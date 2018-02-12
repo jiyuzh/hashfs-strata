@@ -9,7 +9,8 @@
 #include "migrate.h"
 #endif
 
-#ifdef HASHING
+#ifdef HASHTABLE
+#include "inode_hash.h"
 #include "cuckoo_hash.h"
 #include "math.h"
 #endif
@@ -242,7 +243,7 @@ static mlfs_fsblk_t mlfs_new_meta_blocks(handle_t *handle,
 	return block;
 }
 
-static void mlfs_free_blocks(handle_t *handle, struct inode *inode,
+void mlfs_free_blocks(handle_t *handle, struct inode *inode,
 		void *fake, mlfs_fsblk_t block, int count, int flags)
 {
 #ifdef KERNFS
@@ -386,12 +387,6 @@ int mlfs_ext_tree_init(handle_t *handle, struct inode *inode)
 	eh->eh_magic = cpu_to_le16(MLFS_EXT_MAGIC);
 	eh->eh_max = cpu_to_le16(mlfs_ext_space_root(inode, 0));
 	mlfs_mark_inode_dirty(inode);
-#ifdef HASHING
-  int ret = cuckoo_hash_init(inode->ch_table, (int)log2((double)eh->eh_max));
-  if (ret) {
-    fprintf(stderr, "Failed to initialize cuckoo hashtable: %d\n", ret);
-  }
-#endif
 	return 0;
 }
 
@@ -2766,36 +2761,8 @@ int mlfs_ext_get_blocks(handle_t *handle, struct inode *inode,
 	if (enable_perf_stats)
 		tsc_start = asm_rdtscp();
 #endif
-#ifdef HASHING
-  int ret = map->m_len;
-  struct cuckoo_hash* t = inode->ch_table;
-  if (create) {
-    mlfs_lblk_t lb = map->m_lblk;
-    for (uint32_t i = 0; i < map->m_len; ++i, ++lb) {
-      int err;
-      mlfs_fsblk_t res = mlfs_new_data_blocks(handle, inode, 1, flags,
-          NULL, &err);
-
-      if (err) fprintf(stderr, "ERR = %d\n", err);
-
-      mlfs_fsblk_t* val = (mlfs_fsblk_t*)mlfs_alloc(sizeof(*val));
-      *val = lb;
-      struct cuckoo_hash_item* out =
-        cuckoo_hash_insert(t, &lb, sizeof(lb), val);
-
-      if (out == CUCKOO_HASH_FAILED) fprintf(stderr, "could not insert\n");
-
-    }
-  }
-
-  struct cuckoo_hash_item* res =
-    cuckoo_hash_lookup(t, &(map->m_lblk), sizeof(map->m_lblk));
-
-  if (!res) fprintf(stderr, "Key does not exist!\n");
-
-  map->m_pblk = *((mlfs_fsblk_t*)res);
-
-  return ret;
+#ifdef HASHTABLE
+  return mlfs_hash_get_blocks(handle, inode, map, flags);
 #endif
 
 	/*mutex_lock(&inode->truncate_mutex);*/
@@ -2842,14 +2809,6 @@ int mlfs_ext_get_blocks(handle_t *handle, struct inode *inode,
 #endif
 find_ext_path:
 
-<<<<<<< HEAD
-=======
-#ifdef KERNFS
-	if (enable_perf_stats)
-		tsc_start = asm_rdtscp();
-#endif
-
->>>>>>> Checkpointing a version that seems to allocate blocks somewhat decently.
 	/* find extent for this block */
 	path = mlfs_find_extent(handle, inode, map->m_lblk, NULL, 0);
 	if (IS_ERR(path)) {
@@ -2858,14 +2817,6 @@ find_ext_path:
 		goto out2;
 	}
 
-<<<<<<< HEAD
-=======
-#ifdef KERNFS
-	if (enable_perf_stats)
-		g_perf_stats.path_search_tsc += (asm_rdtscp() - tsc_start);
-#endif
-
->>>>>>> Checkpointing a version that seems to allocate blocks somewhat decently.
 	depth = ext_depth(handle, inode);
 
 	/*
@@ -3043,6 +2994,10 @@ int mlfs_ext_truncate(handle_t *handle, struct inode *inode,
 	int ret;
 
 	mlfs_assert(handle != NULL);
+
+#ifdef HASHTABLE
+  return mlfs_hash_truncate(handle, inode, start, end);
+#endif
 
 	ret = mlfs_ext_remove_space(handle, inode, start, end);
 
