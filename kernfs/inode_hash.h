@@ -12,6 +12,21 @@
 #include "migrate.h"
 #endif
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#define CONTINUITY_BITS 4
+#define MAX_CONTIGUOUS_BLOCKS (2 << 4)
+#define REMAINING_BITS ((CHAR_BIT * sizeof(mlfs_fsblk_t)) - CONTINUITY_BITS - 1)
+
+typedef struct {
+  mlfs_fsblk_t is_special : 1;
+  mlfs_fsblk_t index : CONTINUITY_BITS;
+  mlfs_fsblk_t addr : REMAINING_BITS;
+} hash_value_t;
+
+
 /*
  * Generic hash table functions.
  */
