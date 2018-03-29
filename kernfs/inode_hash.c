@@ -144,6 +144,8 @@ create:
               lb + i, in);
         }
       }
+
+      //nvram_flush(ghash);
     }
 
     if (err) fprintf(stderr, "ERR = %d\n", err);
@@ -203,6 +205,10 @@ double check_load_factor(struct inode *inode) {
   double current_size = (double)ghash->noccupied;
   load = current_size / allocated_size;
   return load;
+}
+
+int mlfs_hash_persist(handle_t *handle, struct inode *inode) {
+  nvram_flush(ghash);
 }
 
 #endif
