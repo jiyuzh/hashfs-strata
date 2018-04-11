@@ -82,4 +82,14 @@ int mlfs_hash_get_blocks(handle_t *handle, struct inode *inode,
 int mlfs_hash_truncate(handle_t *handle, struct inode *inode,
 		mlfs_lblk_t start, mlfs_lblk_t end);
 
+/*
+ * Helper functions.
+ */
+
+int mlfs_hash_persist();
+
+#ifdef __cplusplus
+}
+#endif
+
 #endif  // __INODE_HASH__
