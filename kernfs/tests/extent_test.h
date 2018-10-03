@@ -1,4 +1,6 @@
 // vim: set ft=cpp:
+#pragma once
+
 #include "kernfs_interface.h"
 #include "../io/block_io.h"
 #include "../io/buffer_head.h"

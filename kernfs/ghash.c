@@ -237,7 +237,7 @@ g_hash_table_lookup_node (GHashTable    *hash_table,
   *hash_return = hash_value;
 
   node_index = hash_value % hash_table->mod;
-  //pthread_rwlock_rdlock(hash_table->locks + node_index);
+  pthread_rwlock_rdlock(hash_table->locks + node_index);
 
   /*
   nvram_read(hash_table, NV_IDX(node_index), &buffer, FALSE);
@@ -248,6 +248,7 @@ g_hash_table_lookup_node (GHashTable    *hash_table,
   while (!IS_EMPTY(cur.value)) {
     if (cur.key == key && IS_VALID(cur.value)) {
       *ent_return = cur;
+      pthread_rwlock_unlock(hash_table->locks + node_index);
       return node_index;
     } else if (IS_TOMBSTONE(cur.value) && !have_tombstone) {
       first_tombstone = node_index;
@@ -256,8 +257,8 @@ g_hash_table_lookup_node (GHashTable    *hash_table,
 
     step++;
     uint32_t new_idx = (node_index + step) & hash_table->mask;
-    //pthread_rwlock_unlock(hash_table->locks + node_index);
-    //pthread_rwlock_rdlock(hash_table->locks + new_idx);
+    pthread_rwlock_unlock(hash_table->locks + node_index);
+    pthread_rwlock_rdlock(hash_table->locks + new_idx);
     // if the next index would be outside of the block we read from nvram,
     // we need to read another block
     // TODO profile me and see how many times we actually have to do this
@@ -273,12 +274,13 @@ g_hash_table_lookup_node (GHashTable    *hash_table,
   }
 
   if (have_tombstone) {
+    pthread_rwlock_unlock(hash_table->locks + node_index);
     return first_tombstone;
   }
 
-  //pthread_rwlock_unlock(hash_table->locks + node_index);
   //*ent_return = buffer[BUF_IDX(node_index)];
   *ent_return = hash_table->cache[NV_IDX(node_index)][BUF_IDX(node_index)];
+  pthread_rwlock_unlock(hash_table->locks + node_index);
 
   return node_index;
 }
@@ -301,8 +303,8 @@ static void g_hash_table_remove_node (GHashTable  *hash_table,
   hash_entry_t ent;
   UNUSED(notify);
 
-  //pthread_rwlock_wrlock(hash_table->locks + i);
-  //pthread_mutex_lock(hash_table->metalock);
+  pthread_rwlock_wrlock(hash_table->locks + i);
+  pthread_mutex_lock(hash_table->metalock);
 
   //nvram_read_entry(hash_table, i, &ent);
   ent.value = VTOMB;
@@ -315,8 +317,8 @@ static void g_hash_table_remove_node (GHashTable  *hash_table,
   // update metadata on disk
   //nvram_write_metadata(hash_table, hash_table->size);
 
-  //pthread_mutex_unlock(hash_table->metalock);
-  //pthread_rwlock_unlock(hash_table->locks + i);
+  pthread_mutex_unlock(hash_table->metalock);
+  pthread_rwlock_unlock(hash_table->locks + i);
 
 }
 
@@ -403,9 +405,9 @@ g_hash_table_new (GHashFunc    hash_func,
   }
 
   // initialize read-writer locks
-  hash_table->locks = malloc(scaled_size * sizeof(pthread_rwlock_t));
+  hash_table->locks = malloc(max_entries * sizeof(pthread_rwlock_t));
   assert(hash_table->locks);
-  for (size_t i = 0; i < scaled_size; ++i) {
+  for (size_t i = 0; i < max_entries; ++i) {
     int err = pthread_rwlock_init(hash_table->locks + i, NULL);
     if (err) {
       panic("Could not init rwlock!");
@@ -481,8 +483,8 @@ g_hash_table_insert_node (GHashTable    *hash_table,
   int already_exists;
   hash_entry_t ent;
 
-  //pthread_rwlock_wrlock(hash_table->locks + node_index);
-  //pthread_mutex_lock(hash_table->metalock);
+  pthread_rwlock_wrlock(hash_table->locks + node_index);
+  pthread_mutex_lock(hash_table->metalock);
 
   nvram_read_entry(hash_table, node_index, &ent);
   already_exists = IS_VALID(ent.value);
@@ -507,8 +509,8 @@ g_hash_table_insert_node (GHashTable    *hash_table,
 
   //nvram_write_metadata(hash_table, hash_table->size);
 
-  //pthread_mutex_lock(hash_table->metalock);
-  //pthread_rwlock_unlock(hash_table->locks + node_index);
+  pthread_mutex_unlock(hash_table->metalock);
+  pthread_rwlock_unlock(hash_table->locks + node_index);
   return !already_exists;
 }
 
