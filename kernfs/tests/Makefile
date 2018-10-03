@@ -36,8 +36,8 @@ MLFS_FLAGS = -DMLFS_INFO -DKERNFS
 #MLFS_FLAGS += -DBALLOC
 #MLFS_FLAGS += -DDIGEST_OPT
 #MLFS_FLAGS += -DIOMERGE
-#MLFS_FLAGS += -DCONCURRENT
-#MLFS_FLAGS += -DFCONCURRENT
+MLFS_FLAGS += -DCONCURRENT
+MLFS_FLAGS += -DFCONCURRENT
 #MLFS_FLAGS += -DUSE_SSD
 #MLFS_FLAGS += -DUSE_HDD
 #MLFS_FLAGS += -DMIGRATION
@@ -55,7 +55,7 @@ MLFS_FLAGS += -DREUSE_PREVIOUS_PATH  # optimization for extent trees
 ########
 .PHONY: kernfs all clean
 
-BIN := kernfs fifo_cli extent_test
+BIN := kernfs fifo_cli extent_test concurrency_test
 
 all: $(BIN)
 
@@ -72,6 +72,9 @@ kernfs: kernfs.c
 	$(CC) $^ $(DEBUG) -o $@ $(INCLUDES) -L../build -lkernfs -L$(LIBSPDK_DIR) -lspdk $(LD_FLAGS)  -Wl,-rpath=$(abspath $(LIBSPDK_DIR)) -Wl,-rpath=$(abspath $(NVML_DIR)/nondebug)
 
 extent_test: extent_test.cc time_stat.o
+	$(CXX) $^ $(DEBUG) -o $@ $(INCLUDES) -L../build -lkernfs -L$(LIBSPDK_DIR) -lspdk $(LD_FLAGS_CXX) -Wl,-rpath=$(abspath ../build) -Wl,-rpath=$(abspath $(LIBSPDK_DIR)) -Wl,-rpath=$(abspath $(NVML_DIR)/nondebug) $(MLFS_FLAGS)
+
+concurrency_test: concurrency_test.cc time_stat.o
 	$(CXX) $^ $(DEBUG) -o $@ $(INCLUDES) -L../build -lkernfs -L$(LIBSPDK_DIR) -lspdk $(LD_FLAGS_CXX) -Wl,-rpath=$(abspath ../build) -Wl,-rpath=$(abspath $(LIBSPDK_DIR)) -Wl,-rpath=$(abspath $(NVML_DIR)/nondebug) $(MLFS_FLAGS)
 
 fifo_cli: fifo_cli.c

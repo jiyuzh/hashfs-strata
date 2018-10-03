@@ -50,6 +50,7 @@ void init_hash(struct inode *inode) {
     printf("Finished initializing the multi-block hash table.\n");
 
   } else {
+    return;
     panic("Error: init_hash has been called multiple times! A programmer error"
           " has occurred somewhere. Please call this function only once.\n");
   }

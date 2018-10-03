@@ -10,7 +10,7 @@ extern "C" {
 
 void time_stats_init(struct time_stats* ts, int n)
 {
-   ts->time_v = (double *)malloc(sizeof(double)*n);
+   ts->time_v = (double *)calloc(n, sizeof(double));
    ts->n = n;
    ts->count = 0;
 }
@@ -53,7 +53,12 @@ static int compare_latency(const void *a, const void *b) {
 void time_stats_print(struct time_stats* ts, char* msg)
 {
    double sum = 0.0;
-   double min = 0.0, max = 0.0, lat_99 = 0.0, lat_99_9 = 0.0, lat_99_99, lat_99_999 = 0.0;
+   double min = 0.0,
+          max = 0.0,
+          lat_99 = 0.0,
+          lat_99_9 = 0.0,
+          lat_99_99 = 0.0,
+          lat_99_999 = 0.0;
    double curlat = 0.0;
    float perc;
    int _99, _99_9, _99_99, _99_999;

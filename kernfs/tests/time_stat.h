@@ -20,4 +20,6 @@ double time_stats_get_avg(struct time_stats*);
 
 #ifdef __cplusplus
 }
+
+typedef struct time_stats TimeStats;
 #endif
