@@ -8,7 +8,7 @@
 #CC=clang-3.8
 #CC=gcc
 CXX=g++ --std=c++11
-CC=gcc
+CC=gcc --std=gnu99
 
 ########
 #  List of all modules' directories

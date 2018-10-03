@@ -145,6 +145,13 @@ static struct buffer_head *buffer_alloc_fast(struct block_device *bdev,
 	bh->b_size = 0;
 	bh->b_offset = 0;
 
+  bh->b_cacheline_size = 256; // units of 64 bytes
+  bh->b_bitmap_size = (g_block_size_bytes / bh->b_cacheline_size);
+  //printf("--- hello? %lu %lu\n", bh->b_cacheline_size, bh->b_bitmap_size);
+  bh->b_dirty_bitmap = (uint64_t*)mlfs_alloc(bh->b_bitmap_size / sizeof(uint8_t));
+  bh->b_use_bitmap = 0;
+  bitmap_zero(bh->b_dirty_bitmap, bh->b_bitmap_size);
+
 	INIT_LIST_HEAD(&bh->b_io_list);
 
 	//pthread_spin_init(&bh->b_spinlock, PTHREAD_PROCESS_SHARED);
@@ -314,7 +321,11 @@ int mlfs_write(struct buffer_head *b)
 	storage_engine = g_bdev[b->b_dev]->storage_engine;
   // (iangneal): Support bitmap for byte-addressable storage.
 	if (b->b_offset || b->b_use_bitmap) {
+    //printf("byte addressable\n");
     if (b->b_use_bitmap) {
+      //printf("bitmap (size of bitmap: %lu)\n", b->b_bitmap_size);
+      //printf("(size of cacheline: %lu)\n", b->b_cacheline_size);
+      //printf("(size of block: %lu)\n", g_block_size_bytes);
       mlfs_assert(b->b_dirty_bitmap);
       size_t total = 0;
       // iangneal: find dirty regions, write them back one snippet at a time.
@@ -324,6 +335,7 @@ int mlfs_write(struct buffer_head *b)
         uint32_t next = 0;
 
         if (start == b->b_bitmap_size) {
+          //printf("done!\n");
           break;
         } else {
           i = start;
@@ -345,10 +357,9 @@ int mlfs_write(struct buffer_head *b)
             b->b_blocknr,
             byte_off,
             region_size * b->b_cacheline_size);
-        /*
-         * printf("$ storage_engine->write_unaligned(%lu, %lu)\n",
-            start * b->b_cacheline_size, region_size * b->b_cacheline_size);
-            */
+
+        //printf("$ storage_engine->write_unaligned(%lu, %lu)\n",
+        //    start * b->b_cacheline_size, region_size * b->b_cacheline_size);
 
         if (ret != region_size * b->b_cacheline_size) {
           mlfs_printf("%d (ret) != %lu\n", ret, region_size * b->b_cacheline_size);
@@ -361,12 +372,14 @@ int mlfs_write(struct buffer_head *b)
       ret = total;
       //printf("Write: %lu\n", total);
     } else {
+      //printf("unaligned write\n");
       ret = storage_engine->write_unaligned(b->b_dev, b->b_data,
           b->b_blocknr, b->b_offset, b->b_size);
     }
-  }
-	else
+  } else {
+    //printf("reg write\n");
 		ret = storage_engine->write(b->b_dev, b->b_data, b->b_blocknr, b->b_size);
+  }
 
 	if (ret != b->b_size) {
     fprintf(stderr, "ret = %d, size = %u\n", ret, b->b_size);
@@ -710,6 +723,7 @@ struct buffer_head *buffer_alloc(struct block_device *bdev,
   //bh->b_cacheline_size = 64; // units of 64 bytes
   bh->b_cacheline_size = 256; // units of 64 bytes
   bh->b_bitmap_size = (g_block_size_bytes / bh->b_cacheline_size);
+  // printf("--- hello? %lu %lu\n", bh->b_cacheline_size, bh->b_bitmap_size);
   bh->b_dirty_bitmap = (uint64_t*)mlfs_alloc(bh->b_bitmap_size / sizeof(uint8_t));
   bh->b_use_bitmap = 0;
   bitmap_zero(bh->b_dirty_bitmap, bh->b_bitmap_size);

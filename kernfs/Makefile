@@ -54,7 +54,7 @@ MLFS_FLAGS += -DBALLOC
 #MLFS_FLAGS += -DUSE_HDD
 #MLFS_FLAGS += -DMIGRATION
 #MLFS_FLAGS += -DEXPERIMENTAL
-MLFS_FLAGS += -DHASHTABLE
+#MLFS_FLAGS += -DHASHTABLE
 
 #######
 # Optimization definitions
@@ -71,7 +71,7 @@ DEBUG = -g -O0
 vpath %.c $(SRC_DIR)
 
 #CC = clang-3.8
-CC = gcc
+CC = gcc --std=gnu99
 CXX = g++ -std=c++11
 
 define make-goal
