@@ -30,6 +30,8 @@
 
 extern int max_kernfs_io_queues;
 
+struct list_head *lru_heads;
+
 int shm_fd = 0;
 uint8_t *shm_base;
 
