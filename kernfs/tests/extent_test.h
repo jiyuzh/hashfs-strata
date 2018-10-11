@@ -18,12 +18,6 @@
 #include "../slru.h"
 #include "../migrate.h"
 
-#ifdef HASHTABLE
-#include "../inode_hash.h"
-extern uint64_t reads;
-extern uint64_t writes;
-#endif
-
 #include <sys/resource.h>
 #include <algorithm>
 #include <cassert>
@@ -44,30 +38,36 @@ using namespace std;
 class ExtentTest
 {
   private:
-  vector<struct inode *> inodes;
+    static map<int, struct inode *> inodes;
 
   public:
-  void initialize(int num_files);
+    void initialize(int num_files);
 
-  void async_io_test(void);
+    void async_io_test(void);
 
-  static void hexdump(void *mem, unsigned int len);
+    static void hexdump(void *mem, unsigned int len);
 
-  list<mlfs_lblk_t> genLogicalBlockSequence(SequenceType s, mlfs_lblk_t from,
+    list<mlfs_lblk_t> genLogicalBlockSequence(SequenceType s, mlfs_lblk_t from,
+        mlfs_lblk_t to, uint32_t nr_block);
+
+    list<mlfs_lblk_t> genLogicalBlockSequence(SequenceType s,
+        const list<mlfs_lblk_t>& insert_order);
+
+    void run_read_block_test(uint32_t inum, mlfs_lblk_t from,
       mlfs_lblk_t to, uint32_t nr_block);
 
-  list<mlfs_lblk_t> genLogicalBlockSequence(SequenceType s,
-      const list<mlfs_lblk_t>& insert_order);
+    tuple<double, double> run_multi_block_test(list<mlfs_lblk_t> insert_order,
+      list<mlfs_lblk_t> lookup_order, int nr_block = 1, int file = 0);
 
-  void run_read_block_test(uint32_t inum, mlfs_lblk_t from,
-    mlfs_lblk_t to, uint32_t nr_block);
+    void run_ftruncate_test(mlfs_lblk_t from, mlfs_lblk_t to,
+      uint32_t nr_block);
 
-  tuple<double, double> run_multi_block_test(list<mlfs_lblk_t> insert_order,
-    list<mlfs_lblk_t> lookup_order, int nr_block = 1, int file = 0);
-
-  void run_ftruncate_test(mlfs_lblk_t from, mlfs_lblk_t to,
-    uint32_t nr_block);
+    static inode_t *GetInode(int inum) {
+      return inodes[inum];
+    }
 };
+
+map<int, inode_t*> ExtentTest::inodes = map<int, inode_t*>();
 
 #define INUM 100
 
@@ -161,7 +161,7 @@ void ExtentTest::initialize(int num_files = 1)
       write_ondisk_inode(g_root_dev, inode);
     }
 
-    inodes.push_back(inode);
+    inodes[INUM + i] = inode;
   }
 
   cout << "Init finished." << endl;

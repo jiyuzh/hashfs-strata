@@ -37,6 +37,11 @@
 
 #define MAX(x,y) (x > y ? x : y)
 
+// stats
+uint64_t reads;
+uint64_t writes;
+uint64_t blocks;
+
 /**
  * SECTION:hash_tables
  * @title: Hash Tables

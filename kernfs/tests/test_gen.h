@@ -1,8 +1,35 @@
 // vim: set ft=cpp:
+#ifndef __TEST_GEN_H__
+#define __TEST_GEN_H__ 1
+
 #include <algorithm>
+#include <iostream>
 #include <list>
 #include <memory>
 #include <random>
+
+#include "kernfs_interface.h"
+#include "../io/block_io.h"
+#include "../io/buffer_head.h"
+#include "../extents.h"
+#include "../extents_bh.h"
+#include "../fs.h"
+#include "../balloc.h"
+#include "../mlfs/mlfs_user.h"
+#include "../global/global.h"
+#include "../global/util.h"
+#include "../global/defs.h"
+#include "../storage/storage.h"
+#include "../extents.h"
+#include "../extents_bh.h"
+#include "../slru.h"
+#include "../migrate.h"
+
+#ifdef HASHTABLE
+#include "../inode_hash.h"
+extern uint64_t reads;
+extern uint64_t writes;
+#endif
 
 /*
  * We support operations on logical blocks in the following sequences:
@@ -17,8 +44,8 @@ enum SequenceType {
   SEQUENTIAL = 0, REVERSE, RANDOM
 };
 
-const char* SequenceTypeNames[] = { "sequential", "reverse", "random" };
-const char* SequenceTypeAbbr[] = { "seq", "rev", "rand" };
+extern const char* SequenceTypeNames[];
+extern const char* SequenceTypeAbbr[];
 
 struct TestInput {
   std::shared_ptr<inode_t> Inode;
@@ -40,6 +67,9 @@ struct TestOutput {
 struct TestCase {
   std::shared_ptr<TestInput> In;
   std::shared_ptr<TestOutput> Out;
+
+  TestCase(std::shared_ptr<TestInput>& i, std::shared_ptr<TestOutput>& o) :
+    In(i), Out(o) { }
 };
 
 class TestGenerator {
@@ -48,19 +78,24 @@ class TestGenerator {
     std::mt19937 mt_;
     handle_t dev_handle_;
 
-    std::shared_ptr<inode_t> CreateInode(uint32_t inum);
+    bool done_init_;
 
-    std::vector<mlfs_lblk_t> CreateBlockListSequential(size_t num, size_t skip);
+    void BaseInit();
 
   public:
-    TestGenerator(uint8_t dev = g_root_dev): rd_(), mt_(rd_()) {
-      dev_handle_ = {.dev = dev};
-    }
+    TestGenerator(uint8_t dev = g_root_dev): rd_(), mt_(rd_()),
+      done_init_(false), dev_handle_({.dev=dev}) {}
 
     ~TestGenerator() {}
+
+    std::vector<std::shared_ptr<inode_t>> CreateInodes(
+        uint32_t inum_start, size_t num);
+
+    std::vector<mlfs_lblk_t> CreateBlockListSequential(size_t num, size_t skip);
 
     std::list<TestCase> CreateTests(SequenceType s, size_t num_files,
         size_t blocks_per_file, size_t block_range_size);
 
 
 };
+#endif  //__TEST_GEN_H__

@@ -23,7 +23,7 @@
  */
 
 #ifndef __G_HASH_MOD_H__
-#define __G_HASH_MOD_H__
+#define __G_HASH_MOD_H__ 1
 
 #ifdef __cplusplus
 extern "C" {
@@ -195,9 +195,9 @@ void** g_hash_table_get_keys_as_array(GHashTable *hash_table,
 
 unsigned g_direct_hash (const void *v);
 
-uint64_t reads;
-uint64_t writes;
-uint64_t blocks;
+extern uint64_t reads;
+extern uint64_t writes;
+extern uint64_t blocks;
 
 /*
  * Read a NVRAM block and give the users a reference to our cache (saves a

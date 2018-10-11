@@ -1,10 +1,15 @@
-#include <stdio.h>
-#include <time.h>
-#include <sys/time.h>
+#ifndef __TIME_STAT_H__
+#define __TIME_STAT_H__
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+#include <stdio.h>
+#include <time.h>
+#include <sys/time.h>
+#include <math.h>
+#include <stdlib.h>
 
 struct time_stats {
    struct timeval time_start;
@@ -23,3 +28,5 @@ double time_stats_get_avg(struct time_stats*);
 
 typedef struct time_stats TimeStats;
 #endif
+
+#endif  //__TIME_STAT_H__

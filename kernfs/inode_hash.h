@@ -1,5 +1,5 @@
 #ifndef __INODE_HASH__
-#define __INODE_HASH__
+#define __INODE_HASH__ 1
 
 #include <malloc.h>
 #include <memory.h>
