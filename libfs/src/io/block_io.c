@@ -316,14 +316,13 @@ int mlfs_write(struct buffer_head *b)
 
 	mlfs_assert(b->b_size > 0);
 
-	//mlfs_assert(b->b_blocknr + (b->b_size >> g_block_size_shift) <= disk_sb[b->b_dev].size);
-
+#ifdef HASHTABLE
 	storage_engine = g_bdev[b->b_dev]->storage_engine;
   // (iangneal): Support bitmap for byte-addressable storage.
 	if (b->b_offset || b->b_use_bitmap) {
     //printf("byte addressable\n");
     if (b->b_use_bitmap) {
-      //printf("bitmap (size of bitmap: %lu)\n", b->b_bitmap_size);
+      //printf("bitmap write (size of bitmap: %lu)\n", b->b_bitmap_size);
       //printf("(size of cacheline: %lu)\n", b->b_cacheline_size);
       //printf("(size of block: %lu)\n", g_block_size_bytes);
       mlfs_assert(b->b_dirty_bitmap);
@@ -335,14 +334,12 @@ int mlfs_write(struct buffer_head *b)
         uint32_t next = 0;
 
         if (start == b->b_bitmap_size) {
-          //printf("done!\n");
           break;
         } else {
           i = start;
         }
 
         do {
-          //printf("write back bit %d (block %lu)\n", i, b->b_blocknr);
           __clear_bit(i, b->b_dirty_bitmap);
           region_size++;
           i++;
@@ -358,11 +355,9 @@ int mlfs_write(struct buffer_head *b)
             byte_off,
             region_size * b->b_cacheline_size);
 
-        //printf("$ storage_engine->write_unaligned(%lu, %lu)\n",
-        //    start * b->b_cacheline_size, region_size * b->b_cacheline_size);
-
         if (ret != region_size * b->b_cacheline_size) {
-          mlfs_printf("%d (ret) != %lu\n", ret, region_size * b->b_cacheline_size);
+          fprintf(stderr, "%d (ret) != %lu\n", ret,
+              region_size * b->b_cacheline_size);
           panic("failed to write dirty bitmap range");
         } else {
           total += region_size;
@@ -370,14 +365,11 @@ int mlfs_write(struct buffer_head *b)
       }
 
       ret = total;
-      //printf("Write: %lu\n", total);
     } else {
-      //printf("unaligned write\n");
       ret = storage_engine->write_unaligned(b->b_dev, b->b_data,
           b->b_blocknr, b->b_offset, b->b_size);
     }
   } else {
-    //printf("reg write\n");
 		ret = storage_engine->write(b->b_dev, b->b_data, b->b_blocknr, b->b_size);
   }
 
@@ -386,6 +378,17 @@ int mlfs_write(struct buffer_head *b)
 		panic("failed to write storage\n");
   }
 
+#else
+	storage_engine = g_bdev[b->b_dev]->storage_engine;
+	if (b->b_offset)
+		ret = storage_engine->write_unaligned(b->b_dev, b->b_data,
+				b->b_blocknr, b->b_offset, b->b_size);
+	else
+		ret = storage_engine->write(b->b_dev, b->b_data, b->b_blocknr, b->b_size);
+
+	if (ret != b->b_size)
+		panic("fail to write storage\n");
+#endif
 	set_buffer_uptodate(b);
 
 	ret = 0;

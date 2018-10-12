@@ -16,6 +16,7 @@ static GHashTable *ghash = NULL;
 // (iangneal): Second level hash table.
 static GHashTable *gsuper = NULL;
 
+static pthread_mutex_t alloc_tex = PTHREAD_MUTEX_INITIALIZER;
 /*
  *
  */
@@ -161,7 +162,7 @@ create:
       a_type = DATA;
     }
 
-
+    pthread_mutex_lock(&alloc_tex);
     mlfs_lblk_t lb = map->m_lblk + (map->m_len - len);
     int r = mlfs_new_blocks(sb, &blockp, len, 0, 0, a_type, 0);
     if (r > 0) {
@@ -174,6 +175,7 @@ create:
     } else {
       panic("Failed to allocate block -- unknown error!\n");
     }
+    pthread_mutex_unlock(&alloc_tex);
 
     //printf("Starting insert: %u, %lu, %lu\n", map->m_lblk, map->m_len, len);
     for (int c = 0; c < len; ) {
@@ -275,7 +277,7 @@ int mlfs_hash_truncate(handle_t *handle, struct inode *inode,
     }
   }
 
-  return  mlfs_hash_persist();
+  return mlfs_hash_persist();
 }
 
 double check_load_factor(struct inode *inode) {
@@ -287,9 +289,16 @@ double check_load_factor(struct inode *inode) {
 }
 
 int mlfs_hash_persist() {
+  pthread_mutex_lock(ghash->metalock);
+  pthread_mutex_lock(gsuper->metalock);
+
   sync_all_buffers(g_bdev[g_root_dev]);
   nvram_flush(ghash);
   nvram_flush(gsuper);
+
+  pthread_mutex_unlock(gsuper->metalock);
+  pthread_mutex_unlock(ghash->metalock);
+
   return 0;
 }
 

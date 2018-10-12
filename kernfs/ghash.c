@@ -309,7 +309,6 @@ static void g_hash_table_remove_node (GHashTable  *hash_table,
   UNUSED(notify);
 
   pthread_rwlock_wrlock(hash_table->locks + i);
-  pthread_mutex_lock(hash_table->metalock);
 
   //nvram_read_entry(hash_table, i, &ent);
   ent.value = VTOMB;
@@ -322,7 +321,6 @@ static void g_hash_table_remove_node (GHashTable  *hash_table,
   // update metadata on disk
   //nvram_write_metadata(hash_table, hash_table->size);
 
-  pthread_mutex_unlock(hash_table->metalock);
   pthread_rwlock_unlock(hash_table->locks + i);
 
 }
@@ -488,11 +486,13 @@ g_hash_table_insert_node (GHashTable    *hash_table,
   int already_exists;
   hash_entry_t ent;
 
-  pthread_rwlock_wrlock(hash_table->locks + node_index);
-  pthread_mutex_lock(hash_table->metalock);
-
   nvram_read_entry(hash_table, node_index, &ent);
   already_exists = IS_VALID(ent.value);
+
+  if (already_exists) {
+    printf("Already exists: %lx %lx (trying to insert: %lx %lx)\n",
+        ent.key, ent.value, new_key, new_value);
+  }
 
   ent.key = new_key;
   ent.value = new_value;
@@ -500,6 +500,7 @@ g_hash_table_insert_node (GHashTable    *hash_table,
   nvram_update(hash_table, node_index, &ent);
 
 
+  pthread_mutex_lock(hash_table->metalock);
   /* Now, the bookkeeping... */
   if (!already_exists) {
     hash_table->nnodes++;
@@ -515,7 +516,6 @@ g_hash_table_insert_node (GHashTable    *hash_table,
   //nvram_write_metadata(hash_table, hash_table->size);
 
   pthread_mutex_unlock(hash_table->metalock);
-  pthread_rwlock_unlock(hash_table->locks + node_index);
   return !already_exists;
 }
 
@@ -593,15 +593,76 @@ g_hash_table_insert_internal (GHashTable     *hash_table,
                               mlfs_fsblk_t    value,
                               mlfs_fsblk_t    size)
 {
+  assert(hash_table != NULL);
+#if 0
   hash_entry_t ent;
   uint32_t node_index;
   uint32_t hash;
 
-  assert(hash_table != NULL);
+
   node_index = g_hash_table_lookup_node (hash_table, key, &ent, &hash);
 
   return g_hash_table_insert_node (hash_table, node_index, hash, key,
       value, size);
+#else
+  /*
+   * iangneal: for concurrency reasons, we can't do lookup -> insert, as another
+   * thread may come in and use the slot we just looked for.
+   * This is basically a copy of lookup_node, but with write locks.
+   */
+  uint32_t node_index;
+  uint32_t hash_value;
+  uint32_t first_tombstone = 0;
+  int have_tombstone = FALSE;
+  uint32_t step = 0;
+  hash_entry_t *buffer;
+  hash_entry_t cur;
+
+  assert (hash_table->ref_count > 0);
+
+  hash_value = hash_table->hash_func((void*)key);
+  if (unlikely (!HASH_IS_REAL (hash_value))) {
+    hash_value = 2;
+  }
+
+  node_index = hash_value % hash_table->mod;
+  pthread_rwlock_wrlock(hash_table->locks + node_index);
+
+  /*
+  nvram_read(hash_table, NV_IDX(node_index), &buffer, FALSE);
+  cur = buffer[BUF_IDX(node_index)];
+  */
+  cur = hash_table->cache[NV_IDX(node_index)][BUF_IDX(node_index)];
+
+  while (!IS_EMPTY(cur.value)) {
+    if (cur.key == key && IS_VALID(cur.value)) {
+      break;
+    } else if (IS_TOMBSTONE(cur.value) && !have_tombstone) {
+      first_tombstone = node_index;
+      have_tombstone = TRUE;
+    }
+
+    step++;
+    uint32_t new_idx = (node_index + step) & hash_table->mask;
+    pthread_rwlock_unlock(hash_table->locks + node_index);
+    pthread_rwlock_wrlock(hash_table->locks + new_idx);
+
+    node_index = new_idx;
+    cur = hash_table->cache[NV_IDX(node_index)][BUF_IDX(node_index)];
+  }
+
+  if (have_tombstone) {
+    pthread_rwlock_unlock(hash_table->locks + node_index);
+    node_index = first_tombstone;
+  }
+
+  int res = g_hash_table_insert_node(
+      hash_table, node_index, hash_value, key, value, size);
+
+  pthread_rwlock_unlock(hash_table->locks + node_index);
+
+  return res;
+#endif
 }
 
 /**
@@ -722,6 +783,7 @@ g_hash_table_remove_internal (GHashTable    *hash_table,
                               mlfs_fsblk_t   key,
                               int            notify)
 {
+#if 0
   hash_entry_t ent;
   uint32_t node_index;
   uint32_t hash;
@@ -735,6 +797,65 @@ g_hash_table_remove_internal (GHashTable    *hash_table,
   g_hash_table_remove_node (hash_table, node_index, notify);
 
   return TRUE;
+#else
+
+  /*
+   * iangneal: for concurrency reasons, we can't do lookup -> insert, as another
+   * thread may come in and use the slot we just looked for.
+   * This is basically a copy of lookup_node, but with write locks.
+   */
+  uint32_t node_index;
+  uint32_t hash_value;
+  uint32_t first_tombstone = 0;
+  int have_tombstone = FALSE;
+  uint32_t step = 0;
+  hash_entry_t *buffer;
+  hash_entry_t cur;
+
+  assert (hash_table->ref_count > 0);
+
+  hash_value = hash_table->hash_func((void*)key);
+  if (unlikely (!HASH_IS_REAL (hash_value))) {
+    hash_value = 2;
+  }
+
+  node_index = hash_value % hash_table->mod;
+  pthread_rwlock_wrlock(hash_table->locks + node_index);
+
+  /*
+  nvram_read(hash_table, NV_IDX(node_index), &buffer, FALSE);
+  cur = buffer[BUF_IDX(node_index)];
+  */
+  cur = hash_table->cache[NV_IDX(node_index)][BUF_IDX(node_index)];
+
+  while (!IS_EMPTY(cur.value)) {
+    if (cur.key == key && IS_VALID(cur.value)) {
+      break;
+    } else if (IS_TOMBSTONE(cur.value) && !have_tombstone) {
+      first_tombstone = node_index;
+      have_tombstone = TRUE;
+    }
+
+    step++;
+    uint32_t new_idx = (node_index + step) & hash_table->mask;
+    pthread_rwlock_unlock(hash_table->locks + node_index);
+    pthread_rwlock_wrlock(hash_table->locks + new_idx);
+
+    node_index = new_idx;
+    cur = hash_table->cache[NV_IDX(node_index)][BUF_IDX(node_index)];
+  }
+
+  if (have_tombstone) {
+    pthread_rwlock_unlock(hash_table->locks + node_index);
+    node_index = first_tombstone;
+  }
+
+  g_hash_table_remove_node(hash_table, node_index, notify);
+
+  pthread_rwlock_unlock(hash_table->locks + node_index);
+
+  return IS_VALID(cur.value);
+#endif
 }
 
 /**
@@ -831,8 +952,21 @@ uint32_t g_hash_table_size (GHashTable *hash_table) {
   return hash_table->nnodes;
 }
 
-/* Hash functions.
+/*
+ * Hash functions.
  */
+
+// https://gist.github.com/badboy/6267743
+uint32_t hash6432shift(uint64_t key)
+{
+  key = (~key) + (key << 18); // key = (key << 18) - key - 1;
+  key = key ^ (key >> 31);
+  key = key * 21; // key = (key + (key << 2)) + (key << 4);
+  key = key ^ (key >> 11);
+  key = key + (key << 6);
+  key = key ^ (key >> 22);
+  return (uint32_t) key;
+}
 
 /**
  * g_direct_hash:
@@ -849,5 +983,6 @@ uint32_t g_hash_table_size (GHashTable *hash_table) {
  * Returns: a hash value corresponding to the key.
  */
 uint32_t g_direct_hash (const void* v) {
-  return (uint32_t)((uint64_t)(v) & 0xFFFFFFFF);
+  //return (uint32_t)((uint64_t)(v) & 0xFFFFFFFF);
+  return hash6432shift((uint64_t)v);
 }

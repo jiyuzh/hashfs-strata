@@ -111,7 +111,6 @@ typedef struct _GHashTable {
   mlfs_fsblk_t     data;
   mlfs_fsblk_t     nvram_size;
   size_t           range_size;
-  pthread_mutex_t *mutexes;
 
   GHashFunc        hash_func;
   GEqualFunc       key_equal_func;
@@ -132,7 +131,6 @@ typedef struct _GHashTable {
   bh_cache_node *bh_cache_head;
 #endif
 } GHashTable;
-
 
 
 typedef int (*GHRFunc) (void* key,
@@ -305,6 +303,7 @@ nvram_read_metadata(GHashTable *hash, mlfs_fsblk_t location) {
 #ifdef HASHCACHE
 /**
  * Assumes sync_all_buffers has been called!
+ * Assumes lock is held!
  */
 static inline void nvram_flush(GHashTable *ht) {
   if (ht->bh_cache_head) writes++;
@@ -398,6 +397,8 @@ nvram_update(GHashTable *ht, mlfs_fsblk_t index, hash_entry_t* val) {
   mlfs_fsblk_t block_addr = ht->data + NV_IDX(index);
   mlfs_fsblk_t block_offset = BUF_IDX(index) * sizeof(hash_entry_t);
 
+  pthread_mutex_lock(ht->metalock);
+
   ht->cache[NV_IDX(index)][BUF_IDX(index)] = *val;
 
   // check if we've seen this buffer head before. if not, we need to fetch
@@ -443,6 +444,8 @@ nvram_update(GHashTable *ht, mlfs_fsblk_t index, hash_entry_t* val) {
    * Test and set so we don't double count.
    */
   bh->b_size += !__test_and_set_bit(bit, bh->b_dirty_bitmap);
+
+  pthread_mutex_unlock(ht->metalock);
 }
 
 #ifdef __cplusplus
