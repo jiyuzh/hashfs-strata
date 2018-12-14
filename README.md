@@ -41,11 +41,13 @@ This script does the following:
 
 ##### 2. Build kernel
 ~~~
+sudo apt install libssl-dev || sudo yum install openssl-devel
 cd kernel/kbuild
 make -f Makefile.setup .config
 make -f Makefile.setup
-make -j
+make -j$(nproc)
 sudo make modules_install ; sudo make install
+sudo update-grub2 || sudo grub2-mkconfig -o /boot/grub2/grub.cfg
 ~~~
 
 This step requires reboot your machine after installing the new kernel.
