@@ -19,7 +19,7 @@ install:
 	[ -d glibc-build ] || mkdir -p glibc-build
 	./buildglibc.py install --quiet
 
-ifeq ($(SYS),x86_64-linux-gnu)
+ifeq ($(SYS), $(filter $(SYS),x86_64-linux-gnu, x86_64-redhat-linux))
 $(GLIBC_TARGET): $(BUILD_DIR)/Makefile
 	cd $(BUILD_DIR) && $(MAKE)
 
