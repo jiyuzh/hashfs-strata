@@ -20,10 +20,8 @@ C_LIBCUCKOO_DIR := $(abspath $(LIBFS_DIR)/lib/libcuckoo-c/src)
 INCLUDES := $(addprefix -I, .. . $(LIBSPDK_DIR) $(NVML_DIR)/include $(CUCKOO_DIR)/src $(C_LIBCUCKOO_DIR) $(GLIB_DIR) $(GLIB_DIR)/glib)
 
 LD_FLAGS = -lpthread -lm -L$(NVML_DIR)/nondebug/ -lpmem -lrt \
-	-L$(abspath $(C_LIBCUCKOO_DIR)/.libs) -lcuckoo_hash -Wl,-rpath=$(abspath $(C_LIBCUCKOO_DIR)/.libs) \
 	-Wl,-rpath=$(abspath $(GLIB_DIR)/glib/.libs) -L$(abspath $(GLIB_DIR)/glib/.libs) #-lglib-2.0
 LD_FLAGS_CXX = -lpthread -lm -L$(NVML_DIR)/nondebug/ -lpmem -lrt \
-	-L$(abspath $(C_LIBCUCKOO_DIR)/.libs) -lcuckoo_hash -Wl,-rpath=$(abspath $(C_LIBCUCKOO_DIR)/.libs) \
 	-Wl,-rpath=$(abspath $(GLIB_DIR)/glib/.libs) -L$(abspath $(GLIB_DIR)/glib/.libs) #-lglib-2.0
 
 DEBUG = -g -O0
@@ -55,7 +53,7 @@ MLFS_FLAGS += -DREUSE_PREVIOUS_PATH  # optimization for extent trees
 ########
 .PHONY: kernfs all clean
 
-BIN := kernfs fifo_cli extent_test concurrency_test
+BIN := kernfs fifo_cli extent_test concurrency_test nvram_versus_dram
 
 all: $(BIN)
 
@@ -67,6 +65,9 @@ scrub: clean
 
 time_stat.o: time_stat.c
 	$(CC) time_stat.c -c -o time_stat.o -D_BSD_SOURCE
+
+nvram_versus_dram: nvram_versus_dram.c time_stat.o
+	gcc $^ -o $@ -lm
 
 test_gen.o: test_gen.cc
 	$(CXX) $^ $(DEBUG) -c -o $@ $(INCLUDES) -L../build -lkernfs -L$(LIBSPDK_DIR) -lspdk $(LD_FLAGS_CXX) -Wl,-rpath=$(abspath ../build) -Wl,-rpath=$(abspath $(LIBSPDK_DIR)) -Wl,-rpath=$(abspath $(NVML_DIR)/nondebug) $(MLFS_FLAGS)
