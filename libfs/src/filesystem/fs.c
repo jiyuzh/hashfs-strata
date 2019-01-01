@@ -28,6 +28,7 @@ struct super_block *sb[g_n_devices + 1];
 ncx_slab_pool_t *mlfs_slab_pool;
 ncx_slab_pool_t *mlfs_slab_pool_shared;
 uint8_t *shm_base;
+struct list_head *lru_heads;
 uint8_t shm_slab_index = 0;
 
 uint8_t g_log_dev = 0;

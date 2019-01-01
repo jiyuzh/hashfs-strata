@@ -214,6 +214,7 @@ static inline int test_bit(int nr, const volatile unsigned long *addr)
  * strict type-checking.. See the
  * "unnecessary" pointer comparison.
  */
+#ifndef __cplusplus
 #define min(a, b) ({\
 		__typeof__(a) _a = a;\
 		__typeof__(b) _b = b;\
@@ -223,6 +224,7 @@ static inline int test_bit(int nr, const volatile unsigned long *addr)
 		__typeof__(a) _a = a;\
 		__typeof__(b) _b = b;\
 		_a > _b ? _a : _b; })
+#endif
 
 #define min3(x, y, z) min((__typeof__(x))min(x, y), z)
 #define max3(x, y, z) max((__typeof__(x))max(x, y), z)

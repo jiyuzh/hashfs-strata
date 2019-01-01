@@ -83,7 +83,7 @@ void ExtentTest::initialize(int num_files = 1)
 	g_hdd_dev = 3;
 	g_log_dev = 4;
 
-  cerr << "Start init" << endl;
+  cerr << "Start init, num_files = " << num_files << endl;
 #ifdef USE_SLAB
 	mlfs_slab_init(3UL << 30);
 #endif
@@ -161,7 +161,7 @@ void ExtentTest::initialize(int num_files = 1)
       write_ondisk_inode(g_root_dev, inode);
     }
 
-    inodes[INUM + i] = inode;
+    inodes[i] = inode;
   }
 
   cout << "Init finished." << endl;
@@ -434,8 +434,11 @@ ExtentTest::run_multi_block_test(list<mlfs_lblk_t> insert_order,
   std::map<mlfs_lblk_t, mlfs_fsblk_t> res_check;
 
   struct inode *inode = inodes[file];
+  mlfs_assert(inode);
+  //cerr << inode << endl;
 
   /* create all logical blocks */
+  cout << "-- INSERT" << endl;
   time_stats_start(&ts);
   for (mlfs_lblk_t lb : insert_order) {
     map.m_lblk = lb;
@@ -470,13 +473,14 @@ ExtentTest::run_multi_block_test(list<mlfs_lblk_t> insert_order,
   time_stats_stop(&ts);
 
 #ifdef HASHTABLE
-  cout << "Hashtable load factor: " << check_load_factor(inode) << endl;
+  cout << "Post-Insert hashtable load factor: " << check_load_factor(inode) << endl;
   cout << "Reads: " << reads << " Writes: " << writes << endl;
   cout << "Total blocks written: " << blocks << endl;
   reads = 0; writes = 0; blocks = 0;
 #endif
 
   /* lookup */
+  cout << "-- LOOKUP" << endl;
   time_stats_start(&lookup);
   for (mlfs_lblk_t lb : lookup_order) {
 
@@ -489,7 +493,7 @@ ExtentTest::run_multi_block_test(list<mlfs_lblk_t> insert_order,
     map.m_len = nr_block;
     map.m_pblk = 0;
     time_stats_start(&ls);
-    err = mlfs_ext_get_blocks(&handle, inode, &map, MLFS_GET_BLOCKS_CREATE);
+    err = mlfs_ext_get_blocks(&handle, inode, &map, 0);
     time_stats_stop(&ls);
 
     if (err < 0) {
@@ -512,13 +516,13 @@ ExtentTest::run_multi_block_test(list<mlfs_lblk_t> insert_order,
   }
   time_stats_stop(&lookup);
 
-  printf("** Total used block %d\n",
+  printf("** Total number of used blocks: %d\n",
     bitmap_weight((uint64_t *)sb[g_root_dev]->s_blk_bitmap->bitmap,
     sb[g_root_dev]->ondisk->ndatablocks));
 
-  cout << "truncate all allocated blocks" << endl;
 
   /* truncate */
+  cout << "-- TRUNCATE" << endl;
   time_stats_start(&trunc);
   for (mlfs_lblk_t lb : insert_order) {
     time_stats_start(&trunc_per);

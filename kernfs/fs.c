@@ -1966,22 +1966,27 @@ void shared_memory_init(void)
 	int ret;
 
 	shm_fd = shm_open(SHM_NAME, O_CREAT | O_RDWR, 0666);
-	if (shm_fd == -1)
+	if (shm_fd == -1) {
 		panic("cannot create shared memory\n");
+  }
 
 	ret = ftruncate(shm_fd, SHM_SIZE);
 	if (ret == -1)
 		panic("cannot ftruncate shared memory\n");
 
-	shm_base = (uint8_t *)mmap(SHM_START_ADDR,
+  //shm_base = (uint8_t *)mmap(SHM_START_ADDR,
+	shm_base = (uint8_t *)mmap(NULL,
 			SHM_SIZE + 4096,
 			PROT_READ| PROT_WRITE,
-			MAP_SHARED | MAP_POPULATE | MAP_FIXED,
+			//MAP_SHARED | MAP_POPULATE | MAP_FIXED,
+			MAP_SHARED | MAP_POPULATE,
 			shm_fd, 0);
 
 	printf("shm mmap base %p\n", shm_base);
-	if (shm_base == MAP_FAILED)
+	if (shm_base == MAP_FAILED) {
+    perror("mmap(SHM_START_ADDR)");
 		panic("cannot map shared memory\n");
+  }
 
 	// the first 4 KB is reserved.
     mlfs_slab_pool_shared = (ncx_slab_pool_t *)(shm_base + 4096);
@@ -2138,10 +2143,14 @@ void read_superblock(uint8_t dev)
 
 	// The partition is GC unit (1 GB) in SSD.
 	// disk_sb[dev].size : total # of blocks
+#if 0
 	sb[dev]->n_partition = disk_sb[dev].size >> 18;
 
 	if (disk_sb[dev].size % (1 << 18))
 		sb[dev]->n_partition++;
+#else
+  sb[dev]->n_partition = 1;
+#endif
 
 	//single partitioned allocation, used for debugging.
 	mlfs_info("dev %u: # of segment %u\n", dev, sb[dev]->n_partition);

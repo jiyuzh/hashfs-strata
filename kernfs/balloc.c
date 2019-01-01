@@ -17,14 +17,14 @@ int blocks_of_bitmap(uint8_t dev, mlfs_fsblk_t nrblocks)
 		((bitmapsz % g_bdev[dev]->bd_blocksize) ? 1 : 0);
 }
 
-struct block_bitmap *read_all_bitmap(uint8_t dev, 
+struct block_bitmap *read_all_bitmap(uint8_t dev,
 		mlfs_fsblk_t nrblocks, mlfs_fsblk_t bitmap_block)
 {
 	int i, err = 0;
 	int bitmap_nrblocks = blocks_of_bitmap(dev, nrblocks);
 	uint8_t *bitmap = NULL;
 	struct block_bitmap_desc *desc = NULL;
-	struct block_bitmap *b_bitmap = 
+	struct block_bitmap *b_bitmap =
 		(struct block_bitmap *)mlfs_zalloc(sizeof(struct block_bitmap));
 	if (!b_bitmap)
 		return NULL;
@@ -40,7 +40,7 @@ struct block_bitmap *read_all_bitmap(uint8_t dev,
 
 	b_bitmap->nr_bits = nrblocks;
 
-	mlfs_muffled("bitmap size %u KB\n", 
+	mlfs_muffled("bitmap size %u KB\n",
 			(bitmap_nrblocks << g_bdev[dev]->bd_blocksize_bits) >> 10);
 
 	desc = (struct block_bitmap_desc *)mlfs_zalloc(
@@ -137,12 +137,12 @@ void bitmap_bits_set(struct block_bitmap *b_bitmap, mlfs_fsblk_t bit)
 	//mlfs_info("bitmap block %u is dirty, bit %lu\n", bitmap_block, bit);
 }
 
-void bitmap_bits_set_range(struct block_bitmap *b_bitmap, mlfs_fsblk_t bit, 
-		uint32_t length) 
+void bitmap_bits_set_range(struct block_bitmap *b_bitmap, mlfs_fsblk_t bit,
+		uint32_t length)
 {
 	uint64_t *bitmap = (uint64_t *)b_bitmap->bitmap;
 	int start_bitmap_block, end_bitmap_block, i;
-	
+
 	bitmap_set(bitmap, bit, length);
 
 	start_bitmap_block = bit / (g_block_size_bytes << 3);
@@ -187,7 +187,7 @@ static inline bool bitmap_is_bit_clr(uint8_t *bitmap, mlfs_fsblk_t bit)
 	return !bitmap_is_bit_set(bitmap, bit);
 }
 
-void bitmap_bits_free(struct block_bitmap *b_bitmap, 
+void bitmap_bits_free(struct block_bitmap *b_bitmap,
 		mlfs_fsblk_t bit, uint32_t bcnt)
 {
 	mlfs_fsblk_t i = bit;
@@ -232,7 +232,7 @@ void bitmap_bits_free(struct block_bitmap *b_bitmap,
 	}
 }
 
-int bitmap_find_next_clr(struct block_bitmap *b_bitmap, mlfs_fsblk_t start_bit, 
+int bitmap_find_next_clr(struct block_bitmap *b_bitmap, mlfs_fsblk_t start_bit,
 		mlfs_fsblk_t ebit, mlfs_fsblk_t *bit_id)
 {
 	uint64_t *bitmap = (uint64_t *)b_bitmap->bitmap;
@@ -247,8 +247,8 @@ int bitmap_find_next_clr(struct block_bitmap *b_bitmap, mlfs_fsblk_t start_bit,
 	return 0;
 }
 
-int bitmap_find_next_contiguous_clr(struct block_bitmap *b_bitmap, 
-		mlfs_fsblk_t start_bit, mlfs_fsblk_t end_bit, 
+int bitmap_find_next_contiguous_clr(struct block_bitmap *b_bitmap,
+		mlfs_fsblk_t start_bit, mlfs_fsblk_t end_bit,
 		uint32_t length, mlfs_fsblk_t *bit_id)
 {
 	uint64_t *bitmap = (uint64_t *)b_bitmap->bitmap;
@@ -264,7 +264,7 @@ int bitmap_find_next_contiguous_clr(struct block_bitmap *b_bitmap,
 	return 0;
 }
 
-int bitmap_find_bits_clr(struct block_bitmap *b_bitmap, mlfs_fsblk_t bit, 
+int bitmap_find_bits_clr(struct block_bitmap *b_bitmap, mlfs_fsblk_t bit,
 		mlfs_fsblk_t ebit, mlfs_fsblk_t *bit_id)
 {
 	mlfs_fsblk_t i;
@@ -505,7 +505,7 @@ void mlfs_init_blockmap(struct super_block *sb, int initialize)
 	/* Divide the block range among per-partition free lists */
 	per_list_blocks = sb->num_blocks / sb->n_partition;
 
-	mlfs_debug("blocks in each segment %lu (%lu MB)\n", 
+	mlfs_debug("blocks in each segment %lu (%lu MB)\n",
 			per_list_blocks, per_list_blocks >> 8);
 
 	sb->per_list_blocks = per_list_blocks;
@@ -553,7 +553,7 @@ void mlfs_init_blockmap(struct super_block *sb, int initialize)
 		sb->shared_free_list.block_start = free_list->block_end + 1;
 		sb->shared_free_list.block_end = sb->num_blocks - 1;
 		mlfs_debug("initialize shared free list : %lu ~ %lu\n",
-				sb->shared_free_list.block_start, 
+				sb->shared_free_list.block_start,
 				sb->shared_free_list.block_end);
 	}
 }
@@ -796,7 +796,7 @@ static unsigned long mlfs_alloc_blocks_in_free_list(struct super_block *sb,
 	return num_blocks;
 }
 
-static int mlfs_find_free_list(struct super_block *sb, 
+static int mlfs_find_free_list(struct super_block *sb,
 		unsigned int num, enum alloc_type a_type)
 {
 	struct free_list *free_list;
@@ -857,13 +857,13 @@ int mlfs_new_blocks(struct super_block *sb, unsigned long *blocknr,
 
 	// FIXME: A known bug
 	// When the TREE partition is full,
-	
+
 	if (atype == TREE) {
 		id = sb->n_partition - 2;
 
 		if (id == -1)
 			id = mlfs_find_free_list(sb, num, atype);
-	} else 
+	} else
 		id = mlfs_find_free_list(sb, num, atype);
 
 	if (id == -1)
@@ -874,7 +874,7 @@ retry:
 	pthread_mutex_lock(&free_list->mutex);
 
 	if (free_list->num_free_blocks < num_blocks || !free_list->first_node) {
-		mlfs_debug("id %d, free_blocks %lu, required %lu, blocknode %lu\n", 
+		mlfs_debug("id %d, free_blocks %lu, required %lu, blocknode %lu\n",
 				id, free_list->num_free_blocks, num_blocks,
 				free_list->num_blocknode);
 		if (free_list->num_free_blocks >= num_blocks) {
@@ -905,7 +905,7 @@ retry:
 	ret_blocks = mlfs_alloc_blocks_in_free_list(sb, free_list, btype,
 			num_blocks, &new_blocknr);
 
-	mlfs_debug("Alloc %lu blocks from freelist %d: %lu ~ %lu\n", 
+	mlfs_debug("Alloc %lu blocks from freelist %d: %lu ~ %lu\n",
 			ret_blocks, free_list->id, new_blocknr, new_blocknr + ret_blocks - 1);
 	if (atype == TREE) {
 		free_list->alloc_log_count++;
@@ -979,7 +979,7 @@ static int mlfs_insert_blocknode_map(struct super_block *sb,
 		free_list->first_node = blknode;
 	free_list->num_blocknode++;
 	free_list->num_free_blocks += num_blocks;
-	
+
 	mlfs_debug("insert block tree - id %u # of free blocks %lu\n",
 			free_list->id, free_list->num_free_blocks);
 out:

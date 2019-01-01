@@ -11,7 +11,6 @@
 
 #ifdef HASHTABLE
 #include "inode_hash.h"
-#include "cuckoo_hash.h"
 #include "math.h"
 #endif
 
@@ -2994,10 +2993,10 @@ int mlfs_ext_truncate(handle_t *handle, struct inode *inode,
 	mlfs_assert(handle != NULL);
 
 #ifdef HASHTABLE
-  return mlfs_hash_truncate(handle, inode, start, end);
-#endif
-
+  ret = mlfs_hash_truncate(handle, inode, start, end);
+#else
 	ret = mlfs_ext_remove_space(handle, inode, start, end);
+#endif
 
 	/* Save modifications on i_blocks field of the inode. */
 	if (!ret)

@@ -225,15 +225,6 @@ g_hash_table_lookup_node (GHashTable    *hash_table,
   hash_entry_t *buffer;
   hash_entry_t cur;
 
-  /*
-   * If this happens, then the application is probably doing too much work from
-   * a destroy notifier. The alternative would be to crash any second (as keys,
-   * etc. will be NULL). Applications need to either use g_hash_table_destroy,
-   * or ensure the hash table is empty prior to removing the last reference
-   * using g_hash_table_unref().
-   */
-  assert (hash_table->ref_count > 0);
-
   hash_value = hash_table->hash_func((void*)key);
   if (unlikely (!HASH_IS_REAL (hash_value))) {
     hash_value = 2;
@@ -241,7 +232,8 @@ g_hash_table_lookup_node (GHashTable    *hash_table,
 
   *hash_return = hash_value;
 
-  node_index = hash_value % hash_table->mod;
+  //node_index = hash_value % hash_table->mod;
+  node_index = hash_value & hash_table->mask;
   pthread_rwlock_rdlock(hash_table->locks + node_index);
 
   /*
@@ -262,6 +254,7 @@ g_hash_table_lookup_node (GHashTable    *hash_table,
 
     step++;
     uint32_t new_idx = (node_index + step) & hash_table->mask;
+    //uint32_t new_idx = (node_index + step) % hash_table->mod;
     pthread_rwlock_unlock(hash_table->locks + node_index);
     pthread_rwlock_rdlock(hash_table->locks + new_idx);
     // if the next index would be outside of the block we read from nvram,
@@ -279,6 +272,7 @@ g_hash_table_lookup_node (GHashTable    *hash_table,
   }
 
   if (have_tombstone) {
+    *ent_return = hash_table->cache[NV_IDX(first_tombstone)][BUF_IDX(first_tombstone)];
     pthread_rwlock_unlock(hash_table->locks + node_index);
     return first_tombstone;
   }
@@ -308,7 +302,7 @@ static void g_hash_table_remove_node (GHashTable  *hash_table,
   hash_entry_t ent;
   UNUSED(notify);
 
-  pthread_rwlock_wrlock(hash_table->locks + i);
+  //pthread_rwlock_wrlock(hash_table->locks + i);
 
   //nvram_read_entry(hash_table, i, &ent);
   ent.value = VTOMB;
@@ -321,7 +315,7 @@ static void g_hash_table_remove_node (GHashTable  *hash_table,
   // update metadata on disk
   //nvram_write_metadata(hash_table, hash_table->size);
 
-  pthread_rwlock_unlock(hash_table->locks + i);
+  //pthread_rwlock_unlock(hash_table->locks + i);
 
 }
 
@@ -397,9 +391,15 @@ g_hash_table_new (GHashFunc    hash_func,
   }
 
   g_hash_table_set_shift_from_size(hash_table, hash_table->nvram_size);
+  printf("mod = %d, mask = %d\n", hash_table->mod, hash_table->mask);
   // Make sure the mod size doesn't go out of range.
   hash_table->nvram_size = max(hash_table->nvram_size, hash_table->size);
   size_t scaled_size = hash_table->nvram_size;
+
+  if (max_entries < scaled_size) {
+    printf("updating max_entries from %lu to %lu\n", max_entries, scaled_size);
+    max_entries = scaled_size;
+  }
 
   size_t nblocks = NV_IDX(scaled_size);
   if (BUF_IDX(scaled_size)) {
@@ -625,7 +625,8 @@ g_hash_table_insert_internal (GHashTable     *hash_table,
     hash_value = 2;
   }
 
-  node_index = hash_value % hash_table->mod;
+  //node_index = hash_value % hash_table->mod;
+  node_index = hash_value & hash_table->mask;
   pthread_rwlock_wrlock(hash_table->locks + node_index);
 
   /*
@@ -644,6 +645,7 @@ g_hash_table_insert_internal (GHashTable     *hash_table,
 
     step++;
     uint32_t new_idx = (node_index + step) & hash_table->mask;
+    //uint32_t new_idx = (node_index + step) % hash_table->mod;
     pthread_rwlock_unlock(hash_table->locks + node_index);
     pthread_rwlock_wrlock(hash_table->locks + new_idx);
 
@@ -653,6 +655,7 @@ g_hash_table_insert_internal (GHashTable     *hash_table,
 
   if (have_tombstone) {
     pthread_rwlock_unlock(hash_table->locks + node_index);
+    pthread_rwlock_wrlock(hash_table->locks + first_tombstone);
     node_index = first_tombstone;
   }
 
@@ -806,8 +809,6 @@ g_hash_table_remove_internal (GHashTable    *hash_table,
    */
   uint32_t node_index;
   uint32_t hash_value;
-  uint32_t first_tombstone = 0;
-  int have_tombstone = FALSE;
   uint32_t step = 0;
   hash_entry_t *buffer;
   hash_entry_t cur;
@@ -819,7 +820,8 @@ g_hash_table_remove_internal (GHashTable    *hash_table,
     hash_value = 2;
   }
 
-  node_index = hash_value % hash_table->mod;
+  //node_index = hash_value % hash_table->mod;
+  node_index = hash_value & hash_table->mask;
   pthread_rwlock_wrlock(hash_table->locks + node_index);
 
   /*
@@ -831,13 +833,11 @@ g_hash_table_remove_internal (GHashTable    *hash_table,
   while (!IS_EMPTY(cur.value)) {
     if (cur.key == key && IS_VALID(cur.value)) {
       break;
-    } else if (IS_TOMBSTONE(cur.value) && !have_tombstone) {
-      first_tombstone = node_index;
-      have_tombstone = TRUE;
     }
 
     step++;
     uint32_t new_idx = (node_index + step) & hash_table->mask;
+    //uint32_t new_idx = (node_index + step) % hash_table->mod;
     pthread_rwlock_unlock(hash_table->locks + node_index);
     pthread_rwlock_wrlock(hash_table->locks + new_idx);
 
@@ -845,12 +845,9 @@ g_hash_table_remove_internal (GHashTable    *hash_table,
     cur = hash_table->cache[NV_IDX(node_index)][BUF_IDX(node_index)];
   }
 
-  if (have_tombstone) {
-    pthread_rwlock_unlock(hash_table->locks + node_index);
-    node_index = first_tombstone;
+  if (IS_VALID(cur.value)) {
+    g_hash_table_remove_node(hash_table, node_index, notify);
   }
-
-  g_hash_table_remove_node(hash_table, node_index, notify);
 
   pthread_rwlock_unlock(hash_table->locks + node_index);
 

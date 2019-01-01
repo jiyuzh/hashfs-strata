@@ -368,7 +368,9 @@ nvram_alloc_range(size_t count) {
 
   err = mlfs_new_blocks(super, &block, count, 0, 0, DATA, 0);
   if (err < 0) {
-    fprintf(stderr, "Error: could not allocate new blocks: %d\n", err);
+    fprintf(stderr, "Error: could not allocate new blocks: %s (%d)\n",
+        strerror(-err), err);
+    panic("Could not allocate range for hash table");
   }
 
   // Mark superblock bits
