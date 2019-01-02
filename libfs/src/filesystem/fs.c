@@ -202,10 +202,12 @@ static void shared_memory_init(void)
 		panic("cannot open shared memory\n");
 
 	// the first 4096 is reserved for lru_head array.
-	shm_base = (uint8_t *)mmap(SHM_START_ADDR,
+	//shm_base = (uint8_t *)mmap(SHM_START_ADDR,
+	shm_base = (uint8_t *)mmap(NULL,
 			SHM_SIZE + 4096,
 			PROT_READ | PROT_WRITE,
-			MAP_SHARED | MAP_FIXED,
+			//MAP_SHARED | MAP_FIXED,
+			MAP_SHARED,
 			shm_fd, 0);
 	if (shm_base == MAP_FAILED)
 		panic("cannot map shared memory\n");
@@ -323,6 +325,10 @@ void init_fs(void)
 
 		// read root inode in NVM
 		read_root_inode(g_root_dev);
+
+#ifdef HASHTABLE
+    init_hash(sb[g_root_dev]);
+#endif
 
 		mlfs_info("LibFS is initialized with id %d\n", g_log_dev);
 

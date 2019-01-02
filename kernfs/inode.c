@@ -172,11 +172,6 @@ struct inode* ialloc(uint8_t dev, uint8_t type, uint32_t inode_nr)
 
   if (!ip) panic("ialloc: no inodes");
 
-#ifdef HASHTABLE
-  printf("HASHTABLE defined!\n");
-  init_hash(ip);
-#endif
-
   return ip;
 }
 

@@ -1977,7 +1977,7 @@ void shared_memory_init(void)
   //shm_base = (uint8_t *)mmap(SHM_START_ADDR,
 	shm_base = (uint8_t *)mmap(NULL,
 			SHM_SIZE + 4096,
-			PROT_READ| PROT_WRITE,
+			PROT_READ | PROT_WRITE,
 			//MAP_SHARED | MAP_POPULATE | MAP_FIXED,
 			MAP_SHARED | MAP_POPULATE,
 			shm_fd, 0);
@@ -2089,6 +2089,10 @@ void init_fs(void)
 
 #ifdef FCONCURRENT
 	file_digest_thread_pool = thpool_init(8);
+#endif
+
+#ifdef HASHTABLE
+    init_hash(sb[g_root_dev]);
 #endif
 
 	wait_for_event();

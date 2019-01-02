@@ -20,43 +20,38 @@ static pthread_mutex_t alloc_tex = PTHREAD_MUTEX_INITIALIZER;
 /*
  *
  */
-void init_hash(struct inode *inode) {
-  assert(inode);
+void init_hash(struct super_block *sb) {
 
+  if (ghash) return;
+
+  assert(sb);
+
+  printf("Initializing NVM hash table structures...\n");
+
+  // Calculate the locations of all the data structure metadata.
+  single_hash_meta_loc = sb->ondisk->ndatablocks - 1;
+  chunk_hash_meta_loc = single_hash_meta_loc - 1;
+  id_map_meta_loc = chunk_hash_meta_loc - 1;
+
+  // single block table
+  ghash = g_hash_table_new(g_direct_hash, sb->ondisk->ndatablocks, 1,
+      single_hash_meta_loc);
   if (!ghash) {
-    printf("Initializing NVM hash table structures...\n");
-    struct super_block *sb = get_inode_sb(inode->dev, inode);
-
-    // Calculate the locations of all the data structure metadata.
-    single_hash_meta_loc = sb->num_blocks - 1;
-    chunk_hash_meta_loc = single_hash_meta_loc - 1;
-    id_map_meta_loc = chunk_hash_meta_loc - 1;
-
-    // single block table
-    ghash = g_hash_table_new(g_direct_hash, sb->num_blocks, 1,
-        single_hash_meta_loc);
-    if (!ghash) {
-      panic("Failed to initialize the single-block hash table.\n");
-    }
-
-    printf("Finished initializing the single-block hash table.\n");
-
-    // chunk (maps a range of blocks) hash table
-    gsuper = g_hash_table_new(g_direct_hash, sb->num_blocks,
-        RANGE_SIZE, chunk_hash_meta_loc);
-    if (!gsuper) {
-      panic("Failed to initialize multi-block hash table\n");
-    }
-
-    printf("Finished initializing the multi-block hash table.\n");
-
-  } else {
-    return;
-    panic("Error: init_hash has been called multiple times! A programmer error"
-          " has occurred somewhere. Please call this function only once.\n");
+    panic("Failed to initialize the single-block hash table.\n");
   }
 
+  printf("Finished initializing the single-block hash table.\n");
+
+  // chunk (maps a range of blocks) hash table
+  gsuper = g_hash_table_new(g_direct_hash, sb->ondisk->ndatablocks,
+      RANGE_SIZE, chunk_hash_meta_loc);
+  if (!gsuper) {
+    panic("Failed to initialize multi-block hash table\n");
+  }
+
+  printf("Finished initializing the multi-block hash table.\n");
   printf("Finished initializing NVM hash table structures.\n");
+
 }
 
 int insert_hash(GHashTable *hash, struct inode *inode, hash_key_t key,
