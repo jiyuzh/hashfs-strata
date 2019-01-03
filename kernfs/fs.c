@@ -20,6 +20,10 @@
 #include "migrate.h"
 #include "thpool.h"
 
+#ifdef HASHTABLE
+#include "inode_hash.h"
+#endif
+
 #define _min(a, b) ({\
 		__typeof__(a) _a = a;\
 		__typeof__(b) _b = b;\

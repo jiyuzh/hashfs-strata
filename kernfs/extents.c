@@ -2759,7 +2759,7 @@ int mlfs_ext_get_blocks(handle_t *handle, struct inode *inode,
 		tsc_start = asm_rdtscp();
 #endif
 #ifdef HASHTABLE
-  return mlfs_hash_get_blocks(handle, inode, map, flags);
+  return mlfs_hash_get_blocks(handle, inode, map, flags, false);
 #endif
 
 	/*mutex_lock(&inode->truncate_mutex);*/

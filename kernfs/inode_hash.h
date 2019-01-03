@@ -70,14 +70,14 @@ int insert_hash(GHashTable *hash, struct inode *inode, hash_key_t key,
     hash_value_t value, hash_value_t size);
 
 int lookup_hash(struct inode *inode, mlfs_lblk_t key, hash_value_t* value,
-    hash_value_t *size, hash_value_t *index);
+    hash_value_t *size, hash_value_t *index, bool force);
 
 /*
  * Emulated mlfs_ext functions.
  */
 
 int mlfs_hash_get_blocks(handle_t *handle, struct inode *inode,
-			struct mlfs_map_blocks *map, int flags);
+			struct mlfs_map_blocks *map, int flags, bool force);
 
 int mlfs_hash_truncate(handle_t *handle, struct inode *inode,
 		mlfs_lblk_t start, mlfs_lblk_t end);

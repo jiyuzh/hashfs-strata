@@ -168,7 +168,7 @@ int g_hash_table_steal(GHashTable *hash_table,
 void g_hash_table_steal_all(GHashTable *hash_table);
 
 void g_hash_table_lookup(GHashTable *hash_table, mlfs_fsblk_t key,
-    mlfs_fsblk_t *val, mlfs_fsblk_t *size);
+    mlfs_fsblk_t *val, mlfs_fsblk_t *size, bool force);
 
 int g_hash_table_contains(GHashTable *hash_table,
                           mlfs_fsblk_t key);

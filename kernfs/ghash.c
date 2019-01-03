@@ -216,7 +216,8 @@ static inline uint32_t
 g_hash_table_lookup_node (GHashTable    *hash_table,
                           mlfs_fsblk_t   key,
                           hash_entry_t  *ent_return,
-                          uint32_t      *hash_return) {
+                          uint32_t      *hash_return,
+                          bool           force) {
   uint32_t node_index;
   uint32_t hash_value;
   uint32_t first_tombstone = 0;
@@ -240,6 +241,9 @@ g_hash_table_lookup_node (GHashTable    *hash_table,
   nvram_read(hash_table, NV_IDX(node_index), &buffer, FALSE);
   cur = buffer[BUF_IDX(node_index)];
   */
+  if (unlikely(force)) {
+    nvram_read(hash_table, NV_IDX(node_index), &buffer, TRUE);
+  }
   cur = hash_table->cache[NV_IDX(node_index)][BUF_IDX(node_index)];
 
   while (!IS_EMPTY(cur.value)) {
@@ -267,6 +271,9 @@ g_hash_table_lookup_node (GHashTable    *hash_table,
     */
 
     node_index = new_idx;
+    if (unlikely(force)) {
+      nvram_read(hash_table, NV_IDX(node_index), &buffer, TRUE);
+    }
     //cur = buffer[BUF_IDX(node_index)];
     cur = hash_table->cache[NV_IDX(node_index)][BUF_IDX(node_index)];
   }
@@ -492,30 +499,30 @@ g_hash_table_insert_node (GHashTable    *hash_table,
   if (already_exists) {
     printf("Already exists: %lx %lx (trying to insert: %lx %lx)\n",
         ent.key, ent.value, new_key, new_value);
+  } else {
+
+    ent.key = new_key;
+    ent.value = new_value;
+    ent.size = new_range;
+    nvram_update(hash_table, node_index, &ent);
   }
 
-  ent.key = new_key;
-  ent.value = new_value;
-  ent.size = new_range;
-  nvram_update(hash_table, node_index, &ent);
-
-
+  /*
   pthread_mutex_lock(hash_table->metalock);
-  /* Now, the bookkeeping... */
+  // Now, the bookkeeping...
   if (!already_exists) {
     hash_table->nnodes++;
 
-    /*
     if (HASH_IS_UNUSED (old_hash)) {
       // We replaced an empty node, and not a tombstone
       hash_table->noccupied++;
     }
-    */
   }
 
   //nvram_write_metadata(hash_table, hash_table->size);
 
   pthread_mutex_unlock(hash_table->metalock);
+  */
   return !already_exists;
 }
 
@@ -552,14 +559,14 @@ g_hash_table_destroy (GHashTable *hash_table)
  * Returns: (nullable): the associated value, or %NULL if the key is not found
  */
 void g_hash_table_lookup(GHashTable *hash_table, mlfs_fsblk_t key,
-    mlfs_fsblk_t *val, mlfs_fsblk_t *size) {
+    mlfs_fsblk_t *val, mlfs_fsblk_t *size, bool force) {
   uint32_t node_index;
   uint32_t hash_return;
   hash_entry_t ent;
 
   assert(hash_table != NULL);
 
-  node_index = g_hash_table_lookup_node(hash_table, key, &ent, &hash_return);
+  node_index = g_hash_table_lookup_node(hash_table, key, &ent, &hash_return, force);
 
   //pthread_rwlock_rdlock(hash_table->locks + node_index);
 
@@ -763,7 +770,7 @@ g_hash_table_contains (GHashTable    *hash_table,
 
   assert(hash_table != NULL);
 
-  node_index = g_hash_table_lookup_node (hash_table, key, &ent, &hash);
+  node_index = g_hash_table_lookup_node (hash_table, key, &ent, &hash, FALSE);
 
   return IS_VALID(ent.value);
 }

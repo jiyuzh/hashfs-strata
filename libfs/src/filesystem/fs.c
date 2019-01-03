@@ -15,6 +15,10 @@
 #include "ds/bitmap.h"
 #include "filesystem/slru.h"
 
+#ifdef HASHTABLE
+#include "inode_hash.h"
+#endif
+
 #define _min(a, b) ({\
 		__typeof__(a) _a = a;\
 		__typeof__(b) _b = b;\
@@ -465,7 +469,22 @@ int sync_inode_ext_tree(uint8_t dev, struct inode *inode)
 		read_ondisk_inode(dev, inode->inum, &dinode);
 
 		pthread_mutex_lock(&inode->i_mutex);
+#ifdef HASHTABLE
+    handle_t handle = {.dev = g_root_dev};
+    struct mlfs_map_blocks map;
+    size_t nblocks = inode->size >> g_block_size_shift;
+    if (nblocks << g_block_size_shift < inode->size) {
+      nblocks++;
+    }
+
+    map.m_lblk = 0;
+    map.m_len = nblocks;
+
+    mlfs_assert(nblocks == mlfs_hash_get_blocks(&handle, inode, &map, 0, true));
+
+#else
 		memmove(inode->l1.addrs, dinode.l1_addrs, sizeof(addr_t) * (NDIRECT + 1));
+#endif
 #ifdef USE_SSD
 		memmove(inode->l2.addrs, dinode.l2_addrs, sizeof(addr_t) * (NDIRECT + 1));
 #endif

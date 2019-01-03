@@ -1,0 +1,223 @@
+file.c:351:			if (inode->itype != type)
+file.c:352:				inode->itype = type;
+file.c:354:			mlfs_get_time(&inode->ctime);
+file.c:355:			inode->atime = inode->mtime = inode->ctime;
+file.c:365:	inode = icreate(parent_inode->dev, type);
+file.c:375:	inode->itype = type;
+file.c:376:	inode->nlink = 1;
+file.c:381:	mlfs_debug("create %s - inum %u\n", path, inode->inum);
+file.c:387:		parent_inode->nlink++;
+file.c:390:		if (dir_add_entry(inode, ".", inode->inum) < 0)
+file.c:393:		if (dir_add_entry(inode, "..", parent_inode->inum) < 0)
+file.c:400:	if (dir_add_entry(parent_inode, name, inode->inum) < 0)
+extents.h:87: * Each block (leaves and indexes), even inode-stored has header.
+extents.h:244:		return (struct mlfs_extent_header *)inode->l1.i_data;
+extents.h:246:		return (struct mlfs_extent_header *)inode->l2.i_data;
+extents.h:248:		return (struct mlfs_extent_header *)inode->l3.i_data;
+dirent.c:82:	mlfs_assert(dir_inode->itype == T_DIR);
+dirent.c:83:	mlfs_assert(offset <= dir_inode->size + sizeof(struct mlfs_dirent));
+dirent.c:85:	d_block = dcache_find(dev, dir_inode->inum, offset, g_fs_log);
+dirent.c:90:	if (dir_inode->size == 0) {
+dirent.c:92:		if (!(dir_inode->dinode_flags & DI_VALID))
+dirent.c:95:		d_block = dcache_alloc_add(dev, dir_inode->inum, 0, NULL, 0, g_fs_log);
+dirent.c:109:			d_block = dcache_alloc_add(dev, dir_inode->inum, offset, NULL, 0, g_fs_log);
+dirent.c:113:			bh = bh_get_sync_IO(dir_inode->dev, bmap_req.block_no, BH_NO_DATA_ALLOC);
+dirent.c:120:			mlfs_io_wait(dir_inode->dev, 1);
+dirent.c:122:			d_block = dcache_alloc_add(dev, dir_inode->inum, 
+dirent.c:150:	if ((dir_inode->n_de_cache_entry == 
+dirent.c:151:				bitmap_weight(dir_inode->dirent_bitmap, DIRBITMAP_SIZE)) &&
+dirent.c:152:			dir_inode->n_de_cache_entry > 2) {
+dirent.c:153:		mlfs_debug("search skipped %d %d\n", dir_inode->n_de_cache_entry,
+dirent.c:154:				bitmap_weight(dir_inode->dirent_bitmap, DIRBITMAP_SIZE));
+dirent.c:173:	if (dir_inode->itype != T_DIR)
+dirent.c:195:	for (off = 0, n = 0; off < dir_inode->size; off += sizeof(*de)) {
+dirent.c:211:				mlfs_assert(*poff <= dir_inode->size);
+dirent.c:214:			ip = iget(dir_inode->dev, inum);
+dirent.c:221:				read_ondisk_inode(dir_inode->dev, inum, &dip);
+dirent.c:314:		bitmap_clear(dir_inode->dirent_bitmap, off / sizeof(*de), 1);
+dirent.c:328:	for (off = 0, n = 0; off < dir_inode->size; off += sizeof(*de)) {
+dirent.c:337:			if (add_to_log(dir_inode, dirent_array, 0, dir_inode->size) 
+dirent.c:338:					!= dir_inode->size)
+dirent.c:348:					dir_inode->size, token, strlen(token));
+dirent.c:358:					dir_inode->size, token, strlen(token));
+dirent.c:388:	if (dir_inode->size > g_block_size_bytes) {
+dirent.c:403:	for (off = 0, n = 0; off < dir_inode->size; off += sizeof(*de)) {
+dirent.c:425:	if (dir_inode->size == off)
+dirent.c:426:		dir_inode->size -= sizeof(*de);
+dirent.c:428:	bitmap_clear(dir_inode->dirent_bitmap, off / sizeof(*de), 1);
+dirent.c:435:			dir_inode->size, token, strlen(token));
+dirent.c:445:	   if (add_to_log(dir_inode, dirent_array, 0, dir_inode->size) 
+dirent.c:446:	   != dir_inode->size)
+dirent.c:476:	next_avail_slot = find_next_zero_bit(dir_inode->dirent_bitmap,
+dirent.c:491:	for (off = 0, n = 0; off < dir_inode->size + sizeof(*de); off += sizeof(*de)) {
+dirent.c:502:		bitmap_set(dir_inode->dirent_bitmap, off / sizeof(*de), 1);
+dirent.c:506:	bitmap_set(dir_inode->dirent_bitmap, off / sizeof(*de), 1);
+dirent.c:517:	//dir_inode->size += sizeof(struct mlfs_dirent);
+dirent.c:519:	if (off + sizeof(struct mlfs_dirent) > dir_inode->size)  
+dirent.c:520:		dir_inode->size = off + sizeof(struct mlfs_dirent);
+dirent.c:523:			icache_find(dir_inode->dev, inum), off);
+dirent.c:525:	mlfs_get_time(&dir_inode->mtime);
+dirent.c:533:			dir_inode->size, token, strlen(token));
+dirent.c:536:	if (add_to_log(dir_inode, dirent_array, 0, dir_inode->size) 
+dirent.c:537:			!= dir_inode->size)
+dirent.c:617:	if (inode && (inode->flags & I_DELETING)) 
+dirent.c:661:	if (inode && (inode->flags & I_DELETING)) 
+dirent.c:703:	if (!(dir_inode->flags & I_VALID)) {
+dirent.c:707:		read_ondisk_inode(dir_inode->dev, inum, &dip);
+dirent.c:714:		dir_inode->_dinode = (struct dinode *)dir_inode;
+dirent.c:716:		dir_inode->flags |= I_VALID;
+dirent.c:719:	if (dir_inode->itype != T_DIR) {
+dirent.c:726:	for (off = 0, n = 0; off < dir_inode->size; off += sizeof(*de)) {
+dirent.c:787:	if (!(inode->flags & I_VALID)) {
+dirent.c:791:		read_ondisk_inode(inode->dev, inum, &dip);
+dirent.c:799:		inode->_dinode = (struct dinode *)inode;
+dirent.c:801:		inode->flags |= I_VALID;
+dirent.c:805:			inode->inum, inode->itype, inode->size, inode->flags);
+dirent.c:819:		if (dinode->itype > 3)
+fs.h:161:	inode->dev = dev;
+fs.h:162:	inode->inum = inum;
+fs.h:163:	inode->i_ref = 1;
+fs.h:165:	inode->_dinode = (struct dinode *)inode;
+fs.h:170:	pthread_rwlock_init(&inode->fcache_rwlock, &rwlattr);
+fs.h:171:	inode->fcache = NULL;
+fs.h:172:	inode->n_fcache_entries = 0;
+fs.h:175:	mlfs_info("allocate hash %u\n", inode->inum);
+fs.h:176:	inode->fcache_hash = kh_init(fcache);
+fs.h:179:	INIT_LIST_HEAD(&inode->i_slru_head);
+fs.h:181:	pthread_spin_init(&inode->de_cache_spinlock, PTHREAD_PROCESS_SHARED);
+fs.h:182:	inode->de_cache = NULL;
+fs.h:197:	uint32_t inum = inode->inum;
+fs.h:199:	pthread_mutex_init(&inode->i_mutex, NULL);
+fs.h:203:	HASH_ADD(hash_handle, inode_hash[inode->dev], inum,
+fs.h:228:	pthread_rwlock_rdlock(&inode->fcache_rwlock);
+fs.h:230:	k = kh_get(fcache, inode->fcache_hash, key);
+fs.h:231:	if (k == kh_end(inode->fcache_hash)) {
+fs.h:232:		pthread_rwlock_unlock(&inode->fcache_rwlock);
+fs.h:236:	fc_block = kh_value(inode->fcache_hash, k);
+fs.h:238:	pthread_rwlock_unlock(&inode->fcache_rwlock);
+fs.h:258:	fc_block->inum = inode->inum;
+fs.h:259:	inode->n_fcache_entries++;
+fs.h:262:	pthread_rwlock_wrlock(&inode->fcache_rwlock);
+fs.h:264:	k = kh_put(fcache, inode->fcache_hash, key, &ret);
+fs.h:269:		kh_del(fcache, inode->fcache_hash, k);
+fs.h:270:		k = kh_put(fcache, inode->fcache_hash, key, &ret);
+fs.h:274:	kh_value(inode->fcache_hash, k) = fc_block;
+fs.h:275:	//mlfs_info("add key %u @ inode %u\n", key, inode->inum);
+fs.h:277:	pthread_rwlock_unlock(&inode->fcache_rwlock);
+fs.h:286:	pthread_rwlock_wrlock(&inode->fcache_rwlock);
+fs.h:288:	k = kh_get(fcache, inode->fcache_hash, fc_block->key);
+fs.h:290:	if (kh_exist(inode->fcache_hash, k)) {
+fs.h:291:		kh_del(fcache, inode->fcache_hash, k);
+fs.h:292:		inode->n_fcache_entries--;
+fs.h:296:	if (k != kh_end(inode->fcache_hash)) {
+fs.h:297:		kh_del(fcache, inode->fcache_hash, k);
+fs.h:298:		inode->n_fcache_entries--;
+fs.h:299:		mlfs_debug("del key %u @ inode %u\n", fc_block->key, inode->inum);
+fs.h:303:	pthread_rwlock_unlock(&inode->fcache_rwlock);
+fs.h:313:	for (k = kh_begin(inode->fcache_hash); 
+fs.h:314:			k != kh_end(inode->fcache_hash); k++) {
+fs.h:315:		if (kh_exist(inode->fcache_hash, k)) {
+fs.h:316:			fc_block = kh_value(inode->fcache_hash, k);
+fs.h:326:	mlfs_debug("destroy hash %u\n", inode->inum);
+fs.h:327:	kh_destroy(fcache, inode->fcache_hash);
+fs.h:336:	pthread_rwlock_rdlock(&inode->fcache_rwlock);
+fs.h:338:	HASH_FIND(hash_handle, inode->fcache, &key,
+fs.h:341:	pthread_rwlock_unlock(&inode->fcache_rwlock);
+fs.h:356:	fc_block->inum = inode->inum;
+fs.h:360:	inode->n_fcache_entries++;
+fs.h:363:	pthread_rwlock_wrlock(&inode->fcache_rwlock);
+fs.h:365:	HASH_ADD(hash_handle, inode->fcache, key,
+fs.h:368:	pthread_rwlock_unlock(&inode->fcache_rwlock);
+fs.h:376:	pthread_rwlock_wrlock(&inode->fcache_rwlock);
+fs.h:378:	HASH_DELETE(hash_handle, inode->fcache, fc_block);
+fs.h:379:	inode->n_fcache_entries--;
+fs.h:381:	pthread_rwlock_unlock(&inode->fcache_rwlock);
+fs.h:390:	pthread_rwlock_wrlock(&inode->fcache_rwlock);
+fs.h:392:	HASH_ITER(hash_handle, inode->fcache, item, tmp) {
+fs.h:393:		HASH_DELETE(hash_handle, inode->fcache, item);
+fs.h:400:	HASH_CLEAR(hash_handle, inode->fcache);
+fs.h:402:	inode->n_fcache_entries = 0;
+fs.h:404:	pthread_rwlock_unlock(&inode->fcache_rwlock);
+fs.h:415:	HASH_FIND_STR(dir_inode->de_cache, _name, dirent_data);
+fs.h:440:	pthread_spin_lock(&dir_inode->de_cache_spinlock);
+fs.h:442:	HASH_ADD_STR(dir_inode->de_cache, name, _dirent_data);
+fs.h:444:	dir_inode->n_de_cache_entry++;
+fs.h:446:	pthread_spin_unlock(&dir_inode->de_cache_spinlock);
+fs.h:455:	HASH_FIND_STR(dir_inode->de_cache, _name, dirent_data);
+fs.h:457:		pthread_spin_lock(&dir_inode->de_cache_spinlock);
+fs.h:458:		HASH_DEL(dir_inode->de_cache, dirent_data);
+fs.h:459:		dir_inode->n_de_cache_entry--;
+fs.h:460:		pthread_spin_unlock(&dir_inode->de_cache_spinlock);
+fs.c:455:	//if (inode->flags & I_RESYNC) {
+fs.c:461:		read_ondisk_inode(dev, inode->inum, &dinode);
+fs.c:463:		pthread_mutex_lock(&inode->i_mutex);
+fs.c:465:    size_t nblocks = inode->size >> g_block_size_shift;
+fs.c:468:		memmove(inode->l1.addrs, dinode.l1_addrs, sizeof(addr_t) * (NDIRECT + 1));
+fs.c:471:		memmove(inode->l2.addrs, dinode.l2_addrs, sizeof(addr_t) * (NDIRECT + 1));
+fs.c:474:		memmove(inode->l3.addrs, dinode.l3_addrs, sizeof(addr_t) * (NDIRECT + 1));
+fs.c:476:		pthread_mutex_unlock(&inode->i_mutex);
+fs.c:479:		if (inode->itype == T_DIR)
+fs.c:480:			mlfs_info("resync inode (DIR) %u is done\n", inode->inum);
+fs.c:482:			mlfs_info("resync inode %u is done\n", inode->inum);
+fs.c:486:	inode->flags &= ~I_RESYNC;
+fs.c:594:	mlfs_assert(inode->i_ref < 2);
+fs.c:596:	if (inode->i_ref == 1 &&
+fs.c:597:			(inode->flags & I_VALID) &&
+fs.c:598:			inode->nlink == 0) {
+fs.c:599:		if (inode->flags & I_BUSY)
+fs.c:603:		   if (inode->size > 0)
+fs.c:607:		inode->flags &= ~I_BUSY;
+fs.c:611:	inode->size = 0;
+fs.c:614:	inode->flags |= I_DELETING;
+fs.c:615:	inode->itype = 0;
+fs.c:620:	pthread_spin_destroy(&inode->de_cache_spinlock);
+fs.c:621:	pthread_mutex_destroy(&inode->i_mutex);
+fs.c:622:	pthread_rwlock_destroy(&inode->fcache_rwlock);
+fs.c:626:	mlfs_debug("dealloc inum %u\n", inode->inum);
+fs.c:629:	list_for_each_entry_safe(l, tmp, &inode->i_slru_head, list) {
+slru.c:51:		list_add(&node->per_inode_list, &inode->i_slru_head);
+extents.c:71:	if (a_inode->inum < b_inode->inum)
+extents.c:73:	else if (a_inode->inum > b_inode->inum)
+extents.c:83:	inode->i_data_dirty = 1;
+extents.c:89:			&inode->i_rb_node, inode_cmp);
+extents.c:93:	inode->invalidate_path = 1;
+extents.c:101:	//return g_bdev[inode->dev]->bd_blocksize;
+extents.c:216:	mlfs_debug("[dev %u] used blocks %d\n", inode->dev,
+extents.c:217:			bitmap_weight((uint64_t *)inode->i_sb[handle->dev]->s_blk_bitmap->bitmap,
+extents.c:218:				inode->i_sb[handle->dev]->ondisk->ndatablocks));
+extents.c:235:	mlfs_debug("[dev %u] used blocks %d\n", inode->dev,
+extents.c:236:			bitmap_weight((uint64_t *)inode->i_sb[handle->dev]->s_blk_bitmap->bitmap,
+extents.c:237:				inode->i_sb[handle->dev]->ondisk->ndatablocks));
+extents.c:260:			inode->inum, block, block + count - 1);
+extents.c:262:	mlfs_debug("[dev %u] used blocks %d\n", inode->dev,
+extents.c:333:	size = sizeof(inode->l1.i_block);
+extents.c:346:	size = sizeof(inode->l1.i_block);
+extents.c:439:	/*return mlfs_crc32c(inode->i_csum, eh, MLFS_EXTENT_TAIL_OFFSET(eh));*/
+extents.c:552:	inode->invalidate_path = 1;
+extents.c:736:	mlfs_info("--------- path dump inum = %u\n", inode->inum);
+extents.c:768:	mlfs_lsm_debug("--------- leaf (inum %u)\n", inode->inum);
+extents.c:814: * path[0] is root of the tree (stored in inode->i_data)
+extents.c:968:	// mlfs_std_error(inode->i_sb, err);
+extents.c:1062:	//bh = mlfs_write(inode->i_sb, newblock);
+extents.c:1131:		//bh = extents_bwrite(inode->i_sb, newblock);
+extents.c:1241:	//bh = extents_bwrite(inode->i_sb, newblock);
+extents.c:1253:	//memmove(bh->b_data, inode->i_data, sizeof(inode->l1.i_data));
+extents.c:1254:	memmove(bh->b_data, ext_inode_hdr(handle, inode), sizeof(inode->l1.i_data));
+extents.c:2755:	/*mutex_lock(&inode->truncate_mutex);*/
+extents.c:2758:		inode->previous_path = NULL;
+extents.c:2763:	if (!inode->previous_path || (map->m_flags & MLFS_MAP_LOG_ALLOC))
+extents.c:2766:	_path = inode->previous_path;
+extents.c:2786:				inode->invalidate_path = 0;
+extents.c:2794:	inode->previous_path = NULL;
+extents.c:2962:	if (inode->invalidate_path) {
+extents.c:2963:		inode->invalidate_path = 0;
+extents.c:2964:		inode->previous_path = NULL;
+extents.c:2967:		inode->previous_path = path;
+extents.c:2978:	/*mutex_unlock(&inode->truncate_mutex);*/
+inode_hash.c:74:  hash_key_t r = RANGE_KEY(inode->inum, key);
+inode_hash.c:101:  hash_key_t r = RANGE_KEY(inode->inum, key);
+inode_hash.c:201:        hash_key_t k = RANGE_KEY(inode->inum, lb + c);
+inode_hash.h:42:#define MAKEKEY(inode, key) (((uint64_t)inode->inum << 32) | key)
+shared.h:296:	return inode->i_sb[dev];
+shared.h:302:	memmove(__inode->_dinode, __dinode, sizeof(struct dinode)); \
+shared.h:303:	__inode->dinode_flags |= DI_VALID; \

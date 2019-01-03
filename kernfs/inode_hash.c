@@ -56,8 +56,6 @@ void init_hash(struct super_block *sb) {
 
 int insert_hash(GHashTable *hash, struct inode *inode, hash_key_t key,
     hash_value_t value, hash_value_t size) {
-  int ret = 0;
-
   // if not exists, then the value was not already in the table, therefore
   // success.
 
@@ -68,20 +66,22 @@ int insert_hash(GHashTable *hash, struct inode *inode, hash_key_t key,
  * Returns 0 if not found (value == 0 means no associated value).
  */
 int lookup_hash(struct inode *inode, mlfs_lblk_t key, hash_value_t* value,
-    hash_value_t *size, hash_value_t *index) {
+    hash_value_t *size, hash_value_t *index, bool force) {
   int ret = 0;
   hash_key_t k = MAKEKEY(inode, key);
   hash_key_t r = RANGE_KEY(inode->inum, key);
 
+  force = true;
+
   *index = 0;
   // Two-level lookup
-  g_hash_table_lookup(gsuper, r, value, size);
+  g_hash_table_lookup(gsuper, r, value, size, force);
   //printf("%u -> %lu, %lu %lu\n", key, r, *value, *size);
   bool present = (*value) && ((key & RANGE_BITS) < *size);
   //printf("--- %lu & %lu (%lu) < %lu\n", key, RANGE_BITS, key & RANGE_BITS, *size);
   if (!present) {
     //printf("Not in big.\n");
-    g_hash_table_lookup(ghash, k, value, size);
+    g_hash_table_lookup(ghash, k, value, size, force);
     present = *value != 0;
     //if (!present) printf("Not in small.\n");
   } else {
@@ -108,7 +108,7 @@ int erase_hash(struct inode *inode, mlfs_lblk_t key) {
 }
 
 int mlfs_hash_get_blocks(handle_t *handle, struct inode *inode,
-			struct mlfs_map_blocks *map, int flags) {
+			struct mlfs_map_blocks *map, int flags, bool force) {
 	int err = 0;
 	mlfs_lblk_t allocated = 0;
 	int create;
@@ -126,7 +126,7 @@ int mlfs_hash_get_blocks(handle_t *handle, struct inode *inode,
     hash_value_t index;
     hash_value_t value;
     hash_value_t size;
-    int pre = lookup_hash(inode, map->m_lblk + i, &value, &size, &index);
+    int pre = lookup_hash(inode, map->m_lblk + i, &value, &size, &index, force);
     if (!pre) {
       goto create;
     }
@@ -186,7 +186,7 @@ create:
         hash_value_t index;
         hash_value_t value;
         hash_value_t size;
-        int pre = lookup_hash(inode, lb + c, &value, &size, &index);
+        int pre = lookup_hash(inode, lb + c, &value, &size, &index, force);
         if (pre) {
           c += size;
           if (!set) {
@@ -199,9 +199,10 @@ create:
         uint32_t nblocks = min(len - c, RANGE_SIZE);
         //printf("Insert to big.\n");
         hash_key_t k = RANGE_KEY(inode->inum, lb + c);
-        int success = insert_hash(gsuper, inode, k, blockp, nblocks);
-        if (!success) {
-          panic("Could not insert huge range!\n");
+        int already_exists = !insert_hash(gsuper, inode, k, blockp, nblocks);
+        if (already_exists) {
+          //panic("Could not insert huge range!\n");
+          printf("Weird, already exists?\n");
         }
 
         if (!set) {
@@ -223,13 +224,13 @@ create:
         //printf("Insert to small: %u.\n", nblocks_to_alloc);
         for (uint32_t i = 0; i < nblocks_to_alloc; ++i) {
           hash_key_t k = MAKEKEY(inode, lb + i + c);
-          int success = insert_hash(ghash, inode, k, blockp,
+          int already_exists = !insert_hash(ghash, inode, k, blockp,
               nblocks_to_alloc - i);
 
-          if (!success) {
-            fprintf(stderr, "could not insert: key = %u, val = %0lx\n",
+          if (already_exists) {
+            fprintf(stderr, "could not insert: key = %u, val = %0lx, already exists (small)\n",
                 lb + i + c, blockp);
-            panic("Could not insert into small table!");
+            //panic("Could not insert into small table!");
           }
 
         }
@@ -239,22 +240,12 @@ create:
       }
     }
 
-    if (err) fprintf(stderr, "ERR = %d\n", err);
-
-    map->m_pblk = blockp;
-
-    mlfs_lblk_t lb = map->m_lblk + (map->m_len - len);
-    for (uint32_t i = 0; i < len; ++i) {
-      int success = insert_hash(inode, lb, blockp);
-
-      if (!success) fprintf(stderr, "could not insert\n");
-
-      blockp++;
-      lb++;
-    }
+    mlfs_hash_persist();
+  } else {
+    ret = 0;
+    map->m_pblk = 0;
   }
 
-  mlfs_hash_persist();
   return ret;
 }
 
@@ -264,7 +255,7 @@ int mlfs_hash_truncate(handle_t *handle, struct inode *inode,
 
   // TODO: probably inefficient
   for (mlfs_lblk_t i = start; i <= end;) {
-    if (lookup_hash(inode, i, &value, &size, &index)) {
+    if (lookup_hash(inode, i, &value, &size, &index, false)) {
       mlfs_fsblk_t pblock = value + index;
       mlfs_free_blocks(handle, inode, NULL, pblock, size, 0);
       erase_hash(inode, i);
