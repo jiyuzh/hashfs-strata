@@ -480,6 +480,9 @@ int sync_inode_ext_tree(uint8_t dev, struct inode *inode)
     map.m_lblk = 0;
     map.m_len = nblocks;
 
+    //int err = mlfs_hash_get_blocks(&handle, inode, &map, 0, true);
+    //if (err < 0);
+
     mlfs_assert(nblocks == mlfs_hash_get_blocks(&handle, inode, &map, 0, true));
 
 #else

@@ -1,4 +1,4 @@
-CC=gcc -std=c11
+CC=gcc
 CXX=g++ -std=c++11
 
 #CC = clang-3.8
@@ -24,9 +24,9 @@ LD_FLAGS = -lpthread -lm -L$(NVML_DIR)/nondebug/ -lpmem -lrt \
 LD_FLAGS_CXX = -lpthread -lm -L$(NVML_DIR)/nondebug/ -lpmem -lrt \
 	-Wl,-rpath=$(abspath $(GLIB_DIR)/glib/.libs) -L$(abspath $(GLIB_DIR)/glib/.libs) #-lglib-2.0
 
-DEBUG = -g -O0
+#DEBUG = -g -O0
 #DEBUG = -g -Ofast
-#DEBUG = -g -O3
+DEBUG = -g -O3
 
 #MLFS_FLAGS = -DUSE_SLAB -DMLFS_INFO -DKERNFS
 MLFS_FLAGS = -DMLFS_INFO -DKERNFS
@@ -40,7 +40,7 @@ MLFS_FLAGS += -DFCONCURRENT
 #MLFS_FLAGS += -DUSE_HDD
 #MLFS_FLAGS += -DMIGRATION
 #MLFS_FLAGS += -DEXPERIMENTAL
-MLFS_FLAGS += -DHASHTABLE
+#MLFS_FLAGS += -DHASHTABLE
 
 #######
 # Optimization definitions

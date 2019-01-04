@@ -112,6 +112,10 @@ void ExtentTest::initialize(int num_files = 1)
 	balloc_init(g_hdd_dev, sb[g_hdd_dev]);
 #endif
 
+#ifdef HASHTABLE
+  init_hash(sb[g_root_dev]);
+#endif
+
 	memset(&g_perf_stats, 0, sizeof(kernfs_stats_t));
 
 	inode_version_table =
@@ -437,6 +441,9 @@ ExtentTest::run_multi_block_test(list<mlfs_lblk_t> insert_order,
   mlfs_assert(inode);
   //cerr << inode << endl;
 
+#ifdef HASHTABLE
+  reads = 0; writes = 0; blocks = 0;
+#endif
   /* create all logical blocks */
   cout << "-- INSERT" << endl;
   time_stats_start(&ts);
@@ -544,18 +551,18 @@ ExtentTest::run_multi_block_test(list<mlfs_lblk_t> insert_order,
     bitmap_weight((uint64_t *)sb[g_root_dev]->s_blk_bitmap->bitmap,
     sb[g_root_dev]->ondisk->ndatablocks));
 
-  cout << "INSERT TIME (total)" << endl;
-  time_stats_print(&ts, NULL);
+  //cout << "INSERT TIME (total)" << endl;
+  //time_stats_print(&ts, NULL);
   cout << "INSERT TIME (per insert [" << hs.n <<"] )" << endl;
   time_stats_print(&hs, NULL);
-  cout << "LOOKUP TIME (total)" << endl;
-  time_stats_print(&lookup, NULL);
+  //cout << "LOOKUP TIME (total)" << endl;
+  //time_stats_print(&lookup, NULL);
   cout << "LOOKUP TIME (per lookup [" << ls.n <<"] )" << endl;
   time_stats_print(&ls, NULL);
   cout << "TRUNCATE TIME (per lookup [" << trunc_per.n <<"] )" << endl;
   time_stats_print(&trunc_per, NULL);
-  cout << "TRUNCATE TIME (total)" << endl;
-  time_stats_print(&trunc, NULL);
+ // cout << "TRUNCATE TIME (total)" << endl;
+ // time_stats_print(&trunc, NULL);
 #ifdef HASHTABLE
   cout << "Reads: " << reads << " Writes: " << writes << endl;
 #endif

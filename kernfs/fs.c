@@ -165,6 +165,7 @@ struct f_digest_worker_arg {
 
 void reset_kernfs_stats(void)
 {
+  storage_tsc = 0;
 	memset(&g_perf_stats, 0, sizeof(kernfs_stats_t));
 }
 void show_kernfs_stats(void)
@@ -1774,10 +1775,6 @@ static void handle_digest_request(void *arg)
 
 		digest_count = digest_logs(dev_id, digest_count, &digest_blkno, &rotated);
 
-		if (enable_perf_stats)
-			g_perf_stats.digest_time_tsc +=
-				(asm_rdtscp() - tsc_begin);
-
 		mlfs_debug("-- Total used block %d\n",
 				bitmap_weight((uint64_t *)sb[g_root_dev].s_blk_bitmap->bitmap,
 					sb[g_root_dev].ondisk->ndatablocks));
@@ -1788,6 +1785,9 @@ static void handle_digest_request(void *arg)
 		mlfs_info("Write %s to libfs\n", response);
 
 		persist_dirty_objects_nvm();
+		if (enable_perf_stats)
+			g_perf_stats.digest_time_tsc +=
+				(asm_rdtscp() - tsc_begin);
 #ifdef USE_SSD
 		persist_dirty_objects_ssd();
 #endif
@@ -2067,7 +2067,7 @@ void init_fs(void)
 	balloc_init(g_hdd_dev, sb[g_hdd_dev]);
 #endif
 
-	memset(&g_perf_stats, 0, sizeof(kernfs_stats_t));
+  reset_kernfs_stats();
 
 	inode_version_table =
 		(uint16_t *)mlfs_zalloc(sizeof(uint16_t) * NINODES);

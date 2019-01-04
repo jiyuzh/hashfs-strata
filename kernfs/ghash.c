@@ -42,6 +42,10 @@ uint64_t reads;
 uint64_t writes;
 uint64_t blocks;
 
+#define pthread_rwlock_rdlock(x) 0
+#define pthread_rwlock_wrlock(x) 0
+#define pthread_rwlock_unlock(x) 0
+
 /**
  * SECTION:hash_tables
  * @title: Hash Tables
@@ -246,12 +250,12 @@ g_hash_table_lookup_node (GHashTable    *hash_table,
   }
   cur = hash_table->cache[NV_IDX(node_index)][BUF_IDX(node_index)];
 
-  while (!IS_EMPTY(cur.value)) {
-    if (cur.key == key && IS_VALID(cur.value)) {
+  while (!HASH_ENTRY_IS_EMPTY(cur)) {
+    if (cur.key == key && HASH_ENTRY_IS_VALID(cur)) {
       *ent_return = cur;
       pthread_rwlock_unlock(hash_table->locks + node_index);
       return node_index;
-    } else if (IS_TOMBSTONE(cur.value) && !have_tombstone) {
+    } else if (HASH_ENTRY_IS_TOMBSTONE(cur) && !have_tombstone) {
       first_tombstone = node_index;
       have_tombstone = TRUE;
     }
@@ -312,7 +316,7 @@ static void g_hash_table_remove_node (GHashTable  *hash_table,
   //pthread_rwlock_wrlock(hash_table->locks + i);
 
   //nvram_read_entry(hash_table, i, &ent);
-  ent.value = VTOMB;
+  HASH_ENTRY_SET_TOMBSTONE(ent);
   ent.size = 0;
 
   /* Erect tombstone */
@@ -494,15 +498,15 @@ g_hash_table_insert_node (GHashTable    *hash_table,
   hash_entry_t ent;
 
   nvram_read_entry(hash_table, node_index, &ent);
-  already_exists = IS_VALID(ent.value);
+  already_exists = HASH_ENTRY_IS_VALID(ent);
 
-  if (already_exists) {
+  if (unlikely(already_exists)) {
     printf("Already exists: %lx %lx (trying to insert: %lx %lx)\n",
-        ent.key, ent.value, new_key, new_value);
+        ent.key, HASH_ENTRY_VAL(ent), new_key, new_value);
   } else {
 
     ent.key = new_key;
-    ent.value = new_value;
+    HASH_ENTRY_SET_VAL(ent, new_value);
     ent.size = new_range;
     nvram_update(hash_table, node_index, &ent);
   }
@@ -570,7 +574,8 @@ void g_hash_table_lookup(GHashTable *hash_table, mlfs_fsblk_t key,
 
   //pthread_rwlock_rdlock(hash_table->locks + node_index);
 
-  *val = !IS_TOMBSTONE(ent.value) ? ent.value : 0;
+  mlfs_fsblk_t ent_val = HASH_ENTRY_VAL(ent);
+  *val = !IS_TOMBSTONE(ent_val) ? ent_val : 0;
   *size = ent.size;
 
   //pthread_rwlock_unlock(hash_table->locks + node_index);
@@ -594,7 +599,7 @@ void g_hash_table_lookup(GHashTable *hash_table, mlfs_fsblk_t key,
  *
  * Returns: %TRUE if the key did not exist yet
  */
-static int
+static inline int
 g_hash_table_insert_internal (GHashTable     *hash_table,
                               mlfs_fsblk_t    key,
                               mlfs_fsblk_t    value,
@@ -642,10 +647,10 @@ g_hash_table_insert_internal (GHashTable     *hash_table,
   */
   cur = hash_table->cache[NV_IDX(node_index)][BUF_IDX(node_index)];
 
-  while (!IS_EMPTY(cur.value)) {
-    if (cur.key == key && IS_VALID(cur.value)) {
+  while (!HASH_ENTRY_IS_EMPTY(cur)) {
+    if (cur.key == key && HASH_ENTRY_IS_VALID(cur)) {
       break;
-    } else if (IS_TOMBSTONE(cur.value) && !have_tombstone) {
+    } else if (HASH_ENTRY_IS_TOMBSTONE(cur) && !have_tombstone) {
       first_tombstone = node_index;
       have_tombstone = TRUE;
     }
@@ -772,7 +777,7 @@ g_hash_table_contains (GHashTable    *hash_table,
 
   node_index = g_hash_table_lookup_node (hash_table, key, &ent, &hash, FALSE);
 
-  return IS_VALID(ent.value);
+  return HASH_ENTRY_IS_VALID(ent);
 }
 
 /*
@@ -837,8 +842,8 @@ g_hash_table_remove_internal (GHashTable    *hash_table,
   */
   cur = hash_table->cache[NV_IDX(node_index)][BUF_IDX(node_index)];
 
-  while (!IS_EMPTY(cur.value)) {
-    if (cur.key == key && IS_VALID(cur.value)) {
+  while (!HASH_ENTRY_IS_EMPTY(cur)) {
+    if (cur.key == key && HASH_ENTRY_IS_VALID(cur)) {
       break;
     }
 
@@ -852,13 +857,13 @@ g_hash_table_remove_internal (GHashTable    *hash_table,
     cur = hash_table->cache[NV_IDX(node_index)][BUF_IDX(node_index)];
   }
 
-  if (IS_VALID(cur.value)) {
+  if (HASH_ENTRY_IS_VALID(cur)) {
     g_hash_table_remove_node(hash_table, node_index, notify);
   }
 
   pthread_rwlock_unlock(hash_table->locks + node_index);
 
-  return IS_VALID(cur.value);
+  return HASH_ENTRY_IS_VALID(cur);
 #endif
 }
 
@@ -961,7 +966,7 @@ uint32_t g_hash_table_size (GHashTable *hash_table) {
  */
 
 // https://gist.github.com/badboy/6267743
-uint32_t hash6432shift(uint64_t key)
+static inline uint32_t hash6432shift(uint64_t key)
 {
   key = (~key) + (key << 18); // key = (key << 18) - key - 1;
   key = key ^ (key >> 31);

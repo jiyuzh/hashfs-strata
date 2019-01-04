@@ -6,6 +6,8 @@
 
 #define GPOINTER_TO_UINT(x) ((uint64_t)x)
 
+#define HASHPERF
+
 mlfs_fsblk_t single_hash_meta_loc = 0;
 mlfs_fsblk_t chunk_hash_meta_loc = 0;
 mlfs_fsblk_t id_map_meta_loc = 0;
@@ -54,7 +56,7 @@ void init_hash(struct super_block *sb) {
 
 }
 
-int insert_hash(GHashTable *hash, struct inode *inode, hash_key_t key,
+inline int insert_hash(GHashTable *hash, struct inode *inode, hash_key_t key,
     hash_value_t value, hash_value_t size) {
   // if not exists, then the value was not already in the table, therefore
   // success.
@@ -70,8 +72,6 @@ int lookup_hash(struct inode *inode, mlfs_lblk_t key, hash_value_t* value,
   int ret = 0;
   hash_key_t k = MAKEKEY(inode, key);
   hash_key_t r = RANGE_KEY(inode->inum, key);
-
-  force = true;
 
   *index = 0;
   // Two-level lookup
@@ -176,7 +176,7 @@ create:
     for (int c = 0; c < len; ) {
       int offset = ((lb + c) & RANGE_BITS);
       int aligned = offset == 0;
-      if (len >= (RANGE_SIZE / 2) && aligned) {
+      if (unlikely(len >= (RANGE_SIZE / 2) && aligned)) {
         /*
          * It's possible part of the range has already been allocated.
          * Say if someone requests (RANGE_SIZE + 1) blocks, but the blocks from
@@ -186,14 +186,18 @@ create:
         hash_value_t index;
         hash_value_t value;
         hash_value_t size;
-        int pre = lookup_hash(inode, lb + c, &value, &size, &index, force);
-        if (pre) {
-          c += size;
-          if (!set) {
-            map->m_pblk = value + index;
-            set = true;
+        // Doesn't make sense to do this on the first pass though, we just
+        // looked it up.
+        if (c > 0) {
+          int pre = lookup_hash(inode, lb + c, &value, &size, &index, force);
+          if (pre) {
+            c += size;
+            if (!set) {
+              map->m_pblk = value + index;
+              set = true;
+            }
+            continue;
           }
-          continue;
         }
 
         uint32_t nblocks = min(len - c, RANGE_SIZE);
@@ -240,7 +244,7 @@ create:
       }
     }
 
-    mlfs_hash_persist();
+    //mlfs_hash_persist();
   } else {
     ret = 0;
     map->m_pblk = 0;
@@ -263,7 +267,8 @@ int mlfs_hash_truncate(handle_t *handle, struct inode *inode,
     }
   }
 
-  return mlfs_hash_persist();
+  //return mlfs_hash_persist();
+  return 0;
 }
 
 double check_load_factor(struct inode *inode) {
@@ -278,7 +283,7 @@ int mlfs_hash_persist() {
   pthread_mutex_lock(ghash->metalock);
   pthread_mutex_lock(gsuper->metalock);
 
-  sync_all_buffers(g_bdev[g_root_dev]);
+  //sync_all_buffers(g_bdev[g_root_dev]);
   nvram_flush(ghash);
   nvram_flush(gsuper);
 

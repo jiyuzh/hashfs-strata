@@ -39,11 +39,20 @@ extern "C" {
 
 // For the big hash table, mapping (inode, lblk) -> single block
 typedef struct  _hash_entry {
-  mlfs_fsblk_t key;
-  mlfs_fsblk_t value;
-  mlfs_fsblk_t size;
-  mlfs_fsblk_t _unused;
+  uint64_t     key;
+  uint16_t     size;
+  uint16_t     value_hi16;
+  uint32_t     value_low32;
 } hash_entry_t;
+
+#define HASH_ENTRY_VAL(x) (((uint64_t)x.value_hi16 << 32) | ((uint64_t)x.value_low32))
+#define HASH_ENTRY_IS_TOMBSTONE(x) (x.value_hi16 == ~0 && x.value_low32 == ~0)
+#define HASH_ENTRY_IS_EMPTY(x) (x.value_hi16 == 0 && x.value_low32 == 0)
+#define HASH_ENTRY_IS_VALID(x) (!HASH_ENTRY_IS_EMPTY(x) && !HASH_ENTRY_IS_TOMBSTONE(x))
+
+#define HASH_ENTRY_SET_TOMBSTONE(x) do {x.value_hi16 = ~0; x.value_low32 = ~0;} while(0)
+#define HASH_ENTRY_SET_EMPTY(x) do {x.value_hi16 = 0; x.value_low32 = 0;} while(0)
+#define HASH_ENTRY_SET_VAL(x,v) do {x.value_hi16 = (uint16_t)(v >> 32); x.value_low32 = (uint32_t)(v);} while(0)
 
 #define KB(x)   ((size_t) (x) << 10)
 #define MB(x)   ((size_t) (x) << 20)
@@ -216,8 +225,9 @@ nvram_read(GHashTable *ht, mlfs_fsblk_t offset, hash_entry_t **buf, bool force) 
    */
 #ifdef HASHCACHE
   // if NULL, then it got invalidated or never loaded.
-  if (!force) {
-    if (ht->cache[offset]) {
+  if (likely(!force)) {
+    /*
+    if (likely(ht->cache[offset])) {
       //memcpy((uint8_t*)buf, (uint8_t*)ht->cache[offset], g_block_size_bytes);
       *buf = ht->cache[offset];
       return;
@@ -226,6 +236,9 @@ nvram_read(GHashTable *ht, mlfs_fsblk_t offset, hash_entry_t **buf, bool force) 
       assert(ht->cache[offset]);
       *buf = ht->cache[offset];
     }
+    */
+    *buf = ht->cache[offset];
+    return;
   }
 #endif
 
@@ -302,7 +315,7 @@ nvram_read_metadata(GHashTable *hash, mlfs_fsblk_t location) {
 
 #ifdef HASHCACHE
 /**
- * Assumes sync_all_buffers has been called!
+ * Assumes aync_all_buffers has been called!
  * Assumes lock is held!
  */
 static inline void nvram_flush(GHashTable *ht) {
@@ -315,6 +328,9 @@ static inline void nvram_flush(GHashTable *ht) {
      */
     bh_cache_node *tmp = ht->bh_cache_head;
     bh_t *buf = ht->bh_cache[tmp->cache_index];
+
+    write_dirty_buffer(buf);
+
     buf->b_use_bitmap = 0;
     ht->bh_cache[tmp->cache_index] = NULL;
     ht->bh_cache_head = tmp->next;

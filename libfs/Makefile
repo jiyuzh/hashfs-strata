@@ -54,12 +54,12 @@ MLFS_FLAGS += -DKLIB_HASH
 #MLFS_FLAGS += -DUSE_SSD
 #MLFS_FLAGS += -DUSE_HDD
 #MLFS_FLAGS += -DMLFS_LOG
-MLFS_FLAGS += -DHASHTABLE
+#MLFS_FLAGS += -DHASHTABLE
 
 #DEBUG = -g3 -O0
 #DEBUG = -O0 -gdwarf-2 -g3 -rdynamic
 #DEBUG = -g -Ofast
-DEBUG = -O3
+DEBUG = -g -O3
 
 ########
 #  vpath and compile function for each file
@@ -81,6 +81,7 @@ checkdirs: $(BUILD_DIR)
 	@mkdir -p bin
 
 clean:
+	@$(CC) -v
 	@rm -rf $(BUILD_DIR)
 	make -C src/storage/spdk/ clean
 

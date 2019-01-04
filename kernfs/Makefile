@@ -32,13 +32,12 @@ CUCKOO_DIR := $(abspath $(LIBFS_DIR)/lib/libcuckoo)
 GLIB_DIR :=
 JEMALLOC_DIR := $(abspath $(LIBFS_DIR)/lib/jemalloc-4.5.0)
 STORAGE_ENGINE := $(wildcard $(LIBFS_DIR)/build/storage/*.o)
-C_LIBCUCKOO_DIR := $(abspath $(LIBFS_DIR)/lib/libcuckoo-c/src)
+#C_LIBCUCKOO_DIR := $(abspath $(LIBFS_DIR)/lib/libcuckoo-c/src)
 #LIBSPDK := $(abspath $(LIBFS_DIR)/src/storage/spdk/libspdk.so)
 
 INCLUDES  := $(addprefix -I, . $(LIBSPDK_DIR) $(NVML_DIR)/include $(CUCKOO_DIR) $(CUCKOO_FILTER_DIR)/src $(GLIB_DIR)/ $(GLIB_DIR)/glib $(C_LIBCUCKOO_DIR))
 
 LD_FLAGS = -lpthread -lm -L$(NVML_DIR)/nondebug/ -lpmem -lrt \
-	-L$(abspath $(C_LIBCUCKOO_DIR)/.libs) -lcuckoo_hash -Wl,-rpath=$(abspath $(C_LIBCUCKOO_DIR)/.libs) \
 	-Wl,-rpath=$(abspath $(GLIB_DIR)/glib/.libs) -L$(abspath $(GLIB_DIR)/glib/.libs) #-lglib-2.0
 
 
@@ -54,16 +53,16 @@ MLFS_FLAGS += -DFCONCURRENT
 #MLFS_FLAGS += -DUSE_HDD
 #MLFS_FLAGS += -DMIGRATION
 #MLFS_FLAGS += -DEXPERIMENTAL
-MLFS_FLAGS += -DHASHTABLE
+#MLFS_FLAGS += -DHASHTABLE
 
 #######
 # Optimization definitions
 #######
 MLFS_FLAGS += -DREUSE_PREVIOUS_PATH  # optimization for extent trees
 
-DEBUG = -g -O0
+#DEBUG = -g -O0
 #DEBUG = -g -Ofast
-#DEBUG = -g -O3
+DEBUG = -g -O3
 
 ########
 #  vpath and compile function for each file
