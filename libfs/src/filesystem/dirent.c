@@ -78,6 +78,7 @@ uint8_t *get_dirent_block(struct inode *dir_inode, offset_t offset)
 	addr_t block_no;
 	// Currently, assuming directory structures are stored in NVM.
 	uint8_t dev = g_root_dev;
+    uint64_t tsc_begin;
 
 	mlfs_assert(dir_inode->itype == T_DIR);
 	mlfs_assert(offset <= dir_inode->size + sizeof(struct mlfs_dirent));
@@ -101,7 +102,12 @@ uint8_t *get_dirent_block(struct inode *dir_inode, offset_t offset)
 		};
 
 		// get block address
+        if (enable_perf_stats)
+            tsc_begin = asm_rdtscp();
 		ret = bmap(dir_inode, &bmap_req);
+        if (enable_perf_stats)
+            g_perf_stats.dir_search_ext_tsc += asm_rdtscp() - tsc_begin;
+
 		mlfs_assert(ret == 0);
 
 		// requested directory block is not allocated in kernfs.

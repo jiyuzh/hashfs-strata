@@ -165,7 +165,9 @@ struct f_digest_worker_arg {
 
 void reset_kernfs_stats(void)
 {
-  storage_tsc = 0;
+#ifdef STORAGE_PERF
+    storage_tsc = 0;
+#endif
 	memset(&g_perf_stats, 0, sizeof(kernfs_stats_t));
 }
 void show_kernfs_stats(void)
