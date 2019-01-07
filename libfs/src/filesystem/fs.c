@@ -80,7 +80,7 @@ void show_libfs_stats(const char *title)
 {
 	printf("\n");
 	printf("----------------------- %s libfs statistics\n", title);
-	// For some reason, floating point operation causes segfault in filebench 
+	// For some reason, floating point operation causes segfault in filebench
 	// worker thread.
 
     //printf("wait on digest    : %.3f ms\n", tsc_to_ms(g_perf_stats.digest_wait_tsc));
@@ -104,19 +104,20 @@ void show_libfs_stats(const char *title)
 	printf("  loghdr writes (tsc)  : %lu \n", g_perf_stats.loghdr_write_tsc);
 	printf("read data blocks (tsc) : %lu \n", g_perf_stats.read_data_tsc);
 	printf("directory search (tsc) : %lu \n", g_perf_stats.dir_search_tsc);
-	printf("  bmap ext tree (tsc) : %lu \n", g_perf_stats.dir_search_ext_tsc);
-    printf("path storage (tsc): %lu\n", g_perf_stats.path_storage_tsc);
+	printf("  bmap ext tree (tsc)  : %lu \n", g_perf_stats.dir_search_ext_tsc);
+  printf("path storage (tsc)     : %lu \n", g_perf_stats.path_storage_tsc);
 	printf("temp_debug (tsc)       : %lu \n", g_perf_stats.tmp_tsc);
 #ifdef STORAGE_PERF
 	printf("--------------------------------------\n");
-    printf("search lsm tree : l0 : read_data = 1 : %f : %f\n",
-            (double)g_perf_stats.l0_search_tsc/g_perf_stats.tree_search_tsc,
-            (double)g_perf_stats.read_data_tsc/g_perf_stats.tree_search_tsc);
-    printf("directory search bmap ext/all : %f\n",
-            (double)g_perf_stats.dir_search_ext_tsc/g_perf_stats.dir_search_tsc);
-    printf("bmap storage/all : %f\n",
-            (double)g_perf_stats.path_storage_tsc/
-            (g_perf_stats.tree_search_tsc + g_perf_stats.dir_search_tsc));
+  printf("search lsm tree : l0 : read_data = 1 : %f : %f\n",
+          (double)g_perf_stats.l0_search_tsc/g_perf_stats.tree_search_tsc,
+          (double)g_perf_stats.read_data_tsc/g_perf_stats.tree_search_tsc);
+  printf("directory search bmap ext/all : %f\n",
+          (double)g_perf_stats.dir_search_ext_tsc/g_perf_stats.dir_search_tsc);
+  printf("bmap storage/all : %f\n",
+          (double)g_perf_stats.path_storage_tsc/
+          (g_perf_stats.tree_search_tsc + g_perf_stats.dir_search_tsc));
+  printf("storage: %lu\n", storage_tsc);
 #endif
 #if 0
 	printf("wait on digest (nr)   : %lu \n", g_perf_stats.digest_wait_nr);
@@ -147,7 +148,7 @@ void shutdown_fs(void)
 
 	enable_perf_stats = _enable_perf_stats;
 
-	if (enable_perf_stats) 
+	if (enable_perf_stats)
 		show_libfs_stats("shutdown fs");
 
 	/*
@@ -489,8 +490,8 @@ int sync_inode_ext_tree(uint8_t dev, struct inode *inode)
 #ifdef HASHTABLE
     handle_t handle = {.dev = g_root_dev};
     struct mlfs_map_blocks map;
-    size_t nblocks = inode->size >> g_block_size_shift;
-    if (nblocks << g_block_size_shift < inode->size) {
+    size_t nblocks = ((size_t)inode->size) >> g_block_size_shift;
+    if ((nblocks << g_block_size_shift) < ((size_t)inode->size)) {
       nblocks++;
     }
 
@@ -499,8 +500,17 @@ int sync_inode_ext_tree(uint8_t dev, struct inode *inode)
 
     //int err = mlfs_hash_get_blocks(&handle, inode, &map, 0, true);
     //if (err < 0);
-
-    mlfs_assert(nblocks == mlfs_hash_get_blocks(&handle, inode, &map, 0, true));
+    size_t total = 0;
+    int ret = 1;
+    while (ret > 0 && total < nblocks) {
+      ret = mlfs_hash_get_blocks(&handle, inode, &map, 0, true);
+      mlfs_assert(ret >= 0);
+      map.m_lblk += ret;
+      map.m_len -= ret;
+      total += ret;
+    }
+    fprintf(stderr, "%llu == %llu\n", total, nblocks);
+    //mlfs_assert(total == nblocks);
 
 #else
 		memmove(inode->l1.addrs, dinode.l1_addrs, sizeof(addr_t) * (NDIRECT + 1));
@@ -1228,12 +1238,15 @@ do_io_unaligned:
 	if (enable_perf_stats)
 		start_tsc = asm_rdtscp();
 
+  printf("------\n");
 	// Patch data from log (L0) if up-to-date blocks are in the update log.
 	// This is required when partial updates are in the update log.
 	list_for_each_entry_safe(bh, _bh, &io_list_log, b_io_list) {
+    printf("%p\n", bh);
 		bh_submit_read_sync_IO(bh);
 		bh_release(bh);
 	}
+  printf("------\n");
 
 	if (enable_perf_stats) {
 		g_perf_stats.read_data_tsc += (asm_rdtscp() - start_tsc);

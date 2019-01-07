@@ -89,6 +89,7 @@ int mlfs_readahead(uint8_t dev, addr_t blockno, uint32_t io_size);
 
 int submit_bh(int is_write, struct buffer_head *bh);
 int write_dirty_buffer(struct buffer_head *bh);
+int sync_dirty_buffer(struct buffer_head *bh);
 int bh_submit_read(struct buffer_head *bh);
 void brelse(struct buffer_head *bh);
 void wait_on_buffer(struct buffer_head *bh, int isread);
@@ -106,7 +107,7 @@ static inline struct buffer_head *bh_find(block_key_t key)
 	pthread_rwlock_rdlock(bcache_rwlock);
 
 	HASH_FIND(hash_handle, bh_hash[0], &key, sizeof(block_key_t), bh);
-	
+
 	pthread_rwlock_unlock(bcache_rwlock);
 
 	return bh;

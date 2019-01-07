@@ -178,11 +178,11 @@ void show_kernfs_stats(void)
 	printf("\n");
 	//printf("CPU clock : %.3f MHz\n", clock_speed_mhz);
 	printf("----------------------- kernfs statistics\n");
-	printf("digest       : %lu\n",
+	printf("digest          : %lu\n",
 			g_perf_stats.digest_time_tsc);
-	printf("- replay     : %lu\n",
+	printf("- replay        : %lu\n",
 			g_perf_stats.replay_time_tsc);
-	printf("- apply      : %lu\n",
+	printf("- apply         : %lu\n",
 			g_perf_stats.apply_time_tsc);
 	printf("-- inode digest : %lu\n",
 			g_perf_stats.digest_inode_tsc);
@@ -194,13 +194,13 @@ void show_kernfs_stats(void)
 	printf("n_digest_skipped: %lu (%.1f %%)\n",
 			g_perf_stats.n_digest_skipped,
 			((float)g_perf_stats.n_digest_skipped * 100.0) / (float)n_digest);
-	printf("path search    : %lu\n",
+	printf("path search     : %lu\n",
 			g_perf_stats.path_search_tsc);
-	printf("total migrated : %lu MB\n", g_perf_stats.total_migrated_mb);
+	printf("total migrated  : %lu MB\n", g_perf_stats.total_migrated_mb);
 	printf("--------------------------------------\n");
 #ifdef STORAGE_PERF
-    printf("storage_dax: %lu\n", storage_tsc);
-    printf("path storage: %lu\n", g_perf_stats.path_storage_tsc);
+  printf("storage_dax     : %lu\n", storage_tsc);
+  printf("path storage    : %lu\n", g_perf_stats.path_storage_tsc);
     /*
      * *------------------------------*
      * |   digest (D)                 |
@@ -224,11 +224,11 @@ void show_kernfs_stats(void)
      * ------------------------------------
      * metrics:
      * path/digest: (E+SE)/(D+E+SE+SD) == $1/$4
-     * path/digest(without storage): E/D == ($1-$2)/($4-($1-$2)-$3)
+     * path/digest(without storage): E/(D+E) == ($1-$2)/($4-$3)
      */
     double E = (g_perf_stats.path_search_tsc - g_perf_stats.path_storage_tsc);
     printf("path/digest(without storage) is %f\n",
-            E/(g_perf_stats.digest_time_tsc - E - storage_tsc));
+            E/(g_perf_stats.digest_time_tsc - storage_tsc));
 #endif
     printf("path/digest is %f\n", (double)g_perf_stats.path_search_tsc/g_perf_stats.digest_time_tsc);
     printf("");
@@ -2069,6 +2069,10 @@ void init_fs(void)
 	balloc_init(g_hdd_dev, sb[g_hdd_dev]);
 #endif
 
+#ifdef HASHTABLE
+  init_hash(sb[g_root_dev]);
+#endif
+
   reset_kernfs_stats();
 
 	inode_version_table =
@@ -2078,9 +2082,9 @@ void init_fs(void)
 
 	if (perf_profile) {
 		enable_perf_stats = 1;
-    }
-	else
+  } else {
 		enable_perf_stats = 0;
+  }
 
 	mlfs_debug("%s\n", "LIBFS is initialized");
 
@@ -2095,10 +2099,6 @@ void init_fs(void)
 
 #ifdef FCONCURRENT
 	file_digest_thread_pool = thpool_init(8);
-#endif
-
-#ifdef HASHTABLE
-    init_hash(sb[g_root_dev]);
 #endif
 
 	wait_for_event();

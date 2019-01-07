@@ -2759,7 +2759,12 @@ int mlfs_ext_get_blocks(handle_t *handle, struct inode *inode,
 		tsc_start = asm_rdtscp();
 #endif
 #ifdef HASHTABLE
-  return mlfs_hash_get_blocks(handle, inode, map, flags, false);
+  int hash_ret = mlfs_hash_get_blocks(handle, inode, map, flags, false);
+#ifdef KERNFS
+	if (enable_perf_stats)
+		g_perf_stats.path_search_tsc += (asm_rdtscp() - tsc_start);
+#endif
+  return hash_ret;
 #endif
 
 	/*mutex_lock(&inode->truncate_mutex);*/

@@ -1,0 +1,918 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	5.8	//
+ADDR	inode_hash.h	30;"	d
+AGGRESSIVE_TEST_	extents.h	23;"	d
+BBLOCK	fs.h	599;"	d
+BLOOM_HEAD	shared.h	317;"	d
+BMAP_GET	shared.h	189;"	d
+BMAP_GET_NO_ALLOC	shared.h	188;"	d
+BMAP_SET	shared.h	190;"	d
+BPB	fs.h	596;"	d
+BUF_IDX	ghash.h	78;"	d
+BUF_SIZE	ghash.h	77;"	d
+BUG_ON	extents.c	39;"	d	file:
+CHECK_BINSEARCH__	extents.h	29;"	d
+CONFIG_EXTENT_TEST	extents.c	29;"	d	file:
+CONSOLE	file.h	28;"	d
+CONTINUITY_BITS	inode_hash.h	20;"	d
+DATA	balloc.h	/^	DATA,	\/\/ allow in-place updates$/;"	e	enum:alloc_type
+DATA_LOG	balloc.h	/^	DATA_LOG, \/\/ allow blocks from GCed segment$/;"	e	enum:alloc_type
+DIRBITMAP_SIZE	shared.h	192;"	d
+DI_INVALID	shared.h	180;"	d
+DI_VALID	shared.h	181;"	d
+EFSBADCRC	extents.h	40;"	d
+EFSCORRUPTED	extents.h	39;"	d
+ET_CHECKSUM_MAGIC	extents.h	61;"	d
+EXT_EXTENT_SIZE	extents.h	220;"	d
+EXT_FIRST_EXTENT	extents.h	223;"	d
+EXT_FIRST_INDEX	extents.h	226;"	d
+EXT_HAS_FREE_INDEX	extents.h	229;"	d
+EXT_INDEX_SIZE	extents.h	221;"	d
+EXT_INIT_MAX_LEN	extents.h	217;"	d
+EXT_LAST_EXTENT	extents.h	231;"	d
+EXT_LAST_INDEX	extents.h	233;"	d
+EXT_MAX_BLOCKS	extents.c	303;"	d	file:
+EXT_MAX_EXTENT	extents.h	235;"	d
+EXT_MAX_INDEX	extents.h	237;"	d
+EXT_UNWRITTEN_MAX_LEN	extents.h	218;"	d
+FALSE	ghash.c	113;"	d	file:
+FD_DIR	file.h	/^typedef enum { FD_NONE, FD_PIPE, FD_INODE, FD_DIR } fd_type_t;$/;"	e	enum:__anon1
+FD_INODE	file.h	/^typedef enum { FD_NONE, FD_PIPE, FD_INODE, FD_DIR } fd_type_t;$/;"	e	enum:__anon1
+FD_NONE	file.h	/^typedef enum { FD_NONE, FD_PIPE, FD_INODE, FD_DIR } fd_type_t;$/;"	e	enum:__anon1
+FD_PIPE	file.h	/^typedef enum { FD_NONE, FD_PIPE, FD_INODE, FD_DIR } fd_type_t;$/;"	e	enum:__anon1
+GCompareDataFunc	gtypes.h	/^typedef gint            (*GCompareDataFunc)     (gconstpointer  a,$/;"	t
+GCompareFunc	gtypes.h	/^typedef gint            (*GCompareFunc)         (gconstpointer  a,$/;"	t
+GDestroyNotify	gtypes.h	/^typedef void            (*GDestroyNotify)       (gpointer       data);$/;"	t
+GET_INUM	inode_hash.h	43;"	d
+GET_LBLK	inode_hash.h	44;"	d
+GEqualFunc	gtypes.h	/^typedef gboolean        (*GEqualFunc)           (gconstpointer  a,$/;"	t
+GFreeFunc	gtypes.h	/^typedef void            (*GFreeFunc)            (gpointer       data);$/;"	t
+GFunc	gtypes.h	/^typedef void            (*GFunc)                (gpointer       data,$/;"	t
+GHFunc	gtypes.h	/^typedef void            (*GHFunc)               (gpointer       key,$/;"	t
+GHRFunc	ghash.h	/^typedef int (*GHRFunc) (void* key,$/;"	t
+GHashFunc	gtypes.h	/^typedef guint           (*GHashFunc)            (gconstpointer  key);$/;"	t
+GHashTable	ghash.h	/^} GHashTable;$/;"	t	typeref:struct:_GHashTable
+GINT16_FROM_BE	gtypes.h	341;"	d
+GINT16_FROM_LE	gtypes.h	339;"	d
+GINT32_FROM_BE	gtypes.h	345;"	d
+GINT32_FROM_LE	gtypes.h	343;"	d
+GINT64_FROM_BE	gtypes.h	350;"	d
+GINT64_FROM_LE	gtypes.h	348;"	d
+GINT_FROM_BE	gtypes.h	360;"	d
+GINT_FROM_LE	gtypes.h	358;"	d
+GKEY2PTR	inode_hash.h	45;"	d
+GLIB_VAR	gtypes.h	517;"	d
+GLIB_VAR	gtypes.h	521;"	d
+GLIB_VAR	gtypes.h	523;"	d
+GLIB_VAR	gtypes.h	526;"	d
+GLIB_VAR	gtypes.h	530;"	d
+GLONG_FROM_BE	gtypes.h	355;"	d
+GLONG_FROM_LE	gtypes.h	353;"	d
+GPOINTER_TO_UINT	inode_hash.c	7;"	d	file:
+GPTR2KEY	inode_hash.h	46;"	d
+GPTR2VAL	inode_hash.h	38;"	d
+GSIZE_FROM_BE	gtypes.h	365;"	d
+GSIZE_FROM_LE	gtypes.h	363;"	d
+GSSIZE_FROM_BE	gtypes.h	366;"	d
+GSSIZE_FROM_LE	gtypes.h	364;"	d
+GTimeVal	gtypes.h	/^typedef struct _GTimeVal                GTimeVal;$/;"	t	typeref:struct:_GTimeVal
+GTranslateFunc	gtypes.h	/^typedef const gchar *   (*GTranslateFunc)       (const gchar   *str,$/;"	t
+GUINT16_FROM_BE	gtypes.h	342;"	d
+GUINT16_FROM_LE	gtypes.h	340;"	d
+GUINT16_SWAP_BE_PDP	gtypes.h	328;"	d
+GUINT16_SWAP_LE_BE	gtypes.h	236;"	d
+GUINT16_SWAP_LE_BE	gtypes.h	276;"	d
+GUINT16_SWAP_LE_BE	gtypes.h	305;"	d
+GUINT16_SWAP_LE_BE	gtypes.h	313;"	d
+GUINT16_SWAP_LE_BE	gtypes.h	322;"	d
+GUINT16_SWAP_LE_BE_CONSTANT	gtypes.h	145;"	d
+GUINT16_SWAP_LE_BE_IA32	gtypes.h	183;"	d
+GUINT16_SWAP_LE_BE_IA64	gtypes.h	244;"	d
+GUINT16_SWAP_LE_PDP	gtypes.h	327;"	d
+GUINT32_FROM_BE	gtypes.h	346;"	d
+GUINT32_FROM_LE	gtypes.h	344;"	d
+GUINT32_SWAP_BE_PDP	gtypes.h	332;"	d
+GUINT32_SWAP_LE_BE	gtypes.h	178;"	d
+GUINT32_SWAP_LE_BE	gtypes.h	238;"	d
+GUINT32_SWAP_LE_BE	gtypes.h	278;"	d
+GUINT32_SWAP_LE_BE	gtypes.h	307;"	d
+GUINT32_SWAP_LE_BE	gtypes.h	315;"	d
+GUINT32_SWAP_LE_BE	gtypes.h	323;"	d
+GUINT32_SWAP_LE_BE_CONSTANT	gtypes.h	149;"	d
+GUINT32_SWAP_LE_BE_IA32	gtypes.h	197;"	d
+GUINT32_SWAP_LE_BE_IA32	gtypes.h	211;"	d
+GUINT32_SWAP_LE_BE_IA64	gtypes.h	255;"	d
+GUINT32_SWAP_LE_BE_X86_64	gtypes.h	284;"	d
+GUINT32_SWAP_LE_PDP	gtypes.h	329;"	d
+GUINT64_FROM_BE	gtypes.h	351;"	d
+GUINT64_FROM_LE	gtypes.h	349;"	d
+GUINT64_SWAP_LE_BE	gtypes.h	179;"	d
+GUINT64_SWAP_LE_BE	gtypes.h	241;"	d
+GUINT64_SWAP_LE_BE	gtypes.h	281;"	d
+GUINT64_SWAP_LE_BE	gtypes.h	310;"	d
+GUINT64_SWAP_LE_BE	gtypes.h	318;"	d
+GUINT64_SWAP_LE_BE	gtypes.h	324;"	d
+GUINT64_SWAP_LE_BE_CONSTANT	gtypes.h	155;"	d
+GUINT64_SWAP_LE_BE_IA32	gtypes.h	222;"	d
+GUINT64_SWAP_LE_BE_IA64	gtypes.h	266;"	d
+GUINT64_SWAP_LE_BE_X86_64	gtypes.h	294;"	d
+GUINT_FROM_BE	gtypes.h	361;"	d
+GUINT_FROM_LE	gtypes.h	359;"	d
+GULONG_FROM_BE	gtypes.h	356;"	d
+GULONG_FROM_LE	gtypes.h	354;"	d
+GVAL2PTR	inode_hash.h	37;"	d
+G_BIG_ENDIAN	gtypes.h	139;"	d
+G_DISABLE_ASSERT	ghash.c	36;"	d	file:
+G_E	gtypes.h	125;"	d
+G_LITTLE_ENDIAN	gtypes.h	138;"	d
+G_LN10	gtypes.h	127;"	d
+G_LN2	gtypes.h	126;"	d
+G_MAXINT16	gtypes.h	60;"	d
+G_MAXINT32	gtypes.h	64;"	d
+G_MAXINT64	gtypes.h	68;"	d
+G_MAXINT8	gtypes.h	56;"	d
+G_MAXUINT16	gtypes.h	61;"	d
+G_MAXUINT32	gtypes.h	65;"	d
+G_MAXUINT64	gtypes.h	69;"	d
+G_MAXUINT8	gtypes.h	57;"	d
+G_MININT16	gtypes.h	59;"	d
+G_MININT32	gtypes.h	63;"	d
+G_MININT64	gtypes.h	67;"	d
+G_MININT8	gtypes.h	55;"	d
+G_PDP_ENDIAN	gtypes.h	140;"	d
+G_PI	gtypes.h	128;"	d
+G_PI_2	gtypes.h	129;"	d
+G_PI_4	gtypes.h	130;"	d
+G_SQRT2	gtypes.h	131;"	d
+HASHCACHE	ghash.h	83;"	d
+HASH_ENTRY_VAL	ghash.h	48;"	d
+HASH_IS_REAL	ghash.h	63;"	d
+HASH_IS_TOMBSTONE	ghash.h	62;"	d
+HASH_IS_UNUSED	ghash.h	61;"	d
+HASH_TABLE_MIN_SHIFT	ghash.c	110;"	d	file:
+IBITS	inode_hash.h	33;"	d
+INDEX	inode_hash.h	29;"	d
+INITIALIZE	balloc.c	357;"	d	file:
+IPB	fs.h	584;"	d
+IS_EMPTY	ghash.h	68;"	d
+IS_TOMBSTONE	ghash.h	67;"	d
+IS_VALID	ghash.h	69;"	d
+I_BUSY	shared.h	173;"	d
+I_DELETING	shared.h	176;"	d
+I_DIRTY	shared.h	175;"	d
+I_RESYNC	shared.h	177;"	d
+I_VALID	shared.h	174;"	d
+KB	ghash.h	50;"	d
+LH_COMMIT_MAGIC	shared.h	90;"	d
+LRU_ENTRY_SIZE	slru.h	23;"	d
+LRU_HEADS	shared.h	316;"	d
+L_TYPE_DIR_ADD	shared.h	82;"	d
+L_TYPE_DIR_DEL	shared.h	84;"	d
+L_TYPE_DIR_RENAME	shared.h	83;"	d
+L_TYPE_FILE	shared.h	87;"	d
+L_TYPE_INODE_CREATE	shared.h	85;"	d
+L_TYPE_INODE_UPDATE	shared.h	86;"	d
+L_TYPE_UNLINK	shared.h	88;"	d
+MAKEKEY	inode_hash.h	42;"	d
+MAKEVAL	inode_hash.h	35;"	d
+MASK_32	inode_hash.h	41;"	d
+MAX	ghash.c	38;"	d	file:
+MAX_CMD_BUF	shared.h	308;"	d
+MAX_CONTIGUOUS_BLOCKS	inode_hash.h	21;"	d
+MAX_SOCK_BUF	shared.h	307;"	d
+MB	ghash.h	51;"	d
+MLFS_ERROR_INODE	extents.c	34;"	d	file:
+MLFS_EXTENT_TAIL_OFFSET	extents.h	99;"	d
+MLFS_EXT_DATA_VALID1	extents.c	26;"	d	file:
+MLFS_EXT_DATA_VALID2	extents.c	27;"	d	file:
+MLFS_EXT_MAGIC	extents.h	97;"	d
+MLFS_EXT_MARK_UNWRIT1	extents.c	23;"	d	file:
+MLFS_EXT_MARK_UNWRIT2	extents.c	24;"	d	file:
+MLFS_EXT_MAY_ZEROOUT	extents.c	20;"	d	file:
+MLFS_EX_FORCE_CACHE	extents.h	173;"	d
+MLFS_EX_NOCACHE	extents.h	172;"	d
+MLFS_FREE_BLOCKS_FORGET	extents.h	179;"	d
+MLFS_FREE_BLOCKS_METADATA	extents.h	178;"	d
+MLFS_FREE_BLOCKS_NOFREE_FIRST_CLUSTER	extents.h	182;"	d
+MLFS_FREE_BLOCKS_NOFREE_LAST_CLUSTER	extents.h	183;"	d
+MLFS_FREE_BLOCKS_NO_QUOT_UPDATE	extents.h	181;"	d
+MLFS_FREE_BLOCKS_VALIDATED	extents.h	180;"	d
+MLFS_GET_BLOCKS_CONVERT_UNWRITTEN	extents.h	152;"	d
+MLFS_GET_BLOCKS_CREATE	extents.h	136;"	d
+MLFS_GET_BLOCKS_CREATE_DATA	extents.h	137;"	d
+MLFS_GET_BLOCKS_CREATE_DATA_LOG	extents.h	138;"	d
+MLFS_GET_BLOCKS_CREATE_META	extents.h	139;"	d
+MLFS_GET_BLOCKS_CREATE_UNWRIT_EXT	extents.h	142;"	d
+MLFS_GET_BLOCKS_CREATE_ZERO	extents.h	155;"	d
+MLFS_GET_BLOCKS_METADATA_NOFAIL	extents.h	150;"	d
+MLFS_GET_BLOCKS_PRE_IO	extents.h	147;"	d
+MLFS_GET_BLOCKS_UNWRIT_EXT	extents.h	141;"	d
+MLFS_GET_BLOCKS_ZERO	extents.h	154;"	d
+MLFS_MAP_GC_ALLOC	extents.h	187;"	d
+MLFS_MAP_LOG_ALLOC	extents.h	186;"	d
+MLFS_MAP_NEW	extents.h	185;"	d
+MLFS_MB_USE_RESERVED	extents.h	161;"	d
+NELEM	extents.h	372;"	d
+NO_INITIALIZE	balloc.c	356;"	d	file:
+NV_IDX	ghash.h	79;"	d
+RANGENODE_PER_PAGE	shared.h	15;"	d
+RANGE_BITS	ghash.h	55;"	d
+RANGE_KEY	ghash.h	57;"	d
+RANGE_MASK	ghash.h	56;"	d
+RANGE_SIZE	ghash.h	54;"	d
+REMAINING_BITS	inode_hash.h	22;"	d
+SBIT	inode_hash.h	32;"	d
+SHARED_PARTITION	balloc.c	6;"	d	file:
+SPECIAL	inode_hash.h	28;"	d
+SRV_SOCK_PATH	shared.h	305;"	d
+TOMBSTONE_HASH_VALUE	ghash.h	60;"	d
+TO_64	inode_hash.h	24;"	d
+TREE	balloc.h	/^	TREE = 1,$/;"	e	enum:alloc_type
+TRUE	ghash.c	112;"	d	file:
+T_DEV	shared.h	185;"	d
+T_DIR	shared.h	183;"	d
+T_FILE	shared.h	184;"	d
+UNUSED_HASH_VALUE	ghash.h	59;"	d
+VEMPTY	ghash.h	66;"	d
+VTOMB	ghash.h	65;"	d
+_BALLOC_H_	balloc.h	2;"	d
+_EXTENTS_BH_H	extents_bh.h	2;"	d
+_FILE_H_	file.h	2;"	d
+_FS_H_	fs.h	2;"	d
+_GHashTable	ghash.h	/^typedef struct _GHashTable {$/;"	s
+_GLIB_CHECKED_ADD_U32	gtypes.h	/^static inline gboolean _GLIB_CHECKED_ADD_U32 (guint32 *dest, guint32 a, guint32 b) {$/;"	f
+_GLIB_CHECKED_ADD_U64	gtypes.h	/^static inline gboolean _GLIB_CHECKED_ADD_U64 (guint64 *dest, guint64 a, guint64 b) {$/;"	f
+_GLIB_CHECKED_MUL_U32	gtypes.h	/^static inline gboolean _GLIB_CHECKED_MUL_U32 (guint32 *dest, guint32 a, guint32 b) {$/;"	f
+_GLIB_CHECKED_MUL_U64	gtypes.h	/^static inline gboolean _GLIB_CHECKED_MUL_U64 (guint64 *dest, guint64 a, guint64 b) {$/;"	f
+_GLIB_HAVE_BUILTIN_OVERFLOW_CHECKS	gtypes.h	380;"	d
+_GLIB_HAVE_BUILTIN_OVERFLOW_CHECKS	gtypes.h	382;"	d
+_GNU_SOURCE	balloc.c	1;"	d	file:
+_GTimeVal	gtypes.h	/^struct _GTimeVal$/;"	s
+_INODE_H_	shared.h	2;"	d
+_NEW_BTREE_H	extents.h	2;"	d
+_SLRU_H_	slru.h	2;"	d
+_STAT_H_	stat.h	2;"	d
+__G_HASH_MOD_H__	ghash.h	26;"	d
+__G_TYPES_MOD_H__	gtypes.h	26;"	d
+__INODE_HASH__	inode_hash.h	2;"	d
+__bitmap_bits_clr	balloc.c	/^static inline void __bitmap_bits_clr(struct block_bitmap *b_bitmap,$/;"	f	file:
+__buffer_search	extents.c	/^static struct inode *__buffer_search(struct rb_root *root,$/;"	f	file:
+__mlfs_ext_dirty	extents.c	/^int __mlfs_ext_dirty(const char *where, unsigned int line,$/;"	f
+_bh_cache_node	ghash.h	/^typedef struct _bh_cache_node {$/;"	s
+_dinode	shared.h	/^	struct dinode *_dinode;$/;"	m	struct:inode	typeref:struct:inode::dinode
+_hash_entry	ghash.h	/^typedef struct  _hash_entry {$/;"	s
+_min	fs.c	22;"	d	file:
+add_to_log	fs.c	/^int add_to_log(struct inode *ip, uint8_t *data, offset_t off, uint32_t size)$/;"	f
+add_to_read_cache	fs.c	/^static struct fcache_block *add_to_read_cache(struct inode *inode,$/;"	f	file:
+addrs	shared.h	/^		addr_t addrs[NDIRECT+1];    \/\/ Data block addresses$/;"	m	union:inode::__anon2
+addrs	shared.h	/^		addr_t addrs[NDIRECT+1];    \/\/ Data block addresses$/;"	m	union:inode::__anon3
+addrs	shared.h	/^		addr_t addrs[NDIRECT+1];    \/\/ Data block addresses$/;"	m	union:inode::__anon4
+alloc_data_count	shared.h	/^	unsigned long   alloc_data_count;$/;"	m	struct:free_list
+alloc_data_pages	shared.h	/^	unsigned long   alloc_data_pages;$/;"	m	struct:free_list
+alloc_log_count	shared.h	/^	unsigned long   alloc_log_count;$/;"	m	struct:free_list
+alloc_log_pages	shared.h	/^	unsigned long   alloc_log_pages;$/;"	m	struct:free_list
+alloc_tex	inode_hash.c	/^static pthread_mutex_t alloc_tex = PTHREAD_MUTEX_INITIALIZER;$/;"	v	file:
+alloc_type	balloc.h	/^enum alloc_type {$/;"	g
+atime	shared.h	/^	mlfs_time_t atime;$/;"	m	struct:dinode
+atime	shared.h	/^	mlfs_time_t atime;$/;"	m	struct:inode
+atime	stat.h	/^	mlfs_time_t atime;$/;"	m	struct:fs_stat
+b_dev	balloc.h	/^	struct block_device *b_dev;$/;"	m	struct:block_bitmap	typeref:struct:block_bitmap::block_device
+balloc_init	balloc.c	/^void balloc_init(uint8_t dev, struct super_block *_sb)$/;"	f
+base	shared.h	/^	uint8_t *base;$/;"	m	struct:io_vec
+bcache_search_nr	fs.h	/^	uint32_t bcache_search_nr;$/;"	m	struct:mlfs_libfs_stats
+bcache_search_tsc	fs.h	/^	uint64_t bcache_search_tsc;$/;"	m	struct:mlfs_libfs_stats
+bh_cache	ghash.h	/^  bh_t **bh_cache;$/;"	m	struct:_GHashTable
+bh_cache_head	ghash.h	/^  bh_cache_node *bh_cache_head;$/;"	m	struct:_GHashTable
+bh_cache_node	ghash.h	/^} bh_cache_node;$/;"	t	typeref:struct:_bh_cache_node
+bitmap	balloc.h	/^	uint8_t *bitmap;$/;"	m	struct:block_bitmap
+bitmap_bits_clr	balloc.c	/^void bitmap_bits_clr(struct block_bitmap *b_bitmap, mlfs_fsblk_t bit)$/;"	f
+bitmap_bits_free	balloc.c	/^void bitmap_bits_free(struct block_bitmap *b_bitmap,$/;"	f
+bitmap_bits_set	balloc.c	/^void bitmap_bits_set(struct block_bitmap *b_bitmap, mlfs_fsblk_t bit)$/;"	f
+bitmap_bits_set_range	balloc.c	/^void bitmap_bits_set_range(struct block_bitmap *b_bitmap, mlfs_fsblk_t bit,$/;"	f
+bitmap_block	balloc.h	/^	mlfs_fsblk_t bitmap_block;$/;"	m	struct:block_bitmap
+bitmap_count	balloc.h	/^	int bitmap_count;$/;"	m	struct:block_bitmap
+bitmap_desc	balloc.h	/^	struct block_bitmap_desc *bitmap_desc;$/;"	m	struct:block_bitmap	typeref:struct:block_bitmap::block_bitmap_desc
+bitmap_find_bits_clr	balloc.c	/^int bitmap_find_bits_clr(struct block_bitmap *b_bitmap, mlfs_fsblk_t bit,$/;"	f
+bitmap_find_next_clr	balloc.c	/^int bitmap_find_next_clr(struct block_bitmap *b_bitmap, mlfs_fsblk_t start_bit,$/;"	f
+bitmap_find_next_contiguous_clr	balloc.c	/^int bitmap_find_next_contiguous_clr(struct block_bitmap *b_bitmap,$/;"	f
+bitmap_is_bit_clr	balloc.c	/^static inline bool bitmap_is_bit_clr(uint8_t *bitmap, mlfs_fsblk_t bit)$/;"	f	file:
+bitmap_is_bit_set	balloc.c	/^static inline bool bitmap_is_bit_set(uint8_t *bitmap, mlfs_fsblk_t bit)$/;"	f	file:
+blk_count	fs.h	/^	uint32_t blk_count;$/;"	m	struct:bmap_request
+blk_count_found	fs.h	/^	uint32_t blk_count_found;$/;"	m	struct:bmap_request
+block	shared.h	/^	addr_t block;$/;"	m	struct:block_val
+block	shared.h	/^	addr_t block;$/;"	m	struct:lru_key
+block_bitmap	balloc.h	/^struct block_bitmap {$/;"	s
+block_bitmap_desc	balloc.h	/^struct block_bitmap_desc {$/;"	s
+block_bitmap_mutex	extents.c	/^pthread_mutex_t block_bitmap_mutex;$/;"	v
+block_end	shared.h	/^	unsigned long   block_end;$/;"	m	struct:free_list
+block_free_tree	shared.h	/^	struct rb_root  block_free_tree;$/;"	m	struct:free_list	typeref:struct:free_list::rb_root
+block_key_t	shared.h	/^typedef lru_val_t block_key_t;$/;"	t
+block_no	fs.h	/^	addr_t block_no;$/;"	m	struct:bmap_request
+block_start	shared.h	/^	unsigned long   block_start;$/;"	m	struct:free_list
+block_val	shared.h	/^typedef struct block_val {$/;"	s
+block_val_t	shared.h	/^} block_val_t;$/;"	t	typeref:struct:block_val
+blocks	ghash.c	/^uint64_t blocks;$/;"	v
+blocks	shared.h	/^	addr_t blocks[g_max_blocks_per_operation];$/;"	m	struct:logheader
+blocks_of_bitmap	balloc.c	/^int blocks_of_bitmap(uint8_t dev, mlfs_fsblk_t nrblocks)$/;"	f
+bmap	fs.c	/^int bmap(struct inode *ip, struct bmap_request *bmap_req)$/;"	f
+bmap_req_t	fs.h	/^} bmap_req_t;$/;"	t	typeref:struct:bmap_request
+bmap_request	fs.h	/^typedef struct bmap_request {$/;"	s
+bmap_start	shared.h	/^	addr_t bmap_start;		\/\/ Block number of first free map block$/;"	m	struct:disk_superblock
+cache	ghash.h	/^  hash_entry_t **cache;$/;"	m	struct:_GHashTable
+cache_copy_list	fs.h	/^struct cache_copy_list {$/;"	s
+cache_index	ghash.h	/^  uint64_t cache_index;$/;"	m	struct:_bh_cache_node
+cache_init	fs.c	/^static void cache_init(void)$/;"	f	file:
+cached_data	fs.h	/^	uint8_t *cached_data;$/;"	m	struct:cache_copy_list
+check_load_factor	inode_hash.c	/^double check_load_factor(struct inode *inode) {$/;"	f
+check_log_invalidation	fs.c	/^int check_log_invalidation(struct fcache_block *_fcache_block)$/;"	f
+chunk_hash_meta_loc	inode_hash.c	/^mlfs_fsblk_t chunk_hash_meta_loc = 0;$/;"	v
+clock_speed_mhz	fs.c	/^float clock_speed_mhz;$/;"	v
+core_val_t	shared.h	/^typedef block_key_t core_val_t;$/;"	t
+crc32Table	mlfs_crc32.c	/^static const uint32_t crc32Table[256] = {$/;"	v	file:
+crc32_tab	mlfs_crc32.c	/^const uint32_t crc32_tab[] = {$/;"	v
+ctime	shared.h	/^	mlfs_time_t ctime;$/;"	m	struct:dinode
+ctime	shared.h	/^	mlfs_time_t ctime;$/;"	m	struct:inode
+ctime	stat.h	/^	mlfs_time_t ctime;$/;"	m	struct:fs_stat
+data	fs.h	/^	uint8_t *data;$/;"	m	struct:fcache_block
+data	ghash.h	/^  mlfs_fsblk_t     data;$/;"	m	struct:_GHashTable
+data	shared.h	/^	offset_t data[g_max_blocks_per_operation];$/;"	m	struct:logheader
+data_start	ghash.h	/^  mlfs_fsblk_t data_start;$/;"	m	struct:dhashtable_meta
+datablock_start	shared.h	/^	addr_t datablock_start;	\/\/ Block number of first data block$/;"	m	struct:disk_superblock
+dbg_check_dir	dirent.c	/^void dbg_check_dir(void *data)$/;"	f
+dbg_check_inode	dirent.c	/^void dbg_check_inode(void *data)$/;"	f
+dbg_dump_dir	dirent.c	/^void dbg_dump_dir(uint8_t dev, uint32_t inum)$/;"	f
+dbg_dump_inode	dirent.c	/^void dbg_dump_inode(uint8_t dev, uint32_t inum)$/;"	f
+dbg_path_walk	dirent.c	/^void dbg_path_walk(char *path)$/;"	f
+dbg_save_dentry	dirent.c	/^void dbg_save_dentry(struct mlfs_dirent *de, struct inode *dir_inode)$/;"	f
+dbg_save_inode	dirent.c	/^void dbg_save_inode(struct inode *inode, char *name)$/;"	f
+dcache_alloc_add	dirent.c	/^static inline struct dirent_block *dcache_alloc_add(uint8_t dev, uint32_t inum, $/;"	f	file:
+dcache_del	dirent.c	/^static inline int dcache_del(uint8_t dev, struct dirent_block *dir_block)$/;"	f	file:
+dcache_find	dirent.c	/^static inline struct dirent_block *dcache_find(uint8_t dev, $/;"	f	file:
+dcache_key	fs.h	/^typedef struct dcache_key {$/;"	s
+dcache_key_t	fs.h	/^} dcache_key_t;$/;"	t	typeref:struct:dcache_key
+dcache_rwlock	fs.c	/^pthread_rwlock_t *dcache_rwlock;$/;"	v
+de_cache	shared.h	/^	struct dirent_data *de_cache;$/;"	m	struct:inode	typeref:struct:inode::dirent_data
+de_cache_alloc_add	fs.h	/^static inline struct inode *de_cache_alloc_add(struct inode *dir_inode, $/;"	f
+de_cache_del	fs.h	/^static inline int de_cache_del(struct inode *dir_inode, const char *_name)$/;"	f
+de_cache_find	fs.h	/^static inline struct inode *de_cache_find(struct inode *dir_inode, $/;"	f
+de_cache_spinlock	shared.h	/^	pthread_spinlock_t de_cache_spinlock;$/;"	m	struct:inode
+debug_init	fs.c	/^void debug_init(void)$/;"	f
+dev	extents.h	/^	uint8_t dev;$/;"	m	struct:mlfs_extent_handle
+dev	fs.h	/^	uint8_t dev;$/;"	m	struct:bmap_request
+dev	shared.h	/^	uint8_t dev;		\/\/ Device id for multi-level storage$/;"	m	struct:dinode
+dev	shared.h	/^	uint8_t dev;        \/\/ Device id for multi-level storage$/;"	m	struct:inode
+dev	shared.h	/^	uint8_t dev;$/;"	m	struct:lru_key
+dev	stat.h	/^	int dev;		\/\/ File system's disk device id$/;"	m	struct:fs_stat
+dhashtable_meta	ghash.h	/^struct dhashtable_meta {$/;"	s
+digest_wait_nr	fs.h	/^	uint32_t digest_wait_nr;$/;"	m	struct:mlfs_libfs_stats
+digest_wait_tsc	fs.h	/^	uint64_t digest_wait_tsc;$/;"	m	struct:mlfs_libfs_stats
+dinode	shared.h	/^struct dinode {$/;"	s
+dinode_flags	shared.h	/^	uint8_t dinode_flags; \/\/flag to see whether dinode is loaded or not$/;"	m	struct:inode
+dir_add_entry	dirent.c	/^int dir_add_entry(struct inode *dir_inode, char *name, uint32_t inum)$/;"	f
+dir_change_entry	dirent.c	/^int dir_change_entry(struct inode *dir_inode, char *oldname, char *newname)$/;"	f
+dir_check_entry_fast	dirent.c	/^int dir_check_entry_fast(struct inode *dir_inode) $/;"	f
+dir_get_entry	dirent.c	/^int dir_get_entry(struct inode *dir_inode, struct linux_dirent *buf, offset_t off)$/;"	f
+dir_lookup	dirent.c	/^struct inode* dir_lookup(struct inode *dir_inode, char *name, offset_t *poff)$/;"	f
+dir_remove_entry	dirent.c	/^int dir_remove_entry(struct inode *dir_inode, char *name, uint32_t inum)$/;"	f
+dir_search_nr_hit	fs.h	/^	uint32_t dir_search_nr_hit;$/;"	m	struct:mlfs_libfs_stats
+dir_search_nr_miss	fs.h	/^	uint32_t dir_search_nr_miss;$/;"	m	struct:mlfs_libfs_stats
+dir_search_nr_notfound	fs.h	/^	uint32_t dir_search_nr_notfound;$/;"	m	struct:mlfs_libfs_stats
+dir_search_tsc	fs.h	/^	uint64_t dir_search_tsc;$/;"	m	struct:mlfs_libfs_stats
+dirent_array	fs.h	/^	uint8_t dirent_array[g_block_size_bytes];$/;"	m	struct:dirent_block
+dirent_block	fs.h	/^struct dirent_block {$/;"	s
+dirent_data	fs.h	/^struct dirent_data {$/;"	s
+dirent_hash	fs.c	/^struct dirent_block *dirent_hash[g_n_devices + 1];$/;"	v	typeref:struct:dirent_block
+dirty	balloc.h	/^	int dirty:1;$/;"	m	struct:block_bitmap_desc
+disk_sb	fs.c	/^struct disk_superblock *disk_sb;$/;"	v	typeref:struct:disk_superblock
+disk_superblock	shared.h	/^struct disk_superblock {$/;"	s
+dlookup_alloc_add	fs.h	/^static inline struct inode *dlookup_alloc_add(uint8_t dev, $/;"	f
+dlookup_data	fs.h	/^struct dlookup_data {$/;"	s
+dlookup_del	fs.h	/^static inline int dlookup_del(uint8_t dev, const char *path)$/;"	f
+dlookup_find	fs.h	/^static inline struct inode *dlookup_find(uint8_t dev, const char *path)$/;"	f
+dlookup_hash	fs.c	/^struct dlookup_data *dlookup_hash[g_n_devices + 1];$/;"	v	typeref:struct:dlookup_data
+dlookup_rwlock	fs.c	/^pthread_rwlock_t *dlookup_rwlock;$/;"	v
+do_aligned_read	fs.c	/^int do_aligned_read(struct inode *ip, uint8_t *dst, offset_t off, uint32_t io_size)$/;"	f
+do_unaligned_read	fs.c	/^int do_unaligned_read(struct inode *ip, uint8_t *dst, offset_t off, uint32_t io_size)$/;"	f
+dst_buffer	fs.h	/^	uint8_t *dst_buffer;$/;"	m	struct:cache_copy_list
+ee_block	extents.h	/^	uint32_t ee_block;    \/* first logical block extent covers *\/$/;"	m	struct:mlfs_extent
+ee_len	extents.h	/^	uint16_t ee_len;      \/* number of blocks covered by extent *\/$/;"	m	struct:mlfs_extent
+ee_start_hi	extents.h	/^	uint16_t ee_start_hi; \/* high 16 bits of physical block *\/$/;"	m	struct:mlfs_extent
+ee_start_lo	extents.h	/^	uint32_t ee_start_lo; \/* low 32 bits of physical block *\/$/;"	m	struct:mlfs_extent
+eh_depth	extents.h	/^	uint16_t eh_depth;      \/* has tree real underlying blocks? *\/$/;"	m	struct:mlfs_extent_header
+eh_entries	extents.h	/^	uint16_t eh_entries;    \/* number of valid entries *\/$/;"	m	struct:mlfs_extent_header
+eh_generation	extents.h	/^	uint32_t eh_generation; \/* generation of the tree *\/$/;"	m	struct:mlfs_extent_header
+eh_magic	extents.h	/^	uint16_t eh_magic;      \/* probably will support different formats *\/$/;"	m	struct:mlfs_extent_header
+eh_max	extents.h	/^	uint16_t eh_max;	\/* capacity of store in entries *\/$/;"	m	struct:mlfs_extent_header
+ei_block	extents.h	/^	uint32_t ei_block;   \/* index covers logical blocks from 'block' *\/$/;"	m	struct:mlfs_extent_idx
+ei_leaf_hi	extents.h	/^	uint16_t ei_leaf_hi; \/* high 16 bits of physical block *\/$/;"	m	struct:mlfs_extent_idx
+ei_leaf_lo	extents.h	/^	uint32_t ei_leaf_lo; \/* pointer to the physical block of the next level.$/;"	m	struct:mlfs_extent_idx
+ei_unused	extents.h	/^	uint16_t ei_unused;$/;"	m	struct:mlfs_extent_idx
+enable_perf_stats	fs.c	/^uint8_t enable_perf_stats;$/;"	v
+erase_hash	inode_hash.c	/^int erase_hash(struct inode *inode, mlfs_lblk_t key) {$/;"	f
+et_checksum	extents.h	/^	uint32_t et_checksum; \/* crc32c(uuid+inum+extent_block) *\/$/;"	m	struct:mlfs_extent_tail
+evict_read_cache	fs.c	/^static void evict_read_cache(struct inode *inode, uint32_t n_entries_to_evict)$/;"	f	file:
+ext_block_hdr	extents.h	/^static inline struct mlfs_extent_header *ext_block_hdr(struct buffer_head *bh)$/;"	f
+ext_depth	extents.h	/^static inline uint16_t ext_depth(handle_t *handle, struct inode *inode)$/;"	f
+ext_inode_hdr	extents.h	/^static inline struct mlfs_extent_header *ext_inode_hdr(handle_t *handle,$/;"	f
+ext_used	shared.h	/^	uint32_t ext_used;$/;"	m	struct:logheader_meta
+fcache	shared.h	/^	struct fcache_block *fcache;$/;"	m	struct:inode	typeref:struct:inode::fcache_block
+fcache_alloc_add	fs.h	/^static inline struct fcache_block *fcache_alloc_add(struct inode *inode, $/;"	f
+fcache_block	fs.h	/^struct fcache_block {$/;"	s
+fcache_del	fs.h	/^static inline int fcache_del(struct inode *inode, $/;"	f
+fcache_del_all	fs.h	/^static inline int fcache_del_all(struct inode *inode)$/;"	f
+fcache_find	fs.h	/^static inline struct fcache_block *fcache_find(struct inode *inode, offset_t key)$/;"	f
+fcache_hash	shared.h	/^	khash_t(fcache) *fcache_hash;$/;"	m	struct:inode
+fcache_key	fs.h	/^typedef struct fcache_key {$/;"	s
+fcache_key_t	fs.h	/^} fcache_key_t;$/;"	t	typeref:struct:fcache_key
+fcache_rwlock	shared.h	/^	pthread_rwlock_t fcache_rwlock;$/;"	m	struct:inode
+fd	file.h	/^	int fd;$/;"	m	struct:file
+fd_type_t	file.h	/^typedef enum { FD_NONE, FD_PIPE, FD_INODE, FD_DIR } fd_type_t;$/;"	t	typeref:enum:__anon1
+file	file.h	/^struct file {$/;"	s
+find_mlfs_extent_tail	extents.h	/^find_mlfs_extent_tail(struct mlfs_extent_header *eh)$/;"	f
+first_node	shared.h	/^	struct mlfs_range_node *first_node;$/;"	m	struct:free_list	typeref:struct:free_list::mlfs_range_node
+flags	shared.h	/^	uint8_t flags;      \/\/ I_BUSY, I_VALID$/;"	m	struct:inode
+free_all_bitmap	balloc.c	/^void free_all_bitmap(struct block_bitmap *b_bitmap)$/;"	f
+free_data_count	shared.h	/^	unsigned long   free_data_count;$/;"	m	struct:free_list
+free_list	shared.h	/^struct free_list {$/;"	s
+free_lists	shared.h	/^	struct free_list *free_lists;$/;"	m	struct:super_block	typeref:struct:super_block::free_list
+free_log_count	shared.h	/^	unsigned long   free_log_count;$/;"	m	struct:free_list
+freed_data_pages	shared.h	/^	unsigned long   freed_data_pages;$/;"	m	struct:free_list
+freed_log_pages	shared.h	/^	unsigned long   freed_log_pages;$/;"	m	struct:free_list
+fs_bforget	extents_bh.c	/^void fs_bforget(struct buffer_head *bh)$/;"	f
+fs_bh_alloc	extents_bh.c	/^static int fs_bh_alloc = 0;$/;"	v	file:
+fs_bh_freed	extents_bh.c	/^static int fs_bh_freed = 0;$/;"	v	file:
+fs_bh_showstat	extents_bh.c	/^void fs_bh_showstat(void)$/;"	f
+fs_bread	extents_bh.c	/^struct buffer_head *fs_bread(uint8_t dev, mlfs_fsblk_t block,$/;"	f
+fs_brelse	extents_bh.c	/^void fs_brelse(struct buffer_head *bh)$/;"	f
+fs_get_bh	extents_bh.c	/^struct buffer_head *fs_get_bh(uint8_t dev, mlfs_fsblk_t block,$/;"	f
+fs_mark_buffer_dirty	extents_bh.c	/^void fs_mark_buffer_dirty(struct buffer_head *bh)$/;"	f
+fs_start_trans	extents_bh.c	/^void fs_start_trans(struct super_block *sb) { UNUSED(sb); }$/;"	f
+fs_stat	stat.h	/^struct fs_stat {$/;"	s
+fs_stop_trans	extents_bh.c	/^void fs_stop_trans(struct super_block *sb) { UNUSED(sb); }$/;"	f
+g_direct_hash	ghash.c	/^uint32_t g_direct_hash (const void* v) {$/;"	f
+g_fcache_head	fs.c	/^struct lru g_fcache_head;$/;"	v	typeref:struct:lru
+g_fcache_rwlock	fs.c	/^pthread_rwlock_t *g_fcache_rwlock;$/;"	v
+g_fd_table	file.c	/^struct open_file_table g_fd_table;$/;"	v	typeref:struct:open_file_table
+g_hash_table_add	ghash.c	/^g_hash_table_add (GHashTable *hash_table,$/;"	f
+g_hash_table_contains	ghash.c	/^g_hash_table_contains (GHashTable    *hash_table,$/;"	f
+g_hash_table_destroy	ghash.c	/^g_hash_table_destroy (GHashTable *hash_table)$/;"	f
+g_hash_table_find	ghash.c	/^g_hash_table_find (GHashTable *hash_table,$/;"	f
+g_hash_table_find_closest_shift	ghash.c	/^g_hash_table_find_closest_shift (int n) {$/;"	f	file:
+g_hash_table_insert	ghash.c	/^g_hash_table_insert (GHashTable     *hash_table,$/;"	f
+g_hash_table_insert_internal	ghash.c	/^g_hash_table_insert_internal (GHashTable     *hash_table,$/;"	f	file:
+g_hash_table_insert_node	ghash.c	/^g_hash_table_insert_node (GHashTable    *hash_table,$/;"	f	file:
+g_hash_table_lookup	ghash.c	/^void g_hash_table_lookup(GHashTable *hash_table, mlfs_fsblk_t key,$/;"	f
+g_hash_table_lookup_node	ghash.c	/^g_hash_table_lookup_node (GHashTable    *hash_table,$/;"	f	file:
+g_hash_table_maybe_resize	ghash.c	/^g_hash_table_maybe_resize (GHashTable *hash_table) {$/;"	f	file:
+g_hash_table_new	ghash.c	/^g_hash_table_new (GHashFunc    hash_func,$/;"	f
+g_hash_table_remove	ghash.c	/^g_hash_table_remove (GHashTable    *hash_table,$/;"	f
+g_hash_table_remove_internal	ghash.c	/^g_hash_table_remove_internal (GHashTable    *hash_table,$/;"	f	file:
+g_hash_table_remove_node	ghash.c	/^static void g_hash_table_remove_node (GHashTable  *hash_table,$/;"	f	file:
+g_hash_table_replace	ghash.c	/^g_hash_table_replace (GHashTable *hash_table,$/;"	f
+g_hash_table_set_shift	ghash.c	/^g_hash_table_set_shift (GHashTable *hash_table, int shift) {$/;"	f	file:
+g_hash_table_set_shift_from_size	ghash.c	/^g_hash_table_set_shift_from_size (GHashTable *hash_table, int size) {$/;"	f	file:
+g_hash_table_size	ghash.c	/^uint32_t g_hash_table_size (GHashTable *hash_table) {$/;"	f
+g_hdd_dev	fs.c	/^uint8_t g_hdd_dev = 0;$/;"	v
+g_htonl	gtypes.h	372;"	d
+g_htons	gtypes.h	373;"	d
+g_log_dev	fs.c	/^uint8_t g_log_dev = 0;$/;"	v
+g_ntohl	gtypes.h	370;"	d
+g_ntohs	gtypes.h	371;"	d
+g_perf_stats	fs.c	/^libfs_stat_t g_perf_stats;$/;"	v
+g_size_checked_add	gtypes.h	397;"	d
+g_size_checked_add	gtypes.h	402;"	d
+g_size_checked_mul	gtypes.h	399;"	d
+g_size_checked_mul	gtypes.h	404;"	d
+g_ssd_dev	fs.c	/^uint8_t g_ssd_dev = 0;$/;"	v
+g_uint64_checked_add	gtypes.h	391;"	d
+g_uint64_checked_mul	gtypes.h	393;"	d
+g_uint_checked_add	gtypes.h	386;"	d
+g_uint_checked_mul	gtypes.h	388;"	d
+gboolean	gtypes.h	/^typedef gint   gboolean;$/;"	t
+gchar	gtypes.h	/^typedef char   gchar;$/;"	t
+gconstpointer	gtypes.h	/^typedef const void *gconstpointer;$/;"	t
+gdouble	gtypes.h	/^typedef double  gdouble;$/;"	t
+get_block_size	extents.c	/^static inline uint32_t get_block_size(struct inode *inode)$/;"	f	file:
+get_default_free_blocks_flags	extents.c	/^static inline int get_default_free_blocks_flags(struct inode *inode)$/;"	f	file:
+get_dirent	dirent.c	/^struct mlfs_dirent *get_dirent(struct inode *dir_inode, offset_t offset)$/;"	f
+get_dirent_block	dirent.c	/^uint8_t *get_dirent_block(struct inode *dir_inode, offset_t offset)$/;"	f
+get_inode_block	fs.h	/^static inline addr_t get_inode_block(uint8_t dev, uint32_t inum)$/;"	f
+get_inode_sb	shared.h	/^static inline struct super_block* get_inode_sb(uint8_t dev, struct inode *inode)$/;"	f
+gfloat	gtypes.h	/^typedef float   gfloat;$/;"	t
+ghash	inode_hash.c	/^static GHashTable *ghash = NULL;$/;"	v	file:
+gint	gtypes.h	/^typedef int    gint;$/;"	t
+glong	gtypes.h	/^typedef long   glong;$/;"	t
+gpointer	gtypes.h	/^typedef void* gpointer;$/;"	t
+gshort	gtypes.h	/^typedef short  gshort;$/;"	t
+gsuper	inode_hash.c	/^static GHashTable *gsuper = NULL;$/;"	v	file:
+guchar	gtypes.h	/^typedef unsigned char   guchar;$/;"	t
+guint	gtypes.h	/^typedef unsigned int    guint;$/;"	t
+guint32	gtypes.h	/^typedef uint32_t        guint32;$/;"	t
+guint64	gtypes.h	/^typedef uint64_t        guint64;$/;"	t
+gulong	gtypes.h	/^typedef unsigned long   gulong;$/;"	t
+gushort	gtypes.h	/^typedef unsigned short  gushort;$/;"	t
+handle_t	extents.h	/^typedef struct mlfs_extent_handle handle_t;$/;"	t	typeref:struct:mlfs_extent_handle
+hash1	shared.h	/^static inline uint64_t hash1(block_key_t k)$/;"	f
+hash1i	shared.h	/^static inline uint64_t hash1i(uint64_t k)$/;"	f
+hash2	shared.h	/^static inline uint64_t hash2(block_key_t k)$/;"	f
+hash6432shift	ghash.c	/^uint32_t hash6432shift(uint64_t key)$/;"	f
+hash_entry_t	ghash.h	/^} hash_entry_t;$/;"	t	typeref:struct:_hash_entry
+hash_func	ghash.h	/^  GHashFunc        hash_func;$/;"	m	struct:_GHashTable
+hash_handle	fs.h	/^	mlfs_hash_t hash_handle;$/;"	m	struct:dirent_block
+hash_handle	fs.h	/^	mlfs_hash_t hash_handle;$/;"	m	struct:fcache_block
+hash_handle	shared.h	/^	mlfs_hash_t hash_handle;$/;"	m	struct:inode
+hash_key_t	inode_hash.h	/^typedef uint64_t hash_key_t;$/;"	t
+hash_value_t	inode_hash.h	/^typedef mlfs_fsblk_t hash_value_t;$/;"	t
+hdr_blkno	shared.h	/^	addr_t hdr_blkno;$/;"	m	struct:logheader_meta
+hh	fs.h	/^	mlfs_hash_t hh;$/;"	m	struct:dirent_data
+hh	fs.h	/^	mlfs_hash_t hh;$/;"	m	struct:dlookup_data
+hh	slru.h	/^	mlfs_hash_t hh;$/;"	m	struct:lru_node
+i_block	shared.h	/^		uint32_t i_block[15];$/;"	m	union:inode::__anon2
+i_block	shared.h	/^		uint32_t i_block[15];$/;"	m	union:inode::__anon3
+i_block	shared.h	/^		uint32_t i_block[15];$/;"	m	union:inode::__anon4
+i_csum	shared.h	/^	uint32_t i_csum;$/;"	m	struct:inode
+i_data	shared.h	/^		uint32_t i_data[15];$/;"	m	union:inode::__anon2
+i_data	shared.h	/^		uint32_t i_data[15];$/;"	m	union:inode::__anon3
+i_data	shared.h	/^		uint32_t i_data[15];$/;"	m	union:inode::__anon4
+i_data_dirty	shared.h	/^	uint8_t	 i_data_dirty;$/;"	m	struct:inode
+i_db	shared.h	/^	struct db_handle *i_db;$/;"	m	struct:inode	typeref:struct:inode::db_handle
+i_dirty_dblock	shared.h	/^	struct rb_root i_dirty_dblock; \/\/ rb root for dirty directory block.$/;"	m	struct:inode	typeref:struct:inode::rb_root
+i_generation	shared.h	/^	uint32_t i_generation;$/;"	m	struct:inode
+i_mutex	shared.h	/^	pthread_mutex_t i_mutex;$/;"	m	struct:inode
+i_rb_node	shared.h	/^	struct rb_node i_rb_node;      \/\/ rb node link for s_dirty_root.$/;"	m	struct:inode	typeref:struct:inode::rb_node
+i_ref	shared.h	/^	int i_ref;          \/\/ Reference count$/;"	m	struct:inode
+i_sb	shared.h	/^	struct super_block **i_sb;$/;"	m	struct:inode	typeref:struct:inode::super_block
+i_slru_head	shared.h	/^	struct list_head i_slru_head;$/;"	m	struct:inode	typeref:struct:inode::list_head
+i_uuid	shared.h	/^	uint8_t i_uuid[16]; \/\/ For compability only.$/;"	m	struct:inode
+i_writeback	shared.h	/^	int (*i_writeback)(struct inode *inode);$/;"	m	struct:inode
+ialloc	fs.c	/^struct inode* ialloc(uint8_t dev, uint32_t inum, struct dinode *dip)$/;"	f
+ialloc_nr	fs.h	/^	uint32_t ialloc_nr;$/;"	m	struct:mlfs_libfs_stats
+ialloc_tsc	fs.h	/^	uint64_t ialloc_tsc;$/;"	m	struct:mlfs_libfs_stats
+icache_add	fs.h	/^static inline struct inode *icache_add(struct inode *inode)$/;"	f
+icache_alloc_add	fs.h	/^static inline struct inode *icache_alloc_add(uint8_t dev, uint32_t inum)$/;"	f
+icache_del	fs.h	/^static inline int icache_del(struct inode *ip)$/;"	f
+icache_find	fs.h	/^static inline struct inode *icache_find(uint8_t dev, uint32_t inum)$/;"	f
+icache_rwlock	fs.c	/^pthread_rwlock_t *icache_rwlock;$/;"	v
+icreate	fs.c	/^struct inode* icreate(uint8_t dev, uint8_t type)$/;"	f
+id	shared.h	/^	uint32_t id;$/;"	m	struct:free_list
+id_map_meta_loc	inode_hash.c	/^mlfs_fsblk_t id_map_meta_loc = 0;$/;"	v
+idealloc	fs.c	/^int idealloc(struct inode *inode)$/;"	f
+idup	fs.c	/^struct inode* idup(struct inode *ip)$/;"	f
+iget	fs.c	/^struct inode* iget(uint8_t dev, uint32_t inum)$/;"	f
+ilock	fs.c	/^void ilock(struct inode *ip)$/;"	f
+in_range	extents.h	374;"	d
+init_fs	fs.c	/^void init_fs(void)$/;"	f
+init_hash	inode_hash.c	/^void init_hash(struct super_block *sb) {$/;"	f
+initialized	fs.c	/^uint8_t initialized = 0;$/;"	v
+ino	stat.h	/^	uint32_t ino;	\/\/ Inode number$/;"	m	struct:fs_stat
+inode	fs.h	/^	struct inode *inode;$/;"	m	struct:dirent_data	typeref:struct:dirent_data::inode
+inode	fs.h	/^	struct inode *inode;$/;"	m	struct:dlookup_data	typeref:struct:dlookup_data::inode
+inode	shared.h	/^struct inode {$/;"	s
+inode_cmp	extents.c	/^static int inode_cmp(struct rb_node *a, struct rb_node *b)$/;"	f	file:
+inode_hash	fs.c	/^struct inode *inode_hash[g_n_devices + 1];$/;"	v	typeref:struct:inode
+inode_no	shared.h	/^	uint32_t inode_no[g_max_blocks_per_operation];$/;"	m	struct:logheader
+inode_start	shared.h	/^	addr_t inode_start;		\/\/ Block number of first inode block$/;"	m	struct:disk_superblock
+inode_t	shared.h	/^typedef struct inode inode_t;$/;"	t	typeref:struct:inode
+insert_hash	inode_hash.c	/^int insert_hash(GHashTable *hash, struct inode *inode, hash_key_t key,$/;"	f
+inum	fs.h	/^	uint32_t inum;$/;"	m	struct:dcache_key
+inum	fs.h	/^	uint32_t inum;$/;"	m	struct:fcache_block
+inum	shared.h	/^	uint32_t inum;      \/\/ Inode number$/;"	m	struct:inode
+inum	shared.h	/^	uint32_t inum;$/;"	m	struct:lru_val
+inum	shared.h	/^  uint32_t inum;$/;"	m	struct:mlfs_dirent
+inuse	shared.h	/^	uint16_t inuse;$/;"	m	struct:logheader
+invalidate	fs.h	/^	uint8_t invalidate;$/;"	m	struct:fcache_block
+invalidate_path	shared.h	/^	uint8_t invalidate_path;$/;"	m	struct:inode
+invalidate_rwlock	fs.c	/^pthread_rwlock_t *invalidate_rwlock;$/;"	v
+io_vec	shared.h	/^	io_vec_t io_vec[10];$/;"	m	struct:logheader_meta
+io_vec	shared.h	/^typedef struct io_vec {$/;"	s
+io_vec_t	shared.h	/^} io_vec_t;$/;"	t	typeref:struct:io_vec
+ip	file.h	/^	struct inode *ip;$/;"	m	struct:file	typeref:struct:file::inode
+iput	fs.c	/^void iput(struct inode *ip)$/;"	f
+is_data_cached	fs.h	/^	uint8_t is_data_cached;$/;"	m	struct:fcache_block
+is_hdr_allocated	shared.h	/^	uint8_t is_hdr_allocated;$/;"	m	struct:logheader_meta
+itrunc	fs.c	/^int itrunc(struct inode *ip, offset_t length)$/;"	f
+itype	shared.h	/^	uint8_t itype;		\/\/ File type$/;"	m	struct:dinode
+itype	shared.h	/^	uint8_t itype;      \/\/ File type$/;"	m	struct:inode
+iunlock	fs.c	/^void iunlock(struct inode *ip)$/;"	f
+iunlockput	fs.c	/^void iunlockput(struct inode *ip)$/;"	f
+iupdate	fs.c	/^void iupdate(struct inode *ip)$/;"	f
+key	fs.h	/^	dcache_key_t key; $/;"	m	struct:dirent_block
+key	fs.h	/^	offset_t key;$/;"	m	struct:fcache_block
+key	ghash.h	/^  uint64_t     key;$/;"	m	struct:_hash_entry
+key	shared.h	/^	block_key_t key;$/;"	m	struct:block_val
+key	slru.h	/^	lru_key_t key;$/;"	m	struct:lru_node
+key_equal_func	ghash.h	/^  GEqualFunc       key_equal_func;$/;"	m	struct:_GHashTable
+l	fs.h	/^	struct list_head l;	\/\/ entry for global list$/;"	m	struct:fcache_block	typeref:struct:fcache_block::list_head
+l	fs.h	/^	struct list_head l;$/;"	m	struct:cache_copy_list	typeref:struct:cache_copy_list::list_head
+l0_search_nr	fs.h	/^	uint32_t l0_search_nr;$/;"	m	struct:mlfs_libfs_stats
+l0_search_tsc	fs.h	/^	uint64_t l0_search_tsc;$/;"	m	struct:mlfs_libfs_stats
+l1	shared.h	/^	} l1;$/;"	m	struct:inode	typeref:union:inode::__anon2
+l1_addrs	shared.h	/^	addr_t l1_addrs[NDIRECT+1];	\/\/direct block addresses: 64 B$/;"	m	struct:dinode
+l2	shared.h	/^	} l2;$/;"	m	struct:inode	typeref:union:inode::__anon3
+l2_addrs	shared.h	/^	addr_t l2_addrs[NDIRECT+1];$/;"	m	struct:dinode
+l3	shared.h	/^	} l3;$/;"	m	struct:inode	typeref:union:inode::__anon4
+l3_addrs	shared.h	/^	addr_t l3_addrs[NDIRECT+1];$/;"	m	struct:dinode
+last_block_allocated	shared.h	/^	uint64_t last_block_allocated;$/;"	m	struct:super_block
+lblock	shared.h	/^	uint64_t lblock;$/;"	m	struct:lru_val
+length	shared.h	/^	uint32_t length[g_max_blocks_per_operation];$/;"	m	struct:logheader
+libfs_stat_t	fs.h	/^} libfs_stat_t;$/;"	t	typeref:struct:mlfs_libfs_stats
+link	shared.h	/^	struct list_head link;$/;"	m	struct:logheader_meta	typeref:struct:logheader_meta::list_head
+list	slru.h	/^	struct list_head list;$/;"	m	struct:lru_node	typeref:struct:lru_node::list_head
+lock	file.h	/^	pthread_spinlock_t lock;$/;"	m	struct:open_file_table
+locks	ghash.h	/^  pthread_rwlock_t *locks;$/;"	m	struct:_GHashTable
+locks_init	fs.c	/^static void locks_init(void)$/;"	f	file:
+log_addr	fs.h	/^	addr_t log_addr;		\/\/ block # of update log$/;"	m	struct:fcache_block
+log_addr	fs.h	/^	addr_t log_addr;$/;"	m	struct:dirent_block
+log_blocks	shared.h	/^	addr_t log_blocks;$/;"	m	struct:logheader_meta
+log_commit_nr	fs.h	/^	uint32_t log_commit_nr;$/;"	m	struct:mlfs_libfs_stats
+log_commit_tsc	fs.h	/^	uint64_t log_commit_tsc;$/;"	m	struct:mlfs_libfs_stats
+log_fd	fs.c	/^int log_fd = 0;$/;"	v
+log_start	shared.h	/^	addr_t log_start;		\/\/ Block number of first log block$/;"	m	struct:disk_superblock
+log_version	fs.h	/^	uint32_t log_version;$/;"	m	struct:dirent_block
+log_version	fs.h	/^	uint32_t log_version;$/;"	m	struct:fcache_block
+log_write_nr	fs.h	/^	uint32_t log_write_nr;$/;"	m	struct:mlfs_libfs_stats
+log_write_tsc	fs.h	/^	uint64_t log_write_tsc;$/;"	m	struct:mlfs_libfs_stats
+loghdr	shared.h	/^	struct logheader *loghdr;$/;"	m	struct:logheader_meta	typeref:struct:logheader_meta::logheader
+loghdr_ext	shared.h	/^	uint8_t loghdr_ext[2048];$/;"	m	struct:logheader_meta
+loghdr_meta_t	shared.h	/^} loghdr_meta_t;$/;"	t	typeref:struct:logheader_meta
+loghdr_t	shared.h	/^} loghdr_t;$/;"	t	typeref:struct:logheader
+loghdr_write_tsc	fs.h	/^	uint64_t loghdr_write_tsc;$/;"	m	struct:mlfs_libfs_stats
+logheader	shared.h	/^typedef struct logheader {$/;"	s
+logheader_meta	shared.h	/^typedef struct logheader_meta {$/;"	s
+lookup_hash	inode_hash.c	/^int lookup_hash(struct inode *inode, mlfs_lblk_t key, hash_value_t* value,$/;"	f
+lru	slru.h	/^struct lru {$/;"	s
+lru_hash	slru.c	/^lru_node_t *lru_hash;$/;"	v
+lru_head	slru.h	/^	struct list_head lru_head;$/;"	m	struct:lru	typeref:struct:lru::list_head
+lru_heads	fs.c	/^struct list_head *lru_heads;$/;"	v	typeref:struct:list_head
+lru_key	shared.h	/^typedef struct lru_key {$/;"	s
+lru_key_t	shared.h	/^} lru_key_t;$/;"	t	typeref:struct:lru_key
+lru_node	slru.h	/^typedef struct lru_node {$/;"	s
+lru_node_t	slru.h	/^} lru_node_t;$/;"	t	typeref:struct:lru_node
+lru_val	shared.h	/^typedef struct lru_val {$/;"	s
+lru_val_t	shared.h	/^} lru_val_t;$/;"	t	typeref:struct:lru_val
+m_flags	extents.h	/^	uint32_t m_flags;$/;"	m	struct:mlfs_map_blocks
+m_lblk	extents.h	/^	mlfs_lblk_t m_lblk;$/;"	m	struct:mlfs_map_blocks
+m_len	extents.h	/^	uint32_t m_len;$/;"	m	struct:mlfs_map_blocks
+m_pblk	extents.h	/^	mlfs_fsblk_t m_pblk;$/;"	m	struct:mlfs_map_blocks
+mask	ghash.h	/^  guint mask;$/;"	m	struct:dhashtable_meta
+mask	ghash.h	/^  unsigned        mask;$/;"	m	struct:_GHashTable
+metalock	ghash.h	/^  pthread_mutex_t *metalock;$/;"	m	struct:_GHashTable
+mlfs_alloc_block_free_lists	balloc.c	/^int mlfs_alloc_block_free_lists(struct super_block *sb)$/;"	f
+mlfs_alloc_blocknode	balloc.c	/^struct mlfs_range_node *mlfs_alloc_blocknode(struct super_block *sb)$/;"	f
+mlfs_alloc_blocks_in_free_list	balloc.c	/^static unsigned long mlfs_alloc_blocks_in_free_list(struct super_block *sb,$/;"	f	file:
+mlfs_alloc_inode_node	balloc.c	/^struct mlfs_range_node *mlfs_alloc_inode_node(struct super_block *sb)$/;"	f
+mlfs_alloc_range_node	balloc.c	/^static struct mlfs_range_node *mlfs_alloc_range_node(struct super_block *sb)$/;"	f	file:
+mlfs_build_blocknode_map	balloc.c	/^int mlfs_build_blocknode_map(struct super_block *sb,$/;"	f
+mlfs_can_extents_be_merged	extents.c	/^int mlfs_can_extents_be_merged(struct inode *inode, struct mlfs_extent *ex1,$/;"	f
+mlfs_count_free_blocks	balloc.c	/^unsigned long mlfs_count_free_blocks(struct super_block *sb)$/;"	f
+mlfs_crc32c	mlfs_crc32.c	/^mlfs_crc32c(uint32_t crc, const void *buf, size_t size)$/;"	f
+mlfs_delete_free_lists	balloc.c	/^void mlfs_delete_free_lists(struct super_block *sb)$/;"	f
+mlfs_dirent	shared.h	/^struct mlfs_dirent {$/;"	s
+mlfs_ext_alloc_blocks	extents.c	/^int mlfs_ext_alloc_blocks(handle_t *handle, struct inode *inode,$/;"	f
+mlfs_ext_binsearch	extents.c	/^static void mlfs_ext_binsearch(struct inode *inode, struct mlfs_ext_path *path,$/;"	f	file:
+mlfs_ext_binsearch_idx	extents.c	/^static void mlfs_ext_binsearch_idx(struct inode *inode,$/;"	f	file:
+mlfs_ext_block_csum	extents.c	/^static uint32_t mlfs_ext_block_csum(struct inode *inode,$/;"	f	file:
+mlfs_ext_check	extents.c	/^static int mlfs_ext_check(struct inode *inode, struct mlfs_extent_header *eh,$/;"	f	file:
+mlfs_ext_check_inode	extents.c	/^int mlfs_ext_check_inode(handle_t *handle, struct inode *inode)$/;"	f
+mlfs_ext_convert_to_initialized	extents.c	/^static int mlfs_ext_convert_to_initialized(handle_t *handle,$/;"	f	file:
+mlfs_ext_correct_indexes	extents.c	/^static int mlfs_ext_correct_indexes(handle_t *handle,$/;"	f	file:
+mlfs_ext_create_new_leaf	extents.c	/^static int mlfs_ext_create_new_leaf(handle_t *handle,$/;"	f	file:
+mlfs_ext_determine_hole	extents.c	/^static mlfs_lblk_t mlfs_ext_determine_hole(handle_t *handle, struct inode *inode,$/;"	f	file:
+mlfs_ext_dirty	extents.h	377;"	d
+mlfs_ext_drop_refs	extents.c	/^void mlfs_ext_drop_refs(struct mlfs_ext_path *path)$/;"	f
+mlfs_ext_find_goal	extents.c	/^static mlfs_fsblk_t mlfs_ext_find_goal(struct inode *inode,$/;"	f	file:
+mlfs_ext_get_actual_len	extents.h	/^static inline uint16_t mlfs_ext_get_actual_len(struct mlfs_extent *ext)$/;"	f
+mlfs_ext_get_blocks	extents.c	/^int mlfs_ext_get_blocks(handle_t *handle, struct inode *inode,$/;"	f
+mlfs_ext_grow_indepth	extents.c	/^static int mlfs_ext_grow_indepth(handle_t *handle,$/;"	f	file:
+mlfs_ext_init	extents.c	/^void mlfs_ext_init(struct super_block *sb) {$/;"	f
+mlfs_ext_insert_extent	extents.c	/^int mlfs_ext_insert_extent(handle_t *handle, struct inode *inode,$/;"	f
+mlfs_ext_insert_index	extents.c	/^static int mlfs_ext_insert_index(handle_t *handle, struct inode *inode,$/;"	f	file:
+mlfs_ext_is_unwritten	extents.h	/^static inline int mlfs_ext_is_unwritten(struct mlfs_extent *ext)$/;"	f
+mlfs_ext_lblock	extents.h	/^static inline mlfs_lblk_t mlfs_ext_lblock(struct mlfs_extent *ex)$/;"	f
+mlfs_ext_mark_initialized	extents.h	/^static inline void mlfs_ext_mark_initialized(struct mlfs_extent *ext)$/;"	f
+mlfs_ext_mark_unwritten	extents.h	/^static inline void mlfs_ext_mark_unwritten(struct mlfs_extent *ext)$/;"	f
+mlfs_ext_max_entries	extents.c	/^static int mlfs_ext_max_entries(handle_t *handle, struct inode *inode, int depth)$/;"	f	file:
+mlfs_ext_more_to_rm	extents.c	/^static int inline mlfs_ext_more_to_rm(struct mlfs_ext_path *path)$/;"	f	file:
+mlfs_ext_new_meta_block	extents.c	/^static mlfs_fsblk_t mlfs_ext_new_meta_block(handle_t *handle,$/;"	f	file:
+mlfs_ext_next_allocated_block	extents.c	/^mlfs_lblk_t mlfs_ext_next_allocated_block(struct mlfs_ext_path *path)$/;"	f
+mlfs_ext_next_leaf_block	extents.c	/^static mlfs_lblk_t mlfs_ext_next_leaf_block(struct mlfs_ext_path *path)$/;"	f	file:
+mlfs_ext_path	extents.h	/^struct mlfs_ext_path {$/;"	s
+mlfs_ext_pblock	extents.h	/^static inline mlfs_fsblk_t mlfs_ext_pblock(struct mlfs_extent *ex)$/;"	f
+mlfs_ext_remove_space	extents.c	/^int mlfs_ext_remove_space(handle_t *handle, struct inode *inode,$/;"	f
+mlfs_ext_rm_idx	extents.c	/^int mlfs_ext_rm_idx(handle_t *handle, struct inode *inode,$/;"	f
+mlfs_ext_rm_leaf	extents.c	/^static int mlfs_ext_rm_leaf(handle_t *handle, struct inode *inode,$/;"	f	file:
+mlfs_ext_search_left	extents.c	/^static int mlfs_ext_search_left(struct inode *inode, struct mlfs_ext_path *path,$/;"	f	file:
+mlfs_ext_search_right	extents.c	/^static int mlfs_ext_search_right(handle_t *handle, struct inode *inode,$/;"	f	file:
+mlfs_ext_set_lblock	extents.h	/^static inline void mlfs_ext_set_lblock(struct mlfs_extent *ex,$/;"	f
+mlfs_ext_set_pblock	extents.h	/^static inline void mlfs_ext_set_pblock(struct mlfs_extent *ex,$/;"	f
+mlfs_ext_show_leaf	extents.c	/^static void mlfs_ext_show_leaf(handle_t *handle, struct inode *inode,$/;"	f	file:
+mlfs_ext_show_leaf	extents.c	809;"	d	file:
+mlfs_ext_show_move	extents.c	/^static void mlfs_ext_show_move(handle_t *handle, struct inode *inode,$/;"	f	file:
+mlfs_ext_show_move	extents.c	810;"	d	file:
+mlfs_ext_show_path	extents.c	/^static void mlfs_ext_show_path(struct inode *inode, struct mlfs_ext_path *path)$/;"	f	file:
+mlfs_ext_space_block	extents.c	/^static inline int mlfs_ext_space_block(struct inode *inode, int check)$/;"	f	file:
+mlfs_ext_space_block_idx	extents.c	/^static inline int mlfs_ext_space_block_idx(struct inode *inode, int check)$/;"	f	file:
+mlfs_ext_space_root	extents.c	/^static inline int mlfs_ext_space_root(struct inode *inode, int check)$/;"	f	file:
+mlfs_ext_space_root_idx	extents.c	/^static inline int mlfs_ext_space_root_idx(struct inode *inode, int check)$/;"	f	file:
+mlfs_ext_split	extents.c	/^static int mlfs_ext_split(handle_t *handle, struct inode *inode,$/;"	f	file:
+mlfs_ext_store_pblock	extents.h	/^static inline void mlfs_ext_store_pblock(struct mlfs_extent *ex,$/;"	f
+mlfs_ext_tree_init	extents.c	/^int mlfs_ext_tree_init(handle_t *handle, struct inode *inode)$/;"	f
+mlfs_ext_truncate	extents.c	/^int mlfs_ext_truncate(handle_t *handle, struct inode *inode,$/;"	f
+mlfs_ext_try_to_merge	extents.c	/^static void mlfs_ext_try_to_merge(handle_t *handle,$/;"	f	file:
+mlfs_ext_try_to_merge_right	extents.c	/^static int mlfs_ext_try_to_merge_right(handle_t *handle, struct inode *inode,$/;"	f	file:
+mlfs_ext_try_to_merge_up	extents.c	/^static void mlfs_ext_try_to_merge_up(handle_t *handle,$/;"	f	file:
+mlfs_ext_zeroout	extents.c	/^static int mlfs_ext_zeroout(struct inode *inode, struct mlfs_extent *ex)$/;"	f	file:
+mlfs_extent	extents.h	/^struct mlfs_extent {$/;"	s
+mlfs_extent_block_csum_set	extents.c	/^static void mlfs_extent_block_csum_set(struct inode *inode,$/;"	f	file:
+mlfs_extent_handle	extents.h	/^struct mlfs_extent_handle {$/;"	s
+mlfs_extent_header	extents.h	/^struct mlfs_extent_header {$/;"	s
+mlfs_extent_idx	extents.h	/^struct mlfs_extent_idx {$/;"	s
+mlfs_extent_tail	extents.h	/^struct mlfs_extent_tail {$/;"	s
+mlfs_file_alloc	file.c	/^struct file* mlfs_file_alloc(void)$/;"	f
+mlfs_file_close	file.c	/^int mlfs_file_close(struct file *f)$/;"	f
+mlfs_file_dup	file.c	/^struct file* mlfs_file_dup(struct file *f)$/;"	f
+mlfs_file_init	file.c	/^void mlfs_file_init(void)$/;"	f
+mlfs_file_read	file.c	/^ssize_t mlfs_file_read(struct file *f, uint8_t *buf, size_t n)$/;"	f
+mlfs_file_read_offset	file.c	/^int mlfs_file_read_offset(struct file *f, uint8_t *buf, size_t n, offset_t off)$/;"	f
+mlfs_file_stat	file.c	/^int mlfs_file_stat(struct file *f, struct stat *st)$/;"	f
+mlfs_file_write	file.c	/^int mlfs_file_write(struct file *f, uint8_t *buf, size_t n)$/;"	f
+mlfs_find_extent	extents.c	/^struct mlfs_ext_path *mlfs_find_extent(handle_t *handle,$/;"	f
+mlfs_find_free_list	balloc.c	/^static int mlfs_find_free_list(struct super_block *sb,$/;"	f	file:
+mlfs_find_free_slot	balloc.c	/^int mlfs_find_free_slot(struct super_block *sb,$/;"	f
+mlfs_find_range_node	balloc.c	/^static int mlfs_find_range_node(struct super_block *sb,$/;"	f	file:
+mlfs_force_split_extent_at	extents.c	/^static inline int mlfs_force_split_extent_at(handle_t *handle,$/;"	f	file:
+mlfs_free_blocknode	balloc.c	/^static void mlfs_free_blocknode(struct super_block *sb,$/;"	f	file:
+mlfs_free_blocks	extents.c	/^void mlfs_free_blocks(handle_t *handle, struct inode *inode,$/;"	f
+mlfs_free_blocks_node	balloc.c	/^int mlfs_free_blocks_node(struct super_block *sb, unsigned long blocknr,$/;"	f
+mlfs_free_range_node	balloc.c	/^static void mlfs_free_range_node(struct mlfs_range_node *node)$/;"	f	file:
+mlfs_get_free_list	balloc.c	/^struct free_list *mlfs_get_free_list(struct super_block *sb, int cpu)$/;"	f	file:
+mlfs_get_time	stat.h	/^static inline void mlfs_get_time(mlfs_time_t *t)$/;"	f
+mlfs_handle_dirty_metadata	extents.c	/^static inline int mlfs_handle_dirty_metadata(handle_t *handle,$/;"	f	file:
+mlfs_hash_get_blocks	inode_hash.c	/^int mlfs_hash_get_blocks(handle_t *handle, struct inode *inode,$/;"	f
+mlfs_hash_persist	inode_hash.c	/^int mlfs_hash_persist() {$/;"	f
+mlfs_hash_truncate	inode_hash.c	/^int mlfs_hash_truncate(handle_t *handle, struct inode *inode,$/;"	f
+mlfs_idx_lblock	extents.h	/^static inline mlfs_lblk_t mlfs_idx_lblock(struct mlfs_extent_idx *ix)$/;"	f
+mlfs_idx_pblock	extents.h	/^static inline mlfs_fsblk_t mlfs_idx_pblock(struct mlfs_extent_idx *ix)$/;"	f
+mlfs_idx_set_lblock	extents.h	/^static inline void mlfs_idx_set_lblock(struct mlfs_extent_idx *ix,$/;"	f
+mlfs_idx_set_pblock	extents.h	/^static inline void mlfs_idx_set_pblock(struct mlfs_extent_idx *ix,$/;"	f
+mlfs_idx_store_pblock	extents.h	/^static inline void mlfs_idx_store_pblock(struct mlfs_extent_idx *ix,$/;"	f
+mlfs_init_blockmap	balloc.c	/^void mlfs_init_blockmap(struct super_block *sb, int initialize)$/;"	f
+mlfs_inode_to_goal_block	extents.c	/^static inline mlfs_fsblk_t mlfs_inode_to_goal_block(struct inode *inode)$/;"	f	file:
+mlfs_insert_blocknode_map	balloc.c	/^static int mlfs_insert_blocknode_map(struct super_block *sb,$/;"	f	file:
+mlfs_insert_blocktree	balloc.c	/^static inline int mlfs_insert_blocktree(struct super_block *sb,$/;"	f	file:
+mlfs_insert_range_node	balloc.c	/^static int mlfs_insert_range_node(struct super_block *sb,$/;"	f	file:
+mlfs_libfs_stats	fs.h	/^typedef struct mlfs_libfs_stats {$/;"	s
+mlfs_lsm_debug	extents.c	31;"	d	file:
+mlfs_lsm_info	extents.c	32;"	d	file:
+mlfs_map_blocks	extents.h	/^struct mlfs_map_blocks {$/;"	s
+mlfs_mark_inode_dirty	extents.c	/^int mlfs_mark_inode_dirty(struct inode *inode)$/;"	f
+mlfs_new_blocks	balloc.c	/^int mlfs_new_blocks(struct super_block *sb, unsigned long *blocknr,$/;"	f
+mlfs_new_data_blocks	extents.c	/^static mlfs_fsblk_t mlfs_new_data_blocks(handle_t *handle,$/;"	f	file:
+mlfs_new_meta_blocks	extents.c	/^mlfs_fsblk_t mlfs_new_meta_blocks(handle_t *handle,$/;"	f
+mlfs_object_create	file.c	/^struct inode *mlfs_object_create(char *path, unsigned short type)$/;"	f
+mlfs_range_node	shared.h	/^struct mlfs_range_node {$/;"	s
+mlfs_rbtree_compare_rangenode	balloc.c	/^static inline int mlfs_rbtree_compare_rangenode(struct mlfs_range_node *curr,$/;"	f	file:
+mlfs_remove_blocks	extents.c	/^static int mlfs_remove_blocks(handle_t *handle, struct inode *inode,$/;"	f	file:
+mlfs_slab_init	fs.c	/^void mlfs_slab_init(uint64_t pool_size)$/;"	f
+mlfs_slab_pool	fs.c	/^ncx_slab_pool_t *mlfs_slab_pool;$/;"	v
+mlfs_slab_pool_shared	fs.c	/^ncx_slab_pool_t *mlfs_slab_pool_shared;$/;"	v
+mlfs_split_extent_at	extents.c	/^static int mlfs_split_extent_at(handle_t *handle,$/;"	f	file:
+mlfs_update_get_fcache	file.c	/^static addr_t mlfs_update_get_fcache(struct inode *inode, $/;"	f	file:
+mod	ghash.h	/^  gint mod;$/;"	m	struct:dhashtable_meta
+mod	ghash.h	/^  int             mod;$/;"	m	struct:_GHashTable
+mtime	shared.h	/^	mlfs_time_t mtime;$/;"	m	struct:dinode
+mtime	shared.h	/^	mlfs_time_t mtime;$/;"	m	struct:inode
+mtime	shared.h	/^	mlfs_time_t mtime;$/;"	m	struct:logheader
+mtime	stat.h	/^	mlfs_time_t mtime;$/;"	m	struct:fs_stat
+mutex	shared.h	/^	pthread_mutex_t mutex;$/;"	m	struct:free_list
+n	shared.h	/^	uint8_t n;$/;"	m	struct:logheader
+n	slru.h	/^	uint64_t n;$/;"	m	struct:lru
+n_de_cache_entry	shared.h	/^	uint32_t n_de_cache_entry;$/;"	m	struct:inode
+n_fcache_entries	shared.h	/^	uint32_t n_fcache_entries;$/;"	m	struct:inode
+n_partition	shared.h	/^	uint32_t n_partition;$/;"	m	struct:super_block
+name	fs.h	/^	char name[DIRSIZ]; \/\/ key$/;"	m	struct:dirent_data
+name	shared.h	/^  char name[DIRSIZ];$/;"	m	struct:mlfs_dirent
+namecmp	dirent.c	/^int namecmp(const char *s, const char *t)$/;"	f
+namei	dirent.c	/^struct inode* namei(char *path)$/;"	f
+nameiparent	dirent.c	/^struct inode* nameiparent(char *path, char *name)$/;"	f
+namex	dirent.c	/^static struct inode* namex(char *path, int parent, char *name)$/;"	f	file:
+ndatablocks	shared.h	/^	uint64_t ndatablocks;		\/\/ Number of data blocks$/;"	m	struct:disk_superblock
+next	ghash.h	/^  struct _bh_cache_node *next;$/;"	m	struct:_bh_cache_node	typeref:struct:_bh_cache_node::_bh_cache_node
+next_loghdr_blkno	shared.h	/^	addr_t next_loghdr_blkno;$/;"	m	struct:logheader
+ninodes	shared.h	/^	uint32_t ninodes;			\/\/ Number of inodes.$/;"	m	struct:disk_superblock
+nlink	shared.h	/^	uint8_t nlink;		\/\/ Number of links to inode in file system$/;"	m	struct:dinode
+nlink	shared.h	/^	uint8_t nlink;      \/\/ Number of links to inode in file system$/;"	m	struct:inode
+nlink	stat.h	/^	short nlink;	\/\/ Number of links to file$/;"	m	struct:fs_stat
+nlog	shared.h	/^	uint64_t nlog;			\/\/ Number of log blocks$/;"	m	struct:disk_superblock
+nnodes	ghash.h	/^  gint nnodes;$/;"	m	struct:dhashtable_meta
+nnodes	ghash.h	/^  int             nnodes;$/;"	m	struct:_GHashTable
+noccupied	ghash.h	/^  gint noccupied;$/;"	m	struct:dhashtable_meta
+noccupied	ghash.h	/^  int             noccupied;  \/* nnodes + tombstones *\/$/;"	m	struct:_GHashTable
+node	shared.h	/^	struct rb_node node;$/;"	m	struct:mlfs_range_node	typeref:struct:mlfs_range_node::rb_node
+nr_bits	balloc.h	/^	uint64_t nr_bits;$/;"	m	struct:block_bitmap
+nr_iovec	shared.h	/^	uint32_t nr_iovec;$/;"	m	struct:logheader_meta
+nr_log_blocks	shared.h	/^	uint32_t nr_log_blocks;$/;"	m	struct:logheader_meta
+num_blocknode	shared.h	/^	unsigned long   num_blocknode;$/;"	m	struct:free_list
+num_blocks	shared.h	/^	uint64_t num_blocks;$/;"	m	struct:super_block
+num_free_blocks	shared.h	/^	unsigned long   num_free_blocks;$/;"	m	struct:free_list
+nvram_alloc_range	ghash.h	/^nvram_alloc_range(size_t count) {$/;"	f
+nvram_flush	ghash.h	/^static inline void nvram_flush(GHashTable *ht) {$/;"	f
+nvram_read	ghash.h	/^nvram_read(GHashTable *ht, mlfs_fsblk_t offset, hash_entry_t **buf, bool force) {$/;"	f
+nvram_read_entry	ghash.h	/^nvram_read_entry(GHashTable *ht, mlfs_fsblk_t idx, hash_entry_t *ret) {$/;"	f
+nvram_read_metadata	ghash.h	/^nvram_read_metadata(GHashTable *hash, mlfs_fsblk_t location) {$/;"	f
+nvram_size	ghash.h	/^  mlfs_fsblk_t     nvram_size;$/;"	m	struct:_GHashTable
+nvram_size	ghash.h	/^  mlfs_fsblk_t nvram_size;$/;"	m	struct:dhashtable_meta
+nvram_update	ghash.h	/^nvram_update(GHashTable *ht, mlfs_fsblk_t index, hash_entry_t* val) {$/;"	f
+nvram_write_metadata	ghash.h	/^nvram_write_metadata(GHashTable *hash, mlfs_fsblk_t location) {$/;"	f
+off	file.h	/^	offset_t off;$/;"	m	struct:file
+offset	fs.h	/^	offset_t offset;$/;"	m	struct:dirent_data
+offset	fs.h	/^	offset_t offset;$/;"	m	struct:fcache_key
+offset	fs.h	/^	uint32_t offset; \/\/ offset of directory inode \/ 4096.$/;"	m	struct:dcache_key
+ondisk	shared.h	/^	struct disk_superblock *ondisk;$/;"	m	struct:super_block	typeref:struct:super_block::disk_superblock
+open_file_table	file.h	/^struct open_file_table {$/;"	s
+open_files	file.h	/^	struct file open_files[g_max_open_files];$/;"	m	struct:open_file_table	typeref:struct:open_file_table::file
+p_bh	extents.h	/^	struct buffer_head *p_bh;$/;"	m	struct:mlfs_ext_path	typeref:struct:mlfs_ext_path::buffer_head
+p_block	extents.h	/^	mlfs_fsblk_t p_block;$/;"	m	struct:mlfs_ext_path
+p_depth	extents.h	/^	uint16_t p_depth;$/;"	m	struct:mlfs_ext_path
+p_ext	extents.h	/^	struct mlfs_extent *p_ext;$/;"	m	struct:mlfs_ext_path	typeref:struct:mlfs_ext_path::mlfs_extent
+p_hdr	extents.h	/^	struct mlfs_extent_header *p_hdr;$/;"	m	struct:mlfs_ext_path	typeref:struct:mlfs_ext_path::mlfs_extent_header
+p_idx	extents.h	/^	struct mlfs_extent_idx *p_idx;$/;"	m	struct:mlfs_ext_path	typeref:struct:mlfs_ext_path::mlfs_extent_idx
+p_maxdepth	extents.h	/^	uint16_t p_maxdepth;$/;"	m	struct:mlfs_ext_path
+path	fs.h	/^	char path[MAX_PATH];	\/\/ key: canonical path$/;"	m	struct:dlookup_data
+per_inode_list	slru.h	/^	struct list_head per_inode_list;$/;"	m	struct:lru_node	typeref:struct:lru_node::list_head
+per_list_blocks	shared.h	/^	unsigned long per_list_blocks;$/;"	m	struct:super_block
+pos	shared.h	/^	uint32_t pos; \/\/ 0 <= pos <= nr_log_blocks$/;"	m	struct:logheader_meta
+previous_path	shared.h	/^	struct mlfs_ext_path *previous_path;$/;"	m	struct:inode	typeref:struct:inode::mlfs_ext_path
+prime_mod	ghash.c	/^static const int prime_mod [] = {$/;"	v	file:
+range_high	shared.h	/^	unsigned long range_high;$/;"	m	struct:mlfs_range_node
+range_low	shared.h	/^	unsigned long range_low;$/;"	m	struct:mlfs_range_node
+range_size	ghash.h	/^  mlfs_fsblk_t range_size;$/;"	m	struct:dhashtable_meta
+range_size	ghash.h	/^  size_t           range_size;$/;"	m	struct:_GHashTable
+read_all_bitmap	balloc.c	/^struct block_bitmap *read_all_bitmap(uint8_t dev,$/;"	f
+read_data_nr	fs.h	/^	uint32_t read_data_nr;$/;"	m	struct:mlfs_libfs_stats
+read_data_tsc	fs.h	/^	uint64_t read_data_tsc;$/;"	m	struct:mlfs_libfs_stats
+read_extent_tree_block	extents.c	/^static struct buffer_head *read_extent_tree_block(handle_t *handle,$/;"	f	file:
+read_ondisk_inode	fs.c	/^int read_ondisk_inode(uint8_t dev, uint32_t inum, struct dinode *dip)$/;"	f
+read_root_inode	fs.c	/^void read_root_inode(uint8_t dev_id)$/;"	f
+read_superblock	fs.c	/^void read_superblock(uint8_t dev)$/;"	f
+readable	file.h	/^	uint8_t readable;$/;"	m	struct:file
+readi	fs.c	/^int readi(struct inode *ip, uint8_t *dst, offset_t off, uint32_t io_size)$/;"	f
+reads	ghash.c	/^uint64_t reads;$/;"	v
+ref	file.h	/^	int ref; \/\/ reference count$/;"	m	struct:file
+ref_count	ghash.h	/^  int              ref_count;$/;"	m	struct:_GHashTable
+reserved_blocks	shared.h	/^	uint32_t reserved_blocks;$/;"	m	struct:super_block
+rwlock	file.h	/^	pthread_rwlock_t rwlock;$/;"	m	struct:file
+s_bdev	shared.h	/^	struct block_device *s_bdev;$/;"	m	struct:super_block	typeref:struct:super_block::block_device
+s_blk_bitmap	shared.h	/^	struct block_bitmap *s_blk_bitmap;$/;"	m	struct:super_block	typeref:struct:super_block::block_bitmap
+s_dirty_root	shared.h	/^	struct rb_root s_dirty_root;$/;"	m	struct:super_block	typeref:struct:super_block::rb_root
+s_inode_bitmap	shared.h	/^	unsigned long *s_inode_bitmap;$/;"	m	struct:super_block
+sb	fs.c	/^struct super_block *sb[g_n_devices + 1];$/;"	v	typeref:struct:super_block
+setup_ondisk_inode	shared.h	167;"	d
+shared_free_list	shared.h	/^	struct free_list shared_free_list;$/;"	m	struct:super_block	typeref:struct:super_block::free_list
+shared_memory_init	fs.c	/^static void shared_memory_init(void)$/;"	f	file:
+shared_slab_init	fs.c	/^void shared_slab_init(uint8_t _shm_slab_index)$/;"	f
+shm_base	fs.c	/^uint8_t *shm_base;$/;"	v
+shm_fd	fs.c	/^int shm_fd = 0;$/;"	v
+shm_lru_rwlock	fs.c	/^pthread_rwlock_t *shm_lru_rwlock;$/;"	v
+shm_slab_index	fs.c	/^uint8_t shm_slab_index = 0;$/;"	v
+shm_slab_rwlock	fs.c	/^pthread_rwlock_t *shm_slab_rwlock;$/;"	v
+show_libfs_stats	fs.c	/^void show_libfs_stats(void)$/;"	f
+shutdown_fs	fs.c	/^void shutdown_fs(void)$/;"	f
+single_hash_meta_loc	inode_hash.c	/^mlfs_fsblk_t single_hash_meta_loc = 0;$/;"	v
+size	fs.h	/^	uint32_t size;$/;"	m	struct:cache_copy_list
+size	ghash.h	/^  gint size;$/;"	m	struct:dhashtable_meta
+size	ghash.h	/^  int             size;$/;"	m	struct:_GHashTable
+size	ghash.h	/^  uint16_t     size;$/;"	m	struct:_hash_entry
+size	shared.h	/^	uint32_t size;$/;"	m	struct:io_vec
+size	shared.h	/^	uint64_t size;			\/\/ Size of file system image (blocks)$/;"	m	struct:disk_superblock
+size	shared.h	/^	uint64_t size;		\/\/ Size of file (bytes)$/;"	m	struct:dinode
+size	shared.h	/^	uint64_t size;      \/\/ Size of file (bytes)$/;"	m	struct:inode
+size	stat.h	/^	uint32_t size;	\/\/ Size of file in bytes$/;"	m	struct:fs_stat
+size_of_bitmap	balloc.c	/^uint64_t size_of_bitmap(mlfs_fsblk_t nrblocks)$/;"	f
+slru_upsert	slru.c	/^int slru_upsert(struct inode *inode, struct list_head *lru_head, lru_key_t k, lru_val_t v) $/;"	f
+start_offset	fs.h	/^	offset_t start_offset;$/;"	m	struct:bmap_request
+stati	fs.c	/^void stati(struct inode *ip, struct stat *st)$/;"	f
+store_all_bitmap	balloc.c	/^void store_all_bitmap(uint8_t dev, struct block_bitmap *b_bitmap)$/;"	f
+super_block	shared.h	/^struct super_block$/;"	s
+sync	slru.h	/^	uint8_t sync;$/;"	m	struct:lru_node
+sync_inode_ext_tree	fs.c	/^int sync_inode_ext_tree(uint8_t dev, struct inode *inode)$/;"	f
+sync_inode_from_dinode	shared.h	301;"	d
+tmp_tsc	fs.h	/^	uint64_t tmp_tsc;$/;"	m	struct:mlfs_libfs_stats
+tree_search_nr	fs.h	/^	uint32_t tree_search_nr;$/;"	m	struct:mlfs_libfs_stats
+tree_search_tsc	fs.h	/^	uint64_t tree_search_tsc;$/;"	m	struct:mlfs_libfs_stats
+tsc_to_ms	fs.c	/^static inline float tsc_to_ms(uint64_t tsc)$/;"	f	file:
+tv_sec	gtypes.h	/^  glong tv_sec;$/;"	m	struct:_GTimeVal
+tv_usec	gtypes.h	/^  glong tv_usec;$/;"	m	struct:_GTimeVal
+type	file.h	/^	fd_type_t type;$/;"	m	struct:file
+type	shared.h	/^	uint8_t type[g_max_blocks_per_operation];$/;"	m	struct:logheader
+type	stat.h	/^	short type;		\/\/ Type of file$/;"	m	struct:fs_stat
+used_blocks	shared.h	/^	uint64_t used_blocks;$/;"	m	struct:super_block
+val	slru.h	/^	lru_val_t val;$/;"	m	struct:lru_node
+value_hi16	ghash.h	/^  uint16_t     value_hi16;$/;"	m	struct:_hash_entry
+value_low32	ghash.h	/^  uint32_t     value_low32;$/;"	m	struct:_hash_entry
+writable	file.h	/^	uint8_t writable;$/;"	m	struct:file
+writes	ghash.c	/^uint64_t writes;$/;"	v

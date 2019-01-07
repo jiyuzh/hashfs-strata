@@ -902,8 +902,17 @@ retry:
 		}
 	}
 
+#define HACK
+#ifdef HACK
+  ret_blocks = mlfs_alloc_blocks_in_free_list(sb, free_list, btype,
+      1, &new_blocknr);
+  ret_blocks = mlfs_alloc_blocks_in_free_list(sb, free_list, btype,
+      1, &new_blocknr);
+#else
 	ret_blocks = mlfs_alloc_blocks_in_free_list(sb, free_list, btype,
 			num_blocks, &new_blocknr);
+#endif
+
 
 	mlfs_debug("Alloc %lu blocks from freelist %d: %lu ~ %lu\n",
 			ret_blocks, free_list->id, new_blocknr, new_blocknr + ret_blocks - 1);
@@ -927,7 +936,7 @@ retry:
 	*blocknr = new_blocknr;
 
 	//return ret_blocks / mlfs_get_numblocks(btype);
-	return ret_blocks;
+  return ret_blocks;
 }
 
 unsigned long mlfs_count_free_blocks(struct super_block *sb)

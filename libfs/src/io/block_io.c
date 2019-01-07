@@ -652,7 +652,6 @@ static signed char bdev_io_thread_read_notify(struct block_device *bdev)
 	return test_byte;
 }
 
-static int sync_dirty_buffer(struct buffer_head *bh);
 static void detach_bh_from_freelist(struct buffer_head *bh);
 static void buffer_free(struct buffer_head *bh);
 
@@ -996,7 +995,7 @@ int bh_submit_read(struct buffer_head *bh)
 	return ret;
 }
 
-static int sync_dirty_buffer(struct buffer_head *bh)
+int sync_dirty_buffer(struct buffer_head *bh)
 {
 	int ret = 0;
 

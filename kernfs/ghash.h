@@ -88,6 +88,7 @@ typedef struct  _hash_entry {
 
 
 #define HASHCACHE
+#define DISABLE_BH_CACHING
 
 // This is the hash table meta-data that is persisted to NVRAM, that we may read
 // it and know everything we need to know in order to reconstruct it in memory.
@@ -242,6 +243,9 @@ nvram_read(GHashTable *ht, mlfs_fsblk_t offset, hash_entry_t **buf, bool force) 
   }
 #endif
 
+#ifdef STORAGE_PERF
+  uint64_t tsc_begin = asm_rdtscp();
+#endif
   bh = bh_get_sync_IO(g_root_dev, ht->data + offset, BH_NO_DATA_ALLOC);
   bh->b_offset = 0;
   bh->b_size = g_block_size_bytes;
@@ -254,6 +258,9 @@ nvram_read(GHashTable *ht, mlfs_fsblk_t offset, hash_entry_t **buf, bool force) 
 
   bh_release(bh);
   reads++;
+#ifdef STORAGE_PERF
+  g_perf_stats.path_storage_tsc += asm_rdtscp() - tsc_begin;
+#endif
 }
 
 /*
@@ -319,6 +326,9 @@ nvram_read_metadata(GHashTable *hash, mlfs_fsblk_t location) {
  * Assumes lock is held!
  */
 static inline void nvram_flush(GHashTable *ht) {
+#ifdef DISABLE_BH_CACHING
+  return;
+#else
   if (ht->bh_cache_head) writes++;
 
   while(ht->bh_cache_head) {
@@ -329,7 +339,7 @@ static inline void nvram_flush(GHashTable *ht) {
     bh_cache_node *tmp = ht->bh_cache_head;
     bh_t *buf = ht->bh_cache[tmp->cache_index];
 
-    write_dirty_buffer(buf);
+    sync_dirty_buffer(buf);
 
     buf->b_use_bitmap = 0;
     ht->bh_cache[tmp->cache_index] = NULL;
@@ -337,6 +347,7 @@ static inline void nvram_flush(GHashTable *ht) {
     free(tmp);
     blocks++;
   }
+#endif
 }
 #endif
 
@@ -377,24 +388,32 @@ nvram_write_metadata(GHashTable *hash, mlfs_fsblk_t location) {
 
 static mlfs_fsblk_t
 nvram_alloc_range(size_t count) {
-  int err;
+  int err = 1;
   // TODO: maybe generalize this for other devices.
   struct super_block *super = sb[g_root_dev];
   mlfs_fsblk_t block;
 
-  err = mlfs_new_blocks(super, &block, count, 0, 0, DATA, 0);
-  if (err < 0) {
-    fprintf(stderr, "Error: could not allocate new blocks: %s (%d)\n",
-        strerror(-err), err);
-    panic("Could not allocate range for hash table");
+  // TODO: remove--this is due to a hack
+  size_t total_blocks = 0;
+  while (err > 0 && total_blocks < count) {
+    mlfs_fsblk_t blk;
+    err = mlfs_new_blocks(super, &blk, count, 0, 0, DATA, 0);
+    if (err < 0) {
+      fprintf(stderr, "Total: %lu\n", total_blocks);
+      fprintf(stderr, "Error: could not allocate new blocks: %s (%d)\n",
+          strerror(-err), err);
+      panic("Could not allocate range for hash table");
+    }
+
+    // Mark superblock bits
+    bitmap_bits_set_range(super->s_blk_bitmap, blk, err);
+    super->used_blocks += err;
+    assert(err >= 0);
+    if (total_blocks == 0) block = blk;
+    total_blocks += err;
   }
 
-  // Mark superblock bits
-  bitmap_bits_set_range(super->s_blk_bitmap, block, count);
-  super->used_blocks += count;
-
-  assert(err >= 0);
-  assert(err == count);
+  assert(total_blocks == count);
 
   return block;
 }
@@ -412,16 +431,21 @@ nvram_update(GHashTable *ht, mlfs_fsblk_t index, hash_entry_t* val) {
   struct buffer_head *bh;
   int ret;
 
+#ifdef STORAGE_PERF
+  uint64_t tsc_begin = asm_rdtscp();
+#endif
   mlfs_fsblk_t block_addr = ht->data + NV_IDX(index);
   mlfs_fsblk_t block_offset = BUF_IDX(index) * sizeof(hash_entry_t);
 
-  pthread_mutex_lock(ht->metalock);
+  //pthread_mutex_lock(ht->metalock);
 
   ht->cache[NV_IDX(index)][BUF_IDX(index)] = *val;
 
   // check if we've seen this buffer head before. if not, we need to fetch
   // it and point to our cache page.
+#ifdef DISABLE_BH_CACHING
   if (!ht->bh_cache[NV_IDX(index)]) {
+#endif
     // Set up the buffer head -- once we point it to a cache page, we don't
     // need to do this again, just manipulate the page.
     bh = sb_getblk(g_root_dev, block_addr);
@@ -445,9 +469,11 @@ nvram_update(GHashTable *ht, mlfs_fsblk_t index, hash_entry_t* val) {
     tmp->cache_index = NV_IDX(index);
     tmp->next = ht->bh_cache_head;
     ht->bh_cache_head = tmp;
+#ifdef DISABLE_BH_CACHING
   } else {
     bh = ht->bh_cache[NV_IDX(index)];
   }
+#endif
 
   // Set bitmap cachelines.
   bh->b_use_bitmap = 1;
@@ -463,7 +489,10 @@ nvram_update(GHashTable *ht, mlfs_fsblk_t index, hash_entry_t* val) {
    */
   bh->b_size += !__test_and_set_bit(bit, bh->b_dirty_bitmap);
 
-  pthread_mutex_unlock(ht->metalock);
+  //pthread_mutex_unlock(ht->metalock);
+#ifdef STORAGE_PERF
+  g_perf_stats.path_storage_tsc += asm_rdtscp() - tsc_begin;
+#endif
 }
 
 #ifdef __cplusplus

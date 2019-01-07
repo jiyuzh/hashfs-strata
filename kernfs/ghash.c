@@ -42,9 +42,11 @@ uint64_t reads;
 uint64_t writes;
 uint64_t blocks;
 
+/*
 #define pthread_rwlock_rdlock(x) 0
 #define pthread_rwlock_wrlock(x) 0
 #define pthread_rwlock_unlock(x) 0
+*/
 
 /**
  * SECTION:hash_tables
@@ -504,7 +506,6 @@ g_hash_table_insert_node (GHashTable    *hash_table,
     printf("Already exists: %lx %lx (trying to insert: %lx %lx)\n",
         ent.key, HASH_ENTRY_VAL(ent), new_key, new_value);
   } else {
-
     ent.key = new_key;
     HASH_ENTRY_SET_VAL(ent, new_value);
     ent.size = new_range;

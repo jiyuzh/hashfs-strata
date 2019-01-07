@@ -48,7 +48,7 @@ void ConcurrencyTasks::CreateBlocks(
   }
 
 #ifdef HASHTABLE
-  cout << "Hashtable load factor: " << check_load_factor(inode) << endl;
+  //cout << "Hashtable load factor: " << check_load_factor(inode) << endl;
   cout << "Reads: " << reads << " Writes: " << writes << endl;
   cout << "Total blocks written: " << blocks << endl;
   reads = 0; writes = 0; blocks = 0;

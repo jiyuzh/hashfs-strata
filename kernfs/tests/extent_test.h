@@ -473,14 +473,14 @@ ExtentTest::run_multi_block_test(list<mlfs_lblk_t> insert_order,
 
     res_check[lb] = map.m_pblk;
 
-    //cout << hex << lb << " ---> " << res_check[lb] << endl;
+    //cout << lb << " ---> " << res_check[lb] << endl;
     //fprintf(stdout, "INSERT [%d/%d] offset %u, block: %lx len %u\n",
     //    from, to, from, map.m_pblk, map.m_len);
   }
   time_stats_stop(&ts);
 
 #ifdef HASHTABLE
-  cout << "Post-Insert hashtable load factor: " << check_load_factor(inode) << endl;
+  //cout << "Post-Insert hashtable load factor: " << check_load_factor(inode) << endl;
   cout << "Reads: " << reads << " Writes: " << writes << endl;
   cout << "Total blocks written: " << blocks << endl;
   reads = 0; writes = 0; blocks = 0;

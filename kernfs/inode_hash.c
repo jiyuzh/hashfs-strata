@@ -116,7 +116,8 @@ int mlfs_hash_get_blocks(handle_t *handle, struct inode *inode,
 	mlfs_assert(handle);
 
 	create = flags & MLFS_GET_BLOCKS_CREATE_DATA;
-  int ret = map->m_len;
+  int ret = 0;
+  map->m_pblk = 0;
 
   // lookup all blocks.
   uint32_t len = map->m_len;
@@ -135,11 +136,14 @@ int mlfs_hash_get_blocks(handle_t *handle, struct inode *inode,
       //printf("Setting to %lu + %lu\n", value, index);
       map->m_pblk = value + index;
       set = true;
+    } else if (value + index != map->m_pblk + i) {
+      // only return contiguous ranges
+      return i;
     }
 
-    len -= size;
-    i += size;
-
+    len -= size - index;
+    i += size - index;
+    ret = i;
   }
   return ret;
 
@@ -157,7 +161,7 @@ create:
       a_type = DATA;
     }
 
-    pthread_mutex_lock(&alloc_tex);
+    //pthread_mutex_lock(&alloc_tex);
     mlfs_lblk_t lb = map->m_lblk + (map->m_len - len);
     int r = mlfs_new_blocks(sb, &blockp, len, 0, 0, a_type, 0);
     if (r > 0) {
@@ -170,13 +174,15 @@ create:
     } else {
       panic("Failed to allocate block -- unknown error!\n");
     }
-    pthread_mutex_unlock(&alloc_tex);
+
+    ret = r;
+    //pthread_mutex_unlock(&alloc_tex);
 
     //printf("Starting insert: %u, %lu, %lu\n", map->m_lblk, map->m_len, len);
-    for (int c = 0; c < len; ) {
+    for (int c = 0; c < ret; ) {
       int offset = ((lb + c) & RANGE_BITS);
       int aligned = offset == 0;
-      if (unlikely(len >= (RANGE_SIZE / 2) && aligned)) {
+      if (unlikely(ret >= (RANGE_SIZE / 2) && aligned)) {
         /*
          * It's possible part of the range has already been allocated.
          * Say if someone requests (RANGE_SIZE + 1) blocks, but the blocks from
@@ -200,7 +206,7 @@ create:
           }
         }
 
-        uint32_t nblocks = min(len - c, RANGE_SIZE);
+        uint32_t nblocks = min(ret - c, RANGE_SIZE);
         //printf("Insert to big.\n");
         hash_key_t k = RANGE_KEY(inode->inum, lb + c);
         int already_exists = !insert_hash(gsuper, inode, k, blockp, nblocks);
@@ -218,7 +224,7 @@ create:
         blockp += nblocks;
 
       } else {
-        uint32_t nblocks_to_alloc = min(len - c, RANGE_SIZE - offset);
+        uint32_t nblocks_to_alloc = min(ret - c, RANGE_SIZE - offset);
 
         if (!set) {
           map->m_pblk = blockp;
@@ -244,10 +250,7 @@ create:
       }
     }
 
-    //mlfs_hash_persist();
-  } else {
-    ret = 0;
-    map->m_pblk = 0;
+    mlfs_hash_persist();
   }
 
   return ret;
