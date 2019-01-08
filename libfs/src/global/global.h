@@ -29,8 +29,8 @@ void mlfs_setup(void);
 #define g_directory_shift  16UL
 #define g_directory_mask ((1 << ((sizeof(inum_t) * 8) - g_directory_shift)) - 1)
 #define g_segsize_bytes    (1ULL << 30)  // 1 GB
-//#define g_max_read_cache_blocks  (2 << 18) // 2 GB
-#define g_max_read_cache_blocks  (1 << 17) // 512 MB
+#define g_max_read_cache_blocks  (2 << 18) // 2 GB
+//#define g_max_read_cache_blocks  (1 << 15) // 128 MB
 
 #define g_fd_start  1000000
 

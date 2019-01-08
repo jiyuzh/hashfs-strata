@@ -47,6 +47,10 @@ MLFS_FLAGS += -DHASHTABLE
 #######
 MLFS_FLAGS += -DREUSE_PREVIOUS_PATH  # optimization for extent trees
 
+########
+# Testing definitions
+########
+MLFS_FLAGS += -DSIMULATE_FRAGMENTATION
 
 ########
 #  Phony targets

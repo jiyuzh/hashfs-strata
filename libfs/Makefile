@@ -54,12 +54,17 @@ MLFS_FLAGS += -DKLIB_HASH
 #MLFS_FLAGS += -DUSE_SSD
 #MLFS_FLAGS += -DUSE_HDD
 #MLFS_FLAGS += -DMLFS_LOG
-#MLFS_FLAGS += -DHASHTABLE
+MLFS_FLAGS += -DHASHTABLE
 
-#DEBUG = -g3 -O0
+########
+# Testing definitions
+########
+MLFS_FLAGS += -DSIMULATE_FRAGMENTATION
+
 #DEBUG = -O0 -gdwarf-2 -g3 -rdynamic
 #DEBUG = -g -Ofast
 DEBUG = -g -O3
+#DEBUG = -g -O0
 
 ########
 #  vpath and compile function for each file

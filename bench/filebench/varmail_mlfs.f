@@ -25,9 +25,9 @@
 
 set $dir=/mlfs
 #set $nfiles=5
-#set $nfiles=40
+set $nfiles=40
 #set $nfiles=200
-set $nfiles=500
+#set $nfiles=500
 #set $nfiles=1000
 #set $nfiles=10000
 #set $meandirwidth=10000
@@ -38,8 +38,8 @@ set $meandirwidth=500
 #set $filesize=16k
 set $filesize=4k
 set $nthreads=1
-set $iosize=4k
-set $meanappendsize=4k
+set $iosize=1m
+set $meanappendsize=16k
 
 define fileset name=bigfileset,path=$dir,size=$filesize,entries=$nfiles,dirwidth=$meandirwidth,prealloc=80
 
@@ -67,4 +67,4 @@ define process name=filereader,instances=1
 
 echo  "Varmail Version 3.0 personality successfully loaded"
 
-run 120
+run 10

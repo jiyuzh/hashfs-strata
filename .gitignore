@@ -21,6 +21,8 @@ libfs/tests/*.json
 # Build/configure files.
 autom4te.cache/
 
+shim/libshim/*.o
+
 # Test files.
 kernfs/tests/extent_test
 kernfs/tests/fifo_cli
@@ -29,9 +31,48 @@ kernfs/tests/*.txt
 kernfs/tests/*.log
 kernfs/tests/*.out
 kernfs/tests/kernfs
+kernfs/tests/concurrency_test
+kernfs/tests/nvram_versus_dram
+
+libfs/tests/*.o
+libfs/tests/MTCC
+libfs/tests/a.out
+libfs/tests/age
+libfs/tests/append_test
+libfs/tests/deepqueue
+libfs/tests/dir_test
+libfs/tests/falloc_test
+libfs/tests/file_basic
+libfs/tests/fork_io
+libfs/tests/ftrunc_test
+libfs/tests/fwrite_fread
+libfs/tests/iotest
+libfs/tests/iotest.normal
+libfs/tests/lock_perf
+libfs/tests/lock_test
+libfs/tests/many_files_test
+libfs/tests/multithread
+libfs/tests/partial_update_test
+libfs/tests/readdir_test
+libfs/tests/simple_spdk_test
+libfs/tests/small_io
+
 
 # Bench files.
 bench/hash_bench/hash_bench
 bench/hash_bench/hash_bench.o
 bench/hash_bench/time_stat.o
 bench/hash_bench/xxhash.o
+
+bench/filebench/INSTALL
+bench/filebench/compile
+bench/filebench/config.guess
+bench/filebench/config.h.in
+bench/filebench/config.sub
+bench/filebench/cvars/
+bench/filebench/depcomp
+bench/filebench/filebench
+bench/filebench/install-sh
+bench/filebench/missing
+bench/filebench/ylwrap
+

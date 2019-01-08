@@ -60,6 +60,11 @@ MLFS_FLAGS += -DHASHTABLE
 #######
 MLFS_FLAGS += -DREUSE_PREVIOUS_PATH  # optimization for extent trees
 
+########
+# Testing definitions
+########
+MLFS_FLAGS += -DSIMULATE_FRAGMENTATION
+
 #DEBUG = -g -O0
 #DEBUG = -g -Ofast
 DEBUG = -g -O3

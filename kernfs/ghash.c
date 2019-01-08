@@ -249,8 +249,11 @@ g_hash_table_lookup_node (GHashTable    *hash_table,
   */
   if (unlikely(force)) {
     nvram_read(hash_table, NV_IDX(node_index), &buffer, TRUE);
+  } else {
+    nvram_read(hash_table, NV_IDX(node_index), &buffer, FALSE);
+    cur = buffer[BUF_IDX(node_index)];
   }
-  cur = hash_table->cache[NV_IDX(node_index)][BUF_IDX(node_index)];
+  //cur = hash_table->cache[NV_IDX(node_index)][BUF_IDX(node_index)];
 
   while (!HASH_ENTRY_IS_EMPTY(cur)) {
     if (cur.key == key && HASH_ENTRY_IS_VALID(cur)) {
@@ -279,9 +282,12 @@ g_hash_table_lookup_node (GHashTable    *hash_table,
     node_index = new_idx;
     if (unlikely(force)) {
       nvram_read(hash_table, NV_IDX(node_index), &buffer, TRUE);
+    } else {
+      nvram_read(hash_table, NV_IDX(node_index), &buffer, FALSE);
+      cur = buffer[BUF_IDX(node_index)];
     }
     //cur = buffer[BUF_IDX(node_index)];
-    cur = hash_table->cache[NV_IDX(node_index)][BUF_IDX(node_index)];
+    //cur = hash_table->cache[NV_IDX(node_index)][BUF_IDX(node_index)];
   }
 
   if (have_tombstone) {
@@ -451,6 +457,7 @@ g_hash_table_new (GHashFunc    hash_func,
   hash_table->cache = calloc(nblocks, sizeof(hash_entry_t*));
   assert(hash_table->cache);
 
+#if 0
   hash_entry_t *unused;
 
   for (int i = 0; i < nblocks; ++i) {
@@ -459,6 +466,7 @@ g_hash_table_new (GHashFunc    hash_func,
     // load from NVRAM (force flag)
     nvram_read(hash_table, i, &unused, 1);
   }
+#endif
 
   hash_table->bh_cache = calloc(nblocks, sizeof(*hash_table->bh_cache));
   assert(hash_table->bh_cache);
@@ -642,11 +650,11 @@ g_hash_table_insert_internal (GHashTable     *hash_table,
   node_index = hash_value & hash_table->mask;
   pthread_rwlock_wrlock(hash_table->locks + node_index);
 
-  /*
   nvram_read(hash_table, NV_IDX(node_index), &buffer, FALSE);
   cur = buffer[BUF_IDX(node_index)];
-  */
+  /*
   cur = hash_table->cache[NV_IDX(node_index)][BUF_IDX(node_index)];
+  */
 
   while (!HASH_ENTRY_IS_EMPTY(cur)) {
     if (cur.key == key && HASH_ENTRY_IS_VALID(cur)) {
@@ -663,7 +671,9 @@ g_hash_table_insert_internal (GHashTable     *hash_table,
     pthread_rwlock_wrlock(hash_table->locks + new_idx);
 
     node_index = new_idx;
-    cur = hash_table->cache[NV_IDX(node_index)][BUF_IDX(node_index)];
+    //cur = hash_table->cache[NV_IDX(node_index)][BUF_IDX(node_index)];
+    nvram_read(hash_table, NV_IDX(node_index), &buffer, FALSE);
+    cur = buffer[BUF_IDX(node_index)];
   }
 
   if (have_tombstone) {
@@ -837,11 +847,11 @@ g_hash_table_remove_internal (GHashTable    *hash_table,
   node_index = hash_value & hash_table->mask;
   pthread_rwlock_wrlock(hash_table->locks + node_index);
 
-  /*
   nvram_read(hash_table, NV_IDX(node_index), &buffer, FALSE);
   cur = buffer[BUF_IDX(node_index)];
-  */
+  /*
   cur = hash_table->cache[NV_IDX(node_index)][BUF_IDX(node_index)];
+  */
 
   while (!HASH_ENTRY_IS_EMPTY(cur)) {
     if (cur.key == key && HASH_ENTRY_IS_VALID(cur)) {
@@ -855,7 +865,9 @@ g_hash_table_remove_internal (GHashTable    *hash_table,
     pthread_rwlock_wrlock(hash_table->locks + new_idx);
 
     node_index = new_idx;
-    cur = hash_table->cache[NV_IDX(node_index)][BUF_IDX(node_index)];
+    //cur = hash_table->cache[NV_IDX(node_index)][BUF_IDX(node_index)];
+    nvram_read(hash_table, NV_IDX(node_index), &buffer, FALSE);
+    cur = buffer[BUF_IDX(node_index)];
   }
 
   if (HASH_ENTRY_IS_VALID(cur)) {

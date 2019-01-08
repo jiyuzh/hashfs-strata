@@ -226,20 +226,17 @@ nvram_read(GHashTable *ht, mlfs_fsblk_t offset, hash_entry_t **buf, bool force) 
    */
 #ifdef HASHCACHE
   // if NULL, then it got invalidated or never loaded.
-  if (likely(!force)) {
-    /*
-    if (likely(ht->cache[offset])) {
-      //memcpy((uint8_t*)buf, (uint8_t*)ht->cache[offset], g_block_size_bytes);
-      *buf = ht->cache[offset];
-      return;
-    } else {
-      ht->cache[offset] = (hash_entry_t*)malloc(g_block_size_bytes);
-      assert(ht->cache[offset]);
-      *buf = ht->cache[offset];
-    }
-    */
+  if (likely(!force && ht->cache[offset] != NULL)) {
     *buf = ht->cache[offset];
     return;
+    //*buf = ht->cache[offset];
+    //return;
+  }
+
+  if (unlikely(ht->cache[offset] == NULL)) {
+    ht->cache[offset] = (hash_entry_t*)malloc(g_block_size_bytes);
+    mlfs_assert(ht->cache[offset]);
+    *buf = ht->cache[offset];
   }
 #endif
 
@@ -397,7 +394,7 @@ nvram_alloc_range(size_t count) {
   size_t total_blocks = 0;
   while (err > 0 && total_blocks < count) {
     mlfs_fsblk_t blk;
-    err = mlfs_new_blocks(super, &blk, count, 0, 0, DATA, 0);
+    err = mlfs_new_blocks(super, &blk, count - total_blocks, 0, 0, DATA, 0);
     if (err < 0) {
       fprintf(stderr, "Total: %lu\n", total_blocks);
       fprintf(stderr, "Error: could not allocate new blocks: %s (%d)\n",
@@ -438,7 +435,7 @@ nvram_update(GHashTable *ht, mlfs_fsblk_t index, hash_entry_t* val) {
   mlfs_fsblk_t block_offset = BUF_IDX(index) * sizeof(hash_entry_t);
 
   //pthread_mutex_lock(ht->metalock);
-
+  mlfs_assert(ht->cache[NV_IDX(index)]);
   ht->cache[NV_IDX(index)][BUF_IDX(index)] = *val;
 
   // check if we've seen this buffer head before. if not, we need to fetch

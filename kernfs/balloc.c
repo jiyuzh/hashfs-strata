@@ -902,12 +902,36 @@ retry:
 		}
 	}
 
-#define HACK
-#ifdef HACK
+#ifdef SIMULATE_FRAGMENTATION
+  static int layout_score_percent = 0;
+  static bool init_layout_score = false;
+  static int skip = 0;
+  if (!init_layout_score) {
+    const char *mlfs_layout_score = getenv("MLFS_LAYOUT_SCORE");
+    if (NULL != mlfs_layout_score) {
+      layout_score_percent = atoi(mlfs_layout_score);
+    } else {
+      layout_score_percent = 100;
+    }
+    init_layout_score = true;
+    printf("Simulating fragmentation: '%s' => layout score of %f\n",
+        mlfs_layout_score, layout_score_percent / 100.0);
+
+    skip = layout_score_percent == 100 ? 0 : 100 / (100 - layout_score_percent);
+    printf("\tSkip size = %d\n", skip);
+  }
+
+  int ncontiguous = skip ? min(skip, num_blocks) : num_blocks;
   ret_blocks = mlfs_alloc_blocks_in_free_list(sb, free_list, btype,
-      1, &new_blocknr);
-  ret_blocks = mlfs_alloc_blocks_in_free_list(sb, free_list, btype,
-      1, &new_blocknr);
+      ncontiguous, &new_blocknr);
+
+  // junk block
+  if (skip) {
+    unsigned long dummy_block;
+    int junk_block = mlfs_alloc_blocks_in_free_list(sb, free_list, btype,
+        1, &dummy_block);
+  }
+
 #else
 	ret_blocks = mlfs_alloc_blocks_in_free_list(sb, free_list, btype,
 			num_blocks, &new_blocknr);

@@ -514,7 +514,6 @@ int sync_inode_ext_tree(uint8_t dev, struct inode *inode)
     }
     fprintf(stderr, "%llu == %llu\n", total, nblocks);
     //mlfs_assert(total == nblocks);
-
 #else
 		memmove(inode->l1.addrs, dinode.l1_addrs, sizeof(addr_t) * (NDIRECT + 1));
 #endif
@@ -1241,15 +1240,12 @@ do_io_unaligned:
 	if (enable_perf_stats)
 		start_tsc = asm_rdtscp();
 
-  printf("------\n");
 	// Patch data from log (L0) if up-to-date blocks are in the update log.
 	// This is required when partial updates are in the update log.
 	list_for_each_entry_safe(bh, _bh, &io_list_log, b_io_list) {
-    printf("%p\n", bh);
 		bh_submit_read_sync_IO(bh);
 		bh_release(bh);
 	}
-  printf("------\n");
 
 	if (enable_perf_stats) {
 		g_perf_stats.read_data_tsc += (asm_rdtscp() - start_tsc);
