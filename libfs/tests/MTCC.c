@@ -17,6 +17,7 @@ static uint32_t n_threads;
 static double seq_ratio;
 static uint32_t file_num;
 static size_t max_file_size;
+static size_t read_unit;
 static size_t write_unit;
 static int opt_num;
 static int fd_v[MAX_FILE_NUM];
@@ -39,8 +40,8 @@ static void *worker_thread(void *);
 #ifndef PREFIX
 #define PREFIX "/mlfs"
 #endif
-#define OPTSTRING "b:j:n:s:M:w:h"
-#define OPTNUM 6
+#define OPTSTRING "b:j:n:s:M:r:w:h"
+#define OPTNUM 7
 void print_help(char **argv) {
     printf("usage: %s -b block_size -j n_threads -s seq_ratio -n num_file -M max_file_size -w write_unit_size\n", argv[0]);
 }
@@ -96,6 +97,12 @@ int main(int argc, char **argv) {
                 assert((max_file_size % block_size == 0) && "max_file_size should be dividable by block_size");
                 opt_num++;
                 break;
+            case 'r': // read_unit size
+                read_unit = atoi(optarg);
+                read_unit *= get_unit(optarg[strlen(optarg)-1]);
+                assert((read_unit % block_size == 0) && "read_unit should be dividable by block_size");
+                opt_num++;
+                break;
             case 'w': // write_unit size
                 write_unit = atoi(optarg);
                 write_unit *= get_unit(optarg[strlen(optarg)-1]);
@@ -127,8 +134,9 @@ int main(int argc, char **argv) {
             perror("make tempfile failed");
             exit(-1);
         }
-        // init each file with block_size data
-        write(fd_v[i], write_buf, block_size);
+        // init each file with read_unit data
+        for (size_t s = 0; s < read_unit; s += write_unit)
+            assert(write(fd_v[i], write_buf, write_unit) != -1);
     }
     for (int i=0; i < n_threads; ++i) {
         assert(pthread_create(&threads[i], NULL, worker_thread, (void*)(&worker_results[i])) == 0);
@@ -141,7 +149,6 @@ int main(int argc, char **argv) {
         fstat(fd_v[i], &file_stat);
         printf("%s size is %lu\n", filename_v[i], file_stat.st_size);
         close(fd_v[i]);
-        unlink(filename_v[i]);
     }
     for (int i=0; i < n_threads; ++i) {
         printf("thread %d : read %lu (seq %lu rand %lu), write %lu\n", i,
@@ -165,19 +172,23 @@ static void *worker_thread(void *arg) {
         if (size > max_file_size) // exceeds max file size
             break;
         if ((double)(rand())/RAND_MAX < seq_ratio) { // sequential read
-            for (int i=0; i < size; i += block_size) {
-                assert(pread(fd, read_buf, block_size, i) != -1 && "sequential read failed");
+            int start_offset = (rand()%(block_num - read_unit/block_size + 1)) * block_size;
+            for (int i=start_offset; i < start_offset + read_unit; i += block_size) {
+                ssize_t rs = pread(fd, read_buf, block_size, i);
+                assert(rs != -1 && "sequential read failed");
+                r->total_seq_read += rs;
             }
-            r->total_seq_read += size;
         }
         else { // random read
-            for (int i=0; i < size; i += block_size) {
-                assert(pread(fd, read_buf, block_size, rand()%(block_num) * block_size) != -1 && "random read failed");
+            for (int i=0; i < read_unit; i += block_size) {
+                int rand_offset = (rand()%(block_num)) * block_size;
+                ssize_t rs = pread(fd, read_buf, block_size, rand_offset);
+                assert(rs != -1 && "random read failed");
+                r->total_rand_read += rs;
             }
-            r->total_rand_read += size;
         }
         lseek(fd, 0, SEEK_END);
-        write(fd, write_buf, write_unit);
+        assert(write(fd, write_buf, write_unit) != -1);
         r->total_write += write_unit;
     }
     return NULL;
