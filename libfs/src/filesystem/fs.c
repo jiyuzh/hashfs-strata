@@ -105,19 +105,22 @@ void show_libfs_stats(const char *title)
 	printf("read data blocks (tsc) : %lu \n", g_perf_stats.read_data_tsc);
 	printf("directory search (tsc) : %lu \n", g_perf_stats.dir_search_tsc);
 	printf("  bmap ext tree (tsc)  : %lu \n", g_perf_stats.dir_search_ext_tsc);
-  printf("path storage (tsc)     : %lu \n", g_perf_stats.path_storage_tsc);
+	printf("path storage (tsc)     : %lu \n", g_perf_stats.path_storage_tsc);
 	printf("temp_debug (tsc)       : %lu \n", g_perf_stats.tmp_tsc);
 #ifdef STORAGE_PERF
 	printf("--------------------------------------\n");
-  printf("search lsm tree : l0 : read_data = 1 : %f : %f\n",
-          (double)g_perf_stats.l0_search_tsc/g_perf_stats.tree_search_tsc,
-          (double)g_perf_stats.read_data_tsc/g_perf_stats.tree_search_tsc);
-  printf("directory search bmap ext/all : %f\n",
-          (double)g_perf_stats.dir_search_ext_tsc/g_perf_stats.dir_search_tsc);
-  printf("bmap storage/all : %f\n",
-          (double)g_perf_stats.path_storage_tsc/
-          (g_perf_stats.tree_search_tsc + g_perf_stats.dir_search_tsc));
-  printf("storage: %lu\n", storage_tsc);
+	printf("search lsm tree : l0 : read_data = 1 : %f : %f\n",
+	        (double)g_perf_stats.l0_search_tsc/g_perf_stats.tree_search_tsc,
+	        (double)g_perf_stats.read_data_tsc/g_perf_stats.tree_search_tsc);
+	printf("percentage, lsm/(lsm+l0+read_data) : %f\n",
+	          (double)g_perf_stats.tree_search_tsc/
+	          (g_perf_stats.tree_search_tsc + g_perf_stats.l0_search_tsc + g_perf_stats.read_data_tsc));
+	printf("directory search bmap ext/all : %f\n",
+	        (double)g_perf_stats.dir_search_ext_tsc/g_perf_stats.dir_search_tsc);
+	printf("bmap storage/all : %f\n",
+	        (double)g_perf_stats.path_storage_tsc/
+	        (g_perf_stats.tree_search_tsc + g_perf_stats.dir_search_tsc));
+	printf("storage: %lu\n", storage_tsc);
 #endif
 #if 0
 	printf("wait on digest (nr)   : %lu \n", g_perf_stats.digest_wait_nr);
@@ -1340,10 +1343,15 @@ int do_aligned_read(struct inode *ip, uint8_t *dst, offset_t off, uint32_t io_si
 
 	// All data come from the update log.
 	if (bitmap_weight(io_bitmap, bitmap_size) == 0)  {
+        if (enable_perf_stats)
+            start_tsc = asm_rdtscp();
 		list_for_each_entry_safe(bh, _bh, &io_list_log, b_io_list) {
 			bh_submit_read_sync_IO(bh);
 			bh_release(bh);
 		}
+        if (enable_perf_stats) {
+            g_perf_stats.read_data_tsc += asm_rdtscp() - start_tsc;
+        }
 		return io_size;
 	}
 
