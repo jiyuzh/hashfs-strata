@@ -169,7 +169,7 @@ int mlfs_file_read_offset(struct file *f, uint8_t *buf, size_t n, offset_t off)
 	if (f->type == FD_INODE) {
 		ilock(f->ip);
 
-		if (f->off >= f->ip->size) {
+		if (off >= f->ip->size) {
 			iunlock(f->ip);
 			return 0;
 		}
