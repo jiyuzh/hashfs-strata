@@ -1340,10 +1340,15 @@ int do_aligned_read(struct inode *ip, uint8_t *dst, offset_t off, uint32_t io_si
 
 	// All data come from the update log.
 	if (bitmap_weight(io_bitmap, bitmap_size) == 0)  {
+        if (enable_perf_stats)
+            start_tsc = asm_rdtscp();
 		list_for_each_entry_safe(bh, _bh, &io_list_log, b_io_list) {
 			bh_submit_read_sync_IO(bh);
 			bh_release(bh);
 		}
+        if (enable_perf_stats) {
+            g_perf_stats.read_data_tsc += asm_rdtscp() - start_tsc;
+        }
 		return io_size;
 	}
 
