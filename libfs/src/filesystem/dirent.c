@@ -18,7 +18,7 @@ static inline int dcache_del(uint8_t dev, struct dirent_block *dir_block)
 	return 0;
 }
 
-static inline struct dirent_block *dcache_find(uint8_t dev, 
+static inline struct dirent_block *dcache_find(uint8_t dev,
 		uint32_t inum, offset_t _offset, struct fs_log *fs_log)
 {
 	struct dirent_block *dir_block;
@@ -37,7 +37,7 @@ static inline struct dirent_block *dcache_find(uint8_t dev,
 	return dir_block;
 }
 
-static inline struct dirent_block *dcache_alloc_add(uint8_t dev, uint32_t inum, 
+static inline struct dirent_block *dcache_alloc_add(uint8_t dev, uint32_t inum,
 		offset_t offset, uint8_t *data, addr_t log_addr, struct fs_log *fs_log)
 {
 	struct dirent_block *dir_block;
@@ -57,7 +57,7 @@ static inline struct dirent_block *dcache_alloc_add(uint8_t dev, uint32_t inum,
 	dir_block->log_addr = log_addr;
 	dir_block->log_version = fs_log->avail_version;
 
-	mlfs_debug("add (DIR): inum %u offset %lu version %u -> addr %lu\n", 
+	mlfs_debug("add (DIR): inum %u offset %lu version %u -> addr %lu\n",
 			inum, offset, dir_block->log_version, log_addr);
 
 	pthread_rwlock_wrlock(dcache_rwlock);
@@ -85,7 +85,7 @@ uint8_t *get_dirent_block(struct inode *dir_inode, offset_t offset)
 
 	d_block = dcache_find(dev, dir_inode->inum, offset, g_fs_log);
 
-	if (d_block) 
+	if (d_block)
 		return d_block->dirent_array;
 
 	if (dir_inode->size == 0) {
@@ -105,8 +105,10 @@ uint8_t *get_dirent_block(struct inode *dir_inode, offset_t offset)
         if (enable_perf_stats)
             tsc_begin = asm_rdtscp();
 		ret = bmap(dir_inode, &bmap_req);
-        if (enable_perf_stats)
+        if (enable_perf_stats) {
             g_perf_stats.dir_search_ext_tsc += asm_rdtscp() - tsc_begin;
+            g_perf_stats.dir_search_ext_nr++;
+        }
 
 		mlfs_assert(ret == 0);
 
@@ -125,7 +127,7 @@ uint8_t *get_dirent_block(struct inode *dir_inode, offset_t offset)
 
 			mlfs_io_wait(dir_inode->dev, 1);
 
-			d_block = dcache_alloc_add(dev, dir_inode->inum, 
+			d_block = dcache_alloc_add(dev, dir_inode->inum,
 					offset, data, bmap_req.block_no, g_fs_log);
 
 			mlfs_assert(d_block);
@@ -148,19 +150,19 @@ struct mlfs_dirent *get_dirent(struct inode *dir_inode, offset_t offset)
 }
 
 
-int dir_check_entry_fast(struct inode *dir_inode) 
+int dir_check_entry_fast(struct inode *dir_inode)
 {
 	// Avoid brute force search of directory blocks.
 	// de_cache has caching of all files in the directory.
 	// So cache missing means there is no file in the directory.
-	if ((dir_inode->n_de_cache_entry == 
+	if ((dir_inode->n_de_cache_entry ==
 				bitmap_weight(dir_inode->dirent_bitmap, DIRBITMAP_SIZE)) &&
 			dir_inode->n_de_cache_entry > 2) {
 		mlfs_debug("search skipped %d %d\n", dir_inode->n_de_cache_entry,
 				bitmap_weight(dir_inode->dirent_bitmap, DIRBITMAP_SIZE));
 		return 0;
 	}
-	
+
 	return 1;
 }
 
@@ -239,7 +241,7 @@ struct inode* dir_lookup(struct inode *dir_inode, char *name, offset_t *poff)
 
 			iput(ip);
 
-			de_cache_alloc_add(dir_inode, name, ip, off); 
+			de_cache_alloc_add(dir_inode, name, ip, off);
 
 			if (enable_perf_stats) {
 				tsc_end = asm_rdtscp();
@@ -284,7 +286,7 @@ int dir_get_entry(struct inode *dir_inode, struct linux_dirent *buf, offset_t of
 
 	return sizeof(struct mlfs_dirent);
 }
-	
+
 /* Workflows when renaming to existing one (newname exists in the directory).
  * Libfs: if it finds existing file, it makes unlink request to previous inode.
  *        UNLINK of previous newname, but does not make unlink log entry.
@@ -294,7 +296,7 @@ int dir_get_entry(struct inode *dir_inode, struct linux_dirent *buf, offset_t of
  * Kernfs: when it gets,
  *        DIR_DEL of oldname : delete oldname in the directory
  *        DIR_RENAME of newname: it deletes an existing newname and add newname
- *        to directory (inode number is different). 
+ *        to directory (inode number is different).
  *        If there exist a newname, kernfs unlink it while digesting DIR_RENAME.
  */
 int dir_change_entry(struct inode *dir_inode, char *oldname, char *newname)
@@ -340,17 +342,17 @@ int dir_change_entry(struct inode *dir_inode, char *oldname, char *newname)
 
 		if (namecmp(de->name, oldname) == 0) {
 			/*
-			if (add_to_log(dir_inode, dirent_array, 0, dir_inode->size) 
+			if (add_to_log(dir_inode, dirent_array, 0, dir_inode->size)
 					!= dir_inode->size)
 				panic("cannot write to log");
 			iupdate(dir_inode);
 			*/
-			
+
 			de_cache_del(dir_inode, oldname);
 			memset(token, 0, DIRSIZ+8);
 			sprintf(token, "%s@%d", oldname, de->inum);
 			mlfs_assert(strlen(token) < DIRSIZ+8);
-			add_to_loghdr(L_TYPE_DIR_DEL, dir_inode, de->inum, 
+			add_to_loghdr(L_TYPE_DIR_DEL, dir_inode, de->inum,
 					dir_inode->size, token, strlen(token));
 
 			// remove previous newname if exist.
@@ -360,7 +362,7 @@ int dir_change_entry(struct inode *dir_inode, char *oldname, char *newname)
 			memset(token, 0, DIRSIZ+8);
 			sprintf(token, "%s@%d", newname, de->inum);
 			mlfs_assert(strlen(token) < DIRSIZ+8);
-			add_to_loghdr(L_TYPE_DIR_RENAME, dir_inode, de->inum, 
+			add_to_loghdr(L_TYPE_DIR_RENAME, dir_inode, de->inum,
 					dir_inode->size, token, strlen(token));
 			ret = 0;
 
@@ -392,10 +394,10 @@ int dir_remove_entry(struct inode *dir_inode, char *name, uint32_t inum)
 		tsc_begin = asm_rdtscp();
 
 	if (dir_inode->size > g_block_size_bytes) {
-		de_cache_find(dir_inode, name, &off); 
+		de_cache_find(dir_inode, name, &off);
 
 		if (off != 0) {
-			de = (struct mlfs_dirent *)get_dirent_block(dir_inode, off); 
+			de = (struct mlfs_dirent *)get_dirent_block(dir_inode, off);
 			de += ((off % g_block_size_bytes) / sizeof(*de));
 
 			 if (namecmp(de->name, name) == 0)
@@ -437,7 +439,7 @@ dirent_found:
 
 	mlfs_assert(de->inum != 0);
 
-	add_to_loghdr(L_TYPE_DIR_DEL, dir_inode, de->inum, 
+	add_to_loghdr(L_TYPE_DIR_DEL, dir_inode, de->inum,
 			dir_inode->size, token, strlen(token));
 
 	memset(de, 0, sizeof(*de));
@@ -448,7 +450,7 @@ dirent_found:
 
 	/* unoptimized code.
 
-	   if (add_to_log(dir_inode, dirent_array, 0, dir_inode->size) 
+	   if (add_to_log(dir_inode, dirent_array, 0, dir_inode->size)
 	   != dir_inode->size)
 	   panic("cannot write to log");
 
@@ -486,7 +488,7 @@ int dir_add_entry(struct inode *dir_inode, char *name, uint32_t inum)
 	de = (struct mlfs_dirent *)get_dirent_block(dir_inode, off);
 	de += ((off % g_block_size_bytes) / sizeof(*de));
 
-	if (de->inum == 0) 
+	if (de->inum == 0)
 		goto empty_found;
 
 search_slot:
@@ -522,10 +524,10 @@ empty_found:
 
 	//dir_inode->size += sizeof(struct mlfs_dirent);
 	// directory inode size is a max offset.
-	if (off + sizeof(struct mlfs_dirent) > dir_inode->size)  
+	if (off + sizeof(struct mlfs_dirent) > dir_inode->size)
 		dir_inode->size = off + sizeof(struct mlfs_dirent);
 
-	de_cache_alloc_add(dir_inode, name, 
+	de_cache_alloc_add(dir_inode, name,
 			icache_find(dir_inode->dev, inum), off);
 
 	mlfs_get_time(&dir_inode->mtime);
@@ -535,11 +537,11 @@ empty_found:
 	memset(token, 0, DIRSIZ+8);
 	sprintf(token, "%s@%d", name, inum);
 
-	add_to_loghdr(L_TYPE_DIR_ADD, dir_inode, inum, 
+	add_to_loghdr(L_TYPE_DIR_ADD, dir_inode, inum,
 			dir_inode->size, token, strlen(token));
 
 	/*
-	if (add_to_log(dir_inode, dirent_array, 0, dir_inode->size) 
+	if (add_to_log(dir_inode, dirent_array, 0, dir_inode->size)
 			!= dir_inode->size)
 		panic("cannot write to log");
 	*/
@@ -560,7 +562,7 @@ static struct inode* namex(char *path, int parent, char *name)
 {
 	struct inode *ip, *next;
 
-	if (*path == '/') 
+	if (*path == '/')
 		ip = iget(g_root_dev, ROOTINO);
 	else
 		//ip = idup(proc->cwd);
@@ -602,7 +604,7 @@ struct inode* namei(char *path)
 	struct inode *inode, *_inode;
 	char name[DIRSIZ];
 
-	_inode = dlookup_find(g_root_dev, path); 
+	_inode = dlookup_find(g_root_dev, path);
 
 	if (!_inode) {
 		inode = namex(path, 0, name);
@@ -618,9 +620,9 @@ struct inode* namei(char *path)
 	struct inode *inode;
 	char name[DIRSIZ];
 
-	inode = dlookup_find(g_root_dev, path); 
+	inode = dlookup_find(g_root_dev, path);
 
-	if (inode && (inode->flags & I_DELETING)) 
+	if (inode && (inode->flags & I_DELETING))
 		return NULL;
 
 	if (!inode) {
@@ -643,7 +645,7 @@ struct inode* nameiparent(char *path, char *name)
 
 	get_parent_path(path, parent_path);
 
-	_inode = dlookup_find(g_root_dev, parent_path); 
+	_inode = dlookup_find(g_root_dev, parent_path);
 
 	if (!_inode) {
 		inode = namex(path, 1, name);
@@ -662,9 +664,9 @@ struct inode* nameiparent(char *path, char *name)
 
 	get_parent_path(path, parent_path, name);
 
-	inode = dlookup_find(g_root_dev, parent_path); 
+	inode = dlookup_find(g_root_dev, parent_path);
 
-	if (inode && (inode->flags & I_DELETING)) 
+	if (inode && (inode->flags & I_DELETING))
 		return NULL;
 
 	if (!inode) {
@@ -840,9 +842,9 @@ void dbg_check_dir(void *data)
 		if (de->inum == 0)
 			continue;
 
-		mlfs_info("%u (offset %lu): %s - inum %d\n", 
+		mlfs_info("%u (offset %lu): %s - inum %d\n",
 				i, i * sizeof(*de), de->name, de->inum);
 	}
-	
+
 	return;
 }

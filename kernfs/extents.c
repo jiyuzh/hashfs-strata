@@ -404,11 +404,11 @@ static struct buffer_head *read_extent_tree_block(handle_t *handle,
 	int err;
 
 #ifdef STORAGE_PERF
-    uint64_t tsc_begin = asm_rdtscp();
+  uint64_t tsc_begin = asm_rdtscp();
 #endif
 	bh = fs_bread(handle->dev, pblk, &err);
 #ifdef STORAGE_PERF
-    g_perf_stats.path_storage_tsc += asm_rdtscp() - tsc_begin;
+  g_perf_stats.path_storage_tsc += asm_rdtscp() - tsc_begin;
 #endif
 	if (!bh)
 		return (struct buffer_head *)ERR_PTR(-ENOMEM);
@@ -2758,6 +2758,7 @@ int mlfs_ext_get_blocks(handle_t *handle, struct inode *inode,
 	if (enable_perf_stats)
 		tsc_start = asm_rdtscp();
 #endif
+
 #ifdef HASHTABLE
   int hash_ret = mlfs_hash_get_blocks(handle, inode, map, flags, false);
 #ifdef KERNFS

@@ -94,19 +94,19 @@ void show_libfs_stats(const char *title)
   //printf("read data blocks  : %.3f ms\n", tsc_to_ms(g_perf_stats.read_data_tsc));
   //printf("directory search  : %.3f ms\n", tsc_to_ms(g_perf_stats.dir_search_tsc));
   //printf("temp_debug        : %.3f ms\n", tsc_to_ms(g_perf_stats.tmp_tsc));
-  printf("wait on digest  (tsc)  : %lu \n", g_perf_stats.digest_wait_tsc);
-  printf("inode allocation (tsc) : %lu \n", g_perf_stats.ialloc_tsc);
-  printf("bcache search (tsc)    : %lu \n", g_perf_stats.bcache_search_tsc);
-  printf("search l0 tree  (tsc)  : %lu \n", g_perf_stats.l0_search_tsc);
-  printf("search lsm tree (tsc)  : %lu \n", g_perf_stats.tree_search_tsc);
-  printf("log commit (tsc)       : %lu \n", g_perf_stats.log_commit_tsc);
-  printf("  log writes (tsc)     : %lu \n", g_perf_stats.log_write_tsc);
-  printf("  loghdr writes (tsc)  : %lu \n", g_perf_stats.loghdr_write_tsc);
-  printf("read data blocks (tsc) : %lu (%lu)\n", g_perf_stats.read_data_tsc, g_perf_stats.read_data_nr);
-  printf("directory search (tsc) : %lu \n", g_perf_stats.dir_search_tsc);
-  printf("  bmap ext tree (tsc)  : %lu \n", g_perf_stats.dir_search_ext_tsc);
-  printf("path storage (tsc)     : %lu \n", g_perf_stats.path_storage_tsc);
-  printf("temp_debug (tsc)       : %lu \n", g_perf_stats.tmp_tsc);
+  printf("wait on digest  (tsc/op)  : %f \n", (double)g_perf_stats.digest_wait_tsc / g_perf_stats.digest_wait_nr);
+  printf("inode allocation (tsc/op) : %f \n", (double)g_perf_stats.ialloc_tsc / g_perf_stats.ialloc_nr);
+  printf("bcache search (tsc/op)    : %f \n", (double)g_perf_stats.bcache_search_tsc /g_perf_stats.bcache_search_nr);
+  printf("search l0 tree  (tsc/op)  : %f \n", (double)g_perf_stats.l0_search_tsc / g_perf_stats.l0_search_nr);
+  printf("search lsm tree (tsc/op)  : %f \n", (double)g_perf_stats.tree_search_tsc / g_perf_stats.tree_search_nr);
+  printf("log commit (tsc/op)       : %f \n", (double)g_perf_stats.log_commit_tsc / g_perf_stats.log_commit_nr);
+  printf("  log writes (tsc/op)     : %f \n", (double)g_perf_stats.log_write_tsc / g_perf_stats.log_write_nr);
+  printf("  loghdr writes (tsc/op)  : %f \n", (double)g_perf_stats.loghdr_write_tsc / g_perf_stats.loghdr_write_nr);
+  printf("read data blocks (tsc/op) : %f \n", (double)g_perf_stats.read_data_tsc / g_perf_stats.read_data_nr);
+  printf("directory search (tsc/op) : %f \n", (double)g_perf_stats.dir_search_tsc / g_perf_stats.dir_search_nr_hit);
+  printf("  bmap ext tree (tsc/op)  : %f \n", (double)g_perf_stats.dir_search_ext_tsc / g_perf_stats.dir_search_ext_nr);
+  printf("path storage (tsc/op)     : %f \n", (double)g_perf_stats.path_storage_tsc);
+  printf("temp_debug (tsc/op)       : %f \n", (double)g_perf_stats.tmp_tsc);
 #ifdef STORAGE_PERF
   printf("--------------------------------------\n");
   printf("search lsm tree : l0 : read_data = 1 : %f : %f\n",
@@ -1477,8 +1477,9 @@ do_global_search:
 do_io_aligned:
   //mlfs_assert(bitmap_weight(io_bitmap, bitmap_size) == 0);
 
-  if (enable_perf_stats)
+  if (enable_perf_stats) {
     start_tsc = asm_rdtscp();
+  }
 
   // Read data from L1 ~ trees
   list_for_each_entry_safe(bh, _bh, &io_list, b_io_list) {

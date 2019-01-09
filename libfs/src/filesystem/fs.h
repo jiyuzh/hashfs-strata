@@ -34,7 +34,7 @@ struct dirent_data {
 
 /* A bug note. UThash has a weird bug that
  * if offset is uint64_t type, it cannot find data
- * It is OK to use 32 bit because the offset does not 
+ * It is OK to use 32 bit because the offset does not
  * overflow 32 bit */
 typedef struct dcache_key {
 	uint32_t inum;
@@ -43,7 +43,7 @@ typedef struct dcache_key {
 
 // dirent array block (4KB) cache
 struct dirent_block {
-	dcache_key_t key; 
+	dcache_key_t key;
 	mlfs_hash_t hash_handle;
 	uint8_t dirent_array[g_block_size_bytes];
 	addr_t log_addr;
@@ -80,7 +80,7 @@ struct dlookup_data {
 };
 
 typedef struct bmap_request {
-	// input 
+	// input
 	offset_t start_offset;
 	uint32_t blk_count;
 	// output
@@ -98,6 +98,7 @@ typedef struct mlfs_libfs_stats {
 	uint64_t tree_search_tsc;
 	uint32_t tree_search_nr;
 	uint64_t log_write_tsc;
+  uint32_t loghdr_write_nr;
 	uint64_t loghdr_write_tsc;
 	uint32_t log_write_nr;
 	uint64_t log_commit_tsc;
@@ -110,11 +111,14 @@ typedef struct mlfs_libfs_stats {
 	uint32_t dir_search_nr_notfound;
 	uint64_t ialloc_tsc;
 	uint32_t ialloc_nr;
+	uint32_t tmp_nr;
 	uint64_t tmp_tsc;
 	uint64_t bcache_search_tsc;
 	uint32_t bcache_search_nr;
-    uint64_t dir_search_ext_tsc;
-    uint64_t path_storage_tsc;
+  uint32_t dir_search_ext_nr;
+  uint64_t dir_search_ext_tsc;
+  uint32_t path_storage_nr;
+  uint64_t path_storage_tsc;
 } libfs_stat_t;
 
 extern struct lru g_fcache_head;
@@ -179,7 +183,7 @@ static inline struct inode *icache_alloc_add(uint8_t dev, uint32_t inum)
 #endif
 
 	INIT_LIST_HEAD(&inode->i_slru_head);
-	
+
 	pthread_spin_init(&inode->de_cache_spinlock, PTHREAD_PROCESS_SHARED);
 	inode->de_cache = NULL;
 #endif
@@ -199,7 +203,7 @@ static inline struct inode *icache_add(struct inode *inode)
 	uint32_t inum = inode->inum;
 
 	pthread_mutex_init(&inode->i_mutex, NULL);
-	
+
 	pthread_rwlock_wrlock(icache_rwlock);
 
 	HASH_ADD(hash_handle, inode_hash[inode->dev], inum,
@@ -242,7 +246,7 @@ static inline struct fcache_block *fcache_find(struct inode *inode, offset_t key
 	return fc_block;
 }
 
-static inline struct fcache_block *fcache_alloc_add(struct inode *inode, 
+static inline struct fcache_block *fcache_alloc_add(struct inode *inode,
 		offset_t key, addr_t log_addr)
 {
 	struct fcache_block *fc_block;
@@ -262,7 +266,7 @@ static inline struct fcache_block *fcache_alloc_add(struct inode *inode,
 	INIT_LIST_HEAD(&fc_block->l);
 
 	pthread_rwlock_wrlock(&inode->fcache_rwlock);
-	
+
 	k = kh_put(fcache, inode->fcache_hash, key, &ret);
 	if (ret < 0)
 		panic("fail to insert fcache value");
@@ -281,7 +285,7 @@ static inline struct fcache_block *fcache_alloc_add(struct inode *inode,
 	return fc_block;
 }
 
-static inline int fcache_del(struct inode *inode, 
+static inline int fcache_del(struct inode *inode,
 		struct fcache_block *fc_block)
 {
 	khiter_t k;
@@ -312,7 +316,7 @@ static inline int fcache_del_all(struct inode *inode)
 	khiter_t k;
 	struct fcache_block *fc_block;
 
-	for (k = kh_begin(inode->fcache_hash); 
+	for (k = kh_begin(inode->fcache_hash);
 			k != kh_end(inode->fcache_hash); k++) {
 		if (kh_exist(inode->fcache_hash, k)) {
 			fc_block = kh_value(inode->fcache_hash, k);
@@ -339,13 +343,13 @@ static inline struct fcache_block *fcache_find(struct inode *inode, offset_t key
 
 	HASH_FIND(hash_handle, inode->fcache, &key,
         		sizeof(offset_t), fc_block);
-	
+
 	pthread_rwlock_unlock(&inode->fcache_rwlock);
 
 	return fc_block;
 }
 
-static inline struct fcache_block *fcache_alloc_add(struct inode *inode, 
+static inline struct fcache_block *fcache_alloc_add(struct inode *inode,
 		offset_t key, addr_t log_addr)
 {
 	struct fcache_block *fc_block;
@@ -372,7 +376,7 @@ static inline struct fcache_block *fcache_alloc_add(struct inode *inode,
 	return fc_block;
 }
 
-static inline int fcache_del(struct inode *inode, 
+static inline int fcache_del(struct inode *inode,
 		struct fcache_block *fc_block)
 {
 	pthread_rwlock_wrlock(&inode->fcache_rwlock);
@@ -409,7 +413,7 @@ static inline int fcache_del_all(struct inode *inode)
 }
 #endif
 
-static inline struct inode *de_cache_find(struct inode *dir_inode, 
+static inline struct inode *de_cache_find(struct inode *dir_inode,
 		const char *_name, offset_t *offset)
 {
 	struct dirent_data *dirent_data;
@@ -425,7 +429,7 @@ static inline struct inode *de_cache_find(struct inode *dir_inode,
 	}
 }
 
-static inline struct inode *de_cache_alloc_add(struct inode *dir_inode, 
+static inline struct inode *de_cache_alloc_add(struct inode *dir_inode,
 		const char *name, struct inode *inode, offset_t _offset)
 {
 	struct dirent_data *_dirent_data;
@@ -481,7 +485,7 @@ static inline struct inode *dlookup_find(uint8_t dev, const char *path)
 		return _dlookup_data->inode;
 }
 
-static inline struct inode *dlookup_alloc_add(uint8_t dev, 
+static inline struct inode *dlookup_alloc_add(uint8_t dev,
 		struct inode *inode, const char *_path)
 {
 	struct dlookup_data *_dlookup_data;
@@ -578,8 +582,8 @@ extern ncx_slab_pool_t *mlfs_slab_pool;
 extern ncx_slab_pool_t *mlfs_slab_pool_shared;
 extern uint8_t shm_slab_index;
 
-extern pthread_rwlock_t *shm_slab_rwlock; 
-extern pthread_rwlock_t *shm_lru_rwlock; 
+extern pthread_rwlock_t *shm_slab_rwlock;
+extern pthread_rwlock_t *shm_lru_rwlock;
 
 extern uint64_t *bandwidth_consumption;
 
