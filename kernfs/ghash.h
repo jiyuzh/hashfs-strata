@@ -257,6 +257,7 @@ nvram_read(GHashTable *ht, mlfs_fsblk_t offset, hash_entry_t **buf, bool force) 
   reads++;
 #ifdef STORAGE_PERF
   g_perf_stats.path_storage_tsc += asm_rdtscp() - tsc_begin;
+  g_perf_stats.path_storage_nr++;
 #endif
 }
 
@@ -428,9 +429,6 @@ nvram_update(GHashTable *ht, mlfs_fsblk_t index, hash_entry_t* val) {
   struct buffer_head *bh;
   int ret;
 
-#ifdef STORAGE_PERF
-  uint64_t tsc_begin = asm_rdtscp();
-#endif
   mlfs_fsblk_t block_addr = ht->data + NV_IDX(index);
   mlfs_fsblk_t block_offset = BUF_IDX(index) * sizeof(hash_entry_t);
 
@@ -440,7 +438,7 @@ nvram_update(GHashTable *ht, mlfs_fsblk_t index, hash_entry_t* val) {
 
   // check if we've seen this buffer head before. if not, we need to fetch
   // it and point to our cache page.
-#ifdef DISABLE_BH_CACHING
+#ifndef DISABLE_BH_CACHING
   if (!ht->bh_cache[NV_IDX(index)]) {
 #endif
     // Set up the buffer head -- once we point it to a cache page, we don't
@@ -448,14 +446,15 @@ nvram_update(GHashTable *ht, mlfs_fsblk_t index, hash_entry_t* val) {
     bh = sb_getblk(g_root_dev, block_addr);
 
     bh->b_data = (uint8_t*)ht->cache[NV_IDX(index)];
-    bh->b_size = 0;
+    bh->b_size = g_block_size_bytes;
     bh->b_offset = 0;
 
     mlfs_assert(bh->b_dirty_bitmap);
 
     set_buffer_dirty(bh);
-    brelse(bh);
+    //brelse(bh);
 
+#ifndef DISABLE_BH_CACHING
     // Now we need to set up book-keeping.
     ht->bh_cache[NV_IDX(index)] = bh;
 
@@ -466,12 +465,11 @@ nvram_update(GHashTable *ht, mlfs_fsblk_t index, hash_entry_t* val) {
     tmp->cache_index = NV_IDX(index);
     tmp->next = ht->bh_cache_head;
     ht->bh_cache_head = tmp;
-#ifdef DISABLE_BH_CACHING
   } else {
     bh = ht->bh_cache[NV_IDX(index)];
   }
 #endif
-
+#if 0
   // Set bitmap cachelines.
   bh->b_use_bitmap = 1;
 
@@ -485,11 +483,10 @@ nvram_update(GHashTable *ht, mlfs_fsblk_t index, hash_entry_t* val) {
    * Test and set so we don't double count.
    */
   bh->b_size += !__test_and_set_bit(bit, bh->b_dirty_bitmap);
+#endif
+  brelse(bh);
 
   //pthread_mutex_unlock(ht->metalock);
-#ifdef STORAGE_PERF
-  g_perf_stats.path_storage_tsc += asm_rdtscp() - tsc_begin;
-#endif
 }
 
 #ifdef __cplusplus

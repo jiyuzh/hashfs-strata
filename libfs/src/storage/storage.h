@@ -40,7 +40,7 @@ extern "C" {
 */
 
 // device size in bytes
-static uint64_t dev_size[g_n_devices + 1] = {0UL, 4225761280UL, 0UL, 0UL, 4225761280UL};
+static uint64_t dev_size[g_n_devices + 1] = {0UL, 8453619712UL, 0UL, 0UL, 2111832064UL};
 
 extern struct storage_operations storage_dax;
 extern struct storage_operations storage_spdk;
@@ -97,6 +97,7 @@ extern uint64_t *bandwidth_consumption;
 
 #ifdef STORAGE_PERF
 extern uint64_t storage_tsc;
+extern uint64_t storage_nr;
 #endif
 #ifdef __cplusplus
 }

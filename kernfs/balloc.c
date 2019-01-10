@@ -4,6 +4,7 @@
 #include "balloc.h"
 
 #define SHARED_PARTITION (65536)
+#define HASHTABLE_ALIGNMENT_HACK
 
 uint64_t size_of_bitmap(mlfs_fsblk_t nrblocks)
 {
@@ -919,6 +920,13 @@ retry:
 
     skip = layout_score_percent == 100 ? 0 : 100 / (100 - layout_score_percent);
     printf("\tSkip size = %d\n", skip);
+#ifdef HASHTABLE_ALIGNMENT_HACK
+#ifdef HASHTABLE
+    unsigned long dummy_block;
+    int junk_block = mlfs_alloc_blocks_in_free_list(sb, free_list, btype,
+        1, &dummy_block);
+#endif
+#endif
   }
 
   int ncontiguous = skip ? min(skip, num_blocks) : num_blocks;

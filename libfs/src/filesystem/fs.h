@@ -104,7 +104,8 @@ typedef struct mlfs_libfs_stats {
 	uint64_t log_commit_tsc;
 	uint32_t log_commit_nr;
 	uint64_t read_data_tsc;
-	uint32_t read_data_nr;
+	uint64_t read_data_nr;
+	uint64_t read_data_size;
 	uint64_t dir_search_tsc;
 	uint32_t dir_search_nr_hit;
 	uint32_t dir_search_nr_miss;

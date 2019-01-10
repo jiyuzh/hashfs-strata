@@ -283,10 +283,12 @@ double check_load_factor(struct inode *inode) {
 }
 
 int mlfs_hash_persist() {
+  return 0;
+
   pthread_mutex_lock(ghash->metalock);
   pthread_mutex_lock(gsuper->metalock);
 
-  //sync_all_buffers(g_bdev[g_root_dev]);
+  sync_all_buffers(g_bdev[g_root_dev]);
   nvram_flush(ghash);
   nvram_flush(gsuper);
 

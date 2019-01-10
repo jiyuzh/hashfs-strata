@@ -27,6 +27,7 @@ extern "C" {
 
 #ifdef STORAGE_PERF
 uint64_t storage_tsc;
+uint64_t storage_nr;
 #endif
 // iangneal: because we're using real NVM!
 //#define ENABLE_PERF_MODEL
@@ -151,7 +152,7 @@ uint8_t *dax_init(uint8_t dev, char *dev_path)
 	}
 
 	dax_addr[dev] = (uint8_t *)mmap(NULL, dev_size[dev], PROT_READ | PROT_WRITE,
-			MAP_SHARED| MAP_POPULATE, fd, 0);
+			MAP_SHARED | MAP_POPULATE, fd, 0);
 
 	if (dax_addr[dev] == MAP_FAILED) {
 		perror("cannot map file system file");
@@ -173,6 +174,7 @@ int dax_read(uint8_t dev, uint8_t *buf, addr_t blockno, uint32_t io_size)
 #ifdef STORAGE_PERF
     uint64_t tsc_begin = asm_rdtscp();
 #endif
+  //printf("dax_read: %llu @ %llu\n", blockno, io_size);
 	memmove(buf, dax_addr[dev] + (blockno * g_block_size_bytes), io_size);
 
 	perfmodel_add_delay(1, io_size);
@@ -180,6 +182,7 @@ int dax_read(uint8_t dev, uint8_t *buf, addr_t blockno, uint32_t io_size)
 	//mlfs_debug("read block number %d\n", blockno);
 #ifdef STORAGE_PERF
     storage_tsc += asm_rdtscp() - tsc_begin;
+    storage_nr++;
 #endif
 	return io_size;
 }
@@ -202,6 +205,7 @@ int dax_read_unaligned(uint8_t dev, uint8_t *buf, addr_t blockno, uint32_t offse
 	*/
 #ifdef STORAGE_PERF
     storage_tsc += asm_rdtscp() - tsc_begin;
+    storage_nr++;
 #endif
 	return io_size;
 }
@@ -227,6 +231,7 @@ int dax_write(uint8_t dev, uint8_t *buf, addr_t blockno, uint32_t io_size)
 			blockno, (blockno * g_block_size_bytes), io_size);
 #ifdef STORAGE_PERF
     storage_tsc += asm_rdtscp() - tsc_begin;
+    storage_nr++;
 #endif
 	return io_size;
 }
@@ -250,6 +255,7 @@ int dax_write_unaligned(uint8_t dev, uint8_t *buf, addr_t blockno, uint32_t offs
 			blockno, (blockno * g_block_size_bytes) + offset, io_size);
 #ifdef STORAGE_PERF
     storage_tsc += asm_rdtscp() - tsc_begin;
+    storage_nr++;
 #endif
 	return io_size;
 }
@@ -269,6 +275,7 @@ int dax_erase(uint8_t dev, addr_t blockno, uint32_t io_size)
 	perfmodel_add_delay(0, io_size);
 #ifdef STORAGE_PERF
     storage_tsc += asm_rdtscp() - tsc_begin;
+    storage_nr++;
 #endif
 }
 

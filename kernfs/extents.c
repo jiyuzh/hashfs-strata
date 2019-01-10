@@ -409,6 +409,7 @@ static struct buffer_head *read_extent_tree_block(handle_t *handle,
 	bh = fs_bread(handle->dev, pblk, &err);
 #ifdef STORAGE_PERF
   g_perf_stats.path_storage_tsc += asm_rdtscp() - tsc_begin;
+  g_perf_stats.path_storage_nr++;
 #endif
 	if (!bh)
 		return (struct buffer_head *)ERR_PTR(-ENOMEM);

@@ -457,7 +457,7 @@ g_hash_table_new (GHashFunc    hash_func,
   hash_table->cache = calloc(nblocks, sizeof(hash_entry_t*));
   assert(hash_table->cache);
 
-#if 0
+#if 1
   hash_entry_t *unused;
 
   for (int i = 0; i < nblocks; ++i) {

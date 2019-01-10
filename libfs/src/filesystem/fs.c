@@ -72,6 +72,7 @@ void reset_libfs_stats(void)
 {
 #ifdef STORAGE_PERF
     storage_tsc = 0;
+    storage_nr = 0;
 #endif
     memset(&g_perf_stats, 0, sizeof(libfs_stat_t));
 }
@@ -103,9 +104,11 @@ void show_libfs_stats(const char *title)
   printf("  log writes (tsc/op)     : %f \n", (double)g_perf_stats.log_write_tsc / g_perf_stats.log_write_nr);
   printf("  loghdr writes (tsc/op)  : %f \n", (double)g_perf_stats.loghdr_write_tsc / g_perf_stats.loghdr_write_nr);
   printf("read data blocks (tsc/op) : %f \n", (double)g_perf_stats.read_data_tsc / g_perf_stats.read_data_nr);
+  printf("read data blocks (tsc/op) : %llu / %llu \n", g_perf_stats.read_data_tsc, g_perf_stats.read_data_nr);
+  printf("read data (bytes/op)      : %f \n", (double)g_perf_stats.read_data_size / g_perf_stats.read_data_nr);
   printf("directory search (tsc/op) : %f \n", (double)g_perf_stats.dir_search_tsc / g_perf_stats.dir_search_nr_hit);
   printf("  bmap ext tree (tsc/op)  : %f \n", (double)g_perf_stats.dir_search_ext_tsc / g_perf_stats.dir_search_ext_nr);
-  printf("path storage (tsc/op)     : %f \n", (double)g_perf_stats.path_storage_tsc);
+  printf("path storage (tsc/op)     : %f \n", (double)g_perf_stats.path_storage_tsc / g_perf_stats.path_storage_nr);
   printf("temp_debug (tsc/op)       : %f \n", (double)g_perf_stats.tmp_tsc);
 #ifdef STORAGE_PERF
   printf("--------------------------------------\n");
@@ -120,7 +123,9 @@ void show_libfs_stats(const char *title)
   printf("bmap storage/all : %f\n",
           (double)g_perf_stats.path_storage_tsc/
           (g_perf_stats.tree_search_tsc + g_perf_stats.dir_search_tsc));
-  printf("storage: %lu\n", storage_tsc);
+  printf("storage    : %lu\n", storage_tsc);
+  printf("storage num: %lu\n", storage_nr);
+  printf("storage per: %f\n",  (double)storage_tsc / storage_nr);
 #endif
 #if 0
   printf("wait on digest (nr)   : %lu \n", g_perf_stats.digest_wait_nr);
@@ -1207,8 +1212,10 @@ int do_unaligned_read(struct inode *ip, uint8_t *dst, offset_t off, uint32_t io_
     bh_release(bh);
 
     if (enable_perf_stats) {
+      //printf("[%d] blkno = %llu, bh_size = %llu, io_size = %llu\n", __LINE__, bh->b_blocknr, bh->b_size, io_size);
       g_perf_stats.read_data_tsc += (asm_rdtscp() - start_tsc);
       g_perf_stats.read_data_nr++;
+      g_perf_stats.read_data_size += bh->b_size;
     }
   }
   // SSD and HDD cache: do read caching.
@@ -1235,8 +1242,10 @@ int do_unaligned_read(struct inode *ip, uint8_t *dst, offset_t off, uint32_t io_
     mlfs_io_wait(g_ssd_dev, 1);
 
     if (enable_perf_stats) {
+      //printf("[%d] blkno = %llu, bh_size = %llu, io_size = %llu\n", __LINE__, bh->b_blocknr, bh->b_size, io_size);
       g_perf_stats.read_data_tsc += (asm_rdtscp() - start_tsc);
       g_perf_stats.read_data_nr++;
+      g_perf_stats.read_data_size += bh->b_size;
     }
 
     bh_release(bh);
@@ -1256,7 +1265,9 @@ do_io_unaligned:
     bh_submit_read_sync_IO(bh);
     bh_release(bh);
     if (enable_perf_stats) {
+      //printf("[%d] blkno = %llu, bh_size = %llu, io_size = %llu\n", __LINE__, bh->b_blocknr, bh->b_size, io_size);
       g_perf_stats.read_data_nr++;
+      g_perf_stats.read_data_size += bh->b_size;
     }
   }
 
@@ -1358,7 +1369,9 @@ int do_aligned_read(struct inode *ip, uint8_t *dst, offset_t off, uint32_t io_si
       bh_submit_read_sync_IO(bh);
       bh_release(bh);
       if (enable_perf_stats) {
+        //printf("[%d] blkno = %llu, bh_size = %llu, io_size = %llu\n", __LINE__, bh->b_blocknr, bh->b_size, io_size);
         g_perf_stats.read_data_nr++;
+        g_perf_stats.read_data_size += bh->b_size;
       }
     }
 
@@ -1405,10 +1418,9 @@ do_global_search:
   // NVM case: no read caching.
   if (bmap_req.dev == g_root_dev) {
     bh = bh_get_sync_IO(bmap_req.dev, bmap_req.block_no, BH_NO_DATA_ALLOC);
-    bh->b_size = (bmap_req.blk_count_found << g_block_size_shift);
     bh->b_offset = 0;
     bh->b_data = dst + pos;
-    bh->b_size = (bmap_req.blk_count_found << g_block_size_shift);
+    bh->b_size = min((bmap_req.blk_count_found << g_block_size_shift), io_size);
 
     list_add_tail(&bh->b_io_list, &io_list);
   }
@@ -1482,13 +1494,19 @@ do_io_aligned:
   }
 
   // Read data from L1 ~ trees
+  //int ii = 0;
   list_for_each_entry_safe(bh, _bh, &io_list, b_io_list) {
     bh_submit_read_sync_IO(bh);
     bh_release(bh);
     if (enable_perf_stats) {
+      //printf("[%d] blkno = %llu, bh_size = %llu, io_size = %llu\n", __LINE__, bh->b_blocknr, bh->b_size, io_size);
+      //printf("\r[%d]", ii++);
+      //fflush(stdout);
       g_perf_stats.read_data_nr++;
+      g_perf_stats.read_data_size += bh->b_size;
     }
   }
+  //if (enable_perf_stats) printf("\n");
 
   mlfs_io_wait(g_ssd_dev, 1);
   // At this point, read cache entries are filled with data.
@@ -1510,7 +1528,9 @@ do_io_aligned:
     bh_submit_read_sync_IO(bh);
     bh_release(bh);
     if (enable_perf_stats) {
+      //printf("[%d] blkno = %llu, bh_size = %llu, io_size = %llu\n", __LINE__, bh->b_blocknr, bh->b_size, io_size);
       g_perf_stats.read_data_nr++;
+      g_perf_stats.read_data_size += bh->b_size;
     }
   }
 
