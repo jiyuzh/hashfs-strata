@@ -4,3 +4,6 @@
 [submodule "bench/hash_bench/thashmap"]
 	path = bench/hash_bench/thashmap
 	url = https://github.com/Dahca/thashmap.git
+[submodule "bench/leveldb"]
+	path = bench/leveldb
+	url = https://github.com/Alkaid-Benetnash/leveldb.git
