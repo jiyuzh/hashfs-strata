@@ -249,8 +249,8 @@ int mlfs_posix_lseek(int fd, int64_t offset, int origin)
 			f->off += offset;
 			break;
 		case SEEK_END:
-			f->ip->size += offset;
-			f->off = f->ip->size;
+			//f->ip->size += offset;
+			f->off = f->ip->size + offset;
 			break;
 		default:
 			ret = -EINVAL;
