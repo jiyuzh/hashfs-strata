@@ -15,7 +15,7 @@ void shim_init(void)
 {
 	if (!shim_initialized) {
 		//asm("int $3");
-		//init_fs();
+		init_fs();
 		shim_initialized = 1;
 	}
 }
@@ -23,5 +23,5 @@ void shim_init(void)
 void shim_fini(void)
 {
 	shim_initialized = 0;
-	//shutdown_fs();
+	shutdown_fs();
 }

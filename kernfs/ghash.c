@@ -42,11 +42,18 @@ uint64_t reads;
 uint64_t writes;
 uint64_t blocks;
 
-/*
+#if 0
 #define pthread_rwlock_rdlock(x) 0
 #define pthread_rwlock_wrlock(x) 0
 #define pthread_rwlock_unlock(x) 0
-*/
+#elif 0
+#define pthread_rwlock_rdlock(x) do { printf("rdlk\n"); pthread_rwlock_rdlock(x); } while (0)
+#define pthread_rwlock_wrlock(x) do { printf("wrlk\n"); pthread_rwlock_wrlock(x); } while (0)
+#define pthread_rwlock_unlock(x) do { printf("unlk\n"); pthread_rwlock_unlock(x); } while (0)
+#elif 0
+#define pthread_rwlock_rdlock(x) if (0 != pthread_rwlock_tryrdlock(x)) printf("WUT\n")
+#define pthread_rwlock_wrlock(x) if (0 != pthread_rwlock_trywrlock(x)) printf("WUT\n")
+#endif
 
 /**
  * SECTION:hash_tables
@@ -247,12 +254,8 @@ g_hash_table_lookup_node (GHashTable    *hash_table,
   nvram_read(hash_table, NV_IDX(node_index), &buffer, FALSE);
   cur = buffer[BUF_IDX(node_index)];
   */
-  if (unlikely(force)) {
-    nvram_read(hash_table, NV_IDX(node_index), &buffer, TRUE);
-  } else {
-    nvram_read(hash_table, NV_IDX(node_index), &buffer, FALSE);
-    cur = buffer[BUF_IDX(node_index)];
-  }
+  nvram_read(hash_table, NV_IDX(node_index), &buffer, force);
+  cur = buffer[BUF_IDX(node_index)];
   //cur = hash_table->cache[NV_IDX(node_index)][BUF_IDX(node_index)];
 
   while (!HASH_ENTRY_IS_EMPTY(cur)) {
@@ -280,13 +283,8 @@ g_hash_table_lookup_node (GHashTable    *hash_table,
     */
 
     node_index = new_idx;
-    if (unlikely(force)) {
-      nvram_read(hash_table, NV_IDX(node_index), &buffer, TRUE);
-    } else {
-      nvram_read(hash_table, NV_IDX(node_index), &buffer, FALSE);
-      cur = buffer[BUF_IDX(node_index)];
-    }
-    //cur = buffer[BUF_IDX(node_index)];
+    nvram_read(hash_table, NV_IDX(node_index), &buffer, force);
+    cur = buffer[BUF_IDX(node_index)];
     //cur = hash_table->cache[NV_IDX(node_index)][BUF_IDX(node_index)];
   }
 
@@ -584,7 +582,7 @@ void g_hash_table_lookup(GHashTable *hash_table, mlfs_fsblk_t key,
   //pthread_rwlock_rdlock(hash_table->locks + node_index);
 
   mlfs_fsblk_t ent_val = HASH_ENTRY_VAL(ent);
-  *val = !IS_TOMBSTONE(ent_val) ? ent_val : 0;
+  *val = !HASH_ENTRY_IS_TOMBSTONE(ent) ? ent_val : 0;
   *size = ent.size;
 
   //pthread_rwlock_unlock(hash_table->locks + node_index);

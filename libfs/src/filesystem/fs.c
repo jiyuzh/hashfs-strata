@@ -144,8 +144,9 @@ void shutdown_fs(void)
   int ret;
   int _enable_perf_stats = enable_perf_stats;
 
-  if (!initialized)
-    return ;
+  if (!initialized) {
+    return;
+  }
 
   fflush(stdout);
   fflush(stderr);
@@ -156,8 +157,9 @@ void shutdown_fs(void)
 
   enable_perf_stats = _enable_perf_stats;
 
-  if (enable_perf_stats)
+  if (enable_perf_stats) {
     show_libfs_stats("shutdown fs");
+  }
 
   /*
   ret = munmap(mlfs_slab_pool_shared, SHM_SIZE);
@@ -169,7 +171,7 @@ void shutdown_fs(void)
     panic("cannot close shared memory\n");
   */
 
-  return ;
+  return;
 }
 
 #ifdef USE_SLAB
@@ -528,6 +530,7 @@ int sync_inode_ext_tree(uint8_t dev, struct inode *inode)
 #ifdef USE_HDD
     memmove(inode->l3.addrs, dinode.l3_addrs, sizeof(addr_t) * (NDIRECT + 1));
 #endif
+
     pthread_mutex_unlock(&inode->i_mutex);
 
     /*

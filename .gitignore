@@ -22,6 +22,8 @@ libfs/tests/*.json
 autom4te.cache/
 
 shim/libshim/*.o
+shim/libshim/*.so
+shim/glibc-build-all
 
 # Test files.
 kernfs/tests/extent_test

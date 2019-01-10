@@ -75,18 +75,22 @@ int lookup_hash(struct inode *inode, mlfs_lblk_t key, hash_value_t* value,
 
   *index = 0;
   // Two-level lookup
+  //if (force) printf("FORCEFUL LOOKUP\n");
   g_hash_table_lookup(gsuper, r, value, size, force);
+  //if (force) printf("searched high\n");
   //printf("%u -> %lu, %lu %lu\n", key, r, *value, *size);
   bool present = (*value) && ((key & RANGE_BITS) < *size);
   //printf("--- %lu & %lu (%lu) < %lu\n", key, RANGE_BITS, key & RANGE_BITS, *size);
   if (!present) {
-    //printf("Not in big.\n");
+    //if (force) printf("Not in big.\n");
     g_hash_table_lookup(ghash, k, value, size, force);
-    present = *value != 0;
-    //if (!present) printf("Not in small.\n");
+    //if (force) printf("searched low\n");
+    present = (*value) != 0;
+    //if (!present && force) printf("Not in small.\n");
   } else {
     *index = (key & RANGE_BITS);
   }
+  //if (force) printf("FORCEFUL RETURN\n");
 
   return (int) present;
 }
@@ -127,7 +131,9 @@ int mlfs_hash_get_blocks(handle_t *handle, struct inode *inode,
     hash_value_t index;
     hash_value_t value;
     hash_value_t size;
+    //printf("LUP %lu\n", map->m_lblk + i);
     int pre = lookup_hash(inode, map->m_lblk + i, &value, &size, &index, force);
+    //printf("LDOWN value = %llu size = %llu index = %llu\n", value, size, index);
     if (!pre) {
       goto create;
     }
@@ -161,7 +167,7 @@ create:
       a_type = DATA;
     }
 
-    //pthread_mutex_lock(&alloc_tex);
+    pthread_mutex_lock(&alloc_tex);
     mlfs_lblk_t lb = map->m_lblk + (map->m_len - len);
     int r = mlfs_new_blocks(sb, &blockp, len, 0, 0, a_type, 0);
     if (r > 0) {
@@ -176,7 +182,7 @@ create:
     }
 
     ret = r;
-    //pthread_mutex_unlock(&alloc_tex);
+    pthread_mutex_unlock(&alloc_tex);
 
     //printf("Starting insert: %u, %lu, %lu\n", map->m_lblk, map->m_len, len);
     for (int c = 0; c < ret; ) {
@@ -283,8 +289,9 @@ double check_load_factor(struct inode *inode) {
 }
 
 int mlfs_hash_persist() {
+#if 1
   return 0;
-
+#else
   pthread_mutex_lock(ghash->metalock);
   pthread_mutex_lock(gsuper->metalock);
 
@@ -296,6 +303,7 @@ int mlfs_hash_persist() {
   pthread_mutex_unlock(ghash->metalock);
 
   return 0;
+#endif
 }
 
 #endif

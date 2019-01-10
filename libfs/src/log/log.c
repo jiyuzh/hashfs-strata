@@ -1082,12 +1082,13 @@ void handle_digest_response(char *ack_cmd)
 	// and Libfs syncs inodes based on the list.
 	HASH_ITER(hash_handle, inode_hash[g_root_dev], inode, tmp) {
 		if (!(inode->flags & I_DELETING)) {
-			if (inode->itype == T_FILE)
+			if (inode->itype == T_FILE) {
 				sync_inode_ext_tree(g_root_dev, inode);
-			else if(inode->itype == T_DIR)
-				;
-			else
+      } else if(inode->itype == T_DIR) {
+				// do nothing?
+      } else {
 				panic("unsupported inode type\n");
+      }
 		}
 	}
 

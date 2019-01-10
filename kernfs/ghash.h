@@ -236,9 +236,9 @@ nvram_read(GHashTable *ht, mlfs_fsblk_t offset, hash_entry_t **buf, bool force) 
   if (unlikely(ht->cache[offset] == NULL)) {
     ht->cache[offset] = (hash_entry_t*)malloc(g_block_size_bytes);
     mlfs_assert(ht->cache[offset]);
-    *buf = ht->cache[offset];
   }
-#endif
+
+  *buf = ht->cache[offset];
 
 #ifdef STORAGE_PERF
   uint64_t tsc_begin = asm_rdtscp();
@@ -258,6 +258,10 @@ nvram_read(GHashTable *ht, mlfs_fsblk_t offset, hash_entry_t **buf, bool force) 
 #ifdef STORAGE_PERF
   g_perf_stats.path_storage_tsc += asm_rdtscp() - tsc_begin;
   g_perf_stats.path_storage_nr++;
+#endif
+
+#else
+#error "Need nvram_read for no cache"
 #endif
 }
 
@@ -390,6 +394,7 @@ nvram_alloc_range(size_t count) {
   // TODO: maybe generalize this for other devices.
   struct super_block *super = sb[g_root_dev];
   mlfs_fsblk_t block;
+  mlfs_fsblk_t last;
 
   // TODO: remove--this is due to a hack
   size_t total_blocks = 0;
@@ -409,9 +414,12 @@ nvram_alloc_range(size_t count) {
     assert(err >= 0);
     if (total_blocks == 0) block = blk;
     total_blocks += err;
+    last = blk + err;
   }
 
   assert(total_blocks == count);
+
+  printf("-- Allocated blkno %llu - %llu\n", block, last);
 
   return block;
 }
