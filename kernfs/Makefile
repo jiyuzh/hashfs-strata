@@ -7,8 +7,9 @@
 
 SUBDIR	:= io cache concurrency global ds mlfs storage .
 
+PREFIX ?= ebuild
 SRC_DIR   := $(addprefix , $(SUBDIR))
-BUILD_DIR := $(addprefix build/, $(SUBDIR))
+BUILD_DIR := $(addprefix $(PREFIX)/, $(SUBDIR))
 LIBFS_DIR := $(CURDIR)/../libfs
 
 ########
@@ -16,7 +17,7 @@ LIBFS_DIR := $(CURDIR)/../libfs
 ########
 SRC	:= $(foreach sdir, $(SRC_DIR), $(wildcard $(sdir)/*.c))
 SRC := $(filter-out %mkfs.c %kernf.c,$(SRC))
-OBJ	:= $(patsubst %.c,build/%.o,$(SRC))
+OBJ	:= $(patsubst %.c,$(PREFIX)/%.o,$(SRC))
 HDER := $(foreach sdir, $(SRC_DIR), $(wildcard $(sdir)/*.h))
 
 ########
@@ -31,7 +32,7 @@ CUCKOO_DIR := $(abspath $(LIBFS_DIR)/lib/libcuckoo)
 #GLIB_DIR := $(abspath $(LIBFS_DIR)/lib/glib)
 GLIB_DIR :=
 JEMALLOC_DIR := $(abspath $(LIBFS_DIR)/lib/jemalloc-4.5.0)
-STORAGE_ENGINE := $(wildcard $(LIBFS_DIR)/build/storage/*.o)
+STORAGE_ENGINE := $(wildcard $(LIBFS_DIR)/$(PREFIX)/storage/*.o)
 #C_LIBCUCKOO_DIR := $(abspath $(LIBFS_DIR)/lib/libcuckoo-c/src)
 #LIBSPDK := $(abspath $(LIBFS_DIR)/src/storage/spdk/libspdk.so)
 
@@ -53,7 +54,13 @@ MLFS_FLAGS += -DFCONCURRENT
 #MLFS_FLAGS += -DUSE_HDD
 #MLFS_FLAGS += -DMIGRATION
 #MLFS_FLAGS += -DEXPERIMENTAL
-MLFS_FLAGS += -DHASHTABLE
+ifeq ($(PREFIX), hbuild)
+    MLFS_FLAGS += -DHASHTABLE
+else
+ifneq ($(PREFIX), ebuild)
+    $(error "prefix must be ebuild or hbuild")
+endif
+endif
 
 #######
 # Optimization definitions
@@ -91,7 +98,7 @@ endef
 all: $(BUILD_DIR) filesystem
 
 clean:
-	@rm -rf ./build
+	@rm -rf ./$(PREFIX)
 
 ########
 #  Create dirs recursively
@@ -103,8 +110,8 @@ $(BUILD_DIR):
 #  Targets
 ########
 filesystem: $(OBJ) $(SRC) $(HDER)
-	#$(CC) -shared $(DEBUG) -o build/libkernfs.so $(OBJ) $(CUCKOO_FILTER_DIR)/libcuckoofilter.a $(LD_FLAGS) $(MLFS_FLAGS)
-	$(CC) -shared $(DEBUG) -o build/libkernfs.so $(OBJ) $(LD_FLAGS) $(MLFS_FLAGS)
+	#$(CC) -shared $(DEBUG) -o $(PREFIX)/libkernfs.so $(OBJ) $(CUCKOO_FILTER_DIR)/libcuckoofilter.a $(LD_FLAGS) $(MLFS_FLAGS)
+	$(CC) -shared $(DEBUG) -o $(PREFIX)/libkernfs.so $(OBJ) $(LD_FLAGS) $(MLFS_FLAGS)
 
 ########
 #  Compile each source into an object

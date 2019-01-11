@@ -4,10 +4,12 @@ include $(SPDK_ROOT_DIR)/mk/spdk.common.mk
 
 # (iangneal): override in libfs/Makefile
 MLFS_FLAGS +=
-
+ifndef PREFIX
+    $(error 'must pass in $$(PREFIX)')
+endif
 C_SRCS := common.c sync.c async.c
 OBJS=$(C_SRCS:.c=.o)
-MLFS_DEP_OBJS = $(MLFS_DIR)/../build/global/util.o
+MLFS_DEP_OBJS = $(MLFS_DIR)/../$(PREFIX)/global/util.o
 
 OBJS += $(MLFS_DEP_OBJS)
 
