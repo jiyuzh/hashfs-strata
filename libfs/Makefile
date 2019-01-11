@@ -23,14 +23,15 @@ MODULES   := io concurrency config filesystem global ds log mkfs \
 ########
 #  All modules' directories in src and build
 ########
+PREFIX ?= ebuild
 SRC_DIR   := $(addprefix src/,$(MODULES))
-BUILD_DIR := $(addprefix build/,$(MODULES))
+BUILD_DIR := $(addprefix $(PREFIX)/,$(MODULES))
 
 ########
 #  Source and Object files in their  module directories
 ########
 SRC       := $(foreach sdir,$(SRC_DIR),$(wildcard $(sdir)/*.c))
-OBJ       := $(patsubst src/%.c,build/%.o,$(SRC))
+OBJ       := $(patsubst src/%.c,$(PREFIX)/%.o,$(SRC))
 
 ########
 #  Lib directories
@@ -54,7 +55,13 @@ MLFS_FLAGS += -DKLIB_HASH
 #MLFS_FLAGS += -DUSE_SSD
 #MLFS_FLAGS += -DUSE_HDD
 #MLFS_FLAGS += -DMLFS_LOG
-MLFS_FLAGS += -DHASHTABLE
+ifeq ($(PREFIX), hbuild)
+    MLFS_FLAGS += -DHASHTABLE
+else
+ifneq ($(PREFIX), ebuild)
+    $(error "prefix must be ebuild or hbuild")
+endif
+endif
 
 ########
 # Testing definitions
@@ -86,9 +93,8 @@ checkdirs: $(BUILD_DIR)
 	@mkdir -p bin
 
 clean:
-	@$(CC) -v
-	@rm -rf $(BUILD_DIR)
-	make -C src/storage/spdk/ clean
+	rm -rf $(PREFIX)
+	make -C src/storage/spdk/ clean PREFIX="$(PREFIX)"
 
 ########
 #  Create dirs recursively
@@ -101,15 +107,15 @@ $(BUILD_DIR):
 ########
 #build/libmlfs.a: $(OBJ)
 libmlfs: $(OBJ) spdk
-	ar cr build/libmlfs.a $(OBJ)
-	$(CC) -shared $(DEBUG) -o build/libmlfs.so $(OBJ) $(LD_FLAGS) -DLIBFS $(MLFS_FLAGS) -L$(LIBSPDK_DIR) -lspdk -L$(JEMALLOC_DIR)/lib -Wl,-rpath=$(abspath $(JEMALLOC_DIR)/lib) -ljemalloc
+	ar cr $(PREFIX)/libmlfs.a $(OBJ)
+	$(CC) -shared $(DEBUG) -o $(PREFIX)/libmlfs.so $(OBJ) $(LD_FLAGS) -DLIBFS $(MLFS_FLAGS) -L$(LIBSPDK_DIR) -lspdk -L$(JEMALLOC_DIR)/lib -Wl,-rpath=$(abspath $(JEMALLOC_DIR)/lib) -ljemalloc
 
 spdk: $(OBJ)
-	make -C src/storage/spdk/ MLFS_FLAGS="$(MLFS_FLAGS)"
+	make -C src/storage/spdk/ MLFS_FLAGS="$(MLFS_FLAGS)" PREFIX="$(PREFIX)"
 
 mkfs: $(OBJ) libmlfs
-	$(CC) -o build/mkfs.o -c src/mkfs/mkfs.c $(INCLUDES) $(MLFS_FLAGS)
-	$(CC) -g -o bin/mkfs.mlfs  build/libmlfs.a $(INCLUDES) -L$(LIBSPDK_DIR) -lspdk $(LD_FLAGS) -DLIBFS -Wl,-rpath=$(abspath $(LIBSPDK_DIR)) -Wl,-rpath=$(abspath $(NVML_DIR)/nondebug)
+	$(CC) -o $(PREFIX)/mkfs.o -c src/mkfs/mkfs.c $(INCLUDES) $(MLFS_FLAGS)
+	$(CC) -g -o bin/mkfs.mlfs  $(PREFIX)/libmlfs.a $(INCLUDES) -L$(LIBSPDK_DIR) -lspdk $(LD_FLAGS) -DLIBFS -Wl,-rpath=$(abspath $(LIBSPDK_DIR)) -Wl,-rpath=$(abspath $(NVML_DIR)/nondebug)
 
 
 ########

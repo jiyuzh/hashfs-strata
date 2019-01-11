@@ -8,7 +8,6 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <string.h>
-#include "mlfs/mlfs_interface.h"
 #define MAX_FILE_NUM 1024
 #define MAX_FILE_NAME_LEN 1024
 #define MAX_THREADS 1024
@@ -62,7 +61,6 @@ uint32_t get_unit(char c) {
 }
 int main(int argc, char **argv) {
     int c;
-    init_fs();
     srand(time(NULL));
     while ((c = getopt(argc, argv, OPTSTRING)) != -1) {
         switch (c) {
@@ -156,7 +154,6 @@ int main(int argc, char **argv) {
                 worker_results[i].total_seq_read, worker_results[i].total_rand_read,
                 worker_results[i].total_write);
     }
-    shutdown_fs();
     return 0;
 }
 
