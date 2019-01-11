@@ -2,6 +2,7 @@
 #include <sys/shm.h>
 #include <sys/stat.h>
 #include <sys/mman.h>
+#include <json-c/json.h>
 
 #include "mlfs/mlfs_user.h"
 #include "global/global.h"
@@ -61,6 +62,7 @@ struct dirent_block *dirent_hash[g_n_devices + 1];
 struct dlookup_data *dlookup_hash[g_n_devices + 1];
 
 libfs_stat_t g_perf_stats;
+int prof_fd;
 float clock_speed_mhz;
 
 static inline float tsc_to_ms(uint64_t tsc)
@@ -76,25 +78,68 @@ void reset_libfs_stats(void)
 #endif
     memset(&g_perf_stats, 0, sizeof(libfs_stat_t));
 }
-
+#define js_add_int64(obj, name, val) json_object_object_add(obj, name, json_object_new_int64(val));
 void show_libfs_stats(const char *title)
 {
+  json_object *root = json_object_new_object();
+  json_object_object_add(root, "title", json_object_new_string(title));
+  json_object *wait_digest = json_object_new_object(); {
+	  js_add_int64(wait_digest, "tsc", g_perf_stats.digest_wait_tsc);
+	  js_add_int64(wait_digest, "nr" , g_perf_stats.digest_wait_nr);
+	  json_object_object_add(root, "wait_digest", wait_digest);
+  }
+  json_object *l0 = json_object_new_object(); {
+	  js_add_int64(l0, "tsc", g_perf_stats.l0_search_tsc);
+	  js_add_int64(l0, "nr" , g_perf_stats.l0_search_nr);
+	  json_object_object_add(root, "l0", l0);
+  }
+  json_object *lsm = json_object_new_object(); {
+	  js_add_int64(lsm, "tsc", g_perf_stats.tree_search_tsc);
+	  js_add_int64(lsm, "nr" , g_perf_stats.tree_search_nr);
+	  json_object_object_add(root, "lsm", lsm);
+  }
+  json_object *log = json_object_new_object(); {
+	  json_object *commit = json_object_new_object(); {
+		  js_add_int64(commit, "tsc", g_perf_stats.log_commit_tsc);
+		  js_add_int64(commit, "nr" , g_perf_stats.log_commit_nr);
+		  json_object_object_add(log, "commit", commit);
+	  }
+	  json_object *wr = json_object_new_object(); {
+		  js_add_int64(wr, "tsc", g_perf_stats.log_write_tsc);
+		  js_add_int64(wr, "nr" , g_perf_stats.log_write_nr);
+		  json_object_object_add(log, "write", wr);
+	  }
+	  json_object *hdrwr = json_object_new_object(); {
+		  js_add_int64(hdrwr, "tsc", g_perf_stats.loghdr_write_tsc);
+		  js_add_int64(hdrwr, "nr" , g_perf_stats.loghdr_write_nr);
+		  json_object_object_add(log, "hdr_write", hdrwr);
+	  }
+	  json_object_object_add(root, "log", log);
+  }
+  json_object *read_data = json_object_new_object(); {
+	  js_add_int64(read_data, "tsc", g_perf_stats.read_data_tsc);
+	  js_add_int64(read_data, "nr" , g_perf_stats.read_data_nr);
+	  js_add_int64(read_data, "bytes", g_perf_stats.read_data_size);
+	  json_object_object_add(root, "read_data", read_data);
+  }
+  json_object *path_storage = json_object_new_object(); {
+	  js_add_int64(path_storage, "tsc", g_perf_stats.path_storage_tsc);
+	  js_add_int64(path_storage, "nr" , g_perf_stats.path_storage_nr);
+	  json_object_object_add(root, "path_storage", path_storage);
+  }
+  json_object *storage = json_object_new_object(); {
+	  js_add_int64(storage, "tsc", storage_tsc);
+	  js_add_int64(storage, "nr" , storage_nr);
+	  json_object_object_add(root, "storage", storage);
+  }
+  const char *js_str = json_object_get_string(root);
+  write(prof_fd, js_str, strlen(js_str));
+  json_object_put(root);
   printf("\n");
   printf("----------------------- %s libfs statistics\n", title);
   // For some reason, floating point operation causes segfault in filebench
   // worker thread.
 
-    //printf("wait on digest    : %.3f ms\n", tsc_to_ms(g_perf_stats.digest_wait_tsc));
-  //printf("inode allocation  : %.3f ms\n", tsc_to_ms(g_perf_stats.ialloc_tsc));
-  //printf("bcache search     : %.3f ms\n", tsc_to_ms(g_perf_stats.bcache_search_tsc));
-  //printf("search l0 tree    : %.3f ms\n", tsc_to_ms(g_perf_stats.l0_search_tsc));
-  //printf("search lsm tree   : %.3f ms\n", tsc_to_ms(g_perf_stats.tree_search_tsc));
-  //printf("log commit        : %.3f ms\n", tsc_to_ms(g_perf_stats.log_commit_tsc));
-  //printf("  log writes      : %.3f ms\n", tsc_to_ms(g_perf_stats.log_write_tsc));
-  //printf("  loghdr writes   : %.3f ms\n", tsc_to_ms(g_perf_stats.loghdr_write_tsc));
-  //printf("read data blocks  : %.3f ms\n", tsc_to_ms(g_perf_stats.read_data_tsc));
-  //printf("directory search  : %.3f ms\n", tsc_to_ms(g_perf_stats.dir_search_tsc));
-  //printf("temp_debug        : %.3f ms\n", tsc_to_ms(g_perf_stats.tmp_tsc));
   printf("wait on digest  (tsc/op)  : %f \n", (double)g_perf_stats.digest_wait_tsc / g_perf_stats.digest_wait_nr);
   printf("inode allocation (tsc/op) : %f \n", (double)g_perf_stats.ialloc_tsc / g_perf_stats.ialloc_nr);
   printf("bcache search (tsc/op)    : %f \n", (double)g_perf_stats.bcache_search_tsc /g_perf_stats.bcache_search_nr);
@@ -160,6 +205,7 @@ void shutdown_fs(void)
   if (enable_perf_stats) {
     show_libfs_stats("shutdown fs");
   }
+  close(prof_fd);
 
   /*
   ret = munmap(mlfs_slab_pool_shared, SHM_SIZE);
@@ -376,7 +422,9 @@ void init_fs(void)
       mlfs_info("%s", " disable profile\n");
     }
 
-    //memset(&g_perf_stats, 0, sizeof(libfs_stat_t));
+	char prof_fn[256];
+	sprintf(prof_fn, "/tmp/libfs_prof.%d", getpid());
+	assert((prof_fd = open(prof_fn, O_CREAT | O_TRUNC | O_WRONLY, 0666)) != -1);
     reset_libfs_stats();
 
     clock_speed_mhz = get_cpu_clock_speed();

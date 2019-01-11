@@ -108,7 +108,7 @@ $(BUILD_DIR):
 #build/libmlfs.a: $(OBJ)
 libmlfs: $(OBJ) spdk
 	ar cr $(PREFIX)/libmlfs.a $(OBJ)
-	$(CC) -shared $(DEBUG) -o $(PREFIX)/libmlfs.so $(OBJ) $(LD_FLAGS) -DLIBFS $(MLFS_FLAGS) -L$(LIBSPDK_DIR) -lspdk -L$(JEMALLOC_DIR)/lib -Wl,-rpath=$(abspath $(JEMALLOC_DIR)/lib) -ljemalloc
+	$(CC) -shared $(DEBUG) -o $(PREFIX)/libmlfs.so $(OBJ) $(LD_FLAGS) -DLIBFS $(MLFS_FLAGS) -L$(LIBSPDK_DIR) -lspdk -L$(JEMALLOC_DIR)/lib -Wl,-rpath=$(abspath $(JEMALLOC_DIR)/lib) -ljemalloc -ljson-c
 
 spdk: $(OBJ)
 	make -C src/storage/spdk/ MLFS_FLAGS="$(MLFS_FLAGS)" PREFIX="$(PREFIX)"

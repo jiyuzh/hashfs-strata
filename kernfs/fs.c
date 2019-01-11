@@ -4,6 +4,7 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <unistd.h>
+#include <json-c/json.h>
 
 #include "mlfs/mlfs_user.h"
 #include "global/global.h"
@@ -59,6 +60,7 @@ uint8_t g_log_dev = 4;
 
 kernfs_stats_t g_perf_stats;
 uint8_t enable_perf_stats;
+int prof_fd;
 
 uint16_t *inode_version_table;
 threadpool thread_pool;
@@ -172,6 +174,19 @@ void reset_kernfs_stats(void)
 }
 void show_kernfs_stats(void)
 {
+	json_object *root = json_object_new_object();
+	json_object *digest = json_object_new_int64(g_perf_stats.digest_time_tsc);
+	json_object *path_search = json_object_new_int64(g_perf_stats.path_search_tsc);
+	json_object *storage = json_object_new_int64(storage_tsc);
+	json_object *path_storage = json_object_new_int64(g_perf_stats.path_storage_tsc);
+	json_object_object_add(root, "digest", digest);
+	json_object_object_add(root, "path_search", path_search);
+	json_object_object_add(root, "path_storage", path_storage);
+	json_object_object_add(root, "storage", storage);
+	const char *js_str = json_object_get_string(root);
+	write(prof_fd, js_str, strlen(js_str));
+	json_object_put(root);
+
 	//float clock_speed_mhz = get_cpu_clock_speed();
 	uint64_t n_digest = g_perf_stats.n_digest == 0 ? 1 : g_perf_stats.n_digest;
 
@@ -1939,6 +1954,7 @@ static void wait_for_event(void)
 void shutdown_fs(void)
 {
 	printf("Finalize FS\n");
+	close(prof_fd);
 
 	device_shutdown();
 	return ;
@@ -2070,11 +2086,14 @@ void init_fs(void)
 #endif
 
 #ifdef HASHTABLE
-  init_hash(sb[g_root_dev]);
+	init_hash(sb[g_root_dev]);
 #endif
 
-  reset_kernfs_stats();
-
+	// initialzie profiling
+	char prof_fn[256];
+	sprintf(prof_fn, "/tmp/kernfs_prof.%d", getpid());
+	assert((prof_fd = open(prof_fn, O_CREAT | O_TRUNC | O_WRONLY, 0666)) != -1);
+	reset_kernfs_stats();
 	inode_version_table =
 		(uint16_t *)mlfs_zalloc(sizeof(uint16_t) * NINODES);
 
@@ -2082,20 +2101,20 @@ void init_fs(void)
 
 	if (perf_profile) {
 		enable_perf_stats = 1;
-  } else {
+	} else {
 		enable_perf_stats = 0;
-  }
+	}
 
 	mlfs_debug("%s\n", "LIBFS is initialized");
 
-  // iangneal: change to make our max number.
-  thread_pool = thpool_init(1);
-  //thread_pool = thpool_init(max_kernfs_io_queues);
+	// iangneal: change to make our max number.
+	thread_pool = thpool_init(1);
+	//thread_pool = thpool_init(max_kernfs_io_queues);
 	// A fixed thread for using SPDK.
 	thread_pool_ssd = thpool_init(max_kernfs_io_queues);
 	//thread_pool_ssd = thpool_init(1);
 
-  printf("Initialized thread pool with %d threads.\n", max_kernfs_io_queues);
+	printf("Initialized thread pool with %d threads.\n", max_kernfs_io_queues);
 
 #ifdef FCONCURRENT
 	file_digest_thread_pool = thpool_init(8);
