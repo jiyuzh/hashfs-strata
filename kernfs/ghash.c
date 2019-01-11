@@ -244,6 +244,8 @@ g_hash_table_lookup_node (GHashTable    *hash_table,
     hash_value = 2;
   }
 
+  //pthread_rwlock_rdlock(hash_table->cache_lock);
+
   *hash_return = hash_value;
 
   //node_index = hash_value % hash_table->mod;
@@ -262,6 +264,7 @@ g_hash_table_lookup_node (GHashTable    *hash_table,
     if (cur.key == key && HASH_ENTRY_IS_VALID(cur)) {
       *ent_return = cur;
       pthread_rwlock_unlock(hash_table->locks + node_index);
+      //pthread_rwlock_unlock(hash_table->cache_lock);
       return node_index;
     } else if (HASH_ENTRY_IS_TOMBSTONE(cur) && !have_tombstone) {
       first_tombstone = node_index;
@@ -291,6 +294,7 @@ g_hash_table_lookup_node (GHashTable    *hash_table,
   if (have_tombstone) {
     *ent_return = hash_table->cache[NV_IDX(first_tombstone)][BUF_IDX(first_tombstone)];
     pthread_rwlock_unlock(hash_table->locks + node_index);
+    //pthread_rwlock_unlock(hash_table->cache_lock);
     return first_tombstone;
   }
 
@@ -298,6 +302,7 @@ g_hash_table_lookup_node (GHashTable    *hash_table,
   *ent_return = hash_table->cache[NV_IDX(node_index)][BUF_IDX(node_index)];
   pthread_rwlock_unlock(hash_table->locks + node_index);
 
+  //pthread_rwlock_unlock(hash_table->cache_lock);
   return node_index;
 }
 
@@ -423,6 +428,7 @@ g_hash_table_new (GHashFunc    hash_func,
     // Partial block.
     nblocks++;
   }
+  hash_table->nblocks = nblocks;
 
   // initialize read-writer locks
   hash_table->locks = malloc(max_entries * sizeof(pthread_rwlock_t));
@@ -432,6 +438,14 @@ g_hash_table_new (GHashFunc    hash_func,
     if (err) {
       panic("Could not init rwlock!");
     }
+  }
+
+  // cache lock
+  hash_table->cache_lock = malloc(sizeof(pthread_rwlock_t));
+  assert(hash_table->cache_lock);
+  int err = pthread_rwlock_init(hash_table->cache_lock, NULL);
+  if (err) {
+    panic("Could not init rwlock!");
   }
 
   // init metadata lock
@@ -458,12 +472,17 @@ g_hash_table_new (GHashFunc    hash_func,
 #if 1
   hash_entry_t *unused;
 
+  // allocate cache bitmap -- unset for valid, set for invalid
+  hash_table->cache_bitmap = calloc(nblocks / BITS_PER_LONG, sizeof(unsigned long));
+  assert(hash_table->cache_bitmap);
+
   for (int i = 0; i < nblocks; ++i) {
     hash_table->cache[i] = calloc(g_block_size_bytes / sizeof(hash_entry_t),
         sizeof(hash_entry_t));
     // load from NVRAM (force flag)
     nvram_read(hash_table, i, &unused, 1);
   }
+
 #endif
 
   hash_table->bh_cache = calloc(nblocks, sizeof(*hash_table->bh_cache));
@@ -643,6 +662,7 @@ g_hash_table_insert_internal (GHashTable     *hash_table,
   if (unlikely (!HASH_IS_REAL (hash_value))) {
     hash_value = 2;
   }
+  //pthread_rwlock_rdlock(hash_table->cache_lock);
 
   //node_index = hash_value % hash_table->mod;
   node_index = hash_value & hash_table->mask;
@@ -685,6 +705,7 @@ g_hash_table_insert_internal (GHashTable     *hash_table,
 
   pthread_rwlock_unlock(hash_table->locks + node_index);
 
+  //pthread_rwlock_unlock(hash_table->cache_lock);
   return res;
 #endif
 }
@@ -841,6 +862,7 @@ g_hash_table_remove_internal (GHashTable    *hash_table,
     hash_value = 2;
   }
 
+  //pthread_rwlock_rdlock(hash_table->cache_lock);
   //node_index = hash_value % hash_table->mod;
   node_index = hash_value & hash_table->mask;
   pthread_rwlock_wrlock(hash_table->locks + node_index);
@@ -874,6 +896,7 @@ g_hash_table_remove_internal (GHashTable    *hash_table,
 
   pthread_rwlock_unlock(hash_table->locks + node_index);
 
+  //pthread_rwlock_unlock(hash_table->cache_lock);
   return HASH_ENTRY_IS_VALID(cur);
 #endif
 }

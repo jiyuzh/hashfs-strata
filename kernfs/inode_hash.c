@@ -306,4 +306,32 @@ int mlfs_hash_persist() {
 #endif
 }
 
+// TODO: probably could keep track of this with a bitmap or something, but this
+// is very easy to implement
+int mlfs_hash_cache_invalidate() {
+  //pthread_rwlock_wrlock(ghash->cache_lock);
+  /*
+  for (size_t i = 0; i < ghash->nblocks; ++i) {
+    if(ghash->cache[i]) {
+      free(ghash->cache[i]);
+      ghash->cache[i] = NULL;
+    }
+  }
+  */
+  bitmap_set(ghash->cache_bitmap, 0, ghash->nblocks);
+  //pthread_rwlock_unlock(ghash->cache_lock);
+
+  //pthread_rwlock_wrlock(gsuper->cache_lock);
+  /*
+  for (size_t i = 0; i < gsuper->nblocks; ++i) {
+    if(gsuper->cache[i]) {
+      free(gsuper->cache[i]);
+      gsuper->cache[i] = NULL;
+    }
+  }
+  */
+  bitmap_set(gsuper->cache_bitmap, 0, gsuper->nblocks);
+  //pthread_rwlock_unlock(gsuper->cache_lock);
+}
+
 #endif

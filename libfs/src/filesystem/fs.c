@@ -546,6 +546,7 @@ int sync_inode_ext_tree(uint8_t dev, struct inode *inode)
 
     pthread_mutex_lock(&inode->i_mutex);
 #ifdef HASHTABLE
+#if 0
     handle_t handle = {.dev = g_root_dev};
     struct mlfs_map_blocks map;
     size_t nblocks = ((size_t)inode->size) >> g_block_size_shift;
@@ -567,8 +568,11 @@ int sync_inode_ext_tree(uint8_t dev, struct inode *inode)
       map.m_len -= ret;
       total += ret;
     }
-    fprintf(stderr, "%llu == %llu\n", total, nblocks);
+    //fprintf(stderr, "%llu == %llu\n", total, nblocks);
     //mlfs_assert(total == nblocks);
+#else
+    mlfs_hash_cache_invalidate();
+#endif
 #else
     memmove(inode->l1.addrs, dinode.l1_addrs, sizeof(addr_t) * (NDIRECT + 1));
 #endif

@@ -534,10 +534,7 @@ ExtentTest::run_multi_block_test(list<mlfs_lblk_t> insert_order,
   for (mlfs_lblk_t lb : insert_order) {
     time_stats_start(&trunc_per);
     err = mlfs_ext_truncate(&handle, inode, lb, lb + nr_block - 1);
-#ifndef HASHTABLE
-    // already persisted in get blocks
     sync_all_buffers(g_bdev[g_root_dev]);
-#endif
     time_stats_stop(&trunc_per);
 
     if (err < 0) {

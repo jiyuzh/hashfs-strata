@@ -121,6 +121,7 @@ typedef struct _GHashTable {
   mlfs_fsblk_t     data;
   mlfs_fsblk_t     nvram_size;
   size_t           range_size;
+  size_t           nblocks;
 
   GHashFunc        hash_func;
   GEqualFunc       key_equal_func;
@@ -132,6 +133,8 @@ typedef struct _GHashTable {
 
   // caching
 #ifdef HASHCACHE
+  pthread_rwlock_t *cache_lock;
+  unsigned long* cache_bitmap;
   // array of blocks
   hash_entry_t **cache;
   // cache of buffer heads to reduce search time
@@ -225,6 +228,9 @@ nvram_read(GHashTable *ht, mlfs_fsblk_t offset, hash_entry_t **buf, bool force) 
    * Do some caching!
    */
 #ifdef HASHCACHE
+  if (__test_and_clear_bit(offset, ht->cache_bitmap)) {
+    force = true;
+  }
   // if NULL, then it got invalidated or never loaded.
   if (likely(!force && ht->cache[offset] != NULL)) {
     *buf = ht->cache[offset];
@@ -434,6 +440,9 @@ nvram_alloc_range(size_t count) {
  */
 static inline void
 nvram_update(GHashTable *ht, mlfs_fsblk_t index, hash_entry_t* val) {
+#ifndef KERNFS
+  panic("LibFS should never update");
+#endif
   struct buffer_head *bh;
   int ret;
 
