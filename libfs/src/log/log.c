@@ -138,6 +138,7 @@ void shutdown_log(void)
 		m_barrier();
 		wait_on_digesting();
 	}
+	unlink(g_addr.sun_path);
 }
 
 static void read_log_superblock(struct log_superblock *log_sb)
