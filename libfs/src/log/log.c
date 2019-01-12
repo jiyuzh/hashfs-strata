@@ -592,7 +592,6 @@ static int persist_log_file(struct logheader_meta *loghdr_meta,
 			else {
 				if (fc_block->log_addr)  {
 					logblk_no = fc_block->log_addr;
-					fc_block->log_version = g_fs_log->avail_version;
 					mlfs_debug("write is coalesced %lu @ %lu\n", loghdr->data[idx], logblk_no);
 				}
 			}
