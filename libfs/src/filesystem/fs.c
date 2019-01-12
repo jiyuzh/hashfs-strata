@@ -203,9 +203,9 @@ void shutdown_fs(void)
   enable_perf_stats = _enable_perf_stats;
 
   if (enable_perf_stats) {
-    show_libfs_stats("shutdown fs");
+      show_libfs_stats("shutdown fs");
+      close(prof_fd);
   }
-  close(prof_fd);
 
   /*
   ret = munmap(mlfs_slab_pool_shared, SHM_SIZE);
@@ -417,14 +417,14 @@ void init_fs(void)
     if (perf_profile) {
       enable_perf_stats = 1;
       mlfs_info("%s", " enable profile\n");
+      char prof_fn[256];
+      sprintf(prof_fn, "/tmp/libfs_prof.%d", getpid());
+      assert((prof_fd = open(prof_fn, O_CREAT | O_TRUNC | O_WRONLY, 0666)) != -1);
     } else {
       enable_perf_stats = 0;
       mlfs_info("%s", " disable profile\n");
     }
 
-	char prof_fn[256];
-	sprintf(prof_fn, "/tmp/libfs_prof.%d", getpid());
-	assert((prof_fd = open(prof_fn, O_CREAT | O_TRUNC | O_WRONLY, 0666)) != -1);
     reset_libfs_stats();
 
     clock_speed_mhz = get_cpu_clock_speed();
