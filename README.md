@@ -236,7 +236,8 @@ Here are some common issues and how we were able to resolve them.
 4. mmap is not supported yet.
 5. Benchmarks are not fully tested in all configurations. Working
    configurations are described in our paper.
-6. There are known bugs in fork.
+6. Can only rename inside the same directory.
+7. There are known bugs in fork.
 
 ### Future Documentation ###
 
