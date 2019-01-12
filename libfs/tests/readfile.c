@@ -39,7 +39,7 @@ static void *worker_thread(void *);
 #define OPTSTRING "b:j:s:r:f:h"
 #define OPTNUM 5
 void print_help(char **argv) {
-    printf("usage: %s -b block_size -j n_threads -s seq_ratio -f file_path -r read_total", argv[0]);
+    printf("usage: %s -b block_size -j n_threads -s seq_ratio -f file_path -r read_total\n", argv[0]);
 }
 uint32_t get_unit(char c) {
     switch (c) {
