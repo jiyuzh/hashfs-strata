@@ -1,0 +1,212 @@
+[
+    {
+        "title": "worker sigusr1",
+        "wait_digest": {
+            "tsc": 0,
+            "nr": 0
+        },
+        "l0": {
+            "tsc": 1423286798,
+            "nr": 17350100
+        },
+        "lsm": {
+            "tsc": 10344001630,
+            "nr": 8675050
+        },
+        "log": {
+            "commit": {
+                "tsc": 1104,
+                "nr": 1
+            },
+            "write": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "hdr_write": {
+                "tsc": 0,
+                "nr": 0
+            }
+        },
+        "read_data": {
+            "tsc": 110020783894,
+            "nr": 8675050,
+            "bytes": 71066009600
+        },
+        "path_storage": {
+            "tsc": 3730864418,
+            "nr": 17350100
+        },
+        "storage": {
+            "tsc": 108881379046,
+            "nr": 8675138
+        }
+    },
+    {
+        "title": "worker sigusr1",
+        "wait_digest": {
+            "tsc": 0,
+            "nr": 0
+        },
+        "l0": {
+            "tsc": 1405452050,
+            "nr": 17376428
+        },
+        "lsm": {
+            "tsc": 10316561984,
+            "nr": 8688214
+        },
+        "log": {
+            "commit": {
+                "tsc": 1284,
+                "nr": 1
+            },
+            "write": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "hdr_write": {
+                "tsc": 0,
+                "nr": 0
+            }
+        },
+        "read_data": {
+            "tsc": 110159825664,
+            "nr": 8688214,
+            "bytes": 71173849088
+        },
+        "path_storage": {
+            "tsc": 3700507372,
+            "nr": 17376428
+        },
+        "storage": {
+            "tsc": 109023625290,
+            "nr": 8688302
+        }
+    },
+    {
+        "title": "worker sigusr1",
+        "wait_digest": {
+            "tsc": 0,
+            "nr": 0
+        },
+        "l0": {
+            "tsc": 1417000550,
+            "nr": 17413374
+        },
+        "lsm": {
+            "tsc": 10353419446,
+            "nr": 8706687
+        },
+        "log": {
+            "commit": {
+                "tsc": 850,
+                "nr": 1
+            },
+            "write": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "hdr_write": {
+                "tsc": 0,
+                "nr": 0
+            }
+        },
+        "read_data": {
+            "tsc": 110065883214,
+            "nr": 8706687,
+            "bytes": 71325179904
+        },
+        "path_storage": {
+            "tsc": 3727209278,
+            "nr": 17413374
+        },
+        "storage": {
+            "tsc": 108921840302,
+            "nr": 8706775
+        }
+    },
+    {
+        "title": "worker sigusr1",
+        "wait_digest": {
+            "tsc": 0,
+            "nr": 0
+        },
+        "l0": {
+            "tsc": 1406565510,
+            "nr": 17372982
+        },
+        "lsm": {
+            "tsc": 10276896698,
+            "nr": 8686491
+        },
+        "log": {
+            "commit": {
+                "tsc": 1114,
+                "nr": 1
+            },
+            "write": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "hdr_write": {
+                "tsc": 0,
+                "nr": 0
+            }
+        },
+        "read_data": {
+            "tsc": 110225881052,
+            "nr": 8686491,
+            "bytes": 71159734272
+        },
+        "path_storage": {
+            "tsc": 3707343512,
+            "nr": 17372982
+        },
+        "storage": {
+            "tsc": 109089874096,
+            "nr": 8686579
+        }
+    },
+    {
+        "title": "worker sigusr1",
+        "wait_digest": {
+            "tsc": 0,
+            "nr": 0
+        },
+        "l0": {
+            "tsc": 1410790640,
+            "nr": 17366246
+        },
+        "lsm": {
+            "tsc": 10289314722,
+            "nr": 8683123
+        },
+        "log": {
+            "commit": {
+                "tsc": 918,
+                "nr": 1
+            },
+            "write": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "hdr_write": {
+                "tsc": 0,
+                "nr": 0
+            }
+        },
+        "read_data": {
+            "tsc": 110188953062,
+            "nr": 8683123,
+            "bytes": 71132143616
+        },
+        "path_storage": {
+            "tsc": 3706683082,
+            "nr": 17366246
+        },
+        "storage": {
+            "tsc": 109060708942,
+            "nr": 8683211
+        }
+    }
+]
