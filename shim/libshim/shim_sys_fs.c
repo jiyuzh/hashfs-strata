@@ -606,6 +606,7 @@ int shim_do_ftruncate(int fd, off_t length)
 
 int shim_do_unlink(const char *path)
 {
+    return 0;
 	int ret;
 	char path_buf[PATH_BUF_SIZE];
 
