@@ -20,27 +20,6 @@ void mlfs_file_init(void)
 	pthread_spin_init(&g_fd_table.lock, PTHREAD_PROCESS_SHARED); 
 }
 
-static addr_t mlfs_update_get_fcache(struct inode *inode, 
-		offset_t offset, addr_t log_addr)
-{
-	offset_t key;
-	struct fcache_block *fc_block;
-
-	key = (offset >> g_block_size_shift);
-
-	fc_block = fcache_find(inode, key);
-
-	if (fc_block) 
-		return fc_block->log_addr;
-	
-	fc_block = fcache_alloc_add(inode, key, log_addr);
-
-	if (!fc_block)
-		return 0;
-
-	return fc_block->log_addr;
-}
-
 // Allocate a file structure.
 /* FIXME: the ftable implementation is too naive. need to
  * improve way to allocate struct file */
