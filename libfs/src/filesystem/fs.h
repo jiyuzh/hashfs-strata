@@ -61,6 +61,13 @@ struct fcache_block {
 	addr_t log_addr;		// block # of update log
 	uint8_t invalidate;
 	uint32_t log_version;
+	/* track what in-block offset the cached data for this block in the log
+	 * starts from, non-zero offset happens when previous zero-start log
+	 * expired while new write (append actually) to this block doesn't start
+	 * from zero. The correct data from 0 locates on NVM shared area
+	 * this offset should be 0 ~ g_block_size_bytes
+	 */
+	uint16_t start_offset;
 	uint8_t is_data_cached;
 	uint8_t *data;
 	struct list_head l;	// entry for global list
@@ -247,8 +254,9 @@ static inline struct fcache_block *fcache_find(struct inode *inode, offset_t key
 	return fc_block;
 }
 
+// if cache data (instead of log), log_addr and start_offset aren't used
 static inline struct fcache_block *fcache_alloc_add(struct inode *inode,
-		offset_t key, addr_t log_addr)
+		offset_t key, addr_t log_addr, uint16_t start_offset)
 {
 	struct fcache_block *fc_block;
 	khiter_t k;
@@ -263,6 +271,7 @@ static inline struct fcache_block *fcache_alloc_add(struct inode *inode,
 	fc_block->invalidate = 0;
 	fc_block->is_data_cached = 0;
 	fc_block->inum = inode->inum;
+    fc_block->start_offset = start_offset;
 	inode->n_fcache_entries++;
 	INIT_LIST_HEAD(&fc_block->l);
 

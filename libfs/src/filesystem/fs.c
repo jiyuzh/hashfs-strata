@@ -1119,7 +1119,7 @@ static struct fcache_block *add_to_read_cache(struct inode *inode,
   _fcache_block = fcache_find(inode, (off >> g_block_size_shift));
 
   if (!_fcache_block) {
-    _fcache_block = fcache_alloc_add(inode, (off >> g_block_size_shift), 0);
+    _fcache_block = fcache_alloc_add(inode, (off >> g_block_size_shift), 0, 0);
     g_fcache_head.n++;
   } else {
     mlfs_assert(_fcache_block->is_data_cached == 0);
@@ -1217,17 +1217,52 @@ int do_unaligned_read(struct inode *ip, uint8_t *dst, offset_t off, uint32_t io_
     // the update log search
     else if (_fcache_block->log_addr) {
       addr_t block_no = _fcache_block->log_addr;
+      uint16_t fc_off = _fcache_block->start_offset;
+      mlfs_debug("GET from cache: blockno %lu (%lu, %lu, (%d,%d)) offset %lu(0x%lx) dst %lx size %lu\n",
+              block_no, g_fs_log->start_blk, g_fs_log->next_avail, _fcache_block->log_version, g_fs_log->avail_version, off, off, dst, io_size);
 
-      mlfs_debug("GET from cache: blockno %lx offset %lu(0x%lx) size %lu\n",
-          block_no, off, off, io_size);
-
+      if (off - off_aligned < fc_off) { // incomplete fcache
+          /*off_aligned   off   fc_off                 block_end
+           *      |--------|-----|----------|--------------|
+           *                                |
+           *                            (off+io_size)
+           */
+          uint8_t buffer[g_block_size_bytes];
+          bmap_req.start_offset = off_aligned;
+          bmap_req.blk_count = 1;
+          if (enable_perf_stats) {
+              start_tsc = asm_rdtscp();
+          }
+          ret = bmap(ip, &bmap_req);
+          if (enable_perf_stats) {
+              g_perf_stats.tree_search_tsc += (asm_rdtscp() - start_tsc);
+              g_perf_stats.tree_search_nr++;
+          }
+          mlfs_assert(ret != -EIO);
+          bh = bh_get_sync_IO(bmap_req.dev, bmap_req.block_no, BH_NO_DATA_ALLOC);
+          bh->b_offset = 0;
+          bh->b_data = buffer;
+          bh->b_size = fc_off;
+          bh_submit_read_sync_IO(bh);
+          bh_release(bh);
+          // patch existing log with missing data from the beginning of this block
+          bh = bh_get_sync_IO(g_log_dev, block_no, BH_NO_DATA_ALLOC);
+          bh->b_offset = 0;
+          bh->b_data = buffer;
+          bh->b_size = fc_off;
+          mlfs_write(bh);
+          bh_release(bh);
+          _fcache_block->start_offset = 0;
+          mlfs_info("patch log %lu with start_offset %u\n", block_no, fc_off);
+      }
+      // continue read either patched or already complete log
       bh = bh_get_sync_IO(g_fs_log->dev, block_no, BH_NO_DATA_ALLOC);
-
       bh->b_offset = off - off_aligned;
       bh->b_data = dst;
       bh->b_size = io_size;
-
-      list_add_tail(&bh->b_io_list, &io_list_log);
+      bh_submit_read_sync_IO(bh);
+      bh_release(bh);
+      return io_size;
     }
   }
 
@@ -1247,11 +1282,8 @@ int do_unaligned_read(struct inode *ip, uint8_t *dst, offset_t off, uint32_t io_
     g_perf_stats.tree_search_nr++;
   }
 
-  if (ret == -EIO)
-    goto do_io_unaligned;
-
+  mlfs_assert(ret != -EIO);
   bh = bh_get_sync_IO(bmap_req.dev, bmap_req.block_no, BH_NO_DATA_ALLOC);
-  bh->b_size = (bmap_req.blk_count_found << g_block_size_shift);
 
   // NVM case: no read caching.
   if (bmap_req.dev == g_root_dev) {
@@ -1308,28 +1340,6 @@ int do_unaligned_read(struct inode *ip, uint8_t *dst, offset_t off, uint32_t io_
     // copying cached data to user buffer
     memmove(dst, _fcache_block->data + (off - off_aligned), io_size);
   }
-
-do_io_unaligned:
-  if (enable_perf_stats) {
-    start_tsc = asm_rdtscp();
-  }
-
-  // Patch data from log (L0) if up-to-date blocks are in the update log.
-  // This is required when partial updates are in the update log.
-  list_for_each_entry_safe(bh, _bh, &io_list_log, b_io_list) {
-    bh_submit_read_sync_IO(bh);
-    bh_release(bh);
-    if (enable_perf_stats) {
-      //printf("[%d] blkno = %llu, bh_size = %llu, io_size = %llu\n", __LINE__, bh->b_blocknr, bh->b_size, io_size);
-      g_perf_stats.read_data_nr++;
-      g_perf_stats.read_data_size += bh->b_size;
-    }
-  }
-
-  if (enable_perf_stats) {
-    g_perf_stats.read_data_tsc += (asm_rdtscp() - start_tsc);
-  }
-
   return io_size;
 }
 
@@ -1398,19 +1408,48 @@ int do_aligned_read(struct inode *ip, uint8_t *dst, offset_t off, uint32_t io_si
       // the update log search
       else if (_fcache_block->log_addr) {
         addr_t block_no = _fcache_block->log_addr;
+        uint16_t fc_off = _fcache_block->start_offset;
 
         mlfs_debug("GET from update log: blockno %lx offset %lu(0x%lx) size %lu\n",
             block_no, off, off, io_size);
 
         bh = bh_get_sync_IO(g_fs_log->dev, block_no, BH_NO_DATA_ALLOC);
 
-        bh->b_offset = 0;
-        bh->b_data = dst + pos;
+        bh->b_offset = fc_off;
+        bh->b_data = dst + pos + fc_off;
         bh->b_size = g_block_size_bytes;
 
         list_add_tail(&bh->b_io_list, &io_list_log);
         bitmap_clear(io_bitmap, (pos >> g_block_size_shift), 1);
         io_to_be_done++;
+        if (fc_off > 0) { // incomplete fcache
+            bmap_req.start_offset = _off;
+            bmap_req.blk_count = 1;
+            if (enable_perf_stats) {
+                start_tsc = asm_rdtscp();
+            }
+            ret = bmap(ip, &bmap_req);
+            if(enable_perf_stats) {
+                g_perf_stats.tree_search_tsc += (asm_rdtscp() - start_tsc);
+                g_perf_stats.tree_search_nr++;
+            }
+            mlfs_assert(ret != -EIO);
+            bh = bh_get_sync_IO(bmap_req.dev, bmap_req.block_no, BH_NO_DATA_ALLOC);
+            bh->b_offset = 0;
+            bh->b_data = dst + pos;
+            bh->b_size = fc_off;
+            bh_submit_read_sync_IO(bh);
+            bh_release(bh);
+            // patch existing log with missing data from the beginning of this block
+            bh = bh_get_sync_IO(g_log_dev, block_no, BH_NO_DATA_ALLOC);
+            bh->b_offset = 0;
+            bh->b_data = dst + pos;
+            bh->b_size = fc_off;
+            mlfs_write(bh);
+            bh_release(bh);
+            _fcache_block->start_offset = 0;
+            mlfs_info("patch log %lu with start_offset %u\n", block_no, fc_off);
+        }
       }
     }
   }

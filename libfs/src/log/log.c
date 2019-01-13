@@ -587,6 +587,7 @@ static int persist_log_file(struct logheader_meta *loghdr_meta,
 			if (ret) {
 				fc_block->log_version = g_fs_log->avail_version;
 				fc_block->log_addr = logblk_no;
+				fc_block->start_offset = offset_in_block;
 			}
 			// fc_block is valid
 			else {
@@ -600,7 +601,7 @@ static int persist_log_file(struct logheader_meta *loghdr_meta,
 		if (!fc_block) {
 			mlfs_assert(loghdr_meta->pos <= loghdr_meta->nr_log_blocks);
 
-			fc_block = fcache_alloc_add(inode, key, logblk_no);
+			fc_block = fcache_alloc_add(inode, key, logblk_no, offset_in_block);
 			fc_block->log_version = g_fs_log->avail_version;
 		}
 
@@ -686,11 +687,12 @@ static int persist_log_file(struct logheader_meta *loghdr_meta,
 			}
 
 			if (!fc_block) {
-				fc_block = fcache_alloc_add(inode, key, logblk_no + k);
+				fc_block = fcache_alloc_add(inode, key, logblk_no + k, 0);
 				fc_block->log_version = g_fs_log->avail_version;
 			} else {
 				fc_block->log_version = g_fs_log->avail_version;
 				fc_block->log_addr = logblk_no + k;
+				fc_block->start_offset = 0;
 			}
 		}
 
