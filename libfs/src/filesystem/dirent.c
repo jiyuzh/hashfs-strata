@@ -496,7 +496,7 @@ search_slot:
 	mlfs_assert(de);
 
 	// brute-force search of empty dirent slot.
-	for (off = 0, n = 0; off < dir_inode->size + sizeof(*de); off += sizeof(*de)) {
+	for (off = 0, n = 0; off < dir_inode->size; off += sizeof(*de)) {
 		if (n != (off >> g_block_size_shift)) {
 			n = off >> g_block_size_shift;
 			// read another directory block.
