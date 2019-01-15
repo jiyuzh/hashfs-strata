@@ -17,6 +17,8 @@
 struct log_superblock {
 	// block number of the first undigested logheader.
 	addr_t start_digest;
+	// next_avail (log tail) when request digest
+	addr_t next_avail_digest;
 	// # of loghdr to digest
 	atomic_uint n_digest;
 	
@@ -72,6 +74,8 @@ void add_to_loghdr(uint8_t type, struct inode *inode, offset_t data,
 void start_log_tx(void);
 void abort_log_tx(void);
 void commit_log_tx(void);
+int check_read_log_invalidation(struct fcache_block*);
+int check_write_log_invalidation(struct fcache_block*);
 
 static inline void set_digesting(void)
 {
