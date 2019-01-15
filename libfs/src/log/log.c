@@ -904,13 +904,19 @@ static void commit_log(void)
 		pthread_mutex_lock(g_fs_log->shared_log_lock);
 
 		// atomic log allocation.
+		// g_fs_log->next_avail += nr_log_blocks atomically here
 		loghdr_meta->log_blocks = log_alloc(nr_log_blocks);
 		loghdr_meta->nr_log_blocks = nr_log_blocks;
 		// loghdr_meta->pos = 0 is used for log header block.
 		loghdr_meta->pos = 1;
 
+		// Here holds:
+		//     loghdr_meta->log_blocks == loghdr_meta->hdr_blkno + 1
+		// There should always be:
+		//     g_fs_log->next_avail == g_fs_log->next_avail_header + 1
 		loghdr_meta->hdr_blkno = g_fs_log->next_avail_header;
 		g_fs_log->next_avail_header = loghdr_meta->log_blocks + loghdr_meta->nr_log_blocks;
+		g_fs_log->next_avail++;
 
 		loghdr->next_loghdr_blkno = g_fs_log->next_avail_header;
 		loghdr->inuse = LH_COMMIT_MAGIC;
