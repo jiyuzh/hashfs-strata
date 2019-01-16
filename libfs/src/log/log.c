@@ -531,6 +531,59 @@ static int persist_log_directory_unopt(struct logheader_meta *loghdr_meta, uint3
 	return 0;
 }
 
+int check_read_log_invalidation(struct fcache_block *_fcache_block)
+{
+	int ret = 0;
+	int version_diff = g_fs_log->avail_version - _fcache_block->log_version;
+
+	mlfs_assert(version_diff >= 0);
+
+	mlfs_assert(!_fcache_block->is_data_cached && "This code doesn't consider cached data, only for non-cachable NVM read");
+
+	//mlfs_assert(!(version_diff == 0 && _fcache_block->log_version >= g_fs_log->next_avail) && "impossible scenario happened");
+
+	pthread_rwlock_wrlock(invalidate_rwlock);
+	if ((version_diff > 1) ||
+			(version_diff == 1 &&
+	   _fcache_block->log_addr < g_fs_log->next_avail)) {
+		mlfs_debug("invalidate: inum %u offset_key %lu -> addr %lu, start_offset %lu, version %d[%d](%d), start_blk %lu next_avail %lu\n",
+				_fcache_block->inum, _fcache_block->key, _fcache_block->log_addr, _fcache_block->start_offset, _fcache_block->log_version, _fcache_block->log_version_should_be, g_fs_log->avail_version, g_fs_log->start_blk, g_fs_log->next_avail);
+		ret = 1;
+	}
+
+	pthread_rwlock_unlock(invalidate_rwlock);
+
+	return ret;
+}
+
+int check_write_log_invalidation(struct fcache_block *_fcache_block)
+{
+	int version_diff = g_fs_log->avail_version - _fcache_block->log_version;
+	addr_t head;
+	addr_t tail = g_fs_log->next_avail;
+	if (g_fs_log->digesting) {
+		head = g_log_sb->next_avail_digest;
+	}
+	else {
+		head = g_fs_log->start_blk;
+	}
+	mlfs_assert(!_fcache_block->is_data_cached && "This code doesn't consider cached data, only for non-cachable NVM read");
+	//mlfs_assert(!(version_diff == 0 && head < tail && _fcache_block->log_addr >= tail) && "impossible scenario happened");
+	//mlfs_assert(!(version_diff == 0 && tail <= head && _fcache_block->log_addr >= tail) && "impossible scenario happened");
+
+	if ((version_diff > 1) ||
+		(version_diff == 1 && (head < tail || (tail <= head && _fcache_block->log_addr < head))) ||
+		(version_diff == 0 && _fcache_block->log_addr < head && head < tail)
+	   ) {
+		mlfs_debug("invalidate: inum %u offset_key %lu -> addr %lu, start_offset %lu, version %d[%d](%d), start_blk %lu next_avail %lu, digesting %u, next_avail_digest %lu\n",
+        _fcache_block->inum, _fcache_block->key, _fcache_block->log_addr, _fcache_block->start_offset,_fcache_block->log_version, _fcache_block->log_version_should_be, g_fs_log->avail_version, g_fs_log->start_blk, g_fs_log->next_avail, g_fs_log->digesting, g_log_sb->next_avail_digest);
+		return 1;
+	}
+	else {
+		return 0;
+	}
+}
+
 /* This is a critical path for write performance.
  * Stay optimized and need to be careful when modifying it */
 static int persist_log_file(struct logheader_meta *loghdr_meta,
@@ -582,12 +635,30 @@ static int persist_log_file(struct logheader_meta *loghdr_meta,
 		loghdr_meta->pos++;
 
 		if (fc_block) {
-			ret = check_log_invalidation(fc_block);
+			ret = check_write_log_invalidation(fc_block);
 			// fc_block is invalid. update it
 			if (ret) {
+				if (!check_read_log_invalidation(fc_block) && fc_block->start_offset < offset_in_block) { // patch data from Read Only log area to this new partial update log block
+					uint8_t buffer[g_block_size_bytes];
+					log_bh = bh_get_sync_IO(g_log_dev, fc_block->log_addr, BH_NO_DATA_ALLOC);
+					log_bh->b_offset = fc_block->start_offset;
+					log_bh->b_data = buffer;
+					log_bh->b_size = offset_in_block - fc_block->start_offset;
+					bh_submit_read_sync_IO(log_bh);
+					bh_release(log_bh);
+					log_bh = bh_get_sync_IO(g_log_dev, logblk_no, BH_NO_DATA_ALLOC);
+					log_bh->b_offset = fc_block->start_offset;
+					log_bh->b_data = buffer;
+					log_bh->b_size = offset_in_block - fc_block->start_offset;
+					mlfs_write(log_bh);
+					bh_release(log_bh);
+					mlfs_debug("patch partial write log %lu, from %lu, offset from %lu to %lu\n", logblk_no, fc_block->log_addr, fc_block->start_offset, offset_in_block);
+				}
+				else {
+					fc_block->start_offset = offset_in_block;
+				}
 				fc_block->log_version = g_fs_log->avail_version;
 				fc_block->log_addr = logblk_no;
-				fc_block->start_offset = offset_in_block;
 			}
 			// fc_block is valid
 			else {
@@ -833,13 +904,19 @@ static void commit_log(void)
 		pthread_mutex_lock(g_fs_log->shared_log_lock);
 
 		// atomic log allocation.
+		// g_fs_log->next_avail += nr_log_blocks atomically here
 		loghdr_meta->log_blocks = log_alloc(nr_log_blocks);
 		loghdr_meta->nr_log_blocks = nr_log_blocks;
 		// loghdr_meta->pos = 0 is used for log header block.
 		loghdr_meta->pos = 1;
 
+		// Here holds:
+		//     loghdr_meta->log_blocks == loghdr_meta->hdr_blkno + 1
+		// There should always be:
+		//     g_fs_log->next_avail == g_fs_log->next_avail_header + 1
 		loghdr_meta->hdr_blkno = g_fs_log->next_avail_header;
 		g_fs_log->next_avail_header = loghdr_meta->log_blocks + loghdr_meta->nr_log_blocks;
+		g_fs_log->next_avail++;
 
 		loghdr->next_loghdr_blkno = g_fs_log->next_avail_header;
 		loghdr->inuse = LH_COMMIT_MAGIC;
@@ -1007,6 +1084,7 @@ uint32_t make_digest_request_sync(int percent)
 	struct inode *ip;
 
 	g_log_sb->start_digest = g_fs_log->start_blk;
+	g_log_sb->next_avail_digest = g_fs_log->next_avail;
 	write_log_superblock(g_log_sb);
 
 	n_digest = atomic_load(&g_log_sb->n_digest);

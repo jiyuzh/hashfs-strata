@@ -1137,38 +1137,6 @@ static struct fcache_block *add_to_read_cache(struct inode *inode,
   return _fcache_block;
 }
 
-int check_log_invalidation(struct fcache_block *_fcache_block)
-{
-  int ret = 0;
-  int version_diff = g_fs_log->avail_version - _fcache_block->log_version;
-
-  mlfs_assert(version_diff >= 0);
-
-  // fcache must be used for either data cache or log address caching.
-  // mlfs_assert((_fcache_block->is_data_cached && _fcache_block->log_addr) == 0);
-
-  pthread_rwlock_wrlock(invalidate_rwlock);
-
-  // fcache is used for log address.
-  if ((version_diff > 1) ||
-      (version_diff == 1 &&
-       _fcache_block->log_addr < g_fs_log->next_avail_header)) {
-    mlfs_debug("invalidate: inum %u offset %lu -> addr %lu\n",
-        ip->inum, _off, _fcache_block->log_addr);
-    _fcache_block->log_addr = 0;
-
-    // Delete fcache_block when it is not used for read cache.
-    if (!_fcache_block->is_data_cached)
-      ret = 1;
-    else
-      ret = 0;
-  }
-
-  pthread_rwlock_unlock(invalidate_rwlock);
-
-  return ret;
-}
-
 int do_unaligned_read(struct inode *ip, uint8_t *dst, offset_t off, uint32_t io_size)
 {
   int io_done = 0, ret;
@@ -1198,7 +1166,7 @@ int do_unaligned_read(struct inode *ip, uint8_t *dst, offset_t off, uint32_t io_
   }
 
   if (_fcache_block) {
-    ret = check_log_invalidation(_fcache_block);
+    ret = check_read_log_invalidation(_fcache_block);
     if (ret) {
       fcache_del(ip, _fcache_block);
       mlfs_free(_fcache_block);
@@ -1227,6 +1195,7 @@ int do_unaligned_read(struct inode *ip, uint8_t *dst, offset_t off, uint32_t io_
            *                                |
            *                            (off+io_size)
            */
+          mlfs_debug("patching log %lu with start_offset %u\n", block_no, fc_off);
           uint8_t buffer[g_block_size_bytes];
           bmap_req.start_offset = off_aligned;
           bmap_req.blk_count = 1;
@@ -1253,7 +1222,6 @@ int do_unaligned_read(struct inode *ip, uint8_t *dst, offset_t off, uint32_t io_
           mlfs_write(bh);
           bh_release(bh);
           _fcache_block->start_offset = 0;
-          mlfs_info("patch log %lu with start_offset %u\n", block_no, fc_off);
       }
       // continue read either patched or already complete log
       bh = bh_get_sync_IO(g_fs_log->dev, block_no, BH_NO_DATA_ALLOC);
@@ -1381,7 +1349,7 @@ int do_aligned_read(struct inode *ip, uint8_t *dst, offset_t off, uint32_t io_si
     }
 
     if (_fcache_block) {
-      ret = check_log_invalidation(_fcache_block);
+      ret = check_read_log_invalidation(_fcache_block);
       if (ret) {
         fcache_del(ip, _fcache_block);
         mlfs_free(_fcache_block);
@@ -1410,8 +1378,8 @@ int do_aligned_read(struct inode *ip, uint8_t *dst, offset_t off, uint32_t io_si
         addr_t block_no = _fcache_block->log_addr;
         uint16_t fc_off = _fcache_block->start_offset;
 
-        mlfs_debug("GET from update log: blockno %lx offset %lu(0x%lx) size %lu\n",
-            block_no, off, off, io_size);
+        mlfs_debug("GET from cache: blockno %lu (%lu, %lu, (%d,%d)) offset %lu(0x%lx) dst %lx size %lu\n",
+              block_no, g_fs_log->start_blk, g_fs_log->next_avail, _fcache_block->log_version, g_fs_log->avail_version, _off, _off, dst, io_size);
 
         bh = bh_get_sync_IO(g_fs_log->dev, block_no, BH_NO_DATA_ALLOC);
 

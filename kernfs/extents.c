@@ -2745,7 +2745,6 @@ int mlfs_ext_get_blocks(handle_t *handle, struct inode *inode,
 			struct mlfs_map_blocks *map, int flags)
 {
 	struct mlfs_ext_path *path = NULL;
-	struct mlfs_ext_path *_path = NULL;
 	struct mlfs_extent newex, *ex;
 	int goal, err = 0, depth;
 	mlfs_lblk_t allocated = 0;
@@ -2773,16 +2772,17 @@ int mlfs_ext_get_blocks(handle_t *handle, struct inode *inode,
 
 	/*mutex_lock(&inode->truncate_mutex);*/
 
+#ifdef REUSE_PREVIOUS_PATH
 	if (create) {
+		mlfs_ext_drop_refs(inode->previous_path); mlfs_free(inode->previous_path); //TODO: for continue debug
 		inode->previous_path = NULL;
 		goto find_ext_path;
 	}
 
-#ifdef REUSE_PREVIOUS_PATH
 	if (!inode->previous_path || (map->m_flags & MLFS_MAP_LOG_ALLOC))
 		goto find_ext_path;
 
-	_path = inode->previous_path;
+	struct mlfs_ext_path * _path = inode->previous_path;
 	depth = ext_depth(handle, inode);
 	ex = _path[depth].p_ext;
 	if (ex) {
@@ -2966,10 +2966,10 @@ out:
 
 	map->m_pblk = newblock;
 	map->m_len = allocated;
-out2:
 #ifdef REUSE_PREVIOUS_PATH
 	if (inode->invalidate_path) {
 		inode->invalidate_path = 0;
+		mlfs_ext_drop_refs(inode->previous_path); mlfs_free(inode->previous_path); //TODO: for continue debug
 		inode->previous_path = NULL;
 	}
 	else {
@@ -2978,6 +2978,7 @@ out2:
 	}
 
 #endif
+out2:
 	if (path) {
 		/* write back tree changes (internal/leaf nodes) */
 		mlfs_ext_drop_refs(path);

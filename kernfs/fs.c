@@ -1635,14 +1635,16 @@ static int persist_dirty_objects_nvm(void)
 	// flush extent tree changes
 	sync_all_buffers(g_bdev[g_root_dev]);
 
+	struct super_block *root_sb = sb[g_root_dev];
 	// save dirty inodes
-	for (node = rb_first(&sb[g_root_dev]->s_dirty_root);
+	for (node = rb_first(&(root_sb->s_dirty_root));
 			node; node = rb_next(node)) {
 		struct inode *ip = rb_entry(node, struct inode, i_rb_node);
 		mlfs_debug("[dev %d] write dirty inode %d size %lu\n",
 				ip->dev, ip->inum, ip->size);
 		rb_erase(&ip->i_rb_node, &get_inode_sb(g_root_dev, ip)->s_dirty_root);
 		write_ondisk_inode(g_root_dev, ip);
+		ip->i_data_dirty = 0;
 
 		if (ip->itype == T_DIR)
 			persist_dirty_dirent_block(ip);

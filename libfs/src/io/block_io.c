@@ -995,36 +995,32 @@ int bh_submit_read(struct buffer_head *bh)
 	return ret;
 }
 
+/*
+ * return: 0 means synced and no longer dirty
+ *         1 means still has refcount and shouldn't be delete from dirty_list
+ */
 int sync_dirty_buffer(struct buffer_head *bh)
 {
-	int ret = 0;
-
 	if (!trylock_buffer(bh))
-		return ret;
+		return 1;
 
-	if (bh->b_count < 1 && buffer_dirty(bh)) {
-		/*
-		get_bh(bh);
-		bh->b_end_io = after_buffer_sync;
-
-		pthread_mutex_lock(&bh->b_wait_mutex);
-		ret = submit_bh(WRITE, bh);
-		*/
-		get_bh(bh);
+	if (buffer_dirty(bh)) {
+		int ret = 1;
 		mlfs_write(bh);
-
-		set_buffer_uptodate(bh);
-
-		put_bh(bh);
-		//remove_buffer_from_writeback(bh);
-
-		clear_buffer_dirty(bh);
-		attach_bh_to_freelist(bh);
+		if (bh->b_count == 0) {
+			set_buffer_uptodate(bh);
+			clear_buffer_dirty(bh);
+			attach_bh_to_freelist(bh);
+			ret = 0;
+		}
+		// shouldn't remove again since outer side will handle deletion
+		// remove_buffer_from_writeback(bh);
 		unlock_buffer(bh);
+		return ret;
 	} else {
 		unlock_buffer(bh);
+		return 0;
 	}
-	return ret;
 }
 
 /* Direct write without using the writeback thread */
@@ -1055,7 +1051,8 @@ struct buffer_head *__getblk(struct block_device *bdev, uint64_t block,
 	bh = buffer_search(bdev, block);
 	if (bh) {
 		detach_bh_from_freelist(bh);
-		remove_buffer_from_writeback(bh);
+		// comment out on purpose, otherwise dirty buffer still won't be written back
+		//remove_buffer_from_writeback(bh);
 		get_bh(bh);
 		return bh;
 	}
@@ -1121,17 +1118,19 @@ static void try_to_sync_buffers(struct block_device *bdev)
 void sync_all_buffers(struct block_device *bdev)
 {
 	uint32_t i = 0;
-	while (1) {
-		struct buffer_head *cur;
-		cur = remove_first_buffer_from_writeback(bdev);
-		if (cur) {
-			sync_dirty_buffer(cur);
+	struct buffer_head *cur;
+	struct buffer_head *next;
+	pthread_mutex_lock(&bdev->bd_bh_dirty_lock);
+	list_for_each_entry_safe(cur, next, &bdev->bd_bh_dirty, b_dirty_list) {
+		if (!sync_dirty_buffer(cur)) {
+			list_del_init(&cur->b_dirty_list);
+			buffer_dirty_count--;
 			mlfs_debug("[dev %d], block %lu synced\n",
 					cur->b_dev, cur->b_blocknr);
-		} else
-			break;
-		i++;
+			++i;
+		}
 	}
+	pthread_mutex_unlock(&bdev->bd_bh_dirty_lock);
 
 	if (bdev->b_devid == g_ssd_dev)
 		mlfs_io_wait(g_ssd_dev, 0);
