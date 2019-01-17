@@ -904,9 +904,11 @@ retry:
 	}
 
 #ifdef SIMULATE_FRAGMENTATION
+#if 0
   static int layout_score_percent = 0;
   static bool init_layout_score = false;
   static int skip = 0;
+  static int cur  = 0;
   if (!init_layout_score) {
     const char *mlfs_layout_score = getenv("MLFS_LAYOUT_SCORE");
     if (NULL != mlfs_layout_score) {
@@ -929,16 +931,66 @@ retry:
 #endif
   }
 
-  int ncontiguous = skip ? min(skip, num_blocks) : num_blocks;
+  int ncontiguous = skip ? min(skip - cur, num_blocks) : num_blocks;
   ret_blocks = mlfs_alloc_blocks_in_free_list(sb, free_list, btype,
       ncontiguous, &new_blocknr);
 
+  cur += ncontiguous;
+
   // junk block
-  if (skip) {
+  if (skip && cur == skip) {
     unsigned long dummy_block;
     int junk_block = mlfs_alloc_blocks_in_free_list(sb, free_list, btype,
         1, &dummy_block);
+		free_list->alloc_data_pages += junk_block;
+    cur = 0;
   }
+#else
+  static int layout_score_percent = 0;
+  static bool init_layout_score = false;
+  if (!init_layout_score) {
+    const char *mlfs_layout_score = getenv("MLFS_LAYOUT_SCORE");
+    if (NULL != mlfs_layout_score) {
+      layout_score_percent = atoi(mlfs_layout_score);
+    } else {
+      layout_score_percent = 100;
+    }
+    init_layout_score = true;
+    printf("Simulating fragmentation: '%s' => layout score of %f\n",
+        mlfs_layout_score, layout_score_percent / 100.0);
+
+  }
+
+  ret_blocks = 0;
+  bool set = false;
+
+  for(size_t blk = 0; blk < num_blocks; ) {
+    int rnd = rand() % 100;
+    if (rnd < layout_score_percent) {
+      unsigned long dummy_block;
+      int real_block = mlfs_alloc_blocks_in_free_list(sb, free_list, btype,
+          1, &dummy_block);
+      free_list->alloc_data_pages += real_block;
+
+      if (!set) {
+        new_blocknr = dummy_block;
+        set = true;
+      }
+
+      ret_blocks += real_block;
+      blk += real_block;
+
+    } else {
+      unsigned long dummy_block;
+      int junk_block = mlfs_alloc_blocks_in_free_list(sb, free_list, btype,
+          1, &dummy_block);
+      free_list->alloc_data_pages += junk_block;
+
+      if (set) break;
+    }
+  }
+
+#endif
 
 #else
 	ret_blocks = mlfs_alloc_blocks_in_free_list(sb, free_list, btype,
