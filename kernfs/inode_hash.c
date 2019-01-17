@@ -127,7 +127,7 @@ int mlfs_hash_get_blocks(handle_t *handle, struct inode *inode,
   uint32_t len = map->m_len;
   bool set = false;
 
-  for (mlfs_lblk_t i = 0; i < map->m_len; ) {
+  for (mlfs_lblk_t i = 0; i < max(map->m_len, 1); ) {
     hash_value_t index;
     hash_value_t value;
     hash_value_t size;
@@ -151,6 +151,9 @@ int mlfs_hash_get_blocks(handle_t *handle, struct inode *inode,
     i += size - index;
     ret = i;
   }
+
+  ret = min(ret, map->m_len);
+
   return ret;
 
 create:
@@ -258,6 +261,8 @@ create:
 
     mlfs_hash_persist();
   }
+
+  ret = min(ret, map->m_len);
 
   return ret;
 }
