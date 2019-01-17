@@ -40,6 +40,7 @@ LDFLAGS = -Wl,-rpath=$(abspath $(GLIBC_DIR)) \
 		  -Wl,-rpath=/usr/local/lib \
 		  -Wl,-rpath=/usr/lib/x86_64-linux-gnu/ \
 		  -Wl,-rpath=/lib/x86_64-linux-gnu/ \
+		  -Wl,-rpath=/lib64 \
 		  -Wl,-dynamic-linker=$(abspath $(GLIBC_DIR))/ld-linux-x86-64.so.2 \
 		  -lpthread -lrt -lm
 

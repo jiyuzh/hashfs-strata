@@ -466,7 +466,7 @@ nvram_update(GHashTable *ht, mlfs_fsblk_t index, hash_entry_t* val) {
     bh->b_size = g_block_size_bytes;
     bh->b_offset = 0;
 
-    mlfs_assert(bh->b_dirty_bitmap);
+    //mlfs_assert(bh->b_dirty_bitmap);
 
     set_buffer_dirty(bh);
     //brelse(bh);
@@ -487,8 +487,19 @@ nvram_update(GHashTable *ht, mlfs_fsblk_t index, hash_entry_t* val) {
   }
 #endif
 #if 0
+  // Set up the buffer head -- once we point it to a cache page, we don't
+  // need to do this again, just manipulate the page.
+  bh = sb_getblk(g_root_dev, block_addr);
+
+  bh->b_data = (uint8_t*)ht->cache[NV_IDX(index)];
+  //bh->b_size = g_block_size_bytes;
+  bh->b_offset = 0;
   // Set bitmap cachelines.
   bh->b_use_bitmap = 1;
+
+  mlfs_assert(bh->b_dirty_bitmap);
+
+  set_buffer_dirty(bh);
 
   uint64_t size = sizeof(hash_entry_t);
   uint64_t bit_start = (BUF_IDX(index) * size);

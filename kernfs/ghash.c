@@ -42,7 +42,7 @@ uint64_t reads;
 uint64_t writes;
 uint64_t blocks;
 
-#if 0
+#ifdef LIBFS
 #define pthread_rwlock_rdlock(x) 0
 #define pthread_rwlock_wrlock(x) 0
 #define pthread_rwlock_unlock(x) 0
@@ -678,14 +678,16 @@ g_hash_table_insert_internal (GHashTable     *hash_table,
     if (cur.key == key && HASH_ENTRY_IS_VALID(cur)) {
       break;
     } else if (HASH_ENTRY_IS_TOMBSTONE(cur) && !have_tombstone) {
+      // keep lock until we decide we don't need it
       first_tombstone = node_index;
       have_tombstone = TRUE;
+    } else {
+      pthread_rwlock_unlock(hash_table->locks + node_index);
     }
 
     step++;
     uint32_t new_idx = (node_index + step) & hash_table->mask;
     //uint32_t new_idx = (node_index + step) % hash_table->mod;
-    pthread_rwlock_unlock(hash_table->locks + node_index);
     pthread_rwlock_wrlock(hash_table->locks + new_idx);
 
     node_index = new_idx;
@@ -696,7 +698,6 @@ g_hash_table_insert_internal (GHashTable     *hash_table,
 
   if (have_tombstone) {
     pthread_rwlock_unlock(hash_table->locks + node_index);
-    pthread_rwlock_wrlock(hash_table->locks + first_tombstone);
     node_index = first_tombstone;
   }
 

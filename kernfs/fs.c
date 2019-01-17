@@ -509,6 +509,22 @@ int digest_directory(uint8_t from_dev, uint8_t to_dev, int n, uint8_t type,
 	return 0;
 }
 
+#ifdef HASHTABLE
+struct get_blocks_args {
+  handle_t *handle;
+  struct inode *file_inode;
+  struct mlfs_map_blocks map;
+  int flags;
+};
+
+static void *call_mlfs_get_blocks(void *arg_ptr) {
+  struct get_blocks_args *args = (struct get_blocks_args*)arg_ptr;
+  return (void*)(int64_t)mlfs_hash_get_blocks(
+      args->handle, args->file_inode, &(args->map), args->flags, false);
+}
+#endif
+
+
 int digest_file(uint8_t from_dev, uint8_t to_dev, uint32_t file_inum,
 		offset_t offset, uint32_t length, addr_t blknr)
 {
@@ -633,6 +649,69 @@ int digest_file(uint8_t from_dev, uint8_t to_dev, uint32_t file_inum,
 
 		mlfs_assert((cur_offset % g_block_size_bytes) == 0);
 
+#if 0 && defined(HASHTABLE)
+    size_t remaining_blocks = nr_blocks - nr_digested_blocks;
+    if (remaining_blocks < RANGE_SIZE / 2) {
+      pthread_t *threads = calloc(remaining_blocks, sizeof(*threads));
+      struct get_blocks_args *args = calloc(remaining_blocks, sizeof(*args));
+      mlfs_assert(threads);
+      mlfs_assert(args);
+
+      for (size_t r = 0; r < remaining_blocks; ++r) {
+        struct mlfs_map_blocks map;
+        map.m_lblk  = (cur_offset >> g_block_size_shift) + r;
+        map.m_pblk  = 0;
+        map.m_len   = 1;
+        map.m_flags = 0;
+
+        args[r].handle = &handle;
+        args[r].file_inode = file_inode;
+        args[r].map = map;
+        args[r].flags = MLFS_GET_BLOCKS_CREATE_DATA;
+
+        int err = pthread_create(threads + r, NULL, call_mlfs_get_blocks, args + r);
+        if (err) {
+          perror("pthread_create");
+          panic("thread create!");
+        }
+      }
+
+      for (size_t r = 0; r < remaining_blocks; ++r) {
+        int64_t nr_block_ret;
+        int err = pthread_join(threads[r], (void**)(&nr_block_ret));
+        if (err) {
+          perror("pthread_join");
+          panic("thread join!");
+        }
+
+        struct mlfs_map_blocks map = args[r].map;
+
+        //printf("join, pblk = %llu, lblk = %llu, nr = %llu\n",
+        //    map.m_pblk, map.m_lblk, nr_
+        mlfs_assert(map.m_pblk != 0);
+        mlfs_assert(nr_block_ret <= (nr_blocks - nr_digested_blocks));
+        mlfs_assert(nr_block_ret > 0);
+
+        nr_digested_blocks += nr_block_ret;
+
+        // update data block
+        bh_data = bh_get_sync_IO(to_dev, map.m_pblk, BH_NO_DATA_ALLOC);
+
+        bh_data->b_data = data + (nr_block_ret * g_block_size_bytes);
+        bh_data->b_size = g_block_size_bytes;
+        bh_data->b_offset = 0;
+
+
+        ret = mlfs_write(bh_data);
+        mlfs_assert(!ret);
+        clear_buffer_uptodate(bh_data);
+        bh_release(bh_data);
+      }
+
+      free(threads);
+      free(args);
+    } else {
+#else
 		map.m_lblk = (cur_offset >> g_block_size_shift);
 		map.m_pblk = 0;
 		map.m_len = nr_blocks - nr_digested_blocks;
@@ -684,6 +763,7 @@ int digest_file(uint8_t from_dev, uint8_t to_dev, uint32_t file_inum,
 		clear_buffer_uptodate(bh_data);
 		bh_release(bh_data);
 
+#endif
 		if (0) {
 			struct buffer_head *bh;
 			uint8_t tmp_buf[4096];
@@ -705,6 +785,9 @@ int digest_file(uint8_t from_dev, uint8_t to_dev, uint32_t file_inum,
 
 		cur_offset += nr_block_get * g_block_size_bytes;
 		data += nr_block_get * g_block_size_bytes;
+#if 0 && defined(HASHTABLE)
+    }
+#endif
 	}
 
 	mlfs_assert(nr_blocks == nr_digested_blocks);

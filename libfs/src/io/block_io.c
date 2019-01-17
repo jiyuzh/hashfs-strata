@@ -316,6 +316,7 @@ int mlfs_write(struct buffer_head *b)
 
 	mlfs_assert(b->b_size > 0);
 
+  //printf("size = %llu\n", b->b_size);
 #ifdef HASHTABLE
 	storage_engine = g_bdev[b->b_dev]->storage_engine;
   // (iangneal): Support bitmap for byte-addressable storage.

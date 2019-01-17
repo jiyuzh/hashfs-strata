@@ -36,6 +36,9 @@ kernfs/tests/kernfs
 kernfs/tests/concurrency_test
 kernfs/tests/nvram_versus_dram
 
+ebuild/
+hbuild/
+
 libfs/tests/*.o
 libfs/tests/MTCC
 libfs/tests/a.out
