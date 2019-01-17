@@ -184,7 +184,9 @@ void show_kernfs_stats(void)
 	json_object_object_add(root, "path_storage", path_storage);
 	json_object_object_add(root, "storage", storage);
 	const char *js_str = json_object_get_string(root);
-	write(prof_fd, js_str, strlen(js_str));
+	if (enable_perf_stats) {
+		write(prof_fd, js_str, strlen(js_str));
+	}
 	json_object_put(root);
 
 	//float clock_speed_mhz = get_cpu_clock_speed();
@@ -2039,7 +2041,8 @@ static void wait_for_event(void)
 void shutdown_fs(void)
 {
 	printf("Finalize FS\n");
-	close(prof_fd);
+	if (enable_perf_stats)
+		close(prof_fd);
 
 	device_shutdown();
 	return ;
@@ -2177,7 +2180,8 @@ void init_fs(void)
 	// initialzie profiling
 	char prof_fn[256];
 	sprintf(prof_fn, "/tmp/kernfs_prof.%d", getpid());
-	assert((prof_fd = open(prof_fn, O_CREAT | O_TRUNC | O_WRONLY, 0666)) != -1);
+	if (enable_perf_stats)
+		assert((prof_fd = open(prof_fn, O_CREAT | O_TRUNC | O_WRONLY, 0666)) != -1);
 	reset_kernfs_stats();
 	inode_version_table =
 		(uint16_t *)mlfs_zalloc(sizeof(uint16_t) * NINODES);
