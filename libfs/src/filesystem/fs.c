@@ -1229,7 +1229,16 @@ int do_unaligned_read(struct inode *ip, uint8_t *dst, offset_t off, uint32_t io_
       bh->b_offset = off - off_aligned;
       bh->b_data = dst;
       bh->b_size = io_size;
+      if (enable_perf_stats) {
+        start_tsc = asm_rdtscp();
+      }
       bh_submit_read_sync_IO(bh);
+      if (enable_perf_stats) {
+        //printf("[%d] blkno = %llu, bh_size = %llu, io_size = %llu\n", __LINE__, bh->b_blocknr, bh->b_size, io_size);
+        g_perf_stats.read_data_tsc += (asm_rdtscp() - start_tsc);
+        g_perf_stats.read_data_nr++;
+        g_perf_stats.read_data_size += bh->b_size;
+      }
       bh_release(bh);
       return io_size;
     }
