@@ -1467,15 +1467,7 @@ do_global_search:
     g_perf_stats.tree_search_tsc += (asm_rdtscp() - start_tsc);
     g_perf_stats.tree_search_nr++;
   }
-
-  if (ret == -EIO) {
-    if (bmap_req.blk_count_found != bmap_req.blk_count) {
-      //panic("could not found blocks in any storage layers\n");
-      mlfs_debug("inum %u - count not find block in any storage layer\n",
-          ip->inum);
-    }
-    goto do_io_aligned;
-  }
+  mlfs_assert(ret != -EIO);
 
   // NVM case: no read caching.
   if (bmap_req.dev == g_root_dev) {
