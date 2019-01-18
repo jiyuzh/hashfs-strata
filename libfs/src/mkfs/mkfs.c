@@ -276,16 +276,8 @@ int main(int argc, char *argv[])
 		for(i = 0; i < ondisk_sb.datablock_start; i++)
 			wsect(i, (uint8_t *)zeroes);
 	} else {
-#ifdef ZERO_ALL
-		for(i = 0; i < file_size_blks; i++)
+		for(i = 0; i < file_size_blks - 1; i++)
 			wsect(i, (uint8_t *)zeroes);
-#else
-		printf("only write meta datablocks %lu\n", nmeta);
-		for(i = 0; i < nmeta; i++)
-			wsect(i, (uint8_t *)zeroes);
-		for(i = ndatablocks-2; i < ndatablocks; ++i)
-			wsect(i, (uint8_t *)zeroes);
-#endif
 	}
 #else
 	if (storage_mode == SPDK) {

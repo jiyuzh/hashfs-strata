@@ -394,7 +394,6 @@ nvram_write_metadata(GHashTable *hash, mlfs_fsblk_t location) {
   super->used_blocks += 1;
 }
 
-static uint8_t zeroes[g_block_size_bytes] = {0};
 static mlfs_fsblk_t
 nvram_alloc_range(size_t count) {
   int err = 1;
@@ -422,20 +421,6 @@ nvram_alloc_range(size_t count) {
     if (total_blocks == 0) block = blk;
     total_blocks += err;
     last = blk + err;
-  }
-
-  for (int i = 0; i < total_blocks; ++i) {
-    struct buffer_head *bh = bh_get_sync_IO(g_root_dev, block+i, BH_NO_DATA_ALLOC);
-    assert(bh);
-
-    bh->b_size = g_block_size_bytes;
-    bh->b_data = zeroes;
-    bh->b_offset = 0;
-
-    int ret = mlfs_write(bh);
-
-    assert(!ret);
-    bh_release(bh);
   }
 
   assert(total_blocks == count);
