@@ -39,8 +39,8 @@
  serializes writing multiple log groups to log area.
  */
 
-struct fs_log *g_fs_log;
-struct log_superblock *g_log_sb;
+volatile struct fs_log *g_fs_log;
+volatile struct log_superblock *g_log_sb;
 
 // for communication with kernel fs.
 int g_sock_fd;
