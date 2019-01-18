@@ -151,6 +151,7 @@ void show_libfs_stats(const char *title)
   printf("read data blocks (tsc/op) : %f \n", (double)g_perf_stats.read_data_tsc / g_perf_stats.read_data_nr);
   printf("read data blocks (tsc/op) : %llu / %llu \n", g_perf_stats.read_data_tsc, g_perf_stats.read_data_nr);
   printf("read data (bytes/op)      : %f \n", (double)g_perf_stats.read_data_size / g_perf_stats.read_data_nr);
+  printf("read data (bytes/tsc)      : %f \n", (double)g_perf_stats.read_data_size / g_perf_stats.read_data_tsc);
   printf("directory search (tsc/op) : %f \n", (double)g_perf_stats.dir_search_tsc / g_perf_stats.dir_search_nr_hit);
   printf("  bmap ext tree (tsc/op)  : %f \n", (double)g_perf_stats.dir_search_ext_tsc / g_perf_stats.dir_search_ext_nr);
   printf("path storage (tsc/op)     : %f \n", (double)g_perf_stats.path_storage_tsc / g_perf_stats.path_storage_nr);
