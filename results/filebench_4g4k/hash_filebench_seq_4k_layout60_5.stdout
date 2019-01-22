@@ -1,0 +1,111 @@
+dev-dax engine is initialized: dev_path /dev/dax5.1 size 7512 MB
+dev-dax engine is initialized: dev_path /dev/dax5.2 size 1464 MB
+Initializing NVM hash table structures...
+mod = 2097143, mask = 2097151
+updating max_entries from 1919885 to 2097152
+Metadata found!
+Finished initializing the single-block hash table.
+mod = 4093, mask = 4095
+Metadata found!
+Finished initializing the multi-block hash table.
+Finished initializing NVM hash table structures.
+[187726][init_fs():414] LibFS is initialized with id 4
+[187726][init_fs():422]  enable profile
+kernfs id is 187709
+initialize mlfs
+Filebench Version 1.5-alpha3
+0.000: Allocated 173MB of shared memory
+0.001: FileMicro-SeqRead Version 2.1 personality successfully loaded
+0.001: Populating and pre-allocating filesets
+0.001: Removing largefile tree (if exists)
+0.001: Pre-allocating directories in largefile tree
+0.001: Pre-allocating files in largefile tree
+18.287: Waiting for pre-allocation to finish (in case of a parallel pre-allocation)
+18.287: Population and pre-allocation of filesets completed
+
+----------------------- master reset libfs statistics
+wait on digest  (tsc/op)  : 8237454335.500000 
+inode allocation (tsc/op) : 2662.666667 
+bcache search (tsc/op)    : 114.208577 
+search l0 tree  (tsc/op)  : 81.745012 
+search lsm tree (tsc/op)  : -nan 
+log commit (tsc/op)       : 9790630.175165 
+  log writes (tsc/op)     : inf 
+  loghdr writes (tsc/op)  : 8634.474750 
+read data blocks (tsc/op) : -nan 
+read data blocks (tsc/op) : 0 / 0 
+read data (bytes/op)      : -nan 
+read data (bytes/tsc)      : -nan 
+directory search (tsc/op) : 24147.000000 
+  bmap ext tree (tsc/op)  : 446.000000 
+path storage (tsc/op)     : -nan 
+temp_debug (tsc/op)       : 12426124688.000000 
+--------------------------------------
+search lsm tree : l0 : read_data = 1 : inf : -nan
+percentage, lsm/(lsm+l0+read_data) : 0.000000
+directory search bmap ext/all : 0.009235
+bmap storage/all : 0.000000
+storage    : 11977434648
+storage num: 8227
+storage per: 1455869.046797
+--------------------------------------
+24.101: Starting 1 filereader instances
+25.411: Running...
+45.412: Run took 20 seconds...
+45.412: IO Summary: 5707022 ops 285326.191 ops/s 285326/0 rd/wr 1114.6mb/s   0.0ms/op
+45.412: Shutting down processes
+[master] shuting down mlfs
+
+----------------------- shutdown fs libfs statistics
+wait on digest  (tsc/op)  : -nan 
+inode allocation (tsc/op) : -nan 
+bcache search (tsc/op)    : -nan 
+search l0 tree  (tsc/op)  : -nan 
+search lsm tree (tsc/op)  : -nan 
+log commit (tsc/op)       : -nan 
+  log writes (tsc/op)     : -nan 
+  loghdr writes (tsc/op)  : -nan 
+read data blocks (tsc/op) : -nan 
+read data blocks (tsc/op) : 0 / 0 
+read data (bytes/op)      : -nan 
+read data (bytes/tsc)      : -nan 
+directory search (tsc/op) : -nan 
+  bmap ext tree (tsc/op)  : -nan 
+path storage (tsc/op)     : -nan 
+temp_debug (tsc/op)       : 0.000000 
+--------------------------------------
+search lsm tree : l0 : read_data = 1 : -nan : -nan
+percentage, lsm/(lsm+l0+read_data) : -nan
+directory search bmap ext/all : -nan
+bmap storage/all : -nan
+storage    : 0
+storage num: 0
+storage per: -nan
+--------------------------------------
+
+----------------------- shutdown fs libfs statistics
+wait on digest  (tsc/op)  : -nan 
+inode allocation (tsc/op) : -nan 
+bcache search (tsc/op)    : -nan 
+search l0 tree  (tsc/op)  : -nan 
+search lsm tree (tsc/op)  : -nan 
+log commit (tsc/op)       : -nan 
+  log writes (tsc/op)     : -nan 
+  loghdr writes (tsc/op)  : -nan 
+read data blocks (tsc/op) : -nan 
+read data blocks (tsc/op) : 0 / 0 
+read data (bytes/op)      : -nan 
+read data (bytes/tsc)      : -nan 
+directory search (tsc/op) : -nan 
+  bmap ext tree (tsc/op)  : -nan 
+path storage (tsc/op)     : -nan 
+temp_debug (tsc/op)       : 0.000000 
+--------------------------------------
+search lsm tree : l0 : read_data = 1 : -nan : -nan
+percentage, lsm/(lsm+l0+read_data) : -nan
+directory search bmap ext/all : -nan
+bmap storage/all : -nan
+storage    : 0
+storage num: 0
+storage per: -nan
+--------------------------------------

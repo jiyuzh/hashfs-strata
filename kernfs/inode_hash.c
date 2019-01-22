@@ -243,7 +243,7 @@ create:
         //printf("Insert to small: %u.\n", nblocks_to_alloc);
         for (uint32_t i = 0; i < nblocks_to_alloc; ++i) {
           hash_key_t k = MAKEKEY(inode, lb + i + c);
-          int already_exists = !insert_hash(ghash, inode, k, blockp,
+          int already_exists = !insert_hash(ghash, inode, k, blockp + i,
               nblocks_to_alloc - i);
 
           if (already_exists) {

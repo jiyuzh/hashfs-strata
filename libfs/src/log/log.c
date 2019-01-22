@@ -39,8 +39,8 @@
  serializes writing multiple log groups to log area.
  */
 
-struct fs_log *g_fs_log;
-struct log_superblock *g_log_sb;
+volatile struct fs_log *g_fs_log;
+volatile struct log_superblock *g_log_sb;
 
 // for communication with kernel fs.
 int g_sock_fd;
@@ -531,6 +531,107 @@ static int persist_log_directory_unopt(struct logheader_meta *loghdr_meta, uint3
 	return 0;
 }
 
+/*
+ * Here enumerate all possible circumstances could happen for log invalidation
+ * notation:
+ *  `vd' is version_diff, version gap between cached fcache and latest log
+ *  `dig' 0 means not digesting, 1 means is digesting
+ *  `RO' marks the read-only log range, logs there shouldn't be coalesced with
+ *      new writes, otherwise those new writes may never be digested by kernfs
+ *  `RW' marks the read-write log range, logs there can be coalesced with new writes
+ *  `OV' marks the overwritten log range, logs there should always be invalidated
+ *  `ERR' means impossible situation, following code assumes such situation never happen
+ *  `h' means the head of the log, aka g_fs_log->start_blk
+ *  `t' means the tail of the log, aka g_fs_log->next_avail
+ *  `h(d)' means the head of the log when request last digest,
+ *      only valid when digesting, aka g_log_sb->start_digest,
+ *      when digesting, `h(d)' always equals `h'
+ *  `t(d)' means the tail of the log when request last digest,
+ *      only valid when digesting, aka g_log_sb->next_avail_digest,
+ *      when digesting, new log allocation only updates `t'
+ *
+ *  enumeration:
+ *  (1) vd = 0, dig = 0, no rotation
+ *  +--------------------------+
+ *  |        h         t       |
+ *  |        |         |       |
+ *  | '------+---------+------'|
+ *  | '  RO  '   RW    ' ERR  '|
+ *  +--------------------------+
+ *  (2) vd = 0, dig = 0, rotated
+ *  +--------------------------+
+ *  |        t         h       |
+ *  |        |         |       |
+ *  | '------+---------+------'|
+ *  | '  RW  '   ERR   ' ERR  '|
+ *  +--------------------------+
+ *  (3) vd = 1, dig = 0, no rotation
+ *  +--------------------------+
+ *  |        h         t       |
+ *  |        |         |       |
+ *  | '------+---------+------'|
+ *  | '  OV  '   OV    '  RO  '|
+ *  +--------------------------+
+ *  (4) vd = 1, dig = 0, rotated
+ *  +--------------------------+
+ *  |        t         h       |
+ *  |        |         |       |
+ *  | '------+---------+------'|
+ *  | '  OV  '   RO    '  RW  '|
+ *  +--------------------------+
+ *  (5) vd > 1, dig = 0 or 1, rotated or not
+ *  +--------------------------+
+ *  |                          |
+ *  | '-----------------------'|
+ *  | '           OV          '|
+ *  +--------------------------+
+ *  (6) vd = 0, dig = 1, no rotation, t not rotated either
+ *  +--------------------------+
+ *  |      h(d)  t(d)   t      |
+ *  |       |     |     |      |
+ *  | '-----+-----+-----+-----'|
+ *  | ' RO  ' RO  ' RW  ' ERR '|
+ *  +--------------------------+
+ *  (7) vd = 0, dig = 1, no rotation, t rotated
+ *  +--------------------------+
+ *  |       t    h(d)  t(d)    |
+ *  |       |     |     |      |
+ *  | '-----+-----+-----+-----'|
+ *  | ' RW  ' ERR ' ERR ' ERR '|
+ *  +--------------------------+
+ *  (8) vd = 0, dig = 1, rotated
+ *  +--------------------------+
+ *  |      t(d)   t    h(d)    |
+ *  |       |     |     |      |
+ *  | '-----+-----+-----+-----'|
+ *  | ' RO  ' RW  ' ERR ' ERR '|
+ *  +--------------------------+
+ *  (9) vd = 1, dig = 1, no rotation, t not rotated either
+ *  +--------------------------+
+ *  |      h(d)  t(d)   t      |
+ *  |       |     |     |      |
+ *  | '-----+-----+-----+-----'|
+ *  | ' OV  ' OV  ' OV  ' RO  '|
+ *  +--------------------------+
+ *  (10) vd = 1, dig = 1, no rotation, t rotated
+ *  +--------------------------+
+ *  |       t    h(d)  t(d)    |
+ *  |       |     |     |      |
+ *  | '-----+-----+-----+-----'|
+ *  | ' OV  ' RO  ' RO  ' RW  '|
+ *  +--------------------------+
+ *  (11) vd = 1, dig = 1, rotated
+ *  +--------------------------+
+ *  |      t(d)   t    h(d)    |
+ *  |       |     |     |      |
+ *  | '-----+-----+-----+-----'|
+ *  | ' OV  ' OV  ' RO  ' RO  '|
+ *  +--------------------------+
+ *
+ *  insight: when digesting (dig = 1), if consider t(d) as a new h when not
+ *  digesting, situation (6).. (11) can be colaesced with situation (1) .. (4),
+ *  thus simplify invalidation logic
+ */
 int check_read_log_invalidation(struct fcache_block *_fcache_block)
 {
 	int ret = 0;

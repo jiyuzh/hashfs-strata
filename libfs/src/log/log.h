@@ -66,7 +66,7 @@ struct fs_log {
 //forward declaration
 struct inode;
 
-extern struct fs_log *g_fs_log;
+extern volatile struct fs_log *g_fs_log;
 
 void init_log(int dev);
 void add_to_loghdr(uint8_t type, struct inode *inode, offset_t data, 

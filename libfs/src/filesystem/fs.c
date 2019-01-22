@@ -84,56 +84,58 @@ void show_libfs_stats(const char *title)
   json_object *root = json_object_new_object();
   json_object_object_add(root, "title", json_object_new_string(title));
   json_object *wait_digest = json_object_new_object(); {
-	  js_add_int64(wait_digest, "tsc", g_perf_stats.digest_wait_tsc);
-	  js_add_int64(wait_digest, "nr" , g_perf_stats.digest_wait_nr);
-	  json_object_object_add(root, "wait_digest", wait_digest);
+    js_add_int64(wait_digest, "tsc", g_perf_stats.digest_wait_tsc);
+    js_add_int64(wait_digest, "nr" , g_perf_stats.digest_wait_nr);
+    json_object_object_add(root, "wait_digest", wait_digest);
   }
   json_object *l0 = json_object_new_object(); {
-	  js_add_int64(l0, "tsc", g_perf_stats.l0_search_tsc);
-	  js_add_int64(l0, "nr" , g_perf_stats.l0_search_nr);
-	  json_object_object_add(root, "l0", l0);
+    js_add_int64(l0, "tsc", g_perf_stats.l0_search_tsc);
+    js_add_int64(l0, "nr" , g_perf_stats.l0_search_nr);
+    json_object_object_add(root, "l0", l0);
   }
   json_object *lsm = json_object_new_object(); {
-	  js_add_int64(lsm, "tsc", g_perf_stats.tree_search_tsc);
-	  js_add_int64(lsm, "nr" , g_perf_stats.tree_search_nr);
-	  json_object_object_add(root, "lsm", lsm);
+    js_add_int64(lsm, "tsc", g_perf_stats.tree_search_tsc);
+    js_add_int64(lsm, "nr" , g_perf_stats.tree_search_nr);
+    json_object_object_add(root, "lsm", lsm);
   }
   json_object *log = json_object_new_object(); {
-	  json_object *commit = json_object_new_object(); {
-		  js_add_int64(commit, "tsc", g_perf_stats.log_commit_tsc);
-		  js_add_int64(commit, "nr" , g_perf_stats.log_commit_nr);
-		  json_object_object_add(log, "commit", commit);
-	  }
-	  json_object *wr = json_object_new_object(); {
-		  js_add_int64(wr, "tsc", g_perf_stats.log_write_tsc);
-		  js_add_int64(wr, "nr" , g_perf_stats.log_write_nr);
-		  json_object_object_add(log, "write", wr);
-	  }
-	  json_object *hdrwr = json_object_new_object(); {
-		  js_add_int64(hdrwr, "tsc", g_perf_stats.loghdr_write_tsc);
-		  js_add_int64(hdrwr, "nr" , g_perf_stats.loghdr_write_nr);
-		  json_object_object_add(log, "hdr_write", hdrwr);
-	  }
-	  json_object_object_add(root, "log", log);
+    json_object *commit = json_object_new_object(); {
+      js_add_int64(commit, "tsc", g_perf_stats.log_commit_tsc);
+      js_add_int64(commit, "nr" , g_perf_stats.log_commit_nr);
+      json_object_object_add(log, "commit", commit);
+    }
+    json_object *wr = json_object_new_object(); {
+      js_add_int64(wr, "tsc", g_perf_stats.log_write_tsc);
+      js_add_int64(wr, "nr" , g_perf_stats.log_write_nr);
+      json_object_object_add(log, "write", wr);
+    }
+    json_object *hdrwr = json_object_new_object(); {
+      js_add_int64(hdrwr, "tsc", g_perf_stats.loghdr_write_tsc);
+      js_add_int64(hdrwr, "nr" , g_perf_stats.loghdr_write_nr);
+      json_object_object_add(log, "hdr_write", hdrwr);
+    }
+    json_object_object_add(root, "log", log);
   }
   json_object *read_data = json_object_new_object(); {
-	  js_add_int64(read_data, "tsc", g_perf_stats.read_data_tsc);
-	  js_add_int64(read_data, "nr" , g_perf_stats.read_data_nr);
-	  js_add_int64(read_data, "bytes", g_perf_stats.read_data_size);
-	  json_object_object_add(root, "read_data", read_data);
+    js_add_int64(read_data, "tsc", g_perf_stats.read_data_tsc);
+    js_add_int64(read_data, "nr" , g_perf_stats.read_data_nr);
+    js_add_int64(read_data, "bytes", g_perf_stats.read_data_size);
+    json_object_object_add(root, "read_data", read_data);
   }
   json_object *path_storage = json_object_new_object(); {
-	  js_add_int64(path_storage, "tsc", g_perf_stats.path_storage_tsc);
-	  js_add_int64(path_storage, "nr" , g_perf_stats.path_storage_nr);
-	  json_object_object_add(root, "path_storage", path_storage);
+    js_add_int64(path_storage, "tsc", g_perf_stats.path_storage_tsc);
+    js_add_int64(path_storage, "nr" , g_perf_stats.path_storage_nr);
+    json_object_object_add(root, "path_storage", path_storage);
   }
   json_object *storage = json_object_new_object(); {
-	  js_add_int64(storage, "tsc", storage_tsc);
-	  js_add_int64(storage, "nr" , storage_nr);
-	  json_object_object_add(root, "storage", storage);
+    js_add_int64(storage, "tsc", storage_tsc);
+    js_add_int64(storage, "nr" , storage_nr);
+    json_object_object_add(root, "storage", storage);
   }
   const char *js_str = json_object_get_string(root);
-  write(prof_fd, js_str, strlen(js_str));
+  if (enable_perf_stats) {
+    write(prof_fd, js_str, strlen(js_str));
+  }
   json_object_put(root);
   printf("\n");
   printf("----------------------- %s libfs statistics\n", title);
@@ -151,6 +153,7 @@ void show_libfs_stats(const char *title)
   printf("read data blocks (tsc/op) : %f \n", (double)g_perf_stats.read_data_tsc / g_perf_stats.read_data_nr);
   printf("read data blocks (tsc/op) : %llu / %llu \n", g_perf_stats.read_data_tsc, g_perf_stats.read_data_nr);
   printf("read data (bytes/op)      : %f \n", (double)g_perf_stats.read_data_size / g_perf_stats.read_data_nr);
+  printf("read data (bytes/tsc)      : %f \n", (double)g_perf_stats.read_data_size / g_perf_stats.read_data_tsc);
   printf("directory search (tsc/op) : %f \n", (double)g_perf_stats.dir_search_tsc / g_perf_stats.dir_search_nr_hit);
   printf("  bmap ext tree (tsc/op)  : %f \n", (double)g_perf_stats.dir_search_ext_tsc / g_perf_stats.dir_search_ext_nr);
   printf("path storage (tsc/op)     : %f \n", (double)g_perf_stats.path_storage_tsc / g_perf_stats.path_storage_nr);
@@ -1228,7 +1231,16 @@ int do_unaligned_read(struct inode *ip, uint8_t *dst, offset_t off, uint32_t io_
       bh->b_offset = off - off_aligned;
       bh->b_data = dst;
       bh->b_size = io_size;
+      if (enable_perf_stats) {
+        start_tsc = asm_rdtscp();
+      }
       bh_submit_read_sync_IO(bh);
+      if (enable_perf_stats) {
+        //printf("[%d] blkno = %llu, bh_size = %llu, io_size = %llu\n", __LINE__, bh->b_blocknr, bh->b_size, io_size);
+        g_perf_stats.read_data_tsc += (asm_rdtscp() - start_tsc);
+        g_perf_stats.read_data_nr++;
+        g_perf_stats.read_data_size += bh->b_size;
+      }
       bh_release(bh);
       return io_size;
     }
@@ -1467,15 +1479,7 @@ do_global_search:
     g_perf_stats.tree_search_tsc += (asm_rdtscp() - start_tsc);
     g_perf_stats.tree_search_nr++;
   }
-
-  if (ret == -EIO) {
-    if (bmap_req.blk_count_found != bmap_req.blk_count) {
-      //panic("could not found blocks in any storage layers\n");
-      mlfs_debug("inum %u - count not find block in any storage layer\n",
-          ip->inum);
-    }
-    goto do_io_aligned;
-  }
+  mlfs_assert(ret != -EIO);
 
   // NVM case: no read caching.
   if (bmap_req.dev == g_root_dev) {

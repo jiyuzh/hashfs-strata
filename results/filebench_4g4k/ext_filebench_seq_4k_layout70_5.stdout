@@ -1,0 +1,102 @@
+dev-dax engine is initialized: dev_path /dev/dax5.1 size 7512 MB
+dev-dax engine is initialized: dev_path /dev/dax5.2 size 1464 MB
+[211909][init_fs():414] LibFS is initialized with id 4
+[211909][init_fs():422]  enable profile
+kernfs id is 211892
+initialize mlfs
+Filebench Version 1.5-alpha3
+0.000: Allocated 173MB of shared memory
+0.001: FileMicro-SeqRead Version 2.1 personality successfully loaded
+0.001: Populating and pre-allocating filesets
+0.001: Removing largefile tree (if exists)
+0.001: Pre-allocating directories in largefile tree
+0.001: Pre-allocating files in largefile tree
+18.420: Waiting for pre-allocation to finish (in case of a parallel pre-allocation)
+18.420: Population and pre-allocation of filesets completed
+
+----------------------- master reset libfs statistics
+wait on digest  (tsc/op)  : 8102736217.000000 
+inode allocation (tsc/op) : 2591.333333 
+bcache search (tsc/op)    : 116.089181 
+search l0 tree  (tsc/op)  : 82.085556 
+search lsm tree (tsc/op)  : -nan 
+log commit (tsc/op)       : 9861924.608929 
+  log writes (tsc/op)     : inf 
+  loghdr writes (tsc/op)  : 9169.981947 
+read data blocks (tsc/op) : -nan 
+read data blocks (tsc/op) : 0 / 0 
+read data (bytes/op)      : -nan 
+read data (bytes/tsc)      : -nan 
+directory search (tsc/op) : 17561.000000 
+  bmap ext tree (tsc/op)  : 496.000000 
+path storage (tsc/op)     : -nan 
+temp_debug (tsc/op)       : 13214218700.000000 
+--------------------------------------
+search lsm tree : l0 : read_data = 1 : inf : -nan
+percentage, lsm/(lsm+l0+read_data) : 0.000000
+directory search bmap ext/all : 0.014122
+bmap storage/all : 0.000000
+storage    : 12765140536
+storage num: 8227
+storage per: 1551615.477817
+--------------------------------------
+23.810: Starting 1 filereader instances
+24.950: Running...
+44.952: Run took 20 seconds...
+44.952: IO Summary: 5203707 ops 260160.999 ops/s 260161/0 rd/wr 1016.3mb/s   0.0ms/op
+44.952: Shutting down processes
+[master] shuting down mlfs
+
+----------------------- shutdown fs libfs statistics
+wait on digest  (tsc/op)  : -nan 
+inode allocation (tsc/op) : -nan 
+bcache search (tsc/op)    : -nan 
+search l0 tree  (tsc/op)  : -nan 
+search lsm tree (tsc/op)  : -nan 
+log commit (tsc/op)       : -nan 
+  log writes (tsc/op)     : -nan 
+  loghdr writes (tsc/op)  : -nan 
+read data blocks (tsc/op) : -nan 
+read data blocks (tsc/op) : 0 / 0 
+read data (bytes/op)      : -nan 
+read data (bytes/tsc)      : -nan 
+directory search (tsc/op) : -nan 
+  bmap ext tree (tsc/op)  : -nan 
+path storage (tsc/op)     : -nan 
+temp_debug (tsc/op)       : 0.000000 
+--------------------------------------
+search lsm tree : l0 : read_data = 1 : -nan : -nan
+percentage, lsm/(lsm+l0+read_data) : -nan
+directory search bmap ext/all : -nan
+bmap storage/all : -nan
+storage    : 0
+storage num: 0
+storage per: -nan
+--------------------------------------
+
+----------------------- shutdown fs libfs statistics
+wait on digest  (tsc/op)  : -nan 
+inode allocation (tsc/op) : -nan 
+bcache search (tsc/op)    : -nan 
+search l0 tree  (tsc/op)  : -nan 
+search lsm tree (tsc/op)  : -nan 
+log commit (tsc/op)       : -nan 
+  log writes (tsc/op)     : -nan 
+  loghdr writes (tsc/op)  : -nan 
+read data blocks (tsc/op) : -nan 
+read data blocks (tsc/op) : 0 / 0 
+read data (bytes/op)      : -nan 
+read data (bytes/tsc)      : -nan 
+directory search (tsc/op) : -nan 
+  bmap ext tree (tsc/op)  : -nan 
+path storage (tsc/op)     : -nan 
+temp_debug (tsc/op)       : 0.000000 
+--------------------------------------
+search lsm tree : l0 : read_data = 1 : -nan : -nan
+percentage, lsm/(lsm+l0+read_data) : -nan
+directory search bmap ext/all : -nan
+bmap storage/all : -nan
+storage    : 0
+storage num: 0
+storage per: -nan
+--------------------------------------
