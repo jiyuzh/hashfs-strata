@@ -1479,6 +1479,7 @@ do_global_search:
     g_perf_stats.tree_search_tsc += (asm_rdtscp() - start_tsc);
     g_perf_stats.tree_search_nr++;
   }
+
   mlfs_assert(ret != -EIO);
 
   // NVM case: no read caching.

@@ -16,7 +16,7 @@
 #define BUF_COUNT 2UL
 #define FILE_NAME "/mlfs/ftrunc"
 
-int main(int argc, char ** argv)
+int main(int argc, char **argv)
 {
 	int fd1, fd2;
 	int bytes, ret, i;
@@ -24,6 +24,9 @@ int main(int argc, char ** argv)
 	int write_count;
 	unsigned long file_size;
 	struct stat statbuf;
+
+  printf("getchar to continue\n");
+  (void)getchar();
 
 	init_fs();
 
@@ -40,7 +43,7 @@ int main(int argc, char ** argv)
 	printf("%d\n", ret);
 
 	// TODO: -ENOENT is not currently returned
-	// libshim returns -ENOENT correctly. glibc problem? 
+	// libshim returns -ENOENT correctly. glibc problem?
 	if (ret == -1) {
 		printf("File does not exist. create a new file\n");
 
@@ -67,7 +70,7 @@ int main(int argc, char ** argv)
 
 	close(fd1);
 
-	printf("--- ftruncte\n");
+	printf("--- ftruncate\n");
 	fd2 = open(FILE_NAME, O_RDWR, 0600);
 	printf("fd2 %d\n", fd2);
 

@@ -392,9 +392,12 @@ int digest_inode(uint8_t from_dev, uint8_t to_dev,
 			handle_t handle;
 			handle.dev = src_dinode->dev;
 
-			ret = mlfs_ext_truncate(&handle, inode,
-					(src_dinode->size) >> g_block_size_shift,
-					((inode->size) >> g_block_size_shift) - 1);
+      // iangneal: fix truncate segmentation fault by bad end block calculation
+      mlfs_lblk_t start_blk = (src_dinode->size >> g_block_size_shift) +
+                              ((src_dinode->size & g_block_size_mask) != 0);
+      mlfs_lblk_t end_blk   = (inode->size >> g_block_size_shift);
+
+			ret = mlfs_ext_truncate(&handle, inode, start_blk, end_blk);
 
 			mlfs_assert(!ret);
 		}

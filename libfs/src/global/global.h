@@ -20,6 +20,7 @@ void mlfs_setup(void);
 #define g_n_devices			4
 #define g_root_dev			1
 #define g_block_size_bytes	4096UL
+#define g_block_size_mask   (g_block_size_bytes - 1)
 #define g_block_size_shift	12UL
 // 2 is for microbenchmark
 // 6 is generally too big. but Redis AOF mode requires at least 6.

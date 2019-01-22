@@ -70,8 +70,8 @@ MLFS_FLAGS += -DSIMULATE_FRAGMENTATION
 
 #DEBUG = -O0 -gdwarf-2 -g3 -rdynamic
 #DEBUG = -g -Ofast
-DEBUG = -g -O3
-#DEBUG = -g -O0
+#DEBUG = -g -O3
+DEBUG = -g -O0
 
 ########
 #  vpath and compile function for each file

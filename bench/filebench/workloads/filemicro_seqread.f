@@ -29,7 +29,7 @@
 set $dir=/mlfs
 #set $cached=false
 set $filesize=1g
-set $iosize=1m
+set $iosize=4k
 set $nthreads=1
 
 #define file name=largefile,path=$dir,size=$filesize,prealloc,reuse,cached=$cached
@@ -45,4 +45,4 @@ define process name=filereader,instances=1
 
 echo  "FileMicro-SeqRead Version 2.1 personality successfully loaded"
 
-run
+run 100000000

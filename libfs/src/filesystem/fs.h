@@ -331,7 +331,7 @@ static inline int fcache_del_all(struct inode *inode)
 		if (kh_exist(inode->fcache_hash, k)) {
 			fc_block = kh_value(inode->fcache_hash, k);
 
-			if (fc_block->is_data_cached) {
+			if (fc_block && fc_block->is_data_cached) {
 				list_del(&fc_block->l);
 				mlfs_free(fc_block->data);
 			}
