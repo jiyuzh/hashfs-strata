@@ -97,6 +97,8 @@ void sync_all_buffers(struct block_device *bdev);
 void sync_writeback_buffers(struct block_device *bdev);
 void remove_buffer_from_writeback(struct buffer_head *bh);
 
+void ensure_block_is_clear(struct block_device *bdev, mlfs_fsblk_t blk);
+
 extern pthread_rwlock_t *bcache_rwlock;
 
 static inline struct buffer_head *bh_find(block_key_t key)

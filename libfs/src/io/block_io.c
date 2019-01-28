@@ -1140,6 +1140,29 @@ void sync_all_buffers(struct block_device *bdev)
 	mlfs_debug("%lu blocks are synced\n", i);
 }
 
+void ensure_block_is_clear(struct block_device *bdev, mlfs_fsblk_t blk)
+{
+	uint32_t i = 0;
+	struct buffer_head *cur;
+	struct buffer_head *next;
+	pthread_mutex_lock(&bdev->bd_bh_dirty_lock);
+	list_for_each_entry_safe(cur, next, &bdev->bd_bh_dirty, b_dirty_list) {
+		if (buffer_dirty(cur) && cur->b_blocknr == blk) {
+            clear_buffer_dirty(cur);
+			list_del_init(&cur->b_dirty_list);
+			buffer_dirty_count--;
+			mlfs_debug("[dev %d], block %lu cleaned due to alloc\n",
+					cur->b_dev, cur->b_blocknr);
+			++i;
+		}
+	}
+	pthread_mutex_unlock(&bdev->bd_bh_dirty_lock);
+
+	if (bdev->b_devid == g_ssd_dev) {
+		mlfs_io_wait(g_ssd_dev, 0);
+    }
+}
+
 static void *buffer_writeback_thread(void *arg)
 {
 	struct epoll_event epev = {0};

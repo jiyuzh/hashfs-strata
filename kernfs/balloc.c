@@ -811,11 +811,11 @@ static unsigned long mlfs_alloc_blocks_in_free_list(struct super_block *sb,
     last_blk_num += num_blocks;
 #endif
 
-#if 0
+#if 1
     for (unsigned long i = 0; i < num_blocks; ++i) {
         ensure_block_is_clear(sb->s_bdev, (*new_blocknr) + i);
     }
-#elif 1
+#else
     sync_all_buffers(sb->s_bdev);
 #endif
 
