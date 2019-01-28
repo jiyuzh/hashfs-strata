@@ -1047,7 +1047,8 @@ int digest_unlink(uint8_t from_dev, uint8_t to_dev, uint32_t inum)
 			handle_t handle = {.dev = to_dev};
 			mlfs_lblk_t end = (inode->size) >> g_block_size_shift;
 
-			ret = mlfs_ext_truncate(&handle, inode, 0, end == 0 ? end : end - 1);
+			//ret = mlfs_ext_truncate(&handle, inode, 0, end == 0 ? end : end - 1);
+			ret = mlfs_ext_truncate(&handle, inode, 0, end);
 			mlfs_assert(!ret);
 		}
 	} else if (inode->itype == T_DIR) {
@@ -1736,6 +1737,8 @@ static int persist_dirty_objects_nvm(void)
 
 		if (ip->itype == T_DIR)
 			persist_dirty_dirent_block(ip);
+
+		mlfs_debug("[dev %d] write dirty inode complete\n", ip->dev);
 	}
 
 	// save block allocation bitmap

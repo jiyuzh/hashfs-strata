@@ -5,6 +5,7 @@
 
 #define SHARED_PARTITION (65536)
 #define HASHTABLE_ALIGNMENT_HACK
+//#define NEVER_REUSE_BLOCKS
 
 uint64_t size_of_bitmap(mlfs_fsblk_t nrblocks)
 {
@@ -343,7 +344,7 @@ void balloc_init(uint8_t dev, struct super_block *_sb)
   _sb->used_blocks = bitmap_weight((uint64_t *)_sb->s_blk_bitmap->bitmap,
       _sb->ondisk->ndatablocks);
 
-  mlfs_info("[dev %u] used blocks %lu\n", dev, _sb->used_blocks);
+  mlfs_debug("[dev %u] used blocks %lu\n", dev, _sb->used_blocks);
 #if 0
   {
     mlfs_fsblk_t a;
@@ -647,6 +648,11 @@ int mlfs_free_blocks_node(struct super_block *sb, unsigned long blocknr,
 	int new_node_used = 0;
 	int ret;
 
+#ifdef NEVER_REUSE_BLOCKS
+    return 0;
+#endif
+
+
 	if (num <= 0) {
 		mlfs_info("ERROR: free %d\n", num);
 		return -EINVAL;
@@ -756,6 +762,8 @@ static unsigned long mlfs_alloc_blocks_in_free_list(struct super_block *sb,
 		curr = container_of(temp, struct mlfs_range_node, node);
 
 		curr_blocks = curr->range_high - curr->range_low + 1;
+        mlfs_debug("low = %llu, high = %llu, num = %llu\n", curr->range_low,
+                curr->range_high, curr_blocks);
 
 		if (num_blocks >= curr_blocks) {
 			if (btype > 0 && num_blocks > curr_blocks) {
@@ -791,8 +799,25 @@ static unsigned long mlfs_alloc_blocks_in_free_list(struct super_block *sb,
 
 	free_list->num_free_blocks -= num_blocks;
 
+
 	if (found == 0)
 		return -ENOSPC;
+
+#ifdef NEVER_REUSE_BLOCKS
+    static unsigned long last_blk_num = 0;
+    last_blk_num = max(last_blk_num, *new_blocknr);
+    *new_blocknr = last_blk_num;
+
+    last_blk_num += num_blocks;
+#endif
+
+#if 0
+    for (unsigned long i = 0; i < num_blocks; ++i) {
+        ensure_block_is_clear(sb->s_bdev, (*new_blocknr) + i);
+    }
+#elif 1
+    sync_all_buffers(sb->s_bdev);
+#endif
 
 	return num_blocks;
 }
@@ -903,49 +928,7 @@ retry:
 		}
 	}
 
-#ifdef SIMULATE_FRAGMENTATION
-#if 0
-  static int layout_score_percent = 0;
-  static bool init_layout_score = false;
-  static int skip = 0;
-  static int cur  = 0;
-  if (!init_layout_score) {
-    const char *mlfs_layout_score = getenv("MLFS_LAYOUT_SCORE");
-    if (NULL != mlfs_layout_score) {
-      layout_score_percent = atoi(mlfs_layout_score);
-    } else {
-      layout_score_percent = 100;
-    }
-    init_layout_score = true;
-    printf("Simulating fragmentation: '%s' => layout score of %f\n",
-        mlfs_layout_score, layout_score_percent / 100.0);
-
-    skip = layout_score_percent == 100 ? 0 : 100 / (100 - layout_score_percent);
-    printf("\tSkip size = %d\n", skip);
-#ifdef HASHTABLE_ALIGNMENT_HACK
-#ifdef HASHTABLE
-    unsigned long dummy_block;
-    int junk_block = mlfs_alloc_blocks_in_free_list(sb, free_list, btype,
-        1, &dummy_block);
-#endif
-#endif
-  }
-
-  int ncontiguous = skip ? min(skip - cur, num_blocks) : num_blocks;
-  ret_blocks = mlfs_alloc_blocks_in_free_list(sb, free_list, btype,
-      ncontiguous, &new_blocknr);
-
-  cur += ncontiguous;
-
-  // junk block
-  if (skip && cur == skip) {
-    unsigned long dummy_block;
-    int junk_block = mlfs_alloc_blocks_in_free_list(sb, free_list, btype,
-        1, &dummy_block);
-		free_list->alloc_data_pages += junk_block;
-    cur = 0;
-  }
-#else
+#if defined(SIMULATE_FRAGMENTATION) && 0
   static int layout_score_percent = 0;
   static bool init_layout_score = false;
   if (!init_layout_score) {
@@ -989,8 +972,6 @@ retry:
       if (set) break;
     }
   }
-
-#endif
 
 #else
 	ret_blocks = mlfs_alloc_blocks_in_free_list(sb, free_list, btype,

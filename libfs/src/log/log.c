@@ -466,7 +466,8 @@ static int persist_log_inode(struct logheader_meta *loghdr_meta, uint32_t idx)
 		// icache_del(ip);
 		// ideleted_add(ip);
 		ip->flags &= ~I_VALID;
-		bitmap_clear(sb[ip->dev]->s_inode_bitmap, ip->inum, 1);
+		// iangneal
+    //bitmap_clear(sb[ip->dev]->s_inode_bitmap, ip->inum, 1);
 	}
 
 	nr_logblocks = 1;
@@ -740,19 +741,23 @@ static int persist_log_file(struct logheader_meta *loghdr_meta,
 			// fc_block is invalid. update it
 			if (ret) {
 				if (!check_read_log_invalidation(fc_block) && fc_block->start_offset < offset_in_block) { // patch data from Read Only log area to this new partial update log block
+
 					uint8_t buffer[g_block_size_bytes];
+
 					log_bh = bh_get_sync_IO(g_log_dev, fc_block->log_addr, BH_NO_DATA_ALLOC);
 					log_bh->b_offset = fc_block->start_offset;
 					log_bh->b_data = buffer;
 					log_bh->b_size = offset_in_block - fc_block->start_offset;
 					bh_submit_read_sync_IO(log_bh);
 					bh_release(log_bh);
+
 					log_bh = bh_get_sync_IO(g_log_dev, logblk_no, BH_NO_DATA_ALLOC);
 					log_bh->b_offset = fc_block->start_offset;
 					log_bh->b_data = buffer;
 					log_bh->b_size = offset_in_block - fc_block->start_offset;
 					mlfs_write(log_bh);
 					bh_release(log_bh);
+
 					mlfs_debug("patch partial write log %lu, from %lu, offset from %lu to %lu\n", logblk_no, fc_block->log_addr, fc_block->start_offset, offset_in_block);
 				}
 				else {
@@ -791,11 +796,12 @@ static int persist_log_file(struct logheader_meta *loghdr_meta,
 		loghdr->blocks[idx] = logblk_no;
 
 		// case 1. the IO fits into one block.
-		if (offset_in_block + size <= g_block_size_bytes)
+		if (offset_in_block + size <= g_block_size_bytes) {
 			io_size = size;
 		// case 2. the IO incurs two blocks write (unaligned).
-		else
+    } else {
 			panic("do not support this case yet\n");
+    }
 
 		log_bh->b_data = loghdr_meta->io_vec[n_iovec].base;
 		log_bh->b_size = io_size;
@@ -1267,10 +1273,13 @@ void handle_digest_response(char *ack_cmd)
 				sync_inode_ext_tree(g_root_dev, inode);
       } else if(inode->itype == T_DIR) {
 				// do nothing?
-      } else {
+      } else if(inode->itype == T_DEV) {
 				panic("unsupported inode type\n");
       }
-		}
+		} else {
+      inode->flags &= ~I_DELETING;
+      //bitmap_clear(sb[inode->dev]->s_inode_bitmap, inode->inum, 1);
+    }
 	}
 
 	// persist log superblock.

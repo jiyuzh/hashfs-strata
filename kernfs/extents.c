@@ -38,6 +38,8 @@
 
 #define BUG_ON(x) mlfs_assert((x) == 0)
 
+//#define ZERO_FREED_BLOCKS
+
 pthread_mutex_t block_bitmap_mutex;
 
 static struct inode *__buffer_search(struct rb_root *root,
@@ -130,6 +132,9 @@ retry:
 	ret = mlfs_new_blocks(get_inode_sb(handle->dev, inode), blockp,
 			*count, 0, 0, a_type, goal);
 
+    mlfs_debug("[dev %d] [inum %d] ret = %d, pblk = %llu, count = %lu\n",
+            handle->dev, inode->inum, ret, *blockp, *count);
+
 	if (ret > 0) {
 		//mlfs_assert(*blockp >= disk_sb[handle->dev].datablock_start);
 		*count = ret;
@@ -216,6 +221,7 @@ static mlfs_fsblk_t mlfs_new_data_blocks(handle_t *handle,
 	mlfs_debug("[dev %u] used blocks %d\n", inode->dev,
 			bitmap_weight((uint64_t *)inode->i_sb[handle->dev]->s_blk_bitmap->bitmap,
 				inode->i_sb[handle->dev]->ondisk->ndatablocks));
+    mlfs_debug("DATA alloc: %llu (%lu)\n", block, *count);
 #endif
 
 	return block;
@@ -232,10 +238,25 @@ mlfs_fsblk_t mlfs_new_meta_blocks(handle_t *handle,
 	flags |= MLFS_GET_BLOCKS_CREATE_META;
 
 	*errp = mlfs_ext_alloc_blocks(handle, inode, goal, flags, &block, count);
+#ifdef ZERO_FREED_BLOCKS
+    char zero_buf[g_block_size_bytes];
+    memset(zero_buf, 0, g_block_size_bytes);
+    for (mlfs_fsblk_t i = 0; i < *count; ++i) {
+        mlfs_debug("Zero: %lu\n", block + i);
+        struct buffer_head *bh = bh_get_sync_IO(handle->dev,
+                block + i, BH_NO_DATA_ALLOC);
+        bh->b_data = zero_buf;
+        bh->b_size = g_block_size_bytes;
+        bh->b_offset = 0;
+        mlfs_write(bh);
+    }
+#endif
 #ifdef KERNFS
 	mlfs_debug("[dev %u] used blocks %d\n", inode->dev,
 			bitmap_weight((uint64_t *)inode->i_sb[handle->dev]->s_blk_bitmap->bitmap,
 				inode->i_sb[handle->dev]->ondisk->ndatablocks));
+
+    mlfs_debug("META alloc: %llu (%lu)\n", block, *count);
 #endif
 
 	return block;
@@ -252,6 +273,7 @@ void mlfs_free_blocks(handle_t *handle, struct inode *inode,
   UNUSED(fake);
 
 #ifdef BALLOC
+    mlfs_debug("freeing %llu (%d)\n", block, count);
 	ret = mlfs_free_blocks_node(get_inode_sb(handle->dev, inode),
 			block, count, 0, 0);
 	mlfs_assert(ret == 0);
@@ -409,6 +431,7 @@ static struct buffer_head *read_extent_tree_block(handle_t *handle,
   uint64_t tsc_begin = asm_rdtscp();
 #endif
 	bh = fs_bread(handle->dev, pblk, &err);
+    //mlfs_info("inode inum=%llu has extent block %llu\n", inode->inum, pblk);
 #ifdef STORAGE_PERF
   g_perf_stats.path_storage_tsc += asm_rdtscp() - tsc_begin;
   g_perf_stats.path_storage_nr++;
@@ -2238,6 +2261,8 @@ static int mlfs_ext_rm_leaf(handle_t *handle, struct inode *inode,
 		if (ex == EXT_FIRST_EXTENT(eh))
 			correct_index = 1;
 
+        mlfs_debug("[dev %d] [inum %d] truncate from %u to %u\n",
+                handle->dev, inode->inum, a, b);
 		err = mlfs_remove_blocks(handle, inode, ex, a, b);
 		if (err)
 			goto out;

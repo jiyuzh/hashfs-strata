@@ -144,21 +144,21 @@ static struct buffer_head *buffer_alloc_fast(struct block_device *bdev,
 	bh->b_count = 0;
 	bh->b_size = 0;
 	bh->b_offset = 0;
-
+#ifdef HASHTABLE
   bh->b_cacheline_size = 256; // units of 64 bytes
   bh->b_bitmap_size = (g_block_size_bytes / bh->b_cacheline_size);
   //printf("--- hello? %lu %lu\n", bh->b_cacheline_size, bh->b_bitmap_size);
   bh->b_dirty_bitmap = (uint64_t*)mlfs_alloc(bh->b_bitmap_size / sizeof(uint8_t));
   bh->b_use_bitmap = 0;
   bitmap_zero(bh->b_dirty_bitmap, bh->b_bitmap_size);
-
+#endif
 	INIT_LIST_HEAD(&bh->b_io_list);
 
 	//pthread_spin_init(&bh->b_spinlock, PTHREAD_PROCESS_SHARED);
 
 	return bh;
 }
-
+#if 0
 static inline struct buffer_head *bh_alloc_add(uint8_t dev,
 		addr_t block_nr, uint32_t size, uint8_t mode)
 {
@@ -184,6 +184,7 @@ static inline struct buffer_head *bh_alloc_add(uint8_t dev,
 
 	return bh;
 }
+#endif
 
 struct buffer_head *bh_get_sync_IO(uint8_t dev, addr_t block_nr, uint8_t mode)
 {

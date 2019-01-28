@@ -5,11 +5,13 @@
 
 void do_trace(const char *name, int ret, int args, ...);
 
+//#define SYS_TRACE
+
 #ifdef SYS_TRACE
 #define syscall_trace(name, ret, args, ...) \
 	do_trace(name, ret, args, __VA_ARGS__);
 #else
-#define syscall_trace(name, ret, args, ...) 
-#endif 
+#define syscall_trace(name, ret, args, ...)
+#endif
 
 #endif

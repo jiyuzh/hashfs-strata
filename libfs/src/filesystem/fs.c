@@ -534,6 +534,8 @@ int read_ondisk_inode(uint8_t dev, uint32_t inum, struct dinode *dip)
     mlfs_free(bh->b_data);
   }
 
+  bh_release(bh);
+
   return 0;
 }
 
@@ -704,6 +706,7 @@ int idealloc(struct inode *inode)
   struct inode *_inode;
   lru_node_t *l, *tmp;
 
+  mlfs_assert(inode);
   mlfs_assert(inode->i_ref < 2);
 
   if (inode->i_ref == 1 &&
@@ -728,7 +731,10 @@ int idealloc(struct inode *inode)
   inode->itype = 0;
 
   /* delete inode data (log) pointers */
-  fcache_del_all(inode);
+  //printf("fcache del?\n");
+  //fcache_del_all(inode);
+  //inode->fcache_hash = kh_init(fcache);
+  //printf("fcache del!\n");
 
   pthread_spin_destroy(&inode->de_cache_spinlock);
   pthread_mutex_destroy(&inode->i_mutex);
@@ -893,6 +899,7 @@ int bmap(struct inode *ip, struct bmap_request *bmap_req)
       bmap_req->blk_count_found = ret;
       bmap_req->dev = g_root_dev;
       bmap_req->block_no = map.m_pblk;
+      mlfs_debug("physical block: %llu -> %llu\n", map.m_lblk, map.m_pblk);
 
       if (ret == bmap_req->blk_count) {
         mlfs_debug("[dev %d] Get all offset %lx: blockno %lx from NVM\n",
@@ -1228,6 +1235,7 @@ int do_unaligned_read(struct inode *ip, uint8_t *dst, offset_t off, uint32_t io_
       }
       // continue read either patched or already complete log
       bh = bh_get_sync_IO(g_fs_log->dev, block_no, BH_NO_DATA_ALLOC);
+      mlfs_debug("physical block (log): %llu, %llu bytes\n", block_no, io_size);
       bh->b_offset = off - off_aligned;
       bh->b_data = dst;
       bh->b_size = io_size;
@@ -1274,6 +1282,7 @@ int do_unaligned_read(struct inode *ip, uint8_t *dst, offset_t off, uint32_t io_
     bh->b_offset = off - off_aligned;
     bh->b_data = dst;
     bh->b_size = io_size;
+    mlfs_debug("shared io size: %llu\n", io_size);
 
     bh_submit_read_sync_IO(bh);
     bh_release(bh);
@@ -1428,7 +1437,7 @@ int do_aligned_read(struct inode *ip, uint8_t *dst, offset_t off, uint32_t io_si
             mlfs_write(bh);
             bh_release(bh);
             _fcache_block->start_offset = 0;
-            mlfs_info("patch log %lu with start_offset %u\n", block_no, fc_off);
+            mlfs_debug("patch log %lu with start_offset %u\n", block_no, fc_off);
         }
       }
     }

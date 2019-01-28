@@ -25,9 +25,9 @@ extern "C" {
 
 /* note for this posix handlers' (syscall handler) return value and errno.
  * glibc checks syscall return value in INLINE_SYSCALL macro.
- * if the return value is negative, it sets the value as errno 
+ * if the return value is negative, it sets the value as errno
  * (after turnning to positive one) and returns -1 to application.
- * Therefore, the return value must be correct -errno in posix semantic 
+ * Therefore, the return value must be correct -errno in posix semantic
  */
 
 #define SET_MLFS_FD(fd) fd + g_fd_start
@@ -74,8 +74,8 @@ int mlfs_posix_open(char *path, int flags, uint16_t mode)
 		// opendir API
 		if (flags & O_DIRECTORY) {
 			// Fall through..
-			// it is OK to return fd for directory. glibc allocates 
-			// DIR structure and fill it with fd and result from stats. 
+			// it is OK to return fd for directory. glibc allocates
+			// DIR structure and fill it with fd and result from stats.
 			// check: sysdeps/posix/opendir.c
 		}
 
@@ -103,7 +103,7 @@ int mlfs_posix_open(char *path, int flags, uint16_t mode)
 
 	fd = f->fd;
 
-	mlfs_debug("open file %s inum %u fd %d\n", path, inode->inum, fd);
+	mlfs_debug("open file %s inum %u fd %d (%p)\n", path, inode->inum, fd, inode->_dinode);
 
 	commit_log_tx();
 
@@ -122,7 +122,7 @@ int mlfs_posix_open(char *path, int flags, uint16_t mode)
 
 	f->off = 0;
 
-	/* TODO: set inode permission based the mode 
+	/* TODO: set inode permission based the mode
 	if (mode & S_IRUSR)
 		// Set read permission
 	if (mode & S_IWUSR)
@@ -345,7 +345,7 @@ int mlfs_posix_fstat(int fd, struct stat *stat_buf)
 
 	f = &g_fd_table.open_files[fd];
 
-	if (f->ref == 0) 
+	if (f->ref == 0)
 		return -ENOENT;
 
 	mlfs_assert(f->ip);
@@ -410,11 +410,11 @@ int mlfs_posix_unlink(const char *filename)
 	//inode = namei((char *)filename);
 	inode = dir_lookup(dir_inode, name, NULL);
 
-	if (!inode)  
+	if (!inode)
 		return -ENOENT;
 
 	start_log_tx();
-	
+
 	// remove file from directory
 	ret = dir_remove_entry(dir_inode, name, inode->inum);
 	if (ret < 0) {
@@ -425,16 +425,18 @@ int mlfs_posix_unlink(const char *filename)
 	mlfs_debug("unlink filename %s - inum %u\n", name, inode->inum);
 
 	dlookup_del(inode->dev, filename);
-	
+
 	iput(dir_inode);
 	iput(inode);
 
 	ret = idealloc(inode);
 
+
 	// write to the log for digest.
-	add_to_loghdr(L_TYPE_UNLINK, inode, 0, sizeof(struct dinode), NULL, 0);  
+	add_to_loghdr(L_TYPE_UNLINK, inode, 0, sizeof(struct dinode), NULL, 0);
 
 	commit_log_tx();
+
 
 	return ret;
 }
@@ -521,11 +523,11 @@ int mlfs_posix_rename(char *oldpath, char *newpath)
 	iput(new_dir_inode);
 
 	commit_log_tx();
-		
+
 	return 0;
 }
 
-size_t mlfs_posix_getdents(int fd, struct linux_dirent *buf, 
+size_t mlfs_posix_getdents(int fd, struct linux_dirent *buf,
 		size_t nbytes, offset_t off)
 {
 	struct file *f;
@@ -537,16 +539,16 @@ size_t mlfs_posix_getdents(int fd, struct linux_dirent *buf,
 		return -EBADF;
 	}
 
-	if (f->type != FD_DIR) 
+	if (f->type != FD_DIR)
 		return -EBADF;
 
 	/* glibc compute bytes with struct linux_dirent
-	 * but ip->size is is computed by struct dirent, 
+	 * but ip->size is is computed by struct dirent,
 	 * which is much small size than struct linux_dirent
-	if (nbytes < f->ip->size) 
+	if (nbytes < f->ip->size)
 		return -EINVAL;
 	*/
-	
+
 	if (f->off >= f->ip->size)
 		return 0;
 

@@ -90,6 +90,7 @@ int main(int argc, char **argv)
 	// Make zero-length file.
 	// FIXME: this cause a bug.
 	ftruncate(fd2, 0);
+  close(fd2);
 
 	make_digest_request_async(100);
 	wait_on_digesting();
@@ -102,6 +103,18 @@ int main(int argc, char **argv)
 	}
 
 	unlink(FILE_NAME);
+
+	make_digest_request_async(100);
+	wait_on_digesting();
+
+	printf("--- Unlink digest for %s (should no longer exist)\n");
+
+  int fd3 = open(FILE_NAME, O_RDONLY);
+  if (fd3 >= 0 || errno != ENOENT) {
+    printf("%d %d %d\n", fd3, errno, ENOENT);
+    perror("file still exists!");
+    exit(-1);
+  }
 
 	shutdown_fs();
 
