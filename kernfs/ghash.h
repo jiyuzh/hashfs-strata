@@ -85,9 +85,10 @@ typedef struct  _hash_entry {
 #define BUF_IDX(x) (x % (g_block_size_bytes / sizeof(hash_entry_t)))
 #define NV_IDX(x) (x / (g_block_size_bytes / sizeof(hash_entry_t)))
 
-
-
+#ifndef LIBFS
 #define HASHCACHE
+#endif
+
 #define DISABLE_BH_CACHING
 
 // This is the hash table meta-data that is persisted to NVRAM, that we may read
@@ -210,6 +211,7 @@ extern uint64_t reads;
 extern uint64_t writes;
 extern uint64_t blocks;
 
+#ifdef HASHCACHE
 /*
  * Read a NVRAM block and give the users a reference to our cache (saves a
  * memcpy).
@@ -227,7 +229,6 @@ nvram_read(GHashTable *ht, mlfs_fsblk_t offset, hash_entry_t **buf, bool force) 
   /*
    * Do some caching!
    */
-#ifdef HASHCACHE
   if (__test_and_clear_bit(offset, ht->cache_bitmap)) {
     force = true;
   }
@@ -240,7 +241,7 @@ nvram_read(GHashTable *ht, mlfs_fsblk_t offset, hash_entry_t **buf, bool force) 
   }
 
   if (unlikely(ht->cache[offset] == NULL)) {
-    ht->cache[offset] = (hash_entry_t*)malloc(g_block_size_bytes);
+    ht->cache[offset] = (hash_entry_t*)mlfs_zalloc(g_block_size_bytes);
     mlfs_assert(ht->cache[offset]);
   }
 
@@ -266,21 +267,47 @@ nvram_read(GHashTable *ht, mlfs_fsblk_t offset, hash_entry_t **buf, bool force) 
   g_perf_stats.path_storage_nr++;
 #endif
 
-#else
-#error "Need nvram_read for no cache"
-#endif
 }
+
+#endif
 
 /*
  * Convenience wrapper for when you need to look up the single value within
  * the block and nothing else. Index is offset from start (bytes).
  */
 static void
-nvram_read_entry(GHashTable *ht, mlfs_fsblk_t idx, hash_entry_t *ret) {
+nvram_read_entry(GHashTable *ht, mlfs_fsblk_t idx, hash_entry_t *ret, bool force) {
+#ifdef HASHCACHE
   mlfs_fsblk_t offset = NV_IDX(idx);
   hash_entry_t *buf;
-  nvram_read(ht, offset, &buf, 0);
+  nvram_read(ht, offset, &buf, force);
   *ret = buf[BUF_IDX(idx)];
+#else
+
+#ifdef STORAGE_PERF
+  uint64_t tsc_begin = asm_rdtscp();
+#endif
+
+  struct buffer_head *bh;
+
+  bh = bh_get_sync_IO(g_root_dev, ht->data + NV_IDX(idx), BH_NO_DATA_ALLOC);
+  bh->b_offset = BUF_IDX(idx) * sizeof(*ret);
+  bh->b_size = sizeof(*ret);
+  bh->b_data = (uint8_t*)ret;
+  bh_submit_read_sync_IO(bh);
+
+  // uint8_t dev, int read (enables read)
+  int err = mlfs_io_wait(g_root_dev, 1);
+  assert(!err);
+
+  bh_release(bh);
+  reads++;
+#ifdef STORAGE_PERF
+  g_perf_stats.path_storage_tsc += asm_rdtscp() - tsc_begin;
+  g_perf_stats.path_storage_nr++;
+#endif
+
+#endif
 }
 
 /*
@@ -443,6 +470,8 @@ nvram_update(GHashTable *ht, mlfs_fsblk_t index, hash_entry_t* val) {
 #ifndef KERNFS
   panic("LibFS should never update");
 #endif
+
+#ifdef HASHCACHE
   struct buffer_head *bh;
   int ret;
 
@@ -515,6 +544,9 @@ nvram_update(GHashTable *ht, mlfs_fsblk_t index, hash_entry_t* val) {
   brelse(bh);
 
   //pthread_mutex_unlock(ht->metalock);
+#else
+  panic("Never should reach here!");
+#endif
 }
 
 #ifdef __cplusplus
