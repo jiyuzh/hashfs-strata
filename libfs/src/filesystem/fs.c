@@ -73,12 +73,13 @@ static inline float tsc_to_ms(uint64_t tsc)
 void reset_libfs_stats(void)
 {
 #ifdef STORAGE_PERF
-    storage_tsc = 0;
-    storage_nr = 0;
+    reset_stats_dist(&storage_rtsc);
+    reset_stats_dist(&storage_rnr);
+    reset_stats_dist(&storage_wtsc);
+    reset_stats_dist(&storage_wnr);
 #endif
     memset(&g_perf_stats, 0, sizeof(libfs_stat_t));
 }
-#define js_add_int64(obj, name, val) json_object_object_add(obj, name, json_object_new_int64(val));
 void show_libfs_stats(const char *title)
 {
   json_object *root = json_object_new_object();
@@ -128,8 +129,10 @@ void show_libfs_stats(const char *title)
     json_object_object_add(root, "path_storage", path_storage);
   }
   json_object *storage = json_object_new_object(); {
-    js_add_int64(storage, "tsc", storage_tsc);
-    js_add_int64(storage, "nr" , storage_nr);
+    js_add_int64(storage, "rtsc", storage_rtsc.total);
+    js_add_int64(storage, "rnr" , storage_rnr.total);
+    js_add_int64(storage, "wtsc", storage_wtsc.total);
+    js_add_int64(storage, "wnr" , storage_wnr.total);
     json_object_object_add(root, "storage", storage);
   }
   const char *js_str = json_object_get_string(root);
@@ -141,23 +144,21 @@ void show_libfs_stats(const char *title)
   printf("----------------------- %s libfs statistics\n", title);
   // For some reason, floating point operation causes segfault in filebench
   // worker thread.
-
-  printf("wait on digest  (tsc/op)  : %f \n", (double)g_perf_stats.digest_wait_tsc / g_perf_stats.digest_wait_nr);
-  printf("inode allocation (tsc/op) : %f \n", (double)g_perf_stats.ialloc_tsc / g_perf_stats.ialloc_nr);
-  printf("bcache search (tsc/op)    : %f \n", (double)g_perf_stats.bcache_search_tsc /g_perf_stats.bcache_search_nr);
-  printf("search l0 tree  (tsc/op)  : %f \n", (double)g_perf_stats.l0_search_tsc / g_perf_stats.l0_search_nr);
-  printf("search lsm tree (tsc/op)  : %f \n", (double)g_perf_stats.tree_search_tsc / g_perf_stats.tree_search_nr);
-  printf("log commit (tsc/op)       : %f \n", (double)g_perf_stats.log_commit_tsc / g_perf_stats.log_commit_nr);
-  printf("  log writes (tsc/op)     : %f \n", (double)g_perf_stats.log_write_tsc / g_perf_stats.log_write_nr);
-  printf("  loghdr writes (tsc/op)  : %f \n", (double)g_perf_stats.loghdr_write_tsc / g_perf_stats.loghdr_write_nr);
-  printf("read data blocks (tsc/op) : %f \n", (double)g_perf_stats.read_data_tsc / g_perf_stats.read_data_nr);
-  printf("read data blocks (tsc/op) : %llu / %llu \n", g_perf_stats.read_data_tsc, g_perf_stats.read_data_nr);
-  printf("read data (bytes/op)      : %f \n", (double)g_perf_stats.read_data_size / g_perf_stats.read_data_nr);
-  printf("read data (bytes/tsc)      : %f \n", (double)g_perf_stats.read_data_size / g_perf_stats.read_data_tsc);
-  printf("directory search (tsc/op) : %f \n", (double)g_perf_stats.dir_search_tsc / g_perf_stats.dir_search_nr_hit);
-  printf("  bmap ext tree (tsc/op)  : %f \n", (double)g_perf_stats.dir_search_ext_tsc / g_perf_stats.dir_search_ext_nr);
-  printf("path storage (tsc/op)     : %f \n", (double)g_perf_stats.path_storage_tsc / g_perf_stats.path_storage_nr);
-  printf("temp_debug (tsc/op)       : %f \n", (double)g_perf_stats.tmp_tsc);
+  printf("wait on digest  (tsc/op)  : %lu/%lu(%.2f)\n", tri_ratio(g_perf_stats.digest_wait_tsc,g_perf_stats.digest_wait_nr));
+  printf("inode allocation (tsc/op) : %lu/%lu(%.2f)\n", tri_ratio(g_perf_stats.ialloc_tsc,g_perf_stats.ialloc_nr));
+  printf("bcache search (tsc/op)    : %lu/%lu(%.2f)\n", tri_ratio(g_perf_stats.bcache_search_tsc,g_perf_stats.bcache_search_nr));
+  printf("search l0 tree  (tsc/op)  : %lu/%lu(%.2f)\n", tri_ratio(g_perf_stats.l0_search_tsc,g_perf_stats.l0_search_nr));
+  printf("search lsm tree (tsc/op)  : %lu/%lu(%.2f)\n", tri_ratio(g_perf_stats.tree_search_tsc,g_perf_stats.tree_search_nr));
+  printf("log commit (tsc/op)       : %lu/%lu(%.2f)\n", tri_ratio(g_perf_stats.log_commit_tsc,g_perf_stats.log_commit_nr));
+  printf("  log writes (tsc/op)     : %lu/%lu(%.2f)\n", tri_ratio(g_perf_stats.log_write_tsc,g_perf_stats.log_write_nr));
+  printf("  loghdr writes (tsc/op)  : %lu/%lu(%.2f)\n", tri_ratio(g_perf_stats.loghdr_write_tsc,g_perf_stats.loghdr_write_nr));
+  printf("read data blocks (tsc/op) : %lu/%lu(%.2f)\n", tri_ratio(g_perf_stats.read_data_tsc,g_perf_stats.read_data_nr));
+  printf("read data (bytes/op)      : %lu/%lu(%.2f)\n", tri_ratio(g_perf_stats.read_data_size,g_perf_stats.read_data_nr));
+  printf("read data (bytes/tsc)     : %lu/%lu(%.2f)\n", tri_ratio(g_perf_stats.read_data_size,g_perf_stats.read_data_tsc));
+  printf("directory search (tsc/op) : %lu/%lu(%.2f)\n", tri_ratio(g_perf_stats.dir_search_tsc,g_perf_stats.dir_search_nr_hit));
+  printf("  bmap ext tree (tsc/op)  : %lu/%lu(%.2f)\n", tri_ratio(g_perf_stats.dir_search_ext_tsc,g_perf_stats.dir_search_ext_nr));
+  printf("path storage (tsc/op)     : %lu/%lu(%.2f)\n", tri_ratio(g_perf_stats.path_storage_tsc,g_perf_stats.path_storage_nr));
+  printf("temp_debug (tsc)       : %lu\n", tri_ratio(g_perf_stats.tmp_tsc,g_perf_stats.tmp_nr));
 #ifdef STORAGE_PERF
   printf("--------------------------------------\n");
   printf("search lsm tree : l0 : read_data = 1 : %f : %f\n",
@@ -171,9 +172,12 @@ void show_libfs_stats(const char *title)
   printf("bmap storage/all : %f\n",
           (double)g_perf_stats.path_storage_tsc/
           (g_perf_stats.tree_search_tsc + g_perf_stats.dir_search_tsc));
-  printf("storage    : %lu\n", storage_tsc);
-  printf("storage num: %lu\n", storage_nr);
-  printf("storage per: %f\n",  (double)storage_tsc / storage_nr);
+  printf("storage(read nr/ts)     : %lu/%lu(%.2f)\n", tri_ratio(storage_rnr.total, storage_rtsc.total));
+  print_stats_dist(&storage_rtsc, "storage read tsc");
+  print_stats_dist(&storage_rnr, "storage read nr");
+  printf("storage(write nr/ts)    : %lu/%lu(%.2f)\n", tri_ratio(storage_wnr.total, storage_wtsc.total));
+  print_stats_dist(&storage_wtsc, "storage write tsc");
+  print_stats_dist(&storage_wnr, "storage write nr");
 #endif
 #if 0
   printf("wait on digest (nr)   : %lu \n", g_perf_stats.digest_wait_nr);

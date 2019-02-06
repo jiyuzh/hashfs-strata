@@ -701,7 +701,7 @@ static int persist_log_file(struct logheader_meta *loghdr_meta,
 	uint32_t io_size;
 	struct inode *inode;
 	lru_key_t lru_entry;
-	uint64_t start_tsc, start_tsc_tmp;
+	uint64_t start_tsc;
 	int ret;
 
 	inode = icache_find(g_root_dev, loghdr->inode_no[idx]);
@@ -820,9 +820,6 @@ static int persist_log_file(struct logheader_meta *loghdr_meta,
 	else {
 		offset_t cur_offset;
 
-		if (enable_perf_stats)
-			start_tsc_tmp = asm_rdtscp();
-
 		cur_offset = loghdr->data[idx];
 
 		/* logheader of multi-block is always 4K aligned.
@@ -880,10 +877,6 @@ static int persist_log_file(struct logheader_meta *loghdr_meta,
 		mlfs_write(log_bh);
 
 		bh_release(log_bh);
-
-		if (enable_perf_stats) {
-			g_perf_stats.tmp_tsc += (asm_rdtscp() - start_tsc_tmp);
-		}
 	}
 
 	return 0;
@@ -1045,6 +1038,7 @@ static void commit_log(void)
 		if (enable_perf_stats) {
 			tsc_end = asm_rdtscp();
 			g_perf_stats.log_write_tsc += (tsc_end - tsc_begin);
+            g_perf_stats.log_write_nr++;
 		}
 
 #if 0
