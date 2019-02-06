@@ -1282,6 +1282,17 @@ void handle_digest_response(char *ack_cmd)
     }
 	}
 
+    // unset uptodate flag of all buffer heads
+    // all buffer heads should point to extent tree nodes
+    struct block_device *rootdev = g_bdev[g_root_dev];
+    pthread_mutex_lock(&rootdev->bd_bh_root_lock);
+    struct rb_root *root = &rootdev->bd_bh_root;
+    struct buffer_head *bh, *_bh;
+    rbtree_postorder_for_each_entry_safe(bh, _bh, root, b_rb_node) {
+    clear_buffer_uptodate(bh);
+    }
+    pthread_mutex_unlock(&rootdev->bd_bh_root_lock);
+
 	// persist log superblock.
 	write_log_superblock(g_log_sb);
 

@@ -42,7 +42,7 @@ uint64_t reads;
 uint64_t writes;
 uint64_t blocks;
 
-#ifdef LIBFS
+#if 1
 #define pthread_rwlock_rdlock(x) 0
 #define pthread_rwlock_wrlock(x) 0
 #define pthread_rwlock_unlock(x) 0

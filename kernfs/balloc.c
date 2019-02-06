@@ -812,9 +812,11 @@ static unsigned long mlfs_alloc_blocks_in_free_list(struct super_block *sb,
 #endif
 
 #if 1
+#ifndef HASHTABLE
     for (unsigned long i = 0; i < num_blocks; ++i) {
         ensure_block_is_clear(sb->s_bdev, (*new_blocknr) + i);
     }
+#endif
 #else
     sync_all_buffers(sb->s_bdev);
 #endif

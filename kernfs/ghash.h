@@ -85,9 +85,7 @@ typedef struct  _hash_entry {
 #define BUF_IDX(x) (x % (g_block_size_bytes / sizeof(hash_entry_t)))
 #define NV_IDX(x) (x / (g_block_size_bytes / sizeof(hash_entry_t)))
 
-#ifndef LIBFS
 #define HASHCACHE
-#endif
 
 #define DISABLE_BH_CACHING
 

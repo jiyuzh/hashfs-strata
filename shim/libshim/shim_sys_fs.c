@@ -71,7 +71,7 @@ int shim_do_open(char *filename, int flags, mode_t mode)
 {
 	int ret;
 	char path_buf[PATH_BUF_SIZE];
-	
+
 	memset(path_buf, 0, PATH_BUF_SIZE);
 	collapse_name(filename, path_buf);
 
@@ -87,7 +87,7 @@ int shim_do_open(char *filename, int flags, mode_t mode)
 		}
 
 		syscall_trace(__func__, ret, 3, filename, flags, mode);
-			
+
 		return ret;
 	}
 
@@ -109,7 +109,7 @@ int shim_do_openat(int dfd, const char *filename, int flags, mode_t mode)
 {
 	int ret;
 	char path_buf[PATH_BUF_SIZE];
-	
+
 	memset(path_buf, 0, PATH_BUF_SIZE);
 	collapse_name(filename, path_buf);
 
@@ -132,7 +132,7 @@ int shim_do_openat(int dfd, const char *filename, int flags, mode_t mode)
 		}
 
 		syscall_trace(__func__, ret, 4, filename, dfd, flags, mode);
-			
+
 		return ret;
 	}
 
@@ -155,7 +155,7 @@ int shim_do_creat(char *filename, mode_t mode)
 {
 	int ret;
 	char path_buf[PATH_BUF_SIZE];
-	
+
 	memset(path_buf, 0, PATH_BUF_SIZE);
 	collapse_name(filename, path_buf);
 
@@ -169,7 +169,7 @@ int shim_do_creat(char *filename, mode_t mode)
 		if (!check_mlfs_fd(ret)) {
 			printf("incorrect fd %d\n", ret);
 		}
-			
+
 		syscall_trace(__func__, ret, 2, filename, mode);
 
 		return ret;
@@ -404,7 +404,7 @@ int shim_do_rename(char *oldname, char *newname)
 {
 	int ret;
 	char path_buf[PATH_BUF_SIZE];
-	
+
 	memset(path_buf, 0, PATH_BUF_SIZE);
 	collapse_name(oldname, path_buf);
 
@@ -462,7 +462,7 @@ int shim_do_stat(const char *filename, struct stat *statbuf)
 {
 	int ret;
 	char path_buf[PATH_BUF_SIZE];
-	
+
 	memset(path_buf, 0, PATH_BUF_SIZE);
 	collapse_name(filename, path_buf);
 
@@ -476,7 +476,7 @@ int shim_do_stat(const char *filename, struct stat *statbuf)
 
 		return ret;
 	}
-			
+
 	asm("mov %1, %%rdi;"
 		"mov %2, %%rsi;"
 		"mov %3, %%eax;"
@@ -494,7 +494,7 @@ int shim_do_lstat(const char *filename, struct stat *statbuf)
 {
 	int ret;
 	char path_buf[PATH_BUF_SIZE];
-	
+
 	memset(path_buf, 0, PATH_BUF_SIZE);
 	collapse_name(filename, path_buf);
 
@@ -510,7 +510,7 @@ int shim_do_lstat(const char *filename, struct stat *statbuf)
 
 		return ret;
 	}
-			
+
 	asm("mov %1, %%rdi;"
 		"mov %2, %%rsi;"
 		"mov %3, %%eax;"
@@ -552,7 +552,7 @@ int shim_do_truncate(const char *filename, off_t length)
 {
 	int ret;
 	char path_buf[PATH_BUF_SIZE];
-	
+
 	memset(path_buf, 0, PATH_BUF_SIZE);
 	collapse_name(filename, path_buf);
 
@@ -566,7 +566,7 @@ int shim_do_truncate(const char *filename, off_t length)
 
 		return ret;
 	}
-			
+
 	asm("mov %1, %%rdi;"
 		"mov %2, %%rsi;"
 		"mov %3, %%eax;"
@@ -606,7 +606,6 @@ int shim_do_ftruncate(int fd, off_t length)
 
 int shim_do_unlink(const char *path)
 {
-    return 0;
 	int ret;
 	char path_buf[PATH_BUF_SIZE];
 
@@ -637,7 +636,7 @@ int shim_do_symlink(const char *target, const char *linkpath)
 {
 	int ret;
 	char path_buf[PATH_BUF_SIZE];
-	
+
 	memset(path_buf, 0, PATH_BUF_SIZE);
 	collapse_name(target, path_buf);
 
@@ -668,7 +667,7 @@ int shim_do_access(const char *pathname, int mode)
 {
 	int ret;
 	char path_buf[PATH_BUF_SIZE];
-	
+
 	memset(path_buf, 0, PATH_BUF_SIZE);
 	collapse_name(pathname, path_buf);
 
@@ -679,10 +678,10 @@ int shim_do_access(const char *pathname, int mode)
 	} else {
 		ret = mlfs_posix_access((char *)pathname, mode);
 		syscall_trace(__func__, ret, 2, pathname, mode);
-		
+
 		return ret;
 	}
-			
+
 	asm("mov %1, %%rdi;"
 		"mov %2, %%esi;"
 		"mov %3, %%eax;"
@@ -701,7 +700,7 @@ int shim_do_fsync(int fd)
 	int ret;
 
 	if (check_mlfs_fd(fd)) {
-		// libfs has quick persistency guarantee. 
+		// libfs has quick persistency guarantee.
 		// fsync is nop.
 		return 0;
 	}
@@ -753,7 +752,7 @@ int shim_do_sync(void)
 		"mov %%eax, %0;\n\t"
 		:"=r"(ret)
 		:"r"(__NR_sync)
-		:"rax" 
+		:"rax"
 		);
 
 	return ret;
@@ -784,7 +783,7 @@ int shim_do_fcntl(int fd, int cmd, void *arg)
 	return ret;
 }
 
-void* shim_do_mmap(void *addr, size_t length, int prot, 
+void* shim_do_mmap(void *addr, size_t length, int prot,
 		int flags, int fd, off_t offset)
 {
 	void* ret;

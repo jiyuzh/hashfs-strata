@@ -18,10 +18,8 @@ struct buffer_head *fs_bread(uint8_t dev, mlfs_fsblk_t block,
 	bh = sb_getblk(dev, block);
 	if (!bh)
 		return NULL;
-#ifndef LIBFS
-	if (buffer_uptodate(bh)) 
+	if (buffer_uptodate(bh))
 		goto out;
-#endif
 
 	err = bh_submit_read_sync_IO(bh);
 	if (bh->b_dev == g_ssd_dev)
