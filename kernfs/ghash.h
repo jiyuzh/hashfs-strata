@@ -134,6 +134,7 @@ typedef struct _GHashTable {
 #ifdef HASHCACHE
   pthread_rwlock_t *cache_lock;
   unsigned long* cache_bitmap;
+  size_t cache_bitmap_size;
   // array of blocks
   hash_entry_t **cache;
   // cache of buffer heads to reduce search time
@@ -220,38 +221,35 @@ extern uint64_t blocks;
  * force -- refresh the cache from NVRAM.
  */
 static void
-nvram_read(GHashTable *ht, mlfs_fsblk_t offset, hash_entry_t **buf, bool force) {
+nvram_read(GHashTable *ht, mlfs_fsblk_t idx, hash_entry_t **buf, bool force) {
   struct buffer_head *bh;
   int err;
+
+  mlfs_fsblk_t offset = NV_IDX(idx);
+  mlfs_fsblk_t bufidx = BUF_IDX(idx);
+
 
   /*
    * Do some caching!
    */
-  if (__test_and_clear_bit(offset, ht->cache_bitmap)) {
+  if (__test_and_clear_bit(idx, ht->cache_bitmap)) {
     force = true;
-  }
-  // if NULL, then it got invalidated or never loaded.
-  if (likely(!force && ht->cache[offset] != NULL)) {
-    *buf = ht->cache[offset];
-    return;
-    //*buf = ht->cache[offset];
-    //return;
-  }
-
-  if (unlikely(ht->cache[offset] == NULL)) {
-    ht->cache[offset] = (hash_entry_t*)mlfs_zalloc(g_block_size_bytes);
-    mlfs_assert(ht->cache[offset]);
   }
 
   *buf = ht->cache[offset];
+
+  // if NULL, then it got invalidated or never loaded.
+  if (likely(!force)) {
+    return;
+  }
 
 #ifdef STORAGE_PERF
   uint64_t tsc_begin = asm_rdtscp();
 #endif
   bh = bh_get_sync_IO(g_root_dev, ht->data + offset, BH_NO_DATA_ALLOC);
-  bh->b_offset = 0;
-  bh->b_size = g_block_size_bytes;
-  bh->b_data = (uint8_t*)ht->cache[offset];
+  bh->b_offset = bufidx * sizeof(hash_entry_t);
+  bh->b_size = sizeof(hash_entry_t);
+  bh->b_data = (uint8_t*)(&ht->cache[offset][bufidx]);
   bh_submit_read_sync_IO(bh);
 
   // uint8_t dev, int read (enables read)
@@ -278,7 +276,7 @@ nvram_read_entry(GHashTable *ht, mlfs_fsblk_t idx, hash_entry_t *ret, bool force
 #ifdef HASHCACHE
   mlfs_fsblk_t offset = NV_IDX(idx);
   hash_entry_t *buf;
-  nvram_read(ht, offset, &buf, force);
+  nvram_read(ht, idx, &buf, force);
   *ret = buf[BUF_IDX(idx)];
 #else
 

@@ -324,7 +324,7 @@ int mlfs_hash_cache_invalidate() {
   }
   */
 #ifdef HASHCACHE
-  bitmap_set(ghash->cache_bitmap, 0, ghash->nblocks);
+  bitmap_set(ghash->cache_bitmap, 0, ghash->cache_bitmap_size);
   //pthread_rwlock_unlock(ghash->cache_lock);
 
   //pthread_rwlock_wrlock(gsuper->cache_lock);
@@ -336,7 +336,7 @@ int mlfs_hash_cache_invalidate() {
     }
   }
   */
-  bitmap_set(gsuper->cache_bitmap, 0, gsuper->nblocks);
+  bitmap_set(gsuper->cache_bitmap, 0, gsuper->cache_bitmap_size);
   //pthread_rwlock_unlock(gsuper->cache_lock);
 #endif
 }

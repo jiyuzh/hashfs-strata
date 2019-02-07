@@ -461,31 +461,38 @@ g_hash_table_new (GHashFunc    hash_func,
     panic("Could not init rwlock!");
   }
 
-  hash_table->cache = calloc(nblocks, sizeof(hash_entry_t*));
+  hash_table->cache = malloc(nblocks*sizeof(hash_entry_t*));
   assert(hash_table->cache);
 
-#if 1
-  hash_entry_t *unused;
 
   // allocate cache bitmap -- unset for valid, set for invalid
-  hash_table->cache_bitmap = calloc(nblocks / BITS_PER_LONG, sizeof(unsigned long));
+  hash_table->cache_bitmap_size = max_entries;
+  hash_table->cache_bitmap = calloc(max_entries / BITS_PER_LONG, sizeof(unsigned long));
   assert(hash_table->cache_bitmap);
+  bitmap_set(hash_table->cache_bitmap, 0, hash_table->cache_bitmap_size);
 
-  for (int i = 0; i < nblocks; ++i) {
+  size_t entries_per_block = g_block_size_bytes / sizeof(hash_entry_t);
+
+  mlfs_info("nblocks = %llu, per_block = %llu\n", nblocks, entries_per_block);
+  for (mlfs_fsblk_t i = 0; i < nblocks; ++i) {
     hash_table->cache[i] = calloc(g_block_size_bytes / sizeof(hash_entry_t),
         sizeof(hash_entry_t));
-    // load from NVRAM (force flag)
-    nvram_read(hash_table, i, &unused, 1);
   }
+  /*
+    // load from NVRAM (force flag)
+  for (mlfs_fsblk_t j = 0; j < max_entries; ++j) {
+    hash_entry_t unused;
+    nvram_read_entry(hash_table, j, &unused, 1);
+  }
+  */
 
-#endif
-
+#ifndef DISABLE_BH_CACHE
   hash_table->bh_cache = calloc(nblocks, sizeof(*hash_table->bh_cache));
   assert(hash_table->bh_cache);
 
   hash_table->bh_cache_head = NULL;
 #endif
-
+#endif
 
   return hash_table;
 }
