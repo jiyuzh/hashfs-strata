@@ -281,21 +281,8 @@ nvram_read_entry(GHashTable *ht, mlfs_fsblk_t idx, hash_entry_t *ret, bool force
 #ifdef STORAGE_PERF
   uint64_t tsc_begin = asm_rdtscp();
 #endif
-
-  struct buffer_head *bh;
-
-  bh = bh_get_sync_IO(g_root_dev, ht->data + NV_IDX(idx), BH_NO_DATA_ALLOC);
-  bh->b_offset = BUF_IDX(idx) * sizeof(*ret);
-  bh->b_size = sizeof(*ret);
-  bh->b_data = (uint8_t*)ret;
-  bh_submit_read_sync_IO(bh);
-
-  // uint8_t dev, int read (enables read)
-  int err = mlfs_io_wait(g_root_dev, 1);
-  assert(!err);
-
-  bh_release(bh);
-  reads++;
+  dax_read_unaligned(g_root_dev, (uint8_t*)ret, ht->data + NV_IDX(idx),
+                     BUF_IDX(idx) * sizeof(*ret), sizeof(*ret));
 #ifdef STORAGE_PERF
   g_perf_stats.path_storage_tsc += asm_rdtscp() - tsc_begin;
   g_perf_stats.path_storage_nr++;
