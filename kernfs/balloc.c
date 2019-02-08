@@ -930,7 +930,7 @@ retry:
 		}
 	}
 
-#if defined(SIMULATE_FRAGMENTATION) && 0
+#if defined(SIMULATE_FRAGMENTATION)
   static int layout_score_percent = 0;
   static bool init_layout_score = false;
   if (!init_layout_score) {
@@ -955,12 +955,13 @@ retry:
       unsigned long dummy_block;
       int real_block = mlfs_alloc_blocks_in_free_list(sb, free_list, btype,
           1, &dummy_block);
-      free_list->alloc_data_pages += real_block;
 
       if (!set) {
         new_blocknr = dummy_block;
         set = true;
       }
+
+      if(set && dummy_block != new_blocknr + ret_blocks) break;
 
       ret_blocks += real_block;
       blk += real_block;
@@ -969,7 +970,6 @@ retry:
       unsigned long dummy_block;
       int junk_block = mlfs_alloc_blocks_in_free_list(sb, free_list, btype,
           1, &dummy_block);
-      free_list->alloc_data_pages += junk_block;
 
       if (set) break;
     }
