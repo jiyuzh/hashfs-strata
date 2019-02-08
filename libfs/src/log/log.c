@@ -1261,20 +1261,20 @@ void handle_digest_response(char *ack_cmd)
 	// TODO: optimize this. Now sync all inodes in the inode_hash.
 	// As the optimization, Kernfs sends inodes lists (via shared memory),
 	// and Libfs syncs inodes based on the list.
-	HASH_ITER(hash_handle, inode_hash[g_root_dev], inode, tmp) {
-		if (!(inode->flags & I_DELETING)) {
-			if (inode->itype == T_FILE) {
-				sync_inode_ext_tree(g_root_dev, inode);
-      } else if(inode->itype == T_DIR) {
-				// do nothing?
-      } else if(inode->itype == T_DEV) {
-				panic("unsupported inode type\n");
-      }
-		} else {
-      inode->flags &= ~I_DELETING;
-      //bitmap_clear(sb[inode->dev]->s_inode_bitmap, inode->inum, 1);
+    HASH_ITER(hash_handle, inode_hash[g_root_dev], inode, tmp) {
+        if (!(inode->flags & I_DELETING)) {
+            if (inode->itype == T_FILE) {
+                sync_inode_ext_tree(g_root_dev, inode);
+            } else if(inode->itype == T_DIR) {
+                // do nothing?
+            } else if(inode->itype == T_DEV) {
+                panic("unsupported inode type\n");
+            }
+        } else {
+            inode->flags &= ~I_DELETING;
+            //bitmap_clear(sb[inode->dev]->s_inode_bitmap, inode->inum, 1);
+        }
     }
-	}
 #ifdef EXTCACHE
     // unset uptodate flag of all buffer heads
     // all buffer heads should point to extent tree nodes
