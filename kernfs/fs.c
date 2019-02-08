@@ -168,21 +168,26 @@ struct f_digest_worker_arg {
 void reset_kernfs_stats(void)
 {
 #ifdef STORAGE_PERF
-    storage_tsc = 0;
+    reset_stats_dist(&storage_rtsc);
+    reset_stats_dist(&storage_rnr);
+    reset_stats_dist(&storage_wtsc);
+    reset_stats_dist(&storage_wnr);
 #endif
 	memset(&g_perf_stats, 0, sizeof(kernfs_stats_t));
 }
 void show_kernfs_stats(void)
 {
 	json_object *root = json_object_new_object();
-	json_object *digest = json_object_new_int64(g_perf_stats.digest_time_tsc);
-	json_object *path_search = json_object_new_int64(g_perf_stats.path_search_tsc);
-	json_object *storage = json_object_new_int64(storage_tsc);
-	json_object *path_storage = json_object_new_int64(g_perf_stats.path_storage_tsc);
-	json_object_object_add(root, "digest", digest);
-	json_object_object_add(root, "path_search", path_search);
-	json_object_object_add(root, "path_storage", path_storage);
-	json_object_object_add(root, "storage", storage);
+    js_add_int64(root, "digest", g_perf_stats.digest_time_tsc);
+    js_add_int64(root, "path_search", g_perf_stats.path_search_tsc);
+    js_add_int64(root, "path_storage", g_perf_stats.path_storage_tsc);
+    json_object *storage = json_object_new_object(); {
+        js_add_int64(storage, "rtsc", storage_rtsc.total);
+        js_add_int64(storage, "rnr" , storage_rnr.total);
+        js_add_int64(storage, "wtsc", storage_wtsc.total);
+        js_add_int64(storage, "wnr" , storage_wnr.total);
+        json_object_object_add(root, "storage", storage);
+    }
 	const char *js_str = json_object_get_string(root);
 	if (enable_perf_stats) {
 		write(prof_fd, js_str, strlen(js_str));
@@ -216,8 +221,13 @@ void show_kernfs_stats(void)
 	printf("total migrated  : %lu MB\n", g_perf_stats.total_migrated_mb);
 	printf("--------------------------------------\n");
 #ifdef STORAGE_PERF
-  printf("storage_dax     : %lu\n", storage_tsc);
-  printf("path storage    : %lu\n", g_perf_stats.path_storage_tsc);
+  printf("storage(read nr/ts)   : %lu/%lu(%.2f)\n", tri_ratio(storage_rnr.total,storage_rtsc.total));
+  print_stats_dist(&storage_rtsc, "storage read tsc");
+  print_stats_dist(&storage_rnr, "storage read nr");
+  printf("storage(write nr/ts)  : %lu/%lu(%.2f)\n", tri_ratio(storage_wnr.total,storage_wtsc.total));
+  print_stats_dist(&storage_wtsc, "storage write tsc");
+  print_stats_dist(&storage_wnr, "storage write nr");
+  printf("path storage          : %lu\n", g_perf_stats.path_storage_tsc);
     /*
      * *------------------------------*
      * |   digest (D)                 |
@@ -243,6 +253,7 @@ void show_kernfs_stats(void)
      * path/digest: (E+SE)/(D+E+SE+SD) == $1/$4
      * path/digest(without storage): E/(D+E) == ($1-$2)/($4-$3)
      */
+    uint64_t storage_tsc = storage_rtsc.total + storage_wtsc.total;
     double E = (g_perf_stats.path_search_tsc - g_perf_stats.path_storage_tsc);
     printf("path/digest(without storage) is %f\n",
             E/(g_perf_stats.digest_time_tsc - storage_tsc));

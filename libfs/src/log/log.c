@@ -701,7 +701,7 @@ static int persist_log_file(struct logheader_meta *loghdr_meta,
 	uint32_t io_size;
 	struct inode *inode;
 	lru_key_t lru_entry;
-	uint64_t start_tsc, start_tsc_tmp;
+	uint64_t start_tsc;
 	int ret;
 
 	inode = icache_find(g_root_dev, loghdr->inode_no[idx]);
@@ -820,9 +820,6 @@ static int persist_log_file(struct logheader_meta *loghdr_meta,
 	else {
 		offset_t cur_offset;
 
-		if (enable_perf_stats)
-			start_tsc_tmp = asm_rdtscp();
-
 		cur_offset = loghdr->data[idx];
 
 		/* logheader of multi-block is always 4K aligned.
@@ -880,10 +877,6 @@ static int persist_log_file(struct logheader_meta *loghdr_meta,
 		mlfs_write(log_bh);
 
 		bh_release(log_bh);
-
-		if (enable_perf_stats) {
-			g_perf_stats.tmp_tsc += (asm_rdtscp() - start_tsc_tmp);
-		}
 	}
 
 	return 0;
@@ -1045,6 +1038,7 @@ static void commit_log(void)
 		if (enable_perf_stats) {
 			tsc_end = asm_rdtscp();
 			g_perf_stats.log_write_tsc += (tsc_end - tsc_begin);
+            g_perf_stats.log_write_nr++;
 		}
 
 #if 0
@@ -1267,21 +1261,21 @@ void handle_digest_response(char *ack_cmd)
 	// TODO: optimize this. Now sync all inodes in the inode_hash.
 	// As the optimization, Kernfs sends inodes lists (via shared memory),
 	// and Libfs syncs inodes based on the list.
-	HASH_ITER(hash_handle, inode_hash[g_root_dev], inode, tmp) {
-		if (!(inode->flags & I_DELETING)) {
-			if (inode->itype == T_FILE) {
-				sync_inode_ext_tree(g_root_dev, inode);
-      } else if(inode->itype == T_DIR) {
-				// do nothing?
-      } else if(inode->itype == T_DEV) {
-				panic("unsupported inode type\n");
-      }
-		} else {
-      inode->flags &= ~I_DELETING;
-      //bitmap_clear(sb[inode->dev]->s_inode_bitmap, inode->inum, 1);
+    HASH_ITER(hash_handle, inode_hash[g_root_dev], inode, tmp) {
+        if (!(inode->flags & I_DELETING)) {
+            if (inode->itype == T_FILE) {
+                sync_inode_ext_tree(g_root_dev, inode);
+            } else if(inode->itype == T_DIR) {
+                // do nothing?
+            } else if(inode->itype == T_DEV) {
+                panic("unsupported inode type\n");
+            }
+        } else {
+            inode->flags &= ~I_DELETING;
+            //bitmap_clear(sb[inode->dev]->s_inode_bitmap, inode->inum, 1);
+        }
     }
-	}
-
+#ifdef EXTCACHE
     // unset uptodate flag of all buffer heads
     // all buffer heads should point to extent tree nodes
     struct block_device *rootdev = g_bdev[g_root_dev];
@@ -1292,7 +1286,7 @@ void handle_digest_response(char *ack_cmd)
     clear_buffer_uptodate(bh);
     }
     pthread_mutex_unlock(&rootdev->bd_bh_root_lock);
-
+#endif
 	// persist log superblock.
 	write_log_superblock(g_log_sb);
 

@@ -26,8 +26,10 @@ extern "C" {
 #define SEC_TO_NS(x) (x * 1000000000UL)
 
 #ifdef STORAGE_PERF
-uint64_t storage_tsc;
-uint64_t storage_nr;
+stats_dist_t storage_rtsc;
+stats_dist_t storage_rnr;
+stats_dist_t storage_wtsc;
+stats_dist_t storage_wnr;
 #endif
 // iangneal: because we're using real NVM!
 //#define ENABLE_PERF_MODEL
@@ -174,15 +176,15 @@ int dax_read(uint8_t dev, uint8_t *buf, addr_t blockno, uint32_t io_size)
 #ifdef STORAGE_PERF
     uint64_t tsc_begin = asm_rdtscp();
 #endif
-  //printf("dax_read: %llu @ %llu\n", blockno, io_size);
+    //printf("dax_read: %llu @ %llu\n", blockno, io_size);
 	memmove(buf, dax_addr[dev] + (blockno * g_block_size_bytes), io_size);
 
 	perfmodel_add_delay(1, io_size);
 
 	//mlfs_debug("read block number %d\n", blockno);
 #ifdef STORAGE_PERF
-    storage_tsc += asm_rdtscp() - tsc_begin;
-    storage_nr++;
+    update_stats_dist(&storage_rtsc, asm_rdtscp() - tsc_begin);
+    update_stats_dist(&storage_rnr, io_size);
 #endif
 	return io_size;
 }
@@ -204,8 +206,8 @@ int dax_read_unaligned(uint8_t dev, uint8_t *buf, addr_t blockno, uint32_t offse
 			blockno, (blockno * g_block_size_bytes) + offset, io_size);
 	*/
 #ifdef STORAGE_PERF
-    storage_tsc += asm_rdtscp() - tsc_begin;
-    storage_nr++;
+    update_stats_dist(&storage_rtsc, asm_rdtscp() - tsc_begin);
+    update_stats_dist(&storage_rnr, io_size);
 #endif
 	return io_size;
 }
@@ -230,8 +232,8 @@ int dax_write(uint8_t dev, uint8_t *buf, addr_t blockno, uint32_t io_size)
 	mlfs_muffled("write block number %lu, address %lu size %u\n",
 			blockno, (blockno * g_block_size_bytes), io_size);
 #ifdef STORAGE_PERF
-    storage_tsc += asm_rdtscp() - tsc_begin;
-    storage_nr++;
+    update_stats_dist(&storage_wtsc, asm_rdtscp() - tsc_begin);
+    update_stats_dist(&storage_wnr, io_size);
 #endif
 	return io_size;
 }
@@ -254,8 +256,8 @@ int dax_write_unaligned(uint8_t dev, uint8_t *buf, addr_t blockno, uint32_t offs
 	mlfs_muffled("write block number %lu, address %lu size %u\n",
 			blockno, (blockno * g_block_size_bytes) + offset, io_size);
 #ifdef STORAGE_PERF
-    storage_tsc += asm_rdtscp() - tsc_begin;
-    storage_nr++;
+    update_stats_dist(&storage_wtsc, asm_rdtscp() - tsc_begin);
+    update_stats_dist(&storage_wnr, io_size);
 #endif
 	return io_size;
 }
@@ -274,8 +276,8 @@ int dax_erase(uint8_t dev, addr_t blockno, uint32_t io_size)
 
 	perfmodel_add_delay(0, io_size);
 #ifdef STORAGE_PERF
-    storage_tsc += asm_rdtscp() - tsc_begin;
-    storage_nr++;
+    update_stats_dist(&storage_wtsc, asm_rdtscp() - tsc_begin);
+    update_stats_dist(&storage_wnr, io_size);
 #endif
 }
 

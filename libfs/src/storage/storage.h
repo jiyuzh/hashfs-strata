@@ -2,6 +2,7 @@
 #define _STORAGE_H_
 
 #include "global/global.h"
+#include "global/util.h"
 #include "spdk/sync.h"
 
 // iangneal: this is set in spdk/common.c
@@ -96,8 +97,10 @@ void hdd_exit(uint8_t dev);
 extern uint64_t *bandwidth_consumption;
 
 #ifdef STORAGE_PERF
-extern uint64_t storage_tsc;
-extern uint64_t storage_nr;
+extern stats_dist_t storage_rtsc;
+extern stats_dist_t storage_rnr;
+extern stats_dist_t storage_wtsc;
+extern stats_dist_t storage_wnr;
 #endif
 #ifdef __cplusplus
 }
