@@ -82,4 +82,10 @@ void mlfs_setup(void);
 }
 #endif
 
+#ifdef LIBFS
+#undef HASHCACHE
+#else
+#define HASHCACHE
+#endif
+#undef EXTCACHE
 #endif

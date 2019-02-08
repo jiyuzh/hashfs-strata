@@ -1281,7 +1281,7 @@ void handle_digest_response(char *ack_cmd)
       //bitmap_clear(sb[inode->dev]->s_inode_bitmap, inode->inum, 1);
     }
 	}
-
+#ifdef EXTCACHE
     // unset uptodate flag of all buffer heads
     // all buffer heads should point to extent tree nodes
     struct block_device *rootdev = g_bdev[g_root_dev];
@@ -1292,7 +1292,7 @@ void handle_digest_response(char *ack_cmd)
     clear_buffer_uptodate(bh);
     }
     pthread_mutex_unlock(&rootdev->bd_bh_root_lock);
-
+#endif
 	// persist log superblock.
 	write_log_superblock(g_log_sb);
 
