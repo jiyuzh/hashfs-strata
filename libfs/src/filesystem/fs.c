@@ -45,6 +45,7 @@ uint8_t initialized = 0;
 
 // statistics
 uint8_t enable_perf_stats;
+libfs_stat_t g_perf_stats;
 
 struct lru g_fcache_head;
 
@@ -61,7 +62,6 @@ struct inode *inode_hash[g_n_devices + 1];
 struct dirent_block *dirent_hash[g_n_devices + 1];
 struct dlookup_data *dlookup_hash[g_n_devices + 1];
 
-libfs_stat_t g_perf_stats;
 int prof_fd;
 float clock_speed_mhz;
 
@@ -79,6 +79,8 @@ void reset_libfs_stats(void)
     reset_stats_dist(&storage_wnr);
 #endif
     memset(&g_perf_stats, 0, sizeof(libfs_stat_t));
+    reset_stats_dist(&(g_perf_stats.read_per_index));
+    reset_stats_dist(&(g_perf_stats.read_data_bytes));
 }
 void show_libfs_stats(const char *title)
 {
@@ -119,8 +121,8 @@ void show_libfs_stats(const char *title)
   }
   json_object *read_data = json_object_new_object(); {
     js_add_int64(read_data, "tsc", g_perf_stats.read_data_tsc);
-    js_add_int64(read_data, "nr" , g_perf_stats.read_data_nr);
-    js_add_int64(read_data, "bytes", g_perf_stats.read_data_size);
+    js_add_int64(read_data, "nr" , g_perf_stats.read_data_bytes.cnt);
+    js_add_int64(read_data, "bytes", g_perf_stats.read_data_bytes.total);
     json_object_object_add(root, "read_data", read_data);
   }
   json_object *path_storage = json_object_new_object(); {
@@ -144,20 +146,21 @@ void show_libfs_stats(const char *title)
   printf("----------------------- %s libfs statistics\n", title);
   // For some reason, floating point operation causes segfault in filebench
   // worker thread.
-  printf("wait on digest  (tsc/op)  : %lu/%lu(%.2f)\n", tri_ratio(g_perf_stats.digest_wait_tsc,g_perf_stats.digest_wait_nr));
-  printf("inode allocation (tsc/op) : %lu/%lu(%.2f)\n", tri_ratio(g_perf_stats.ialloc_tsc,g_perf_stats.ialloc_nr));
-  printf("bcache search (tsc/op)    : %lu/%lu(%.2f)\n", tri_ratio(g_perf_stats.bcache_search_tsc,g_perf_stats.bcache_search_nr));
-  printf("search l0 tree  (tsc/op)  : %lu/%lu(%.2f)\n", tri_ratio(g_perf_stats.l0_search_tsc,g_perf_stats.l0_search_nr));
-  printf("search lsm tree (tsc/op)  : %lu/%lu(%.2f)\n", tri_ratio(g_perf_stats.tree_search_tsc,g_perf_stats.tree_search_nr));
-  printf("log commit (tsc/op)       : %lu/%lu(%.2f)\n", tri_ratio(g_perf_stats.log_commit_tsc,g_perf_stats.log_commit_nr));
-  printf("  log writes (tsc/op)     : %lu/%lu(%.2f)\n", tri_ratio(g_perf_stats.log_write_tsc,g_perf_stats.log_write_nr));
-  printf("  loghdr writes (tsc/op)  : %lu/%lu(%.2f)\n", tri_ratio(g_perf_stats.loghdr_write_tsc,g_perf_stats.loghdr_write_nr));
-  printf("read data blocks (tsc/op) : %lu/%lu(%.2f)\n", tri_ratio(g_perf_stats.read_data_tsc,g_perf_stats.read_data_nr));
-  printf("read data (bytes/op)      : %lu/%lu(%.2f)\n", tri_ratio(g_perf_stats.read_data_size,g_perf_stats.read_data_nr));
-  printf("read data (bytes/tsc)     : %lu/%lu(%.2f)\n", tri_ratio(g_perf_stats.read_data_size,g_perf_stats.read_data_tsc));
-  printf("directory search (tsc/op) : %lu/%lu(%.2f)\n", tri_ratio(g_perf_stats.dir_search_tsc,g_perf_stats.dir_search_nr_hit));
-  printf("  bmap ext tree (tsc/op)  : %lu/%lu(%.2f)\n", tri_ratio(g_perf_stats.dir_search_ext_tsc,g_perf_stats.dir_search_ext_nr));
-  printf("path storage (tsc/op)     : %lu/%lu(%.2f)\n", tri_ratio(g_perf_stats.path_storage_tsc,g_perf_stats.path_storage_nr));
+  printf("wait on digest  (tsc/op)  : %lu / %lu(%.2f)\n", tri_ratio(g_perf_stats.digest_wait_tsc,g_perf_stats.digest_wait_nr));
+  printf("inode allocation (tsc/op) : %lu / %lu(%.2f)\n", tri_ratio(g_perf_stats.ialloc_tsc,g_perf_stats.ialloc_nr));
+  printf("bcache search (tsc/op)    : %lu / %lu(%.2f)\n", tri_ratio(g_perf_stats.bcache_search_tsc,g_perf_stats.bcache_search_nr));
+  printf("search l0 tree  (tsc/op)  : %lu / %lu(%.2f)\n", tri_ratio(g_perf_stats.l0_search_tsc,g_perf_stats.l0_search_nr));
+  printf("search lsm tree (tsc/op)  : %lu / %lu(%.2f)\n", tri_ratio(g_perf_stats.tree_search_tsc,g_perf_stats.tree_search_nr));
+  printf("log commit (tsc/op)       : %lu / %lu(%.2f)\n", tri_ratio(g_perf_stats.log_commit_tsc,g_perf_stats.log_commit_nr));
+  printf("  log writes (tsc/op)     : %lu / %lu(%.2f)\n", tri_ratio(g_perf_stats.log_write_tsc,g_perf_stats.log_write_nr));
+  printf("  loghdr writes (tsc/op)  : %lu / %lu(%.2f)\n", tri_ratio(g_perf_stats.loghdr_write_tsc,g_perf_stats.loghdr_write_nr));
+  printf("read data blocks (tsc/op) : %lu / %lu(%.2f)\n", tri_ratio(g_perf_stats.read_data_tsc,g_perf_stats.read_data_bytes.cnt));
+  print_stats_dist(&(g_perf_stats.read_data_bytes), "read data");
+  printf("read data (bytes/tsc)     : %lu / %lu(%.2f)\n", tri_ratio(g_perf_stats.read_data_bytes.total,g_perf_stats.read_data_tsc));
+  printf("directory search (tsc/op) : %lu / %lu(%.2f)\n", tri_ratio(g_perf_stats.dir_search_tsc,g_perf_stats.dir_search_nr_hit));
+  printf("  bmap ext tree (tsc/op)  : %lu / %lu(%.2f)\n", tri_ratio(g_perf_stats.dir_search_ext_tsc,g_perf_stats.dir_search_ext_nr));
+  printf("path storage (tsc/op)     : %lu / %lu(%.2f)\n", tri_ratio(g_perf_stats.path_storage_tsc,g_perf_stats.read_per_index.total));
+  printf("path storage (tsc/index)  : %lu / %lu(%.2f)\n", tri_ratio(g_perf_stats.path_storage_tsc,g_perf_stats.read_per_index.cnt));
   printf("temp_debug (tsc)       : %lu\n", tri_ratio(g_perf_stats.tmp_tsc,g_perf_stats.tmp_nr));
 #ifdef STORAGE_PERF
   printf("--------------------------------------\n");
@@ -172,21 +175,13 @@ void show_libfs_stats(const char *title)
   printf("bmap storage/all : %f\n",
           (double)g_perf_stats.path_storage_tsc/
           (g_perf_stats.tree_search_tsc + g_perf_stats.dir_search_tsc));
-  printf("storage(read nr/ts)     : %lu/%lu(%.2f)\n", tri_ratio(storage_rnr.total, storage_rtsc.total));
+  print_stats_dist(&(g_perf_stats.read_per_index), "read per index");
+  printf("storage(read nr/ts)     : %lu / %lu(%.2f)\n", tri_ratio(storage_rnr.total, storage_rtsc.total));
   print_stats_dist(&storage_rtsc, "storage read tsc");
   print_stats_dist(&storage_rnr, "storage read nr");
-  printf("storage(write nr/ts)    : %lu/%lu(%.2f)\n", tri_ratio(storage_wnr.total, storage_wtsc.total));
+  printf("storage(write nr/ts)    : %lu / %lu(%.2f)\n", tri_ratio(storage_wnr.total, storage_wtsc.total));
   print_stats_dist(&storage_wtsc, "storage write tsc");
   print_stats_dist(&storage_wnr, "storage write nr");
-#endif
-#if 0
-  printf("wait on digest (nr)   : %lu \n", g_perf_stats.digest_wait_nr);
-  printf("search lsm tree (nr)  : %lu \n", g_perf_stats.tree_search_nr);
-  printf("log writes (nr)       : %lu \n", g_perf_stats.log_write_nr);
-  printf("read data blocks (nr) : %lu \n", g_perf_stats.read_data_nr);
-  printf("directory search hit  (nr) : %lu \n", g_perf_stats.dir_search_nr_hit);
-  printf("directory search miss (nr) : %lu \n", g_perf_stats.dir_search_nr_miss);
-  printf("directory search notfound (nr) : %lu \n", g_perf_stats.dir_search_nr_notfound);
 #endif
   printf("--------------------------------------\n");
 }
@@ -1250,8 +1245,7 @@ int do_unaligned_read(struct inode *ip, uint8_t *dst, offset_t off, uint32_t io_
       if (enable_perf_stats) {
         //printf("[%d] blkno = %llu, bh_size = %llu, io_size = %llu\n", __LINE__, bh->b_blocknr, bh->b_size, io_size);
         g_perf_stats.read_data_tsc += (asm_rdtscp() - start_tsc);
-        g_perf_stats.read_data_nr++;
-        g_perf_stats.read_data_size += bh->b_size;
+        update_stats_dist(&(g_perf_stats.read_data_bytes), bh->b_size);
       }
       bh_release(bh);
       return io_size;
@@ -1292,10 +1286,8 @@ int do_unaligned_read(struct inode *ip, uint8_t *dst, offset_t off, uint32_t io_
     bh_release(bh);
 
     if (enable_perf_stats) {
-      //printf("[%d] blkno = %llu, bh_size = %llu, io_size = %llu\n", __LINE__, bh->b_blocknr, bh->b_size, io_size);
-      g_perf_stats.read_data_tsc += (asm_rdtscp() - start_tsc);
-      g_perf_stats.read_data_nr++;
-      g_perf_stats.read_data_size += bh->b_size;
+        g_perf_stats.read_data_tsc += (asm_rdtscp() - start_tsc);
+        update_stats_dist(&(g_perf_stats.read_data_bytes), bh->b_size);
     }
   }
   // SSD and HDD cache: do read caching.
@@ -1322,10 +1314,8 @@ int do_unaligned_read(struct inode *ip, uint8_t *dst, offset_t off, uint32_t io_
     mlfs_io_wait(g_ssd_dev, 1);
 
     if (enable_perf_stats) {
-      //printf("[%d] blkno = %llu, bh_size = %llu, io_size = %llu\n", __LINE__, bh->b_blocknr, bh->b_size, io_size);
-      g_perf_stats.read_data_tsc += (asm_rdtscp() - start_tsc);
-      g_perf_stats.read_data_nr++;
-      g_perf_stats.read_data_size += bh->b_size;
+        g_perf_stats.read_data_tsc += (asm_rdtscp() - start_tsc);
+        update_stats_dist(&(g_perf_stats.read_data_bytes), bh->b_size);
     }
 
     bh_release(bh);
@@ -1456,9 +1446,7 @@ int do_aligned_read(struct inode *ip, uint8_t *dst, offset_t off, uint32_t io_si
       bh_submit_read_sync_IO(bh);
       bh_release(bh);
       if (enable_perf_stats) {
-        //printf("[%d] blkno = %llu, bh_size = %llu, io_size = %llu\n", __LINE__, bh->b_blocknr, bh->b_size, io_size);
-        g_perf_stats.read_data_nr++;
-        g_perf_stats.read_data_size += bh->b_size;
+        update_stats_dist(&(g_perf_stats.read_data_bytes), bh->b_size);
       }
     }
 
@@ -1579,11 +1567,7 @@ do_io_aligned:
     bh_submit_read_sync_IO(bh);
     bh_release(bh);
     if (enable_perf_stats) {
-      //printf("[%d] blkno = %llu, bh_size = %llu, io_size = %llu\n", __LINE__, bh->b_blocknr, bh->b_size, io_size);
-      //printf("\r[%d]", ii++);
-      //fflush(stdout);
-      g_perf_stats.read_data_nr++;
-      g_perf_stats.read_data_size += bh->b_size;
+        update_stats_dist(&(g_perf_stats.read_data_bytes), bh->b_size);
     }
   }
   //if (enable_perf_stats) printf("\n");
@@ -1608,9 +1592,7 @@ do_io_aligned:
     bh_submit_read_sync_IO(bh);
     bh_release(bh);
     if (enable_perf_stats) {
-      //printf("[%d] blkno = %llu, bh_size = %llu, io_size = %llu\n", __LINE__, bh->b_blocknr, bh->b_size, io_size);
-      g_perf_stats.read_data_nr++;
-      g_perf_stats.read_data_size += bh->b_size;
+      update_stats_dist(&(g_perf_stats.read_data_bytes), bh->b_size);
     }
   }
 
