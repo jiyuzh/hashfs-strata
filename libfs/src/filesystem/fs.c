@@ -143,9 +143,7 @@ void show_libfs_stats(const char *title)
   }
   json_object_put(root);
   printf("\n");
-  printf("----------------------- %s libfs statistics\n", title);
-  // For some reason, floating point operation causes segfault in filebench
-  // worker thread.
+  printf("-------%s------------- %s libfs statistics\n", INDEX_NAME, title);
   printf("wait on digest  (tsc/op)  : %lu / %lu(%.2f)\n", tri_ratio(g_perf_stats.digest_wait_tsc,g_perf_stats.digest_wait_nr));
   printf("inode allocation (tsc/op) : %lu / %lu(%.2f)\n", tri_ratio(g_perf_stats.ialloc_tsc,g_perf_stats.ialloc_nr));
   printf("bcache search (tsc/op)    : %lu / %lu(%.2f)\n", tri_ratio(g_perf_stats.bcache_search_tsc,g_perf_stats.bcache_search_nr));
