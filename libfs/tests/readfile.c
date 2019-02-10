@@ -6,10 +6,12 @@
 #include <time.h>
 #include <assert.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <string.h>
 #include "mlfs/mlfs_interface.h"
+#include "global/util.h"
 #define MAX_FILE_NUM 1024
 #define MAX_FILE_NAME_LEN 1024
 #define MAX_THREADS 1024
@@ -27,10 +29,6 @@ typedef struct {
 } worker_result_t;
 static worker_result_t worker_results[MAX_THREADS];
 
-static inline int panic(char *str) {
-    fprintf(stderr, str);
-    exit(-1);
-}
 static void *worker_thread(void *);
 
 #ifndef PREFIX
@@ -59,7 +57,6 @@ uint32_t get_unit(char c) {
 int main(int argc, char **argv) {
     int c;
     srand(time(NULL));
-    init_fs();
     while ((c = getopt(argc, argv, OPTSTRING)) != -1) {
         switch (c) {
             case 'b': // block_size
@@ -106,22 +103,36 @@ int main(int argc, char **argv) {
     }
     fd = open(filename, O_RDONLY);
     if (fd == -1) {
-        perror("cannot open file");
-        exit(-1);
+        fprintf(stderr, "can't find %s try to create it\n", filename);
+        fd = open(filename, O_CREAT | O_RDWR, 0644);
+        if (fd == -1) {
+            perror("cannot create file");
+            exit(-1);
+        }
+        void *read_buf = malloc(block_size);
+        for (size_t i=0; i < read_total; i += block_size) {
+            write(fd, read_buf, block_size);
+        }
+        free(read_buf);
+        lseek(fd, 0, SEEK_SET);
     }
+    show_libfs_stats("init done");
+    reset_libfs_stats();
+    uint64_t tsc_begin = asm_rdtscp();
     for (int i=0; i < n_threads; ++i) {
         assert(pthread_create(&threads[i], NULL, worker_thread, (void*)(&worker_results[i])) == 0);
     }
     for (int i=0; i < n_threads; ++i) {
         assert(pthread_join(threads[i], NULL) == 0);
     }
+    uint64_t readtime = asm_rdtscp() - tsc_begin;
+    printf("elapsed time %lu\n", readtime);
     close(fd);
     for (int i=0; i < n_threads; ++i) {
         printf("thread %d : read %lu (seq %lu rand %lu)\n", i,
                 worker_results[i].total_seq_read + worker_results[i].total_rand_read,
                 worker_results[i].total_seq_read, worker_results[i].total_rand_read);
     }
-    shutdown_fs();
     return 0;
 }
 
@@ -136,7 +147,6 @@ static void *worker_thread(void *arg) {
         if (r->total_seq_read + r->total_rand_read > read_total) // exceeds max file size
             break;
         if ((double)(rand())/RAND_MAX < seq_ratio) { // sequential read
-            lseek(fd, 0, SEEK_SET);
             for (int i=0; i < size; i += block_size) {
                 ssize_t rs = pread(fd, read_buf, block_size, i);
                 assert(rs != -1 && "sequential read failed");
