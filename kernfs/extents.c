@@ -2780,7 +2780,9 @@ int mlfs_ext_get_blocks(handle_t *handle, struct inode *inode,
 	mlfs_assert(handle != NULL);
 
 	create = flags & MLFS_GET_BLOCKS_CREATE_DATA;
-
+#ifdef STORAGE_PERF
+    g_perf_stats.path_storage_nr = 0;
+#endif
 #ifdef KERNFS
 	if (enable_perf_stats)
 		tsc_start = asm_rdtscp();
@@ -2791,6 +2793,9 @@ int mlfs_ext_get_blocks(handle_t *handle, struct inode *inode,
 #ifdef KERNFS
 	if (enable_perf_stats)
 		g_perf_stats.path_search_tsc += (asm_rdtscp() - tsc_start);
+#else
+    if (enable_perf_stats)
+        update_stats_dist(&(g_perf_stats.read_per_index), g_perf_stats.path_storage_nr);
 #endif
   return hash_ret;
 #endif
@@ -3015,6 +3020,9 @@ out2:
 #ifdef KERNFS
 	if (enable_perf_stats)
 		g_perf_stats.path_search_tsc += (asm_rdtscp() - tsc_start);
+#else
+    if (enable_perf_stats)
+        update_stats_dist(&(g_perf_stats.read_per_index), g_perf_stats.path_storage_nr);
 #endif
 
 	return err ? err : allocated;

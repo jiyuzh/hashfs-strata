@@ -55,11 +55,12 @@ MLFS_FLAGS += -DFCONCURRENT
 #MLFS_FLAGS += -DMIGRATION
 #MLFS_FLAGS += -DEXPERIMENTAL
 ifeq ($(PREFIX), hbuild)
-    MLFS_FLAGS += -DHASHTABLE
+	MLFS_FLAGS += -DHASHTABLE -DINDEX_NAME=\"hash\"
 else
 ifneq ($(PREFIX), ebuild)
     $(error "prefix must be ebuild or hbuild")
 endif
+	MLFS_FLAGS += -DINDEX_NAME=\"ext\ \"
 endif
 
 #######

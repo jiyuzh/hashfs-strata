@@ -111,8 +111,7 @@ typedef struct mlfs_libfs_stats {
 	uint64_t log_commit_tsc;
 	uint32_t log_commit_nr;
 	uint64_t read_data_tsc;
-	uint64_t read_data_nr;
-	uint64_t read_data_size;
+	stats_dist_t read_data_bytes;
 	uint64_t dir_search_tsc;
 	uint32_t dir_search_nr_hit;
 	uint32_t dir_search_nr_miss;
@@ -127,6 +126,7 @@ typedef struct mlfs_libfs_stats {
 	uint64_t dir_search_ext_tsc;
 	uint32_t path_storage_nr;
 	uint64_t path_storage_tsc;
+	stats_dist_t read_per_index;
 } libfs_stat_t;
 
 extern struct lru g_fcache_head;

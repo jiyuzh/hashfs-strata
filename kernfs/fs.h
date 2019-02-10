@@ -5,6 +5,7 @@
 #include "global/types.h"
 #include "global/defs.h"
 #include "global/mem.h"
+#include "global/util.h"
 #include "global/ncx_slab.h"
 #include "ds/uthash.h"
 #include "ds/rbtree.h"
@@ -24,8 +25,8 @@ extern "C" {
 typedef struct mlfs_kernfs_stats {
 	uint64_t digest_time_tsc;
 	uint64_t path_search_tsc;
-  uint64_t path_storage_nr;
-  uint64_t path_storage_tsc;
+	uint64_t path_storage_nr;
+	uint64_t path_storage_tsc;
 	uint64_t replay_time_tsc;
 	uint64_t apply_time_tsc;
 	uint64_t digest_dir_tsc;
@@ -34,6 +35,7 @@ typedef struct mlfs_kernfs_stats {
 	uint64_t n_digest;
 	uint64_t n_digest_skipped;
 	uint64_t total_migrated_mb;
+	stats_dist_t read_per_index;
 } kernfs_stats_t;
 
 extern struct disk_superblock disk_sb[g_n_devices];
