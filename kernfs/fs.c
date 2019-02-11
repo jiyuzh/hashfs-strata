@@ -199,7 +199,7 @@ void show_kernfs_stats(void)
 
 	printf("\n");
 	//printf("CPU clock : %.3f MHz\n", clock_speed_mhz);
-	printf("----------------------- kernfs statistics\n");
+	printf("-----%s ---------------- kernfs statistics\n", INDEX_NAME);
 	printf("digest          : %lu\n",
 			g_perf_stats.digest_time_tsc);
 	printf("- replay        : %lu\n",
