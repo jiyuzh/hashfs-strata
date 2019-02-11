@@ -83,7 +83,7 @@ uint8_t *get_dirent_block(struct inode *dir_inode, offset_t offset)
 	mlfs_assert(dir_inode->itype == T_DIR);
 	mlfs_assert(offset <= dir_inode->size + sizeof(struct mlfs_dirent));
 
-	d_block = dcache_find(dev, dir_inode->inum, offset, g_fs_log);
+	d_block = dcache_find(dev, dir_inode->inum, offset, (struct fs_log*)g_fs_log);
 
 	if (d_block)
 		return d_block->dirent_array;
@@ -93,7 +93,7 @@ uint8_t *get_dirent_block(struct inode *dir_inode, offset_t offset)
 		if (!(dir_inode->dinode_flags & DI_VALID))
 			panic("dir_inode is not synchronized with on-disk inode\n");
 
-		d_block = dcache_alloc_add(dev, dir_inode->inum, 0, NULL, 0, g_fs_log);
+		d_block = dcache_alloc_add(dev, dir_inode->inum, 0, NULL, 0, (struct fs_log*)g_fs_log);
 	} else {
 		bmap_req_t bmap_req = {
 			.dev = dev,
@@ -114,7 +114,7 @@ uint8_t *get_dirent_block(struct inode *dir_inode, offset_t offset)
 
 		// requested directory block is not allocated in kernfs.
 		if (bmap_req.blk_count_found == 0) {
-			d_block = dcache_alloc_add(dev, dir_inode->inum, offset, NULL, 0, g_fs_log);
+			d_block = dcache_alloc_add(dev, dir_inode->inum, offset, NULL, 0, (struct fs_log*)g_fs_log);
 			mlfs_assert(d_block);
 		} else {
 			uint8_t *data = mlfs_alloc(g_block_size_bytes);
@@ -128,7 +128,7 @@ uint8_t *get_dirent_block(struct inode *dir_inode, offset_t offset)
 			mlfs_io_wait(dir_inode->dev, 1);
 
 			d_block = dcache_alloc_add(dev, dir_inode->inum,
-					offset, data, bmap_req.block_no, g_fs_log);
+					offset, data, bmap_req.block_no, (struct fs_log*)g_fs_log);
 
 			mlfs_assert(d_block);
 		}

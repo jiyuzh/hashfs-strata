@@ -46,8 +46,8 @@ volatile struct log_superblock *g_log_sb;
 int g_sock_fd;
 static struct sockaddr_un g_srv_addr, g_addr;
 
-static void read_log_superblock(struct log_superblock *log_sb);
-static void write_log_superblock(struct log_superblock *log_sb);
+static void read_log_superblock(volatile struct log_superblock *log_sb);
+static void write_log_superblock(volatile struct log_superblock *log_sb);
 static void commit_log(void);
 static void digest_log(void);
 
@@ -78,13 +78,13 @@ void init_log(int dev)
 	g_fs_log->dev = dev;
 	g_fs_log->nloghdr = 0;
 
-	ret = pipe(g_fs_log->digest_fd);
+	ret = pipe(((struct fs_log*)g_fs_log)->digest_fd);
 	if (ret < 0)
 		panic("cannot create pipe for digest\n");
 
 	read_log_superblock(g_log_sb);
 
-	g_fs_log->log_sb = g_log_sb;
+	g_fs_log->log_sb = (struct log_superblock*)g_log_sb;
 
 	// Assuming all logs are digested by recovery.
 	g_fs_log->next_avail_header = disk_sb[dev].log_start + 1; // +1: log superblock
@@ -141,7 +141,7 @@ void shutdown_log(void)
 	unlink(g_addr.sun_path);
 }
 
-static void read_log_superblock(struct log_superblock *log_sb)
+static void read_log_superblock(volatile struct log_superblock *log_sb)
 {
 	int ret;
 	struct buffer_head *bh;
@@ -159,7 +159,7 @@ static void read_log_superblock(struct log_superblock *log_sb)
 	return;
 }
 
-static void write_log_superblock(struct log_superblock *log_sb)
+static void write_log_superblock(volatile struct log_superblock *log_sb)
 {
 	int ret;
 	struct buffer_head *bh;
