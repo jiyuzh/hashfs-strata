@@ -225,6 +225,7 @@ g_hash_table_set_shift_from_size (GHashTable *hash_table, int size) {
  *
  * Returns: index of the described node
  */
+__attribute__((optimize("unroll-loops")))
 static inline uint32_t
 g_hash_table_lookup_node (GHashTable    *hash_table,
                           mlfs_fsblk_t   key,
@@ -236,8 +237,9 @@ g_hash_table_lookup_node (GHashTable    *hash_table,
   uint32_t first_tombstone = 0;
   int have_tombstone = FALSE;
   uint32_t step = 0;
-  hash_entry_t *buffer;
-  hash_entry_t cur;
+//#define he_buf_sz (4096 * 2) / sizeof(hash_entry_t)
+#define he_buf_sz 4
+  hash_entry_t buffer[he_buf_sz];
 
   hash_value = hash_table->hash_func((void*)key);
   if (unlikely (!HASH_IS_REAL (hash_value))) {
@@ -256,16 +258,63 @@ g_hash_table_lookup_node (GHashTable    *hash_table,
   nvram_read(hash_table, NV_IDX(node_index), &buffer, force);
   cur = buffer[BUF_IDX(node_index)];
   */
-  nvram_read_entry(hash_table, node_index, &cur, force);
-  //cur = hash_table->cache[NV_IDX(node_index)][BUF_IDX(node_index)];
+#if 0
+#if 1 && defined(LIBFS)
+  g_perf_stats.n_lookups++;
+  //g_perf_stats.n_entries_read += he_buf_sz;
 
-  while (!HASH_ENTRY_IS_EMPTY(cur)) {
-    if (cur.key == key && HASH_ENTRY_IS_VALID(cur)) {
-      *ent_return = cur;
+  //g_perf_stats.hash_loop_nr++;
+  //uint64_t tsc_begin = asm_rdtscp();
+#endif
+  //nvram_read_entries(hash_table, NV_IDX(node_index) * g_block_size_bytes, buffer, he_buf_sz);
+  nvram_read_entries(hash_table, (node_index), buffer, he_buf_sz);
+  //cur = hash_table->cache[NV_IDX(node_index)][BUF_IDX(node_index)];
+  //for (int i = BUF_IDX(node_index) / sizeof(hash_entry_t); i < he_buf_sz; i+=step) {
+  for (int i = 0; i < he_buf_sz; i+=step) {
+#if 1 && defined(LIBFS)
+  g_perf_stats.n_entries_read++;
+//g_perf_stats.hash_iter_nr++;
+#endif
+    if (buffer[i].key == key && HASH_ENTRY_IS_VALID(buffer[i])) {
+        *ent_return = buffer[i];
       pthread_rwlock_unlock(hash_table->locks + node_index);
       //pthread_rwlock_unlock(hash_table->cache_lock);
+#if 0 && defined(LIBFS)
+g_perf_stats.hash_loop_tsc += asm_rdtscp() - tsc_begin;
+g_perf_stats.hash_iter_nr++;
+#endif
       return node_index;
-    } else if (HASH_ENTRY_IS_TOMBSTONE(cur) && !have_tombstone) {
+    } else if (HASH_ENTRY_IS_TOMBSTONE(buffer[i]) && !have_tombstone) {
+      first_tombstone = node_index;
+      have_tombstone = TRUE;
+    }
+
+    step++;
+    uint32_t new_idx = (node_index + step) & hash_table->mask;
+    //uint32_t new_idx = (node_index + step) % hash_table->mod;
+    pthread_rwlock_unlock(hash_table->locks + node_index);
+    pthread_rwlock_rdlock(hash_table->locks + new_idx);
+
+    node_index = new_idx;
+  }
+
+#if 1 && defined(LIBFS)
+  g_perf_stats.n_entries_read++;
+//g_perf_stats.hash_iter_nr++;
+#endif
+#endif
+  nvram_read_entry(hash_table, node_index, ent_return, force);
+  //cur = hash_table->cache[NV_IDX(node_index)][BUF_IDX(node_index)];
+
+  while (!HASH_ENTRY_IS_EMPTY(*ent_return)) {
+    if (ent_return->key == key && HASH_ENTRY_IS_VALID(*ent_return)) {
+      pthread_rwlock_unlock(hash_table->locks + node_index);
+      //pthread_rwlock_unlock(hash_table->cache_lock);
+#if 0 && defined(LIBFS)
+g_perf_stats.hash_loop_tsc += asm_rdtscp() - tsc_begin;
+#endif
+      return node_index;
+    } else if (HASH_ENTRY_IS_TOMBSTONE(*ent_return) && !have_tombstone) {
       first_tombstone = node_index;
       have_tombstone = TRUE;
     }
@@ -281,7 +330,11 @@ g_hash_table_lookup_node (GHashTable    *hash_table,
     nvram_read(hash_table, NV_IDX(node_index), &buffer, force);
     cur = buffer[BUF_IDX(node_index)];
     */
-    nvram_read_entry(hash_table, node_index, &cur, force);
+    nvram_read_entry(hash_table, node_index, ent_return, force);
+#if 1 && defined(LIBFS)
+g_perf_stats.n_entries_read++;
+//g_perf_stats.hash_iter_nr++;
+#endif
   }
 
   if (have_tombstone) {
@@ -289,14 +342,20 @@ g_hash_table_lookup_node (GHashTable    *hash_table,
     nvram_read_entry(hash_table, first_tombstone, ent_return, false);
     pthread_rwlock_unlock(hash_table->locks + node_index);
     //pthread_rwlock_unlock(hash_table->cache_lock);
+#if 0 && defined(LIBFS)
+g_perf_stats.hash_loop_tsc += asm_rdtscp() - tsc_begin;
+#endif
     return first_tombstone;
   }
 
   //*ent_return = buffer[BUF_IDX(node_index)];
   //*ent_return = hash_table->cache[NV_IDX(node_index)][BUF_IDX(node_index)];
-  nvram_read_entry(hash_table, node_index, ent_return, false);
+  //nvram_read_entry(hash_table, node_index, ent_return, false);
   pthread_rwlock_unlock(hash_table->locks + node_index);
 
+#if 0 && defined(LIBFS)
+g_perf_stats.hash_loop_tsc += asm_rdtscp() - tsc_begin;
+#endif
   //pthread_rwlock_unlock(hash_table->cache_lock);
   return node_index;
 }
@@ -1014,12 +1073,19 @@ uint32_t g_hash_table_size (GHashTable *hash_table) {
 // https://gist.github.com/badboy/6267743
 static inline uint32_t hash6432shift(uint64_t key)
 {
+#ifdef LIBFS
+  uint64_t tsc_begin = asm_rdtscp();
+#endif
   key = (~key) + (key << 18); // key = (key << 18) - key - 1;
   key = key ^ (key >> 31);
   key = key * 21; // key = (key + (key << 2)) + (key << 4);
   key = key ^ (key >> 11);
   key = key + (key << 6);
   key = key ^ (key >> 22);
+#ifdef LIBFS
+  g_perf_stats.hash_fn_tsc += asm_rdtscp() - tsc_begin;
+  g_perf_stats.hash_fn_nr++;
+#endif
   return (uint32_t) key;
 }
 
@@ -1037,7 +1103,7 @@ static inline uint32_t hash6432shift(uint64_t key)
  *
  * Returns: a hash value corresponding to the key.
  */
-uint32_t g_direct_hash (const void* v) {
-  //return (uint32_t)((uint64_t)(v) & 0xFFFFFFFF);
-  return hash6432shift((uint64_t)v);
+inline uint32_t g_direct_hash (const void* v) {
+  return (uint32_t)((uint64_t)(v) & 0xFFFFFFFF);
+  //return hash6432shift((uint64_t)v);
 }

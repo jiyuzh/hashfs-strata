@@ -45,9 +45,9 @@ typedef struct  _hash_entry {
   uint32_t     value_low32;
 } hash_entry_t;
 
-#define HASH_ENTRY_VAL(x) (((uint64_t)x.value_hi16 << 32) | ((uint64_t)x.value_low32))
-#define HASH_ENTRY_IS_TOMBSTONE(x) (x.value_hi16 == ~0 && x.value_low32 == ~0)
-#define HASH_ENTRY_IS_EMPTY(x) (x.value_hi16 == 0 && x.value_low32 == 0)
+#define HASH_ENTRY_VAL(x) (((uint64_t)(x).value_hi16 << 32) | ((uint64_t)(x).value_low32))
+#define HASH_ENTRY_IS_TOMBSTONE(x) ((x).value_hi16 == ~0 && (x).value_low32 == ~0)
+#define HASH_ENTRY_IS_EMPTY(x) ((x).value_hi16 == 0 && (x).value_low32 == 0)
 #define HASH_ENTRY_IS_VALID(x) (!HASH_ENTRY_IS_EMPTY(x) && !HASH_ENTRY_IS_TOMBSTONE(x))
 
 #define HASH_ENTRY_SET_TOMBSTONE(x) do {x.value_hi16 = ~0; x.value_low32 = ~0;} while(0)
@@ -281,13 +281,38 @@ nvram_read_entry(GHashTable *ht, mlfs_fsblk_t idx, hash_entry_t *ret, bool force
 #ifdef STORAGE_PERF
   uint64_t tsc_begin = asm_rdtscp();
 #endif
+#if 0
+  uint8_t buf[g_block_size_bytes];
+  dax_read(g_root_dev, buf, ht->data + NV_IDX(idx), g_block_size_bytes);
+  *ret = *(hash_entry_t*)(&buf[BUF_IDX(idx) * sizeof(*ret)]);
+#else
   dax_read_unaligned(g_root_dev, (uint8_t*)ret, ht->data + NV_IDX(idx),
                      BUF_IDX(idx) * sizeof(*ret), sizeof(*ret));
+#endif
+
+  //reads++;
 #ifdef STORAGE_PERF
   g_perf_stats.path_storage_tsc += asm_rdtscp() - tsc_begin;
   g_perf_stats.path_storage_nr++;
 #endif
 
+#endif
+}
+
+static void
+nvram_read_entries(GHashTable *ht, mlfs_fsblk_t idx, hash_entry_t *ret, size_t nentries) {
+#ifdef STORAGE_PERF
+  uint64_t tsc_begin = asm_rdtscp();
+#endif
+
+  dax_read_unaligned(g_root_dev, (uint8_t*)ret, ht->data + NV_IDX(idx),
+                     BUF_IDX(idx) * sizeof(*ret),
+                     nentries * sizeof(*ret));
+
+  //reads++;
+#ifdef STORAGE_PERF
+  g_perf_stats.path_storage_tsc += asm_rdtscp() - tsc_begin;
+  g_perf_stats.path_storage_nr++;
 #endif
 }
 

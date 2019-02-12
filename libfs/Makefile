@@ -41,10 +41,13 @@ SPDK_DIR := $(abspath $(CURDIR)/lib/spdk)
 LIBSPDK_DIR := $(abspath $(CURDIR)/src/storage/spdk/)
 JEMALLOC_DIR := $(abspath $(CURDIR)/lib/jemalloc-4.5.0)
 C_LIBCUCKOO_DIR := $(abspath $(CURDIR)/lib/libcuckoo-c/src)
+API_DIR := $(abspath ../../nvm-file-indexing/api)
 
-INCLUDES := $(addprefix -I,src/ $(LIBSPDK_DIR) $(NVML_DIR)/include $(C_LIBCUCKOO_DIR))
+INCLUDES := $(addprefix -I,src/ $(LIBSPDK_DIR) $(NVML_DIR)/include $(C_LIBCUCKOO_DIR) $(API_DIR))
 
-LD_FLAGS = -lpthread -lm -L$(NVML_DIR)/nondebug/ -lpmem -lrt #-Wl,-fuse-ld=gold
+LD_FLAGS = -lpthread -lm -L$(NVML_DIR)/nondebug/ -lpmem -lrt -L$(abspath $(API_DIR)/build)
+
+#-Wl,-fuse-ld=gold
 
 #MLFS_FLAGS = -DUSE_SLAB -DLIBFS -DMLFS_INFO
 #MLFS_FLAGS = -DLIBFS
@@ -71,8 +74,8 @@ MLFS_FLAGS += -DSIMULATE_FRAGMENTATION
 
 #DEBUG = -O0 -gdwarf-2 -g3 -rdynamic
 #DEBUG = -g -Ofast
-#DEBUG = -g -O3
-DEBUG = -g -O0
+DEBUG = -g -O3
+#DEBUG = -g -O0
 
 ########
 #  vpath and compile function for each file

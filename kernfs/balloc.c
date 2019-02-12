@@ -7,6 +7,11 @@
 #define HASHTABLE_ALIGNMENT_HACK
 //#define NEVER_REUSE_BLOCKS
 
+#if !defined(HASHTABLE)
+#define GLOBAL_EXTENT_TREES
+#endif
+//#undef GLOBAL_EXTENT_TREES
+
 uint64_t size_of_bitmap(mlfs_fsblk_t nrblocks)
 {
 	return (nrblocks >> 3) + ((nrblocks % 8) ? 1 : 0);
@@ -829,7 +834,7 @@ static int mlfs_find_free_list(struct super_block *sb,
 {
 	struct free_list *free_list;
 	int i;
-
+#if !defined(GLOBAL_EXTENT_TREES)
 	if (a_type == DATA_LOG) {
 		// FIXME: find out GCed segment.
 		for (i = 0; i < sb->n_partition; i++) {
@@ -847,6 +852,42 @@ static int mlfs_find_free_list(struct super_block *sb,
 			}
 		}
 	}
+#else
+    static bool notify = false;
+    if (unlikely(!notify)) {
+        mlfs_info("ALLOC with global extent trees!%s\n","");
+        notify = true;
+    }
+
+	if (a_type == DATA_LOG) {
+		// FIXME: find out GCed segment.
+		for (i = 0; i < sb->n_partition; i++) {
+			free_list = mlfs_get_free_list(sb, i);
+			if (free_list->num_free_blocks > num) {
+				return i;
+			}
+		}
+	} else if (a_type == TREE) {
+        // iangneal: only check first partition
+        i = sb->n_partition - 1;
+        free_list = mlfs_get_free_list(sb, i);
+        if (free_list->num_free_blocks > num) {
+            return i;
+        } else {
+            panic("No more room for tree blocks in partition 0!");
+        }
+	} else {
+		/* Find out the first free list to allocate requested blocks */
+        // (iangneal): skip first partition
+        mlfs_assert(1 < sb->n_partition);
+		for (i = 0; i < sb->n_partition - 1; i++) {
+			free_list = mlfs_get_free_list(sb, i);
+			if (free_list->num_free_blocks > num) {
+				return i;
+			}
+		}
+	}
+#endif
 
 	return -1;
 }
@@ -885,13 +926,14 @@ int mlfs_new_blocks(struct super_block *sb, unsigned long *blocknr,
 
 	// FIXME: A known bug
 	// When the TREE partition is full,
-
+#if 0
 	if (atype == TREE) {
 		id = sb->n_partition - 2;
 
 		if (id == -1)
 			id = mlfs_find_free_list(sb, num, atype);
 	} else
+#endif
 		id = mlfs_find_free_list(sb, num, atype);
 
 	if (id == -1)
@@ -962,7 +1004,6 @@ retry:
       }
 
       if(set && dummy_block != new_blocknr + ret_blocks) break;
-
       ret_blocks += real_block;
       blk += real_block;
 

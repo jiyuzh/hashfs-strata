@@ -228,7 +228,7 @@ inline addr_t log_alloc(uint32_t nr_blocks)
 
 			// digest 90% of log.
 			while(make_digest_request_async(100) != -EBUSY)
-			mlfs_info("%s", "[L] log is getting full. asynchronous digest!\n");
+			mlfs_debug("%s", "[L] log is getting full. asynchronous digest!\n");
 		}
 	}
 
@@ -252,7 +252,7 @@ retry:
 	if (g_fs_log->avail_version > g_fs_log->start_version) {
 		if (g_fs_log->start_blk - g_fs_log->next_avail
 				< (g_fs_log->size/ 5)) {
-			mlfs_info("%s", "\x1B[31m [L] synchronous digest request and wait! \x1B[0m\n");
+			mlfs_debug("%s", "\x1B[31m [L] synchronous digest request and wait! \x1B[0m\n");
 			while (make_digest_request_async(95) != -EBUSY);
 
 			m_barrier();
@@ -268,7 +268,7 @@ retry:
 	if (0) {
 		int i;
 		for (i = 0; i < nr_blocks; i++) {
-			mlfs_info("alloc %lu\n", next_log_blk + i);
+			mlfs_debug("alloc %lu\n", next_log_blk + i);
 		}
 	}
 
@@ -1195,7 +1195,7 @@ uint32_t make_digest_request_sync(int percent)
 	sprintf(cmd, "|digest |%d|%u|%lu|%lu|",
 			g_fs_log->dev, g_fs_log->n_digest_req, g_log_sb->start_digest, 0UL);
 
-	mlfs_info("%s\n", cmd);
+	mlfs_debug("%s\n", cmd);
 
 	// send digest command
 	ret = sendto(g_sock_fd, cmd, MAX_SOCK_BUF, 0,
@@ -1231,8 +1231,8 @@ void handle_digest_response(char *ack_cmd)
 			&next_hdr_of_digested_hdr, &rotated, &lru_updated);
 
 	if (g_fs_log->n_digest_req == n_digested)  {
-		mlfs_info("%s", "digest is done correctly\n");
-		mlfs_info("%s", "-----------------------------------\n");
+		mlfs_debug("%s", "digest is done correctly\n");
+		mlfs_debug("%s", "-----------------------------------\n");
 	} else {
 		mlfs_printf("[D] digest is done insufficiently: req %u | done %u\n",
 				g_fs_log->n_digest_req, n_digested);
@@ -1384,7 +1384,7 @@ void *digest_thread(void *arg)
 				if (ret == 0)
 					continue;
 
-				mlfs_info("[D] cmd: %s\n", cmd_buf);
+				mlfs_debug("[D] cmd: %s\n", cmd_buf);
 
 				// digest command
 				if (cmd_buf[1] == 'd') {
@@ -1448,7 +1448,7 @@ void *digest_thread(void *arg)
 						ret = recvfrom(g_sock_fd, buf, MAX_SOCK_BUF, 0,
 								(struct sockaddr *)&srv_addr, &len);
 
-						mlfs_info("received %s\n", buf);
+						mlfs_debug("received %s\n", buf);
 
 						handle_digest_response(buf);
 					}

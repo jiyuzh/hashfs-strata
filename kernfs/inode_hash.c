@@ -75,22 +75,24 @@ int lookup_hash(struct inode *inode, mlfs_lblk_t key, hash_value_t* value,
 
   *index = 0;
   // Two-level lookup
-  //if (force) printf("FORCEFUL LOOKUP\n");
+#if 0
   g_hash_table_lookup(gsuper, r, value, size, force);
-  //if (force) printf("searched high\n");
-  //printf("%u -> %lu, %lu %lu\n", key, r, *value, *size);
   bool present = (*value) && ((key & RANGE_BITS) < *size);
-  //printf("--- %lu & %lu (%lu) < %lu\n", key, RANGE_BITS, key & RANGE_BITS, *size);
   if (!present) {
-    //if (force) printf("Not in big.\n");
     g_hash_table_lookup(ghash, k, value, size, force);
-    //if (force) printf("searched low\n");
     present = (*value) != 0;
-    //if (!present && force) printf("Not in small.\n");
   } else {
     *index = (key & RANGE_BITS);
   }
-  //if (force) printf("FORCEFUL RETURN\n");
+#else
+  g_hash_table_lookup(ghash, k, value, size, force);
+  bool present = (*value) != 0;
+  if (!present) {
+    g_hash_table_lookup(gsuper, r, value, size, force);
+    present = (*value) && ((key & RANGE_BITS) < *size);
+    *index = (key & RANGE_BITS);
+  }
+#endif
 
   return (int) present;
 }

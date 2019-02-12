@@ -16,13 +16,16 @@ CUCKOO_DIR := $(abspath $(LIBFS_DIR)/lib/cuckoofilter)
 GLIB_DIR :=
 LIBSPDK_DIR := $(abspath $(LIBFS_DIR)/src/storage/spdk/)
 C_LIBCUCKOO_DIR := $(abspath $(LIBFS_DIR)/lib/libcuckoo-c/src)
+API_DIR := $(abspath ../../../nvm-file-indexing/api)
 
-INCLUDES := $(addprefix -I, .. . $(LIBSPDK_DIR) $(NVML_DIR)/include $(CUCKOO_DIR)/src $(C_LIBCUCKOO_DIR) $(GLIB_DIR) $(GLIB_DIR)/glib)
+INCLUDES := $(addprefix -I, .. . $(LIBSPDK_DIR) $(NVML_DIR)/include $(CUCKOO_DIR)/src $(C_LIBCUCKOO_DIR) $(GLIB_DIR) $(GLIB_DIR)/glib $(API_DIR))
 
 LD_FLAGS = -lpthread -lm -L$(NVML_DIR)/nondebug/ -lpmem -lrt \
-	-Wl,-rpath=$(abspath $(GLIB_DIR)/glib/.libs) -L$(abspath $(GLIB_DIR)/glib/.libs) #-lglib-2.0
+	-Wl,-rpath=$(abspath $(GLIB_DIR)/glib/.libs) -L$(abspath $(GLIB_DIR)/glib/.libs) \
+	-L$(abspath $(API_DIR)/build) #-lglib-2.0
 LD_FLAGS_CXX = -lpthread -lm -L$(NVML_DIR)/nondebug/ -lpmem -lrt \
-	-Wl,-rpath=$(abspath $(GLIB_DIR)/glib/.libs) -L$(abspath $(GLIB_DIR)/glib/.libs) #-lglib-2.0
+	-Wl,-rpath=$(abspath $(GLIB_DIR)/glib/.libs) -L$(abspath $(GLIB_DIR)/glib/.libs) \
+	-L$(abspath $(API_DIR)/build) #-lglib-2.0
 
 #DEBUG = -g -O0
 #DEBUG = -g -Ofast

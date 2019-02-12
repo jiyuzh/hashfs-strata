@@ -2278,10 +2278,11 @@ void read_superblock(uint8_t dev)
 
 	// The partition is GC unit (1 GB) in SSD.
 	// disk_sb[dev].size : total # of blocks
-#if 0
-	sb[dev]->n_partition = disk_sb[dev].size >> 18;
+#if 1
+#define shift_size 19
+	sb[dev]->n_partition = disk_sb[dev].size >> shift_size;
 
-	if (disk_sb[dev].size % (1 << 18))
+	if (disk_sb[dev].size % (1 << shift_size))
 		sb[dev]->n_partition++;
 #else
   sb[dev]->n_partition = 1;

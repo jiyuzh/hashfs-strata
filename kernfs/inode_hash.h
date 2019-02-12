@@ -13,6 +13,8 @@
 #include "migrate.h"
 #endif
 
+#include "file_indexing.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif

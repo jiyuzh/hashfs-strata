@@ -28,7 +28,7 @@ void set_affin() {
 #define MB (1024 * KB)
 #define GB (1024 * MB)
 
-#define DEVSIZE 266352984064
+#define DEVSIZE 2111832064
 #define unlikely(x)     __builtin_expect((x),0)
 
 #define _CPUFREQ 1000LLU /* MHz */
@@ -62,31 +62,24 @@ void write_mem(uint8_t *addr, size_t s, struct time_stats* ts) {
 }
 
 void read_mem(uint8_t *addr, size_t s, struct time_stats* ts) {
-  uint8_t *dest = (uint8_t*)malloc(s);
-  if (!dest) {
-    perror("malloc");
-    return;
-  }
+    uint8_t *dest = (uint8_t*)malloc(s);
+    if (!dest) {
+        perror("malloc");
+        return;
+    }
 
-  for(register int i = 0; i < s; i++) {
     uint64_t start, stop;
-    asm volatile ("clflush (%0)\n" :: "r"(addr + i));
+    asm volatile ("clflush (%0)\n" :: "r"(addr));
     asm volatile ("mfence\n" : : );
 
     start = asm_rdtscp();
-    register uint8_t x = addr[i];
-    asm volatile ("lfence\n" : : );
+    memmove(dest, addr, s);
+    //asm volatile ("lfence\n" : : );
     stop = asm_rdtscp();
-
-    if (x != 42) {
-      fprintf(stderr, "Bad write\n");
-      return;
-    }
 
     // more hackz
     ts->time_v[ts->count++] = ((double)CYCLE2NS(stop - start)) / (1.0e9);
-  }
-
+    //printf("tsc: %llu\n", stop - start);
 }
 
 
@@ -119,7 +112,7 @@ end:
 void dax_test(char *dev_name) {
   int ret, f;
   uint8_t *addr;
-  size_t size = 1 * MB;
+  size_t size = 4 * KB;
   struct time_stats wstats, rstats;
 
   f = open(dev_name, O_RDWR);
@@ -135,15 +128,22 @@ void dax_test(char *dev_name) {
     goto end;
   }
 
-  time_stats_init(&wstats, size);
+  int ntrials = 100;
+  time_stats_init(&wstats, ntrials);
 
-  write_mem(addr, size, &wstats);
-  time_stats_print(&wstats, "dax_test (write)");
+  //write_mem(addr, size, &wstats);
+  for (int i = 0; i < ntrials; ++i) {
+      read_mem(addr, size, &wstats);
+  }
+  time_stats_print(&wstats, "dax_test (hot)");
 
-  time_stats_init(&rstats, size);
-
-  read_mem(addr, size, &rstats);
-  time_stats_print(&rstats, "dax_test (read)");
+  time_stats_init(&rstats, ntrials);
+  size_t smaller = size;
+  for (int i = 0; i < ntrials; ++i) {
+      size_t off = rand() % (DEVSIZE - smaller);
+      read_mem(addr + (off), smaller, &rstats);
+  }
+  time_stats_print(&rstats, "dax_test (spread)");
 
   end:
     close(f);
@@ -152,9 +152,9 @@ void dax_test(char *dev_name) {
 int main(char argc, char **argv) {
   set_affin();
 
-  mem_test();
+  //mem_test();
 
-  dax_test("/dev/dax5.0");
+  dax_test("/dev/dax1.0");
 
   return 0;
 }

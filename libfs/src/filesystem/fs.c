@@ -181,6 +181,23 @@ void show_libfs_stats(const char *title)
   print_stats_dist(&storage_wtsc, "storage write tsc");
   print_stats_dist(&storage_wnr, "storage write nr");
 #endif
+#if 0
+  printf("wait on digest (nr)   : %lu \n", g_perf_stats.digest_wait_nr);
+  printf("search lsm tree (nr)  : %lu \n", g_perf_stats.tree_search_nr);
+  printf("log writes (nr)       : %lu \n", g_perf_stats.log_write_nr);
+  printf("read data blocks (nr) : %lu \n", g_perf_stats.read_data_nr);
+  printf("directory search hit  (nr) : %lu \n", g_perf_stats.dir_search_nr_hit);
+  printf("directory search miss (nr) : %lu \n", g_perf_stats.dir_search_nr_miss);
+  printf("directory search notfound (nr) : %lu \n", g_perf_stats.dir_search_nr_notfound);
+#endif
+#ifdef HASHTABLE
+  printf("--------------------------------------\n");
+  printf("HASH: entries per lookup   : %f \n", (double)g_perf_stats.n_entries_read/ g_perf_stats.n_lookups);
+  printf("HASH TIME (tsc/op)         : %f \n", (double)g_perf_stats.tree_search_tsc / g_perf_stats.tree_search_nr);
+  printf("--- HASH: hash fn (tsc/op) : %f \n", (double)g_perf_stats.hash_fn_tsc/ g_perf_stats.hash_fn_nr);
+  printf("--- HASH: iterate (tsc/op) : %f \n", (double)g_perf_stats.hash_loop_tsc/ g_perf_stats.hash_loop_nr);
+  printf("--- HASH: avg iter / op    : %f \n", (double)g_perf_stats.hash_iter_nr/ g_perf_stats.hash_loop_nr);
+#endif
   printf("--------------------------------------\n");
 }
 
