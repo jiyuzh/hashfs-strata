@@ -35,7 +35,7 @@ shim_table.o: shim_table.c
 
 %.o: %.c $(HEADERS)
 	@#$(CC) -E -Werror -fPIC $(CFLAGS) $<  -o $(patsubst %.o, %.i, $@)
-	$(CC) $(DEBUG) -c -Wall -Werror -fPIC $(CFLAGS) $< -o $@ -I$(LIBFS_SRC_DIR) $(TRACE)
+	$(CC) -g -c -Wall -Werror -fPIC $(CFLAGS) $< -o $@ -I$(LIBFS_SRC_DIR) $(TRACE)
 
 %.o: %.S $(HEADERS)
 	$(AS) $(ASFLAGS) -g -c $< -o $@
