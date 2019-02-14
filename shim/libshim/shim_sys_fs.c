@@ -82,7 +82,7 @@ int shim_do_open(char *filename, int flags, mode_t mode)
 	} else {
 		ret = mlfs_posix_open(filename, flags, mode);
 
-		if (ret != -1 && !check_mlfs_fd(ret)) {
+		if (!check_mlfs_fd(ret)) {
 			printf("incorrect fd %d: file %s\n", ret, filename);
 		}
 
@@ -127,7 +127,7 @@ int shim_do_openat(int dfd, const char *filename, int flags, mode_t mode)
 
 		ret = mlfs_posix_open((char *)filename, flags, mode);
 
-		if (ret != -1 && !check_mlfs_fd(ret)) {
+		if (!check_mlfs_fd(ret)) {
 			printf("incorrect fd %d: file %s\n", ret, filename);
 		}
 
