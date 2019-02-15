@@ -2262,12 +2262,13 @@ void read_superblock(uint8_t dev)
 	memmove(&disk_sb[dev], bh->b_data, sizeof(struct disk_superblock));
 
 	mlfs_info("superblock: size %lu nblocks %lu ninodes %u\n"
-			"[inode start %lu bmap start %lu datablock start %lu log start %lu]\n",
+			"[inode start %lu bmap start %lu APIBLOCK %lu datablock start %lu log start %lu]\n",
 			disk_sb[dev].size,
 			disk_sb[dev].ndatablocks,
 			disk_sb[dev].ninodes,
 			disk_sb[dev].inode_start,
 			disk_sb[dev].bmap_start,
+            disk_sb[dev].api_metadata_block,
 			disk_sb[dev].datablock_start,
 			disk_sb[dev].log_start);
 

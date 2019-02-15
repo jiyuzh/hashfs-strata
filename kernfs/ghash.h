@@ -208,6 +208,10 @@ extern uint64_t reads;
 extern uint64_t writes;
 extern uint64_t blocks;
 
+int dax_write_unaligned(uint8_t dev, uint8_t *buf, addr_t blockno, uint32_t offset,
+		uint32_t io_size);
+int dax_read_unaligned(uint8_t dev, uint8_t *buf, addr_t blockno, uint32_t offset,
+		uint32_t io_size);
 #ifdef HASHCACHE
 /*
  * Read a NVRAM block and give the users a reference to our cache (saves a

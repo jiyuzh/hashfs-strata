@@ -200,19 +200,19 @@ int main(int argc, char *argv[])
 
 	/* nmeta = Empty block + Superblock + inode block + block allocation bitmap block */
 	if (dev_id == g_root_dev) {
-		nmeta = 2 + ninodeblocks + nbitmap;
+		nmeta = 2 + ninodeblocks + nbitmap + 1;
 		ndatablocks = file_size_blks - nmeta;
 		nlog = 0;
 	}
 	// SSD and HDD case.
 	else if (dev_id <= g_hdd_dev) {
-		nmeta = 2 + ninodeblocks + nbitmap;
+		nmeta = 2 + ninodeblocks + nbitmap + 1;
 		ndatablocks = file_size_blks - nmeta;
 		nlog = 0;
 	}
 	// Per-application log.
 	else {
-		nmeta = 2 + ninodeblocks + nbitmap;
+		nmeta = 2 + ninodeblocks + nbitmap + 1;
 		ndatablocks = 0;
 		nlog = log_size_blks;
 	}
@@ -224,6 +224,7 @@ int main(int argc, char *argv[])
 	ondisk_sb.nlog = nlog;
 	ondisk_sb.inode_start = 2;
 	ondisk_sb.bmap_start = 2 + ninodeblocks;
+    ondisk_sb.api_metadata_block = 2 + ninodeblocks + nbitmap;
 	ondisk_sb.datablock_start = nmeta;
 	ondisk_sb.log_start = ondisk_sb.datablock_start + ndatablocks;
 
@@ -233,13 +234,14 @@ int main(int argc, char *argv[])
 	printf("size of superblock %ld\n", sizeof(ondisk_sb));
 	printf("----------------------------------------------------------------\n");
 	printf("nmeta %d (boot 1, super 1, inode blocks %u, bitmap blocks %u) \n"
-			"[ inode start %lu, bmap start %lu, datablock start %lu, log start %lu ] \n"
+			"[ inode start %lu, bmap start %lu, APIBLOCK %lu, datablock start %lu, log start %lu ] \n"
 			": data blocks %lu log blocks %lu -- total %lu (%lu MB)\n",
 			nmeta,
 			ninodeblocks,
 			nbitmap,
 			ondisk_sb.inode_start,
 			ondisk_sb.bmap_start,
+            ondisk_sb.api_metadata_block,
 			ondisk_sb.datablock_start,
 			ondisk_sb.log_start,
 			ndatablocks,

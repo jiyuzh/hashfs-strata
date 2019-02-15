@@ -8,6 +8,7 @@
 
 #define HASHPERF
 
+
 mlfs_fsblk_t single_hash_meta_loc = 0;
 mlfs_fsblk_t chunk_hash_meta_loc = 0;
 mlfs_fsblk_t id_map_meta_loc = 0;
@@ -18,17 +19,18 @@ static GHashTable *ghash = NULL;
 // (iangneal): Second level hash table.
 static GHashTable *gsuper = NULL;
 
+static idx_struct_t hash_idx;
+
 static pthread_mutex_t alloc_tex = PTHREAD_MUTEX_INITIALIZER;
 /*
  *
  */
 void init_hash(struct super_block *sb) {
-
+#ifndef USE_API
   if (ghash) return;
 
   assert(sb);
 
-  printf("Initializing NVM hash table structures...\n");
 
   // Calculate the locations of all the data structure metadata.
   single_hash_meta_loc = sb->ondisk->ndatablocks - 1;
@@ -53,9 +55,18 @@ void init_hash(struct super_block *sb) {
 
   printf("Finished initializing the multi-block hash table.\n");
   printf("Finished initializing NVM hash table structures.\n");
+#else
 
+  printf("Initializing NVM hashtable... (sb = %p)\n", sb);
+  paddr_t metadata_block = sb->ondisk->api_metadata_block;
+  printf("metadata block %lu\n", metadata_block);
+  int ret = hash_fns.im_init(&strata_hash_spec, &hash_idx, &metadata_block);
+  if (ret) return;
+  printf("Finished initializing NVM hashtable.\n");
+#endif
 }
 
+#ifndef USE_API
 inline int insert_hash(GHashTable *hash, struct inode *inode, hash_key_t key,
     hash_value_t value, hash_value_t size) {
   // if not exists, then the value was not already in the table, therefore
@@ -112,6 +123,7 @@ int erase_hash(struct inode *inode, mlfs_lblk_t key) {
 
   return true;
 }
+#endif
 
 int mlfs_hash_get_blocks(handle_t *handle, struct inode *inode,
 			struct mlfs_map_blocks *map, int flags, bool force) {
@@ -130,11 +142,18 @@ int mlfs_hash_get_blocks(handle_t *handle, struct inode *inode,
   bool set = false;
 
   for (mlfs_lblk_t i = 0; i < max(map->m_len, 1); ) {
-    hash_value_t index;
-    hash_value_t value;
-    hash_value_t size;
-    //printf("LUP %lu\n", map->m_lblk + i);
+#ifndef USE_API
+    hash_value_t index = 0;
+    hash_value_t value = 0;
+    hash_value_t size  = 0;
     int pre = lookup_hash(inode, map->m_lblk + i, &value, &size, &index, force);
+#else
+    paddr_t value = 0;
+    hash_value_t index = 0; // to make life easier
+    ssize_t size = FN(&hash_idx, im_lookup,
+                      &hash_idx, inode->inum, map->m_lblk + i, &value);
+    bool pre = size > 0;
+#endif
     //printf("LDOWN value = %llu size = %llu index = %llu\n", value, size, index);
     if (!pre) {
       goto create;
@@ -160,6 +179,8 @@ int mlfs_hash_get_blocks(handle_t *handle, struct inode *inode,
 
 create:
   if (create) {
+
+#ifndef USE_API
     mlfs_fsblk_t blockp;
     struct super_block *sb = get_inode_sb(handle->dev, inode);
     enum alloc_type a_type;
@@ -260,6 +281,22 @@ create:
         blockp += nblocks_to_alloc;
       }
     }
+#else
+      inum_t inum   = inode->inum;
+      laddr_t lblk  = map->m_lblk + ret;
+      size_t nalloc = map->m_len - ret;
+      paddr_t pblk  = 0;
+
+      ssize_t nret = FN(&hash_idx, im_create,
+                        &hash_idx, inum, lblk, nalloc, &pblk);
+
+      if (nret < 0) {
+          printf("im_create returned %ld, or %s\n", nret, strerror(-nret));
+          panic("wat");
+      }
+      ret += nret;
+      map->m_pblk = pblk;
+#endif
 
     mlfs_hash_persist();
   }
@@ -273,6 +310,7 @@ int mlfs_hash_truncate(handle_t *handle, struct inode *inode,
 		mlfs_lblk_t start, mlfs_lblk_t end) {
   hash_value_t size, value, index;
 
+#ifndef USE_API
   // TODO: probably inefficient
   for (mlfs_lblk_t i = start; i <= end;) {
     if (lookup_hash(inode, i, &value, &size, &index, false)) {
@@ -282,6 +320,12 @@ int mlfs_hash_truncate(handle_t *handle, struct inode *inode,
       i += size;
     }
   }
+#else
+  size_t  nremove  = (end - start) + 1;
+  ssize_t nremoved = FN(&hash_idx, im_remove,
+                        &hash_idx, inode->inum, start, nremove);
+  if_then_panic(nremove != nremoved, "Could not remove all blocks!");
+#endif
 
   //return mlfs_hash_persist();
   return 0;
@@ -316,30 +360,11 @@ int mlfs_hash_persist() {
 // TODO: probably could keep track of this with a bitmap or something, but this
 // is very easy to implement
 int mlfs_hash_cache_invalidate() {
-  //pthread_rwlock_wrlock(ghash->cache_lock);
-  /*
-  for (size_t i = 0; i < ghash->nblocks; ++i) {
-    if(ghash->cache[i]) {
-      free(ghash->cache[i]);
-      ghash->cache[i] = NULL;
-    }
-  }
-  */
-#ifdef HASHCACHE
+#if !defined(USE_API) && defined(HASHCACHE)
   bitmap_set(ghash->cache_bitmap, 0, ghash->cache_bitmap_size);
-  //pthread_rwlock_unlock(ghash->cache_lock);
-
-  //pthread_rwlock_wrlock(gsuper->cache_lock);
-  /*
-  for (size_t i = 0; i < gsuper->nblocks; ++i) {
-    if(gsuper->cache[i]) {
-      free(gsuper->cache[i]);
-      gsuper->cache[i] = NULL;
-    }
-  }
-  */
   bitmap_set(gsuper->cache_bitmap, 0, gsuper->cache_bitmap_size);
-  //pthread_rwlock_unlock(gsuper->cache_lock);
+#elif defined(USE_API) && defined(HASHCACHE)
+  printf("TODO implement invalidate for API!\n");
 #endif
 }
 

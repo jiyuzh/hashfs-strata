@@ -41,7 +41,7 @@ INCLUDES  := $(addprefix -I, . $(LIBSPDK_DIR) $(NVML_DIR)/include $(CUCKOO_DIR) 
 
 LD_FLAGS = -lpthread -lm -L$(NVML_DIR)/nondebug/ -lpmem -lrt -ljson-c\
 	-Wl,-rpath=$(abspath $(GLIB_DIR)/glib/.libs) -L$(abspath $(GLIB_DIR)/glib/.libs) \
-	-L$(abspath $(API_DIR)/build)
+	-Wl,-rpath=$(abspath $(API_DIR)/build) -L$(abspath $(API_DIR)/build) -lNVMIndexingAPI
 
 #-lglib-2.0
 
@@ -77,9 +77,9 @@ MLFS_FLAGS += -DREUSE_PREVIOUS_PATH  # optimization for extent trees
 ########
 MLFS_FLAGS += -DSIMULATE_FRAGMENTATION
 
-#DEBUG = -g -O0
+DEBUG = -g -O0
 #DEBUG = -g -Ofast
-DEBUG = -g -O3
+#DEBUG = -g -O3
 
 ########
 #  vpath and compile function for each file

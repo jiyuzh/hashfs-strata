@@ -77,6 +77,8 @@ struct disk_superblock {
 	addr_t bmap_start;		// Block number of first free map block
 	addr_t datablock_start;	// Block number of first data block
 	addr_t log_start;		// Block number of first log block
+    // For hash tables/indexing API: where is the metadata block?
+    addr_t api_metadata_block; // for indexing api
 };
 
 #define L_TYPE_DIR_ADD         1

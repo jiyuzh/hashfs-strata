@@ -45,7 +45,8 @@ API_DIR := $(abspath ../../nvm-file-indexing/api)
 
 INCLUDES := $(addprefix -I,src/ $(LIBSPDK_DIR) $(NVML_DIR)/include $(C_LIBCUCKOO_DIR) $(API_DIR))
 
-LD_FLAGS = -lpthread -lm -L$(NVML_DIR)/nondebug/ -lpmem -lrt -L$(abspath $(API_DIR)/build)
+LD_FLAGS = -lpthread -lm -L$(NVML_DIR)/nondebug/ -lpmem -lrt \
+	-Wl,-rpath=$(abspath $(API_DIR)/build) -L$(abspath $(API_DIR)/build) -lNVMIndexingAPI
 
 #-Wl,-fuse-ld=gold
 
@@ -74,8 +75,8 @@ MLFS_FLAGS += -DSIMULATE_FRAGMENTATION
 
 #DEBUG = -O0 -gdwarf-2 -g3 -rdynamic
 #DEBUG = -g -Ofast
-DEBUG = -g -O3
-#DEBUG = -g -O0
+#DEBUG = -g -O3
+DEBUG = -g -O0
 
 ########
 #  vpath and compile function for each file

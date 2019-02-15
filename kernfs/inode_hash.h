@@ -13,7 +13,8 @@
 #include "migrate.h"
 #endif
 
-#include "file_indexing.h"
+#include "indexing_api_interface.h"
+extern idx_fns_t hash_fns;
 
 #ifdef __cplusplus
 extern "C" {
@@ -66,13 +67,18 @@ extern mlfs_fsblk_t id_map_meta_loc;
  * Generic hash table functions.
  */
 
+#define USE_API
+//#undef USE_API
+
 void init_hash(struct super_block *sb);
 
+#ifndef USE_API
 int insert_hash(GHashTable *hash, struct inode *inode, hash_key_t key,
     hash_value_t value, hash_value_t size);
 
 int lookup_hash(struct inode *inode, mlfs_lblk_t key, hash_value_t* value,
     hash_value_t *size, hash_value_t *index, bool force);
+#endif
 
 /*
  * Emulated mlfs_ext functions.

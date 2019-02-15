@@ -6,7 +6,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <fcntl.h>
-#include <errno.h>
 
 #include "global/global.h"
 #include "global/types.h"
@@ -69,8 +68,7 @@ int mlfs_posix_open(char *path, int flags, uint16_t mode)
 
 		if (!inode) {
 			commit_log_tx();
-			errno = -ENOENT;
-            return -1;
+			return -ENOENT;
 		}
 	} else {
 		// opendir API
@@ -83,15 +81,13 @@ int mlfs_posix_open(char *path, int flags, uint16_t mode)
 
 		if ((inode = namei(path)) == NULL) {
 			commit_log_tx();
-			errno = -ENOENT;
-            return -1;
+			return -ENOENT;
 		}
 
 		if (inode->itype == T_DIR) {
 			if (!(flags |= (O_RDONLY|O_DIRECTORY))) {
 				commit_log_tx();
-				errno = -EACCES;
-                return -1;
+				return -EACCES;
 			}
 		}
 	}
@@ -102,8 +98,7 @@ int mlfs_posix_open(char *path, int flags, uint16_t mode)
 		iunlockput(inode);
 		commit_log_tx();
 
-		errno = -ENOMEM;
-        return -1;
+		return -ENOMEM;
 	}
 
 	fd = f->fd;
@@ -149,8 +144,7 @@ int mlfs_posix_access(char *pathname, int mode)
 	inode = namei(pathname);
 
 	if (!inode) {
-		errno = -ENOENT;
-        return -1;
+		return -ENOENT;
 	}
 
 	iput(inode);
@@ -176,8 +170,7 @@ int mlfs_posix_read(int fd, uint8_t *buf, int count)
 
 	if (f->ref == 0) {
 		panic("file descriptor is wrong\n");
-		errno = -EBADF;
-        return -1;
+		return -EBADF;
 	}
 
 	ret = mlfs_file_read(f, buf, count);
@@ -200,8 +193,7 @@ int mlfs_posix_pread64(int fd, uint8_t *buf, int count, loff_t off)
 
 	if (f->ref == 0) {
 		panic("file descriptor is wrong\n");
-		errno = -EBADF;
-        return -1;
+		return -EBADF;
 	}
 
 	ret = mlfs_file_read_offset(f, buf, count, off);
@@ -224,8 +216,7 @@ int mlfs_posix_write(int fd, uint8_t *buf, size_t count)
 
 	if (f->ref == 0) {
 		panic("file descriptor is wrong\n");
-		errno = -EBADF;
-        return -1;
+		return -EBADF;
 	}
 
 	ret = mlfs_file_write(f, buf, count);
@@ -243,8 +234,7 @@ int mlfs_posix_lseek(int fd, int64_t offset, int origin)
 	f = &g_fd_table.open_files[fd];
 
 	if (f->ref == 0) {
-		errno = -EBADF;
-        return -1;
+		return -EBADF;
 	}
 
 	mlfs_assert(f);
@@ -278,8 +268,7 @@ int mlfs_posix_close(int fd)
 	f = &g_fd_table.open_files[fd];
 
 	if (!f) {
-		errno = -EBADF;
-        return -1;
+		return -EBADF;
 	}
 
 	mlfs_debug("close file inum %u fd %d\n", f->ip->inum, f->fd);
@@ -299,8 +288,7 @@ int mlfs_posix_mkdir(char *path, mode_t mode)
 
 	if (!inode) {
 		abort_log_tx();
-		errno = -ENOENT;
-        return -1;
+		return -ENOENT;
 	}
 
 exit_mkdir:
@@ -319,14 +307,12 @@ int mlfs_posix_rmdir(char *path)
 
 	if (!dir_inode) {
 		abort_log_tx();
-		errno = -ENOENT;
-        return -1;
+		return -ENOENT;
 	}
 
 	if (dir_inode->size > 0) {
 		abort_log_tx();
-		errno = -EINVAL;
-        return -1;
+		return -EINVAL;
 	}
 
 	mlfs_debug("%s\n", path);
@@ -345,8 +331,7 @@ int mlfs_posix_stat(const char *filename, struct stat *stat_buf)
 	inode = namei((char *)filename);
 
 	if (!inode) {
-		errno = -ENOENT;
-        return -1;
+		return -ENOENT;
 	}
 
 	stati(inode, stat_buf);
@@ -360,10 +345,8 @@ int mlfs_posix_fstat(int fd, struct stat *stat_buf)
 
 	f = &g_fd_table.open_files[fd];
 
-	if (f->ref == 0) {
-		errno = -ENOENT;
-        return -1;
-    }
+	if (f->ref == 0)
+		return -ENOENT;
 
 	mlfs_assert(f->ip);
 
@@ -382,10 +365,8 @@ int mlfs_posix_fallocate(int fd, offset_t offset, offset_t len)
 
 	f = &g_fd_table.open_files[fd];
 
-	if (f->ref == 0) {
-		errno = -EBADF;
-        return -1;
-    }
+	if (f->ref == 0)
+		return -EBADF;
 
 	memset(falloc_buf, 0, ALLOC_IO_SIZE);
 
@@ -423,18 +404,14 @@ int mlfs_posix_unlink(const char *filename)
 	 * e.g., unlink without calling close */
 
 	dir_inode = nameiparent((char *)filename, name);
-	if (!dir_inode) {
-		errno = -ENOENT;
-        return -1;
-    }
+	if (!dir_inode)
+		return -ENOENT;
 
 	//inode = namei((char *)filename);
 	inode = dir_lookup(dir_inode, name, NULL);
 
-	if (!inode) {
-		errno = -ENOENT;
-        return -1;
-    }
+	if (!inode)
+		return -ENOENT;
 
 	start_log_tx();
 
@@ -471,12 +448,11 @@ int mlfs_posix_truncate(const char *filename, offset_t length)
 	inode = namei((char *)filename);
 
 	if (!inode) {
-		errno = -ENOENT;
-        return -1;
+		return -ENOENT;
 	}
 
 	start_log_tx();
-
+	
 	itrunc(inode, length);
 
 	commit_log_tx();
@@ -494,8 +470,7 @@ int mlfs_posix_ftruncate(int fd, offset_t length)
 	f = &g_fd_table.open_files[fd];
 
 	if (f->ref == 0) {
-		errno = -EBADF;
-        return -1;
+		return -EBADF;
 	}
 
 	start_log_tx();
@@ -561,22 +536,17 @@ size_t mlfs_posix_getdents(int fd, struct linux_dirent *buf,
 	f = &g_fd_table.open_files[fd];
 
 	if (f->ref == 0) {
-		errno = -EBADF;
-        return -1;
+		return -EBADF;
 	}
 
-	if (f->type != FD_DIR) {
-		errno = -EBADF;
-        return -1;
-    }
+	if (f->type != FD_DIR)
+		return -EBADF;
 
 	/* glibc compute bytes with struct linux_dirent
 	 * but ip->size is is computed by struct dirent,
 	 * which is much small size than struct linux_dirent
-	if (nbytes < f->ip->size) {
-		errno = -EINVAL;
-        return -1;
-    }
+	if (nbytes < f->ip->size)
+		return -EINVAL;
 	*/
 
 	if (f->off >= f->ip->size)
@@ -596,8 +566,7 @@ int mlfs_posix_fcntl(int fd, int cmd, void *arg)
 	f = &g_fd_table.open_files[fd];
 
 	if (f->ref == 0) {
-		errno = -EBADF;
-        return -1;
+		return -EBADF;
 	}
 
 	if (cmd != F_SETLK) {
