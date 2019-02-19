@@ -2278,7 +2278,7 @@ void read_superblock(uint8_t dev)
 
 	// The partition is GC unit (1 GB) in SSD.
 	// disk_sb[dev].size : total # of blocks
-#if 1
+#ifdef GLOBAL_EXTENT_TREES
 #define shift_size 19
 	sb[dev]->n_partition = disk_sb[dev].size >> shift_size;
 
