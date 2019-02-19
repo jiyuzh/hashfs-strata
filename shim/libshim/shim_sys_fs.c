@@ -21,13 +21,16 @@
  * return : %rax
  */
 
-#define PATH_BUF_SIZE 4095
+#define PATH_BUF_SIZE 1024
 #define MLFS_PREFIX (char *)"/mlfs"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+static char shim_pwd[PATH_BUF_SIZE];
 
+// _output can be uninitialized
+// return value: output length?
 static int collapse_name(const char *input, char *_output)
 {
 	char *output = _output;
@@ -67,26 +70,71 @@ static int collapse_name(const char *input, char *_output)
 	}
 }
 
+// path is a potentially relative path
+// path_buf and dest_path are char buffer, whose size is buf_size
+// return value: a pointer to absolute path
+//     it will be path_buf if already absolute
+//     or dest_path, which is shim_pwd + path
+static char * get_absolute_path(const char *path, char *path_buf, char *dest_path, size_t buf_size) {
+    if (path == NULL || path_buf == NULL || dest_path == NULL) {
+        return NULL;
+    }
+    else {
+        collapse_name(path, path_buf);
+        if (*path_buf == '/') {
+            return path_buf;
+        }
+        else {
+            strncpy(dest_path, shim_pwd, buf_size);
+            strncat(dest_path, path_buf, buf_size - strlen(dest_path));
+            return dest_path;
+        }
+    }
+}
+
+int shim_do_chdir(const char *pathname)
+{
+    int ret;
+    char path_buf[PATH_BUF_SIZE], dest_path[PATH_BUF_SIZE], *fullpath;
+    fullpath = get_absolute_path(pathname, path_buf, dest_path, PATH_BUF_SIZE);
+    if (strncmp(fullpath, MLFS_PREFIX, 5) != 0) {
+        asm("mov %1, %%rdi;"
+            "mov %2, %%eax;"
+            "syscall;\n\t"
+            "mov %%eax, %0;\n\t"
+            :"=r"(ret)
+            :"m"(fullpath), "r"(__NR_chdir)
+            :"rax", "rdi"
+            );
+    }
+    else {
+        ret = mlfs_posix_chdir(fullpath);
+        syscall_trace(__func__, ret, 1, fullpath);
+    }
+    if (ret == 0) {
+        strncpy(shim_pwd, fullpath, PATH_BUF_SIZE);
+    }
+    return ret;
+}
+
 int shim_do_open(const char *filename, int flags, mode_t mode)
 {
 	int ret;
-	char path_buf[PATH_BUF_SIZE];
+    char path_buf[PATH_BUF_SIZE], dest_path[PATH_BUF_SIZE], *fullpath;
+    fullpath = get_absolute_path(filename, path_buf, dest_path, PATH_BUF_SIZE);
 
-	memset(path_buf, 0, PATH_BUF_SIZE);
-	collapse_name(filename, path_buf);
-
-	if (strncmp(path_buf, MLFS_PREFIX, 5) != 0){
-		//printf("%s : will not go to libfs\n", path_buf);
+	if (strncmp(fullpath, MLFS_PREFIX, 5) != 0){
+		//printf("%s : will not go to libfs\n", fullpath);
 		;
 		// fall through
 	} else {
-		ret = mlfs_posix_open(filename, flags, mode);
+		ret = mlfs_posix_open(fullpath, flags, mode);
 
 		if (ret >= 0 && !check_mlfs_fd(ret)) {
-			printf("incorrect fd %d: file %s\n", ret, filename);
+			printf("incorrect fd %d: file %s\n", ret, fullpath);
 		}
 
-		syscall_trace(__func__, ret, 3, filename, flags, mode);
+		syscall_trace(__func__, ret, 3, fullpath, flags, mode);
 
 		return ret;
 	}
@@ -98,7 +146,7 @@ int shim_do_open(const char *filename, int flags, mode_t mode)
 		"syscall;\n\t"
 		"mov %%eax, %0;\n\t"
 		:"=r"(ret)
-		:"r"(filename), "r"(flags), "r"(mode), "r"(__NR_open)
+		:"r"(fullpath), "r"(flags), "r"(mode), "r"(__NR_open)
 		:"rax", "rdi", "rsi", "rdx"
 		);
 
@@ -108,30 +156,28 @@ int shim_do_open(const char *filename, int flags, mode_t mode)
 int shim_do_openat(int dfd, const char *filename, int flags, mode_t mode)
 {
 	int ret;
-	char path_buf[PATH_BUF_SIZE];
+    char path_buf[PATH_BUF_SIZE], dest_path[PATH_BUF_SIZE], *fullpath;
+    fullpath = get_absolute_path(filename, path_buf, dest_path, PATH_BUF_SIZE);
 
-	memset(path_buf, 0, PATH_BUF_SIZE);
-	collapse_name(filename, path_buf);
-
-	if (strncmp(path_buf, MLFS_PREFIX, 5) != 0){
-		//printf("%s : will not go to libfs\n", path_buf);
+	if (strncmp(fullpath, MLFS_PREFIX, 5) != 0){
+		//printf("%s : will not go to libfs\n", fullpath);
 		;
 		// fall through
 	} else {
-		//printf("%s -> MLFS \n", path_buf);
+		//printf("%s -> MLFS \n", fullpath);
 
 		if (dfd != AT_FDCWD) {
 			fprintf(stderr, "Only support AT_FDCWD\n");
 			exit(-1);
 		}
 
-		ret = mlfs_posix_open((char *)filename, flags, mode);
+		ret = mlfs_posix_open(fullpath, flags, mode);
 
 		if (ret >= 0 && !check_mlfs_fd(ret)) {
-			printf("incorrect fd %d: file %s\n", ret, filename);
+			printf("incorrect fd %d: file %s\n", ret, fullpath);
 		}
 
-		syscall_trace(__func__, ret, 4, filename, dfd, flags, mode);
+		syscall_trace(__func__, ret, 4, fullpath, dfd, flags, mode);
 
 		return ret;
 	}
@@ -144,7 +190,7 @@ int shim_do_openat(int dfd, const char *filename, int flags, mode_t mode)
 		"syscall;\n\t"
 		"mov %%eax, %0;\n\t"
 		:"=r"(ret)
-		:"r"(dfd),"r"(filename), "r"(flags), "r"(mode), "r"(__NR_openat)
+		:"r"(dfd),"r"(fullpath), "r"(flags), "r"(mode), "r"(__NR_openat)
 		:"rax", "rdi", "rsi", "rdx", "r10"
 		);
 
@@ -154,23 +200,21 @@ int shim_do_openat(int dfd, const char *filename, int flags, mode_t mode)
 int shim_do_creat(char *filename, mode_t mode)
 {
 	int ret;
-	char path_buf[PATH_BUF_SIZE];
+    char path_buf[PATH_BUF_SIZE], dest_path[PATH_BUF_SIZE], *fullpath;
+    fullpath = get_absolute_path(filename, path_buf, dest_path, PATH_BUF_SIZE);
 
-	memset(path_buf, 0, PATH_BUF_SIZE);
-	collapse_name(filename, path_buf);
-
-	if (strncmp(path_buf, MLFS_PREFIX, 5) != 0){
+	if (strncmp(fullpath, MLFS_PREFIX, 5) != 0){
 		//printf("%s : will not go to libfs\n", path_buf);
 		;
 		// fall through
 	} else {
-		ret = mlfs_posix_creat(filename, mode);
+		ret = mlfs_posix_creat(fullpath, mode);
 
 		if (ret >= 0 && !check_mlfs_fd(ret)) {
 			printf("incorrect fd %d\n", ret);
 		}
 
-		syscall_trace(__func__, ret, 2, filename, mode);
+		syscall_trace(__func__, ret, 2, fullpath, mode);
 
 		return ret;
 	}
@@ -181,7 +225,7 @@ int shim_do_creat(char *filename, mode_t mode)
 		"syscall;\n\t"
 		"mov %%eax, %0;\n\t"
 		:"=r"(ret)
-		:"m"(filename), "r"(mode), "r"(__NR_creat)
+		:"m"(fullpath), "r"(mode), "r"(__NR_creat)
 		:"rax", "rdi", "rsi"
 		);
 
@@ -345,16 +389,14 @@ int shim_do_lseek(int fd, off_t offset, int origin)
 int shim_do_mkdir(void *path, mode_t mode)
 {
 	int ret;
-	char path_buf[PATH_BUF_SIZE];
+    char path_buf[PATH_BUF_SIZE], dest_path[PATH_BUF_SIZE], *fullpath;
+    fullpath = get_absolute_path(path, path_buf, dest_path, PATH_BUF_SIZE);
 
-	memset(path_buf, 0, PATH_BUF_SIZE);
-	collapse_name((char *)path, path_buf);
-
-	if (strncmp(path_buf, MLFS_PREFIX, 5) != 0){
+	if (strncmp(fullpath, MLFS_PREFIX, 5) != 0){
 		;
 	} else {
-		//printf("%s: go to mlfs\n", path_buf);
-		ret = mlfs_posix_mkdir(path_buf, mode);
+		//printf("%s: go to mlfs\n", fullpath);
+		ret = mlfs_posix_mkdir(fullpath, mode);
 		syscall_trace(__func__, ret, 2, path, mode);
 
 		return ret;
@@ -366,7 +408,7 @@ int shim_do_mkdir(void *path, mode_t mode)
 		"syscall;\n\t"
 		"mov %%eax, %0;\n\t"
 		:"=r"(ret)
-		:"m"(path), "r"(mode), "r"(__NR_mkdir)
+		:"m"(fullpath), "r"(mode), "r"(__NR_mkdir)
 		:"rax", "rdi", "rsi"
 		);
 
@@ -376,15 +418,13 @@ int shim_do_mkdir(void *path, mode_t mode)
 int shim_do_rmdir(const char *path)
 {
 	int ret;
-	char path_buf[PATH_BUF_SIZE];
+    char path_buf[PATH_BUF_SIZE], dest_path[PATH_BUF_SIZE], *fullpath;
+    fullpath = get_absolute_path(path, path_buf, dest_path, PATH_BUF_SIZE);
 
-	memset(path_buf, 0, PATH_BUF_SIZE);
-	collapse_name(path, path_buf);
-
-	if (strncmp(path_buf, MLFS_PREFIX, 5) != 0){
+	if (strncmp(fullpath, MLFS_PREFIX, 5) != 0){
 		;
 	} else {
-		ret = mlfs_posix_rmdir((char *)path);
+		ret = mlfs_posix_rmdir(fullpath);
 		return ret;
 	}
 
@@ -393,7 +433,7 @@ int shim_do_rmdir(const char *path)
 		"syscall;\n\t"
 		"mov %%eax, %0;\n\t"
 		:"=r"(ret)
-		:"m"(path), "r"(__NR_rmdir)
+		:"m"(fullpath), "r"(__NR_rmdir)
 		:"rax", "rdi"
 		);
 
@@ -403,18 +443,18 @@ int shim_do_rmdir(const char *path)
 int shim_do_rename(char *oldname, char *newname)
 {
 	int ret;
-	char path_buf[PATH_BUF_SIZE];
+    char old_path_buf[PATH_BUF_SIZE], old_dest_path[PATH_BUF_SIZE], *old_fullpath;
+    char new_path_buf[PATH_BUF_SIZE], new_dest_path[PATH_BUF_SIZE], *new_fullpath;
+    old_fullpath = get_absolute_path(oldname, old_path_buf, old_dest_path, PATH_BUF_SIZE);
+    new_fullpath = get_absolute_path(newname, new_path_buf, new_dest_path, PATH_BUF_SIZE);
 
-	memset(path_buf, 0, PATH_BUF_SIZE);
-	collapse_name(oldname, path_buf);
-
-	if (strncmp(path_buf, MLFS_PREFIX, 5) != 0){
+	if ((strncmp(old_fullpath, MLFS_PREFIX, 5) != 0) || (strncmp(new_fullpath, MLFS_PREFIX, 5) != 0)){
 		//printf("%s : will not go to libfs\n", path_buf);
 		;
 		// fall through
 	} else {
-		ret = mlfs_posix_rename(oldname, newname);
-		syscall_trace(__func__, ret, 2, oldname, newname);
+		ret = mlfs_posix_rename(old_fullpath, new_fullpath);
+		syscall_trace(__func__, ret, 2, old_fullpath, new_fullpath);
 
 		return ret;
 	}
@@ -425,7 +465,7 @@ int shim_do_rename(char *oldname, char *newname)
 		"syscall;\n\t"
 		"mov %%eax, %0;\n\t"
 		:"=r"(ret)
-		:"m"(oldname), "m"(newname), "r"(__NR_rename)
+		:"m"(old_fullpath), "m"(new_fullpath), "r"(__NR_rename)
 		:"rax", "rdi", "rsi"
 		);
 
@@ -461,18 +501,16 @@ int shim_do_fallocate(int fd, int mode, off_t offset, off_t len)
 int shim_do_stat(const char *filename, struct stat *statbuf)
 {
 	int ret;
-	char path_buf[PATH_BUF_SIZE];
+    char path_buf[PATH_BUF_SIZE], dest_path[PATH_BUF_SIZE], *fullpath;
+    fullpath = get_absolute_path(filename, path_buf, dest_path, PATH_BUF_SIZE);
 
-	memset(path_buf, 0, PATH_BUF_SIZE);
-	collapse_name(filename, path_buf);
-
-	if (strncmp(path_buf, MLFS_PREFIX, 5) != 0){
+	if (strncmp(fullpath, MLFS_PREFIX, 5) != 0){
 		//printf("%s : will not go to libfs\n", path_buf);
 		;
 		// fall through
 	} else {
-		ret = mlfs_posix_stat(filename, statbuf);
-		syscall_trace(__func__, ret, 2, filename, statbuf);
+		ret = mlfs_posix_stat(fullpath, statbuf);
+		syscall_trace(__func__, ret, 2, fullpath, statbuf);
 
 		return ret;
 	}
@@ -483,7 +521,7 @@ int shim_do_stat(const char *filename, struct stat *statbuf)
 		"syscall;\n\t"
 		"mov %%eax, %0;\n\t"
 		:"=r"(ret)
-		:"m"(filename), "m"(statbuf), "r"(__NR_stat)
+		:"m"(fullpath), "m"(statbuf), "r"(__NR_stat)
 		:"rax", "rdi", "rsi"
 		);
 
@@ -493,20 +531,18 @@ int shim_do_stat(const char *filename, struct stat *statbuf)
 int shim_do_lstat(const char *filename, struct stat *statbuf)
 {
 	int ret;
-	char path_buf[PATH_BUF_SIZE];
+    char path_buf[PATH_BUF_SIZE], dest_path[PATH_BUF_SIZE], *fullpath;
+    fullpath = get_absolute_path(filename, path_buf, dest_path, PATH_BUF_SIZE);
 
-	memset(path_buf, 0, PATH_BUF_SIZE);
-	collapse_name(filename, path_buf);
-
-	if (strncmp(path_buf, MLFS_PREFIX, 5) != 0){
+	if (strncmp(fullpath, MLFS_PREFIX, 5) != 0){
 		//printf("%s : will not go to libfs\n", path_buf);
 		;
 		// fall through
 	} else {
 		// Symlink does not implemented yet
 		// so stat and lstat is identical now.
-		ret = mlfs_posix_stat(filename, statbuf);
-		syscall_trace(__func__, ret, 2, filename, statbuf);
+		ret = mlfs_posix_stat(fullpath, statbuf);
+		syscall_trace(__func__, ret, 2, fullpath, statbuf);
 
 		return ret;
 	}
@@ -517,7 +553,7 @@ int shim_do_lstat(const char *filename, struct stat *statbuf)
 		"syscall;\n\t"
 		"mov %%eax, %0;\n\t"
 		:"=r"(ret)
-		:"m"(filename), "m"(statbuf), "r"(__NR_lstat)
+		:"m"(fullpath), "m"(statbuf), "r"(__NR_lstat)
 		:"rax", "rdi", "rsi"
 		);
 
@@ -551,18 +587,16 @@ int shim_do_fstat(int fd, struct stat *statbuf)
 int shim_do_truncate(const char *filename, off_t length)
 {
 	int ret;
-	char path_buf[PATH_BUF_SIZE];
+    char path_buf[PATH_BUF_SIZE], dest_path[PATH_BUF_SIZE], *fullpath;
+    fullpath = get_absolute_path(filename, path_buf, dest_path, PATH_BUF_SIZE);
 
-	memset(path_buf, 0, PATH_BUF_SIZE);
-	collapse_name(filename, path_buf);
-
-	if (strncmp(path_buf, MLFS_PREFIX, 5) != 0){
+	if (strncmp(fullpath, MLFS_PREFIX, 5) != 0){
 		//printf("%s : will not go to libfs\n", path_buf);
 		;
 		// fall through
 	} else {
-		ret = mlfs_posix_truncate(filename, length);
-		syscall_trace(__func__, ret, 2, filename, length);
+		ret = mlfs_posix_truncate(fullpath, length);
+		syscall_trace(__func__, ret, 2, fullpath, length);
 
 		return ret;
 	}
@@ -573,7 +607,7 @@ int shim_do_truncate(const char *filename, off_t length)
 		"syscall;\n\t"
 		"mov %%eax, %0;\n\t"
 		:"=r"(ret)
-		:"m"(filename), "r"(length), "r"(__NR_truncate)
+		:"m"(fullpath), "r"(length), "r"(__NR_truncate)
 		:"rax", "rdi", "rsi"
 		);
 
@@ -607,16 +641,14 @@ int shim_do_ftruncate(int fd, off_t length)
 int shim_do_unlink(const char *path)
 {
 	int ret;
-	char path_buf[PATH_BUF_SIZE];
+    char path_buf[PATH_BUF_SIZE], dest_path[PATH_BUF_SIZE], *fullpath;
+    fullpath = get_absolute_path(path, path_buf, dest_path, PATH_BUF_SIZE);
 
-	memset(path_buf, 0, PATH_BUF_SIZE);
-	collapse_name(path, path_buf);
-
-	if (strncmp(path_buf, MLFS_PREFIX, 5) != 0){
+	if (strncmp(fullpath, MLFS_PREFIX, 5) != 0){
 		;
 	} else {
-		ret = mlfs_posix_unlink(path);
-		syscall_trace(__func__, ret, 1, path);
+		ret = mlfs_posix_unlink(fullpath);
+		syscall_trace(__func__, ret, 1, fullpath);
 		return ret;
 	}
 
@@ -625,7 +657,7 @@ int shim_do_unlink(const char *path)
 		"syscall;\n\t"
 		"mov %%eax, %0;\n\t"
 		:"=r"(ret)
-		:"m"(path), "r"(__NR_unlink)
+		:"m"(fullpath), "r"(__NR_unlink)
 		:"rax", "rdi"
 		);
 
@@ -635,12 +667,10 @@ int shim_do_unlink(const char *path)
 int shim_do_symlink(const char *target, const char *linkpath)
 {
 	int ret;
-	char path_buf[PATH_BUF_SIZE];
+    char path_buf[PATH_BUF_SIZE], dest_path[PATH_BUF_SIZE], *fullpath;
+    fullpath = get_absolute_path(target, path_buf, dest_path, PATH_BUF_SIZE);
 
-	memset(path_buf, 0, PATH_BUF_SIZE);
-	collapse_name(target, path_buf);
-
-	if (strncmp(path_buf, MLFS_PREFIX, 5) != 0){
+	if (strncmp(fullpath, MLFS_PREFIX, 5) != 0){
 		//printf("%s : will not go to libfs\n", path_buf);
 		;
 		// fall through
@@ -666,18 +696,16 @@ int shim_do_symlink(const char *target, const char *linkpath)
 int shim_do_access(const char *pathname, int mode)
 {
 	int ret;
-	char path_buf[PATH_BUF_SIZE];
+    char path_buf[PATH_BUF_SIZE], dest_path[PATH_BUF_SIZE], *fullpath;
+    fullpath = get_absolute_path(pathname, path_buf, dest_path, PATH_BUF_SIZE);
 
-	memset(path_buf, 0, PATH_BUF_SIZE);
-	collapse_name(pathname, path_buf);
-
-	if (strncmp(path_buf, MLFS_PREFIX, 5) != 0){
+	if (strncmp(fullpath, MLFS_PREFIX, 5) != 0){
 		//printf("%s : will not go to libfs\n", path_buf);
 		;
 		// fall through
 	} else {
-		ret = mlfs_posix_access((char *)pathname, mode);
-		syscall_trace(__func__, ret, 2, pathname, mode);
+		ret = mlfs_posix_access((char *)fullpath, mode);
+		syscall_trace(__func__, ret, 2, fullpath, mode);
 
 		return ret;
 	}
@@ -688,7 +716,7 @@ int shim_do_access(const char *pathname, int mode)
 		"syscall;\n\t"
 		"mov %%eax, %0;\n\t"
 		:"=r"(ret)
-		:"m"(pathname), "r"(mode), "r"(__NR_access)
+		:"m"(fullpath), "r"(mode), "r"(__NR_access)
 		:"rax", "rdi", "rsi"
 		);
 

@@ -49,12 +49,58 @@ static int isdirempty(struct inode *dp)
 	return 1;
 }
 #endif
+int mlfs_posix_chdir(const char *pathname)
+{
+    if (pathname == NULL) {
+        return -ENOENT;
+    }
+    else if (*pathname == '/') { // pathname is absolute
+        struct inode *inode = namei(pathname);
+        if (inode == NULL) {
+            return -ENOENT;
+        }
+        if (inode->itype == T_FILE) {
+            return -ENOTDIR;
+        }
+        strncpy(pwd, pathname, MAX_PATH);
+        return 0;
+    }
+    else { // pathname is relative
+        size_t len = strlen(pwd);
+        strncat(pwd, pathname, MAX_PATH - len);
+        struct inode *inode = namei(pwd);
+        if (inode == NULL) {
+            pwd[len] = 0; // reset pwd to origin path
+            return -ENOENT;
+        }
+        if (inode->itype == T_FILE) {
+            pwd[len] = 0; // reset pwd to origin path
+            return -ENOTDIR;
+        }
+        // pwd has already been concatenated above
+        return 0;
+    }
 
-int mlfs_posix_open(const char *path, int flags, uint16_t mode)
+}
+
+int mlfs_posix_open(const char *input_path, int flags, uint16_t mode)
 {
 	struct file *f;
 	struct inode *inode;
 	int fd;
+    char fullpath[MAX_PATH + 1];
+    const char *path;
+    if (input_path == NULL) {
+        return -ENOENT;
+    }
+    else if (*input_path != '/') { // path is relative
+        strncpy(fullpath, pwd, MAX_PATH);
+        strncat(fullpath, input_path, MAX_PATH - strlen(fullpath));
+        path = fullpath;
+    }
+    else { // path is absolute
+        path = input_path;
+    }
 
 	start_log_tx();
 
@@ -482,7 +528,7 @@ int mlfs_posix_truncate(const char *filename, offset_t length)
 	}
 
 	start_log_tx();
-	
+
 	itrunc(inode, length);
 
 	commit_log_tx();

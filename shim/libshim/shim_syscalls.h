@@ -29,6 +29,7 @@ extern "C" {
 
 // TODO: Create macro to generate the declarations
 // for system call interpose macro
+long __shim_chdir(long __arg1);
 long __shim_open(long __arg1, long __arg2, long __arg3);
 long __shim_openat(long __arg1, long __arg2, long __arg3, long __arg4);
 long __shim_creat(long __arg1, long __arg2);
@@ -61,6 +62,7 @@ long __shim_getdents(long __arg1, long __arg2, long __arg3);
 long __shim_getdents64(long __arg1, long __arg2, long __arg3);
 
 // Actual system call handlers.
+int shim_do_chdir(const char *pathname);
 int shim_do_open(const char * file, int flags, mode_t mode);
 int shim_do_openat(int dfd, const char *filename, int flags, mode_t mode);
 int shim_do_creat(const char * file, mode_t mode);

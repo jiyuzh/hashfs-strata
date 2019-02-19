@@ -15,7 +15,6 @@ extern uint8_t g_hdd_dev;
 /**
  * Allocates all structures using the global values.
  */
-void mlfs_setup(void);
 
 #define g_n_devices			4
 #define g_root_dev			1
@@ -77,6 +76,7 @@ void mlfs_setup(void);
 // extern uint	g_max_extent_size_blks; /* filesystem size in blocks, old MAX_EXTENT_SIZE*/
 // extern uint	g_block_reservation_size_blks; /* reservation size in blocks, old BRESRV_SIZE*/
 // extern uint	g_fd_start; /* offset start of fds used by mlfs, old FD_START*/
+extern char pwd[MAX_PATH + 1];
 
 #ifdef __cplusplus
 }
