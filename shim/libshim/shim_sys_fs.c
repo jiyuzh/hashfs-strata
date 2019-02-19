@@ -67,7 +67,7 @@ static int collapse_name(const char *input, char *_output)
 	}
 }
 
-int shim_do_open(char *filename, int flags, mode_t mode)
+int shim_do_open(const char *filename, int flags, mode_t mode)
 {
 	int ret;
 	char path_buf[PATH_BUF_SIZE];

@@ -308,7 +308,7 @@ int mlfs_file_write(struct file *f, uint8_t *buf, size_t n)
 }
 
 //supporting type : T_FILE, T_DIR
-struct inode *mlfs_object_create(char *path, unsigned short type)
+struct inode *mlfs_object_create(const char *path, unsigned short type)
 {
 	offset_t offset;
 	struct inode *inode = NULL, *parent_inode = NULL;

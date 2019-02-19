@@ -575,8 +575,8 @@ int dir_add_entry(struct inode *inode, char *name, uint32_t inum);
 int dir_remove_entry(struct inode *inode,char *name, uint32_t inum);
 int dir_change_entry(struct inode *dir_inode, char *oldname, char *newname);
 int namecmp(const char*, const char*);
-struct inode* namei(char*);
-struct inode* nameiparent(char*, char*);
+struct inode* namei(const char*);
+struct inode* nameiparent(const char*, char*);
 int readi_unopt(struct inode*, uint8_t *, offset_t, uint32_t);
 int readi(struct inode*, uint8_t *, offset_t, uint32_t);
 void stati(struct inode*, struct stat *);
@@ -592,7 +592,7 @@ void dbg_dump_inode(uint8_t dev, uint32_t inum);
 void dbg_check_inode(void *data);
 void dbg_check_dir(void *data);
 void dbg_dir_dump(uint8_t dev, uint32_t inum);
-void dbg_path_walk(char *path);
+void dbg_path_walk(const char *path);
 
 // mempool slab for libfs
 extern ncx_slab_pool_t *mlfs_slab_pool;

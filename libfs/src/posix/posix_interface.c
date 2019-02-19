@@ -50,7 +50,7 @@ static int isdirempty(struct inode *dp)
 }
 #endif
 
-int mlfs_posix_open(char *path, int flags, uint16_t mode)
+int mlfs_posix_open(const char *path, int flags, uint16_t mode)
 {
 	struct file *f;
 	struct inode *inode;
@@ -134,7 +134,7 @@ int mlfs_posix_open(char *path, int flags, uint16_t mode)
 	return SET_MLFS_FD(fd);
 }
 
-int mlfs_posix_access(char *pathname, int mode)
+int mlfs_posix_access(const char *pathname, int mode)
 {
 	struct inode *inode;
 

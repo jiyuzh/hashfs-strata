@@ -299,7 +299,7 @@ void iunlock(struct inode*);
 void iunlockput(struct inode*);
 void iupdate(struct inode*);
 int  namecmp(const char*, const char*);
-struct inode* namei(char*);
+struct inode* namei(const char*);
 struct inode* nameiparent(char*, char*);
 addr_t readi(struct inode*, char*, offset_t, addr_t);
 void stati(struct inode*, struct fs_stat*);
@@ -320,7 +320,7 @@ void dbg_check_inode(void *data);
 void dbg_check_dir(void *data);
 struct inode* dbg_dir_lookup(struct inode *dir_inode,
 		char *name, uint32_t *poff);
-void dbg_path_walk(char *path);
+void dbg_path_walk(const char *path);
 
 extern uint8_t g_ssd_dev;
 extern uint8_t g_log_dev;
