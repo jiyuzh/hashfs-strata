@@ -374,22 +374,24 @@ int mlfs_posix_fallocate(int fd, offset_t offset, offset_t len)
 
 	if (offset > f->ip->size)
 		panic("does not support sparse file\n");
+	else if (offset + len > f->ip->size) {
+		// only append 0 when
+		// offset <= file size && offset + len > file_size
+		len -= f->ip->size - offset;
 
-	f->off = offset;
+		f->off = f->ip->size;
 
-	for (i = 0; i < len; i += ALLOC_IO_SIZE) {
-		io_size = _min(len - i, ALLOC_IO_SIZE);
+		for (i = 0; i < len; i += ALLOC_IO_SIZE) {
+			io_size = _min(len - i, ALLOC_IO_SIZE);
 
-		f->off += io_size;
+			ret = mlfs_file_write(f, (uint8_t *)falloc_buf, io_size);
 
-		ret = mlfs_file_write(f, (uint8_t *)falloc_buf, io_size);
-
-		if (ret < 0) {
-			panic("fail to do fallocate\n");
-			return ret;
+			if (ret < 0) {
+				panic("fail to do fallocate\n");
+				return ret;
+			}
 		}
 	}
-
 	return 0;
 }
 
