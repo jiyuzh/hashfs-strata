@@ -219,7 +219,34 @@ int mlfs_posix_write(int fd, uint8_t *buf, size_t count)
 		return -EBADF;
 	}
 
-	ret = mlfs_file_write(f, buf, count);
+	ret = mlfs_file_write(f, buf, f->off, count);
+	// change offset here since mlfs_file_write doesn't touch f->off
+	if (ret > 0) {
+		f->off += ret;
+	}
+
+	pthread_rwlock_unlock(&f->rwlock);
+
+	return ret;
+}
+
+int mlfs_posix_pwrite64(int fd, uint8_t *buf, size_t count, loff_t off)
+{
+	int ret;
+	struct file *f;
+
+	f = &g_fd_table.open_files[fd];
+
+	pthread_rwlock_wrlock(&f->rwlock);
+
+	mlfs_assert(f);
+
+	if (f->ref == 0) {
+		panic("file descriptor is wrong\n");
+		return -EBADF;
+	}
+
+	ret = mlfs_file_write(f, buf, off, count);
 
 	pthread_rwlock_unlock(&f->rwlock);
 
@@ -375,17 +402,18 @@ int mlfs_posix_fallocate(int fd, offset_t offset, offset_t len)
 	if (offset > f->ip->size)
 		panic("does not support sparse file\n");
 	else if (offset + len > f->ip->size) {
-		// only append 0 when
+		// only append 0 at the end of the file when
 		// offset <= file size && offset + len > file_size
+		// First, make sure offset and len start from the end of the file
 		len -= f->ip->size - offset;
-
-		f->off = f->ip->size;
+		offset = f->ip->size;
 
 		for (i = 0; i < len; i += ALLOC_IO_SIZE) {
 			io_size = _min(len - i, ALLOC_IO_SIZE);
 
-			ret = mlfs_file_write(f, (uint8_t *)falloc_buf, io_size);
-
+			ret = mlfs_file_write(f, (uint8_t *)falloc_buf, offset, io_size);
+			// keep accumulating offset, here should hold `ret == io_size'
+			offset += ret;
 			if (ret < 0) {
 				panic("fail to do fallocate\n");
 				return ret;

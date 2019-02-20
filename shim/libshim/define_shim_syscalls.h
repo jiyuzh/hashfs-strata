@@ -27,7 +27,7 @@ DEFINE_SHIM_SYSCALL (pread64, 4, shim_do_pread64, size_t, int, fd, char *, buf,
 DEFINE_SHIM_SYSCALL (write, 3, shim_do_write, size_t, int, fd, void *,
                      buf, size_t, count)
 
-DEFINE_SHIM_SYSCALL (pwrite64, 4, shim_do_pwrite64, size_t, int, fd, char *,
+DEFINE_SHIM_SYSCALL (pwrite64, 4, shim_do_pwrite64, size_t, int, fd, void *,
                      buf,  size_t, count, loff_t, pos)
 
 DEFINE_SHIM_SYSCALL (close, 1, shim_do_close, int, int, fd)
