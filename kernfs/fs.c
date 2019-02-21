@@ -586,8 +586,6 @@ int digest_file(uint8_t from_dev, uint8_t to_dev, uint32_t file_inum,
 
 		sync_inode_from_dinode(file_inode, &dip);
 
-		file_inode->i_sb = sb;
-
 		mlfs_assert(dip.dev != 0);
 	}
 
@@ -860,9 +858,6 @@ int digest_file_iovec(uint8_t from_dev, uint8_t to_dev,
 		mlfs_assert(dip.dev != 0);
 
 		sync_inode_from_dinode(file_inode, &dip);
-
-		file_inode->i_sb = sb;
-
 	}
 
 	mlfs_assert(file_inode->dev != 0);
@@ -883,8 +878,6 @@ int digest_file_iovec(uint8_t from_dev, uint8_t to_dev,
 
 			mlfs_assert(dip.itype != 0);
 			sync_inode_from_dinode(sync_file_inode, &dip);
-
-			file_inode->i_sb = sb;
 		}
 
 		file_inode->size = offset + length;

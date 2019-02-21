@@ -124,6 +124,7 @@ static inline struct inode *icache_alloc_add(uint8_t dev, uint32_t inum)
 
 	pthread_spin_init(&inode->de_cache_spinlock, PTHREAD_PROCESS_SHARED);
 	inode->de_cache = NULL;
+	inode->i_sb = sb;
 
 	//pthread_spin_init(&inode->i_spinlock, PTHREAD_PROCESS_SHARED);
 	pthread_mutex_init(&inode->i_mutex, NULL);
