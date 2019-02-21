@@ -316,7 +316,10 @@ int mlfs_file_write(struct file *f, uint8_t *buf, offset_t offset, size_t n)
 }
 
 //supporting type : T_FILE, T_DIR
-struct inode *mlfs_object_create(const char *path, unsigned short type)
+// output value: exist == 0 if newly created, exist == 1 if already exists
+//               only make sense when return value is non-null
+// return value: non-null if created successfully, null if part of the path doesn't exist
+struct inode *mlfs_object_create(const char *path, unsigned short type, uint8_t *exist)
 {
 	offset_t offset;
 	struct inode *inode = NULL, *parent_inode = NULL;
@@ -340,7 +343,7 @@ struct inode *mlfs_object_create(const char *path, unsigned short type)
 
 			mlfs_get_time(&inode->ctime);
 			inode->atime = inode->mtime = inode->ctime;
-
+			*exist = 1;
 			return inode;
 		}
 	}
@@ -391,6 +394,6 @@ struct inode *mlfs_object_create(const char *path, unsigned short type)
 
 	if (!dlookup_find(g_root_dev, path))
 		dlookup_alloc_add(g_root_dev, inode, path);
-
+	*exist = 0;
 	return inode;
 }

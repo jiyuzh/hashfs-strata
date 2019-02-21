@@ -108,13 +108,19 @@ int mlfs_posix_open(const char *input_path, int flags, uint16_t mode)
 		if (flags & O_DIRECTORY)
 			panic("O_DIRECTORY cannot be set with O_CREAT\n");
 
-		inode = mlfs_object_create(path, T_FILE);
+		uint8_t exist;
+		inode = mlfs_object_create(path, T_FILE, &exist);
 
 		mlfs_debug("create file %s - inum %u\n", path, inode->inum);
 
 		if (!inode) {
-			commit_log_tx();
+			abort_log_tx();
 			return -ENOENT;
+		}
+
+		if ((flags & O_EXCL) && exist) {
+			abort_log_tx();
+			return -EEXIST;
 		}
 	} else {
 		// opendir API
@@ -126,13 +132,13 @@ int mlfs_posix_open(const char *input_path, int flags, uint16_t mode)
 		}
 
 		if ((inode = namei(path)) == NULL) {
-			commit_log_tx();
+			abort_log_tx();
 			return -ENOENT;
 		}
 
 		if (inode->itype == T_DIR) {
 			if (!(flags |= (O_RDONLY|O_DIRECTORY))) {
-				commit_log_tx();
+				abort_log_tx();
 				return -EACCES;
 			}
 		}
@@ -142,8 +148,7 @@ int mlfs_posix_open(const char *input_path, int flags, uint16_t mode)
 
 	if (f == NULL) {
 		iunlockput(inode);
-		commit_log_tx();
-
+		abort_log_tx();
 		return -ENOMEM;
 	}
 
@@ -353,11 +358,12 @@ int mlfs_posix_mkdir(char *path, mode_t mode)
 {
 	int ret = 0;
 	struct inode *inode;
+	uint8_t exist;
 
 	start_log_tx();
 
 	// return inode with holding ilock.
-	inode = mlfs_object_create(path, T_DIR);
+	inode = mlfs_object_create(path, T_DIR, &exist);
 
 	if (!inode) {
 		abort_log_tx();
@@ -366,7 +372,12 @@ int mlfs_posix_mkdir(char *path, mode_t mode)
 
 exit_mkdir:
 	commit_log_tx();
-	return ret;
+	if (exist) {
+		return -EEXIST;
+	}
+	else {
+		return ret;
+	}
 }
 
 int mlfs_posix_rmdir(char *path)
