@@ -376,13 +376,11 @@ struct inode *mlfs_object_create(const char *path, unsigned short type, uint8_t 
 		// To avoid cyclic ref count, do not bump link for "."
 		parent_inode->nlink++;
 
-#if 0
 		if (dir_add_entry(inode, ".", inode->inum) < 0)
 			panic("cannot add . entry");
 
 		if (dir_add_entry(inode, "..", parent_inode->inum) < 0)
 			panic("cannot add .. entry");
-#endif
 
 		iupdate(parent_inode);
 	}

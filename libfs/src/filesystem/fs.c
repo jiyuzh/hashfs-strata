@@ -1091,7 +1091,17 @@ void stati(struct inode *ip, struct stat *st)
 
   st->st_dev = ip->dev;
   st->st_ino = ip->inum;
-  st->st_mode = 0;
+  switch (ip->itype) {
+      case T_DIR:
+          st->st_mode = S_IFDIR;
+          break;
+      case T_FILE:
+          st->st_mode = S_IFREG;
+          break;
+      default:
+          panic("unknown file type");
+  }
+  st->st_mode |= S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH;
   st->st_nlink = ip->nlink;
   st->st_uid = 0;
   st->st_gid = 0;

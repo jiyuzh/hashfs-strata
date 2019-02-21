@@ -13,6 +13,7 @@
 #include "filesystem/fs.h"
 #include "filesystem/file.h"
 #include "log/log.h"
+#include "posix/posix_interface.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -208,7 +209,7 @@ int mlfs_posix_creat(char *path, uint16_t mode)
 	return mlfs_posix_open(path, O_CREAT|O_RDWR, mode);
 }
 
-int mlfs_posix_read(int fd, uint8_t *buf, int count)
+int mlfs_posix_read(int fd, void *buf, size_t count)
 {
 	int ret = 0;
 	struct file *f;
@@ -224,14 +225,14 @@ int mlfs_posix_read(int fd, uint8_t *buf, int count)
 		return -EBADF;
 	}
 
-	ret = mlfs_file_read(f, buf, count);
+	ret = mlfs_file_read(f, (uint8_t*)buf, count);
 
 	pthread_rwlock_unlock(&f->rwlock);
 
 	return ret;
 }
 
-int mlfs_posix_pread64(int fd, uint8_t *buf, int count, loff_t off)
+int mlfs_posix_pread64(int fd, void *buf, size_t count, loff_t off)
 {
 	int ret = 0;
 	struct file *f;
@@ -247,14 +248,14 @@ int mlfs_posix_pread64(int fd, uint8_t *buf, int count, loff_t off)
 		return -EBADF;
 	}
 
-	ret = mlfs_file_read_offset(f, buf, count, off);
+	ret = mlfs_file_read_offset(f, (uint8_t*)buf, count, off);
 
 	pthread_rwlock_unlock(&f->rwlock);
 
 	return ret;
 }
 
-int mlfs_posix_write(int fd, uint8_t *buf, size_t count)
+int mlfs_posix_write(int fd, void *buf, size_t count)
 {
 	int ret;
 	struct file *f;
@@ -270,7 +271,7 @@ int mlfs_posix_write(int fd, uint8_t *buf, size_t count)
 		return -EBADF;
 	}
 
-	ret = mlfs_file_write(f, buf, f->off, count);
+	ret = mlfs_file_write(f, (uint8_t*)buf, f->off, count);
 	// change offset here since mlfs_file_write doesn't touch f->off
 	if (ret > 0) {
 		f->off += ret;
@@ -281,7 +282,7 @@ int mlfs_posix_write(int fd, uint8_t *buf, size_t count)
 	return ret;
 }
 
-int mlfs_posix_pwrite64(int fd, uint8_t *buf, size_t count, loff_t off)
+int mlfs_posix_pwrite64(int fd, void *buf, size_t count, loff_t off)
 {
 	int ret;
 	struct file *f;
@@ -297,7 +298,7 @@ int mlfs_posix_pwrite64(int fd, uint8_t *buf, size_t count, loff_t off)
 		return -EBADF;
 	}
 
-	ret = mlfs_file_write(f, buf, off, count);
+	ret = mlfs_file_write(f, (uint8_t*)buf, off, count);
 
 	pthread_rwlock_unlock(&f->rwlock);
 
@@ -382,6 +383,8 @@ exit_mkdir:
 
 int mlfs_posix_rmdir(char *path)
 {
+    return mlfs_posix_unlink(path);
+/*
 	int ret = 0;
 	struct inode *dir_inode;
 
@@ -406,6 +409,7 @@ int mlfs_posix_rmdir(char *path)
 exit_rmdir:
 	commit_log_tx();
 	return ret;
+*/
 }
 
 int mlfs_posix_stat(const char *filename, struct stat *stat_buf)
@@ -615,7 +619,7 @@ int mlfs_posix_rename(char *oldpath, char *newpath)
 }
 
 size_t mlfs_posix_getdents(int fd, struct linux_dirent *buf,
-		size_t nbytes, offset_t off)
+		size_t nbytes)
 {
 	struct file *f;
 	int bytes;
@@ -639,10 +643,10 @@ size_t mlfs_posix_getdents(int fd, struct linux_dirent *buf,
 	if (f->off >= f->ip->size)
 		return 0;
 
-	bytes = dir_get_entry(f->ip, buf, f->off);
+	bytes = dir_get_linux_dirent(f->ip, buf, f->off, nbytes);
 	f->off += bytes;
 
-	return sizeof(struct linux_dirent);
+	return bytes;
 }
 
 int mlfs_posix_fcntl(int fd, int cmd, void *arg)

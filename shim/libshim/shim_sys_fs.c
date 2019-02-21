@@ -109,22 +109,18 @@ static char fn_map[MLFS_FD_MAP_SIZE][PATH_BUF_SIZE];
 		}} while(0)
 #define NUM_CMP(a,b) (a == b)
 #define STRING_CMP(a,b) (!strcmp(a,b))
+#define ST_MODE_CMP(a,b) ((a&S_IFMT) == (b&S_IFMT))
 #define CMP_STAT(stat1, stat2)\
-		CMP_SUBFIELD(stat1, stat2, "%lu", st_dev, NUM_CMP);\
+		CMP_SUBFIELD(stat1, stat2, "%u", st_mode, ST_MODE_CMP);\
+		CMP_SUBFIELD(stat1, stat2, "%ld", st_size, NUM_CMP)
+/*		CMP_SUBFIELD(stat1, stat2, "%lu", st_dev, NUM_CMP);\
 		CMP_SUBFIELD(stat1, stat2, "%lu", st_ino, NUM_CMP);\
-		CMP_SUBFIELD(stat1, stat2, "%u", st_mode, NUM_CMP);\
 		CMP_SUBFIELD(stat1, stat2, "%lu", st_nlink, NUM_CMP);\
 		CMP_SUBFIELD(stat1, stat2, "%u", st_uid, NUM_CMP);\
 		CMP_SUBFIELD(stat1, stat2, "%u", st_gid, NUM_CMP);\
 		CMP_SUBFIELD(stat1, stat2, "%lu", st_rdev, NUM_CMP);\
-		CMP_SUBFIELD(stat1, stat2, "%ld", st_size, NUM_CMP);\
 		CMP_SUBFIELD(stat1, stat2, "%lu", st_blksize, NUM_CMP);\
-		CMP_SUBFIELD(stat1, stat2, "%lu", st_blocks, NUM_CMP)
-#define CMP_LINUX_DIRENT(dir1, dir2)\
-		CMP_SUBFIELD(dir1, dir2, "%lu", d_ino, NUM_CMP);\
-		CMP_SUBFIELD(dir1, dir2, "%lu", d_off, NUM_CMP);\
-		CMP_SUBFIELD(dir1, dir2, "%hu", d_reclen, NUM_CMP);\
-		CMP_SUBFIELD(dir1, dir2, "%s", d_name, STRING_CMP);
+		CMP_SUBFIELD(stat1, stat2, "%lu", st_blocks, NUM_CMP)*/
 #else
 #define MLFS_RET ret
 #define MLFS_RET_DEF
@@ -793,8 +789,8 @@ int shim_do_fstat(int fd, struct stat *buf)
 	if (in_mlfs) {
 		MLFS_RET_DEF;
 		MLFS_BUF_DEF(struct stat*, sizeof(struct stat));
-		MLFS_RET = mlfs_posix_fstat(get_mlfs_fd(MLFS_FD), buf);
-		syscall_trace(__func__, MLFS_RET, 2, fd, buf);
+		MLFS_RET = mlfs_posix_fstat(get_mlfs_fd(MLFS_FD), MLFS_BUF);
+		syscall_trace(__func__, MLFS_RET, 2, MLFS_FD, MLFS_BUF);
 #ifdef MIRROR_SYSCALL
 		if (MLFS_RET != ret) {
 			printf("%s fd %d name %s inconsistent ret %d, mlfs %d\n", __func__, fd, fn_map[fd], ret, MLFS_RET);
@@ -1105,7 +1101,8 @@ int shim_do_fcntl(int fd, int cmd, void *arg)
 #ifdef MIRROR_SYSCALL
 		if (MLFS_RET != ret) {
 			printf("%s fd %d name %s inconsistent ret %d, mlfs %d\n", __func__, fd, fn_map[fd], ret, MLFS_RET);
-			abort();
+			// strata only implement F_SETLK, don't check fcntl return value
+			//abort();
 		}
 #endif
 	}
@@ -1184,11 +1181,20 @@ size_t shim_do_getdents(int fd, struct linux_dirent *buf, size_t count)
 		MLFS_RET = mlfs_posix_getdents(get_mlfs_fd(MLFS_FD), MLFS_BUF, count);
 		syscall_trace(__func__, MLFS_RET, 3, MLFS_FD, MLFS_BUF, count);
 #ifdef MIRROR_SYSCALL
-		if (MLFS_RET != ret) {
-			printf("%s fd %d name %s inconsistent ret %d, mlfs %d\n", __func__, fd, fn_map[fd], ret, MLFS_RET);
-			abort();
+		size_t n_entry = 0, mlfs_n_entry = 0;
+		for (struct linux_dirent *dir = buf;
+			(uint8_t*)dir < (uint8_t*)buf + ret;
+			dir = (struct linux_dirent*)((uint8_t*)dir + dir->d_reclen)) {
+			++n_entry;
 		}
-		CMP_LINUX_DIRENT(buf, MLFS_BUF);
+		for (struct linux_dirent *mlfs_dir = MLFS_BUF;
+			(uint8_t*)mlfs_dir < (uint8_t*)MLFS_BUF + MLFS_RET;
+			mlfs_dir = (struct linux_dirent*)((uint8_t*)mlfs_dir + mlfs_dir->d_reclen)) {
+			++mlfs_n_entry;
+		}
+		if (n_entry != mlfs_n_entry) {
+			printf("%s fd %d name %s inconsistent n_entry %lu, mlfs %lu\n", __func__, fd, fn_map[fd], n_entry, mlfs_n_entry);
+		}
 		free(MLFS_BUF);
 #endif
 	}

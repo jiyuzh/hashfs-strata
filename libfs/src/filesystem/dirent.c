@@ -269,7 +269,11 @@ struct inode* dir_lookup(struct inode *dir_inode, char *name, offset_t *poff)
 
 /* linux_dirent must be identical to gblic kernel_dirent
  * defined in sysdeps/unix/sysv/linux/getdents.c */
-int dir_get_entry(struct inode *dir_inode, struct linux_dirent *buf, offset_t off)
+/*
+ * Known Bug FIXME
+ * will only return the first directory block
+ */
+int dir_get_linux_dirent(struct inode *dir_inode, struct linux_dirent *buf, offset_t off, size_t nbytes)
 {
 	struct inode *ip;
 	uint8_t *dirent_array;
@@ -278,13 +282,28 @@ int dir_get_entry(struct inode *dir_inode, struct linux_dirent *buf, offset_t of
 	de = get_dirent(dir_inode, off);
 
 	mlfs_assert(de);
+    offset_t buf_off = 0, de_off = off % g_block_size_bytes;
+    while (de_off < g_block_size_bytes) {
+        if (de->inum != 0) {
+            size_t namelen = strlen(de->name);
+            size_t next_entry_size = sizeof(struct linux_dirent) + namelen;
+            if (buf_off + next_entry_size < nbytes) {
+                buf->d_ino = de->inum;
+                buf->d_off = de_off;
+                buf->d_reclen = next_entry_size;
+                strncpy(buf->d_name, de->name, DIRSIZ);
+                buf = (struct linux_dirent*)(((uint8_t*)buf) + buf->d_reclen);
+                buf_off += next_entry_size;
+            }
+            else {
+                break;
+            }
+        }
+        de_off += sizeof(struct mlfs_dirent);
+        de++;
+    }
 
-	buf->d_ino = de->inum;
-	buf->d_off = (off/sizeof(*de)) * sizeof(struct linux_dirent);
-	buf->d_reclen = sizeof(struct linux_dirent);
-	memmove(buf->d_name, de->name, DIRSIZ);
-
-	return sizeof(struct mlfs_dirent);
+    return buf_off;
 }
 
 /* Workflows when renaming to existing one (newname exists in the directory).
@@ -520,6 +539,7 @@ empty_found:
 	}
 
 	strncpy(de->name, name, DIRSIZ);
+    de->name[DIRSIZ - 1] = 0; // make sure null-terminated
 	de->inum = inum;
 
 	//dir_inode->size += sizeof(struct mlfs_dirent);
