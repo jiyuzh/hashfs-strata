@@ -740,6 +740,7 @@ static int persist_log_file(struct logheader_meta *loghdr_meta,
 			ret = check_write_log_invalidation(fc_block);
 			// fc_block is invalid. update it
 			if (ret) {
+				//FIXME: what if async digest happens after checking log invalidation but before finish using log value
 				if (!check_read_log_invalidation(fc_block) && fc_block->start_offset < offset_in_block) { // patch data from Read Only log area to this new partial update log block
 
 					uint8_t buffer[g_block_size_bytes];
@@ -798,10 +799,10 @@ static int persist_log_file(struct logheader_meta *loghdr_meta,
 		// case 1. the IO fits into one block.
 		if (offset_in_block + size <= g_block_size_bytes) {
 			io_size = size;
-		// case 2. the IO incurs two blocks write (unaligned).
-    } else {
+			// case 2. the IO incurs two blocks write (unaligned).
+		} else {
 			panic("do not support this case yet\n");
-    }
+		}
 
 		log_bh->b_data = loghdr_meta->io_vec[n_iovec].base;
 		log_bh->b_size = io_size;
