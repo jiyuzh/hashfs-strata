@@ -746,6 +746,7 @@ int idealloc(struct inode *inode)
 
   /* delete inode data (log) pointers */
   //printf("fcache del?\n");
+  //FIXME why don't delete all fcache here?
   //fcache_del_all(inode);
   //inode->fcache_hash = kh_init(fcache);
   //printf("fcache del!\n");

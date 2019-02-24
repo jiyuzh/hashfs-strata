@@ -247,8 +247,12 @@ static inline struct fcache_block *fcache_find(struct inode *inode, offset_t key
 	khiter_t k;
 	struct fcache_block *fc_block = NULL;
 
+	if (inode->fcache_hash == NULL) {
+		pthread_rwlock_wrlock(&inode->fcache_rwlock);
+		inode->fcache_hash = kh_init(fcache);
+		pthread_rwlock_unlock(&inode->fcache_rwlock);
+	}
 	pthread_rwlock_rdlock(&inode->fcache_rwlock);
-
 	k = kh_get(fcache, inode->fcache_hash, key);
 	if (k == kh_end(inode->fcache_hash)) {
 		pthread_rwlock_unlock(&inode->fcache_rwlock);
@@ -284,6 +288,10 @@ static inline struct fcache_block *fcache_alloc_add(struct inode *inode,
 	INIT_LIST_HEAD(&fc_block->l);
 
 	pthread_rwlock_wrlock(&inode->fcache_rwlock);
+
+	if (inode->fcache_hash == NULL) {
+		inode->fcache_hash = kh_init(fcache);
+	}
 
 	k = kh_put(fcache, inode->fcache_hash, key, &ret);
 	if (ret < 0)
@@ -349,6 +357,7 @@ static inline int fcache_del_all(struct inode *inode)
 
 	mlfs_debug("destroy hash %u\n", inode->inum);
 	kh_destroy(fcache, inode->fcache_hash);
+	inode->fcache_hash = NULL;
 	return 0;
 }
 // UTHash version
