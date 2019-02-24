@@ -45,7 +45,10 @@ isdef:
         pushq %r14
         pushq %r15
 
-		//int $3
+        //int $3
+        // conver from syscall to funcall
+        // refer to glibc-2.19/sysdeps/unix/sysv/linux/x86_64/sysdep.h
+        movq %r10, %rcx
         call *%rbx
 
         popq %r15
