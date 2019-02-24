@@ -41,7 +41,7 @@ uint8_t g_log_dev = 0;
 uint8_t g_ssd_dev = 0;
 uint8_t g_hdd_dev = 0;
 
-uint8_t initialized = 0;
+uint8_t strata_initialized = 0;
 
 // statistics
 uint8_t enable_perf_stats;
@@ -206,7 +206,7 @@ void shutdown_fs(void)
   int ret;
   int _enable_perf_stats = enable_perf_stats;
 
-  if (!initialized) {
+  if (!strata_initialized) {
     return;
   }
 
@@ -364,7 +364,7 @@ void init_fs(void)
   unsigned long memsize_gb = 4;
 #endif
 
-  if (!initialized) {
+  if (!strata_initialized) {
     const char *perf_profile;
     const char *device_id;
     uint8_t dev_id;
@@ -427,7 +427,7 @@ void init_fs(void)
 
     mlfs_info("LibFS is initialized with id %d\n", g_log_dev);
 
-    initialized = 1;
+    strata_initialized = 1;
 
     perf_profile = getenv("MLFS_PROFILE");
 
