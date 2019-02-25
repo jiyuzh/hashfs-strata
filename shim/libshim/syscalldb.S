@@ -11,6 +11,8 @@ syscalldb:
 
 		//pushq %rbp
 		//movq  %rsp, %rbp
+		// allocate big buffer on stack, to avoid overlapping with glibc call, e.g. sigaction
+		sub $0x400, %rsp
 		pushq %rbx
 
 		//int $3
@@ -69,7 +71,8 @@ isundef:
 
 ret:
         popq %rbx
-		//leaveq
+        add $0x400, %rsp
+        //leaveq
         retq
 
         .cfi_endproc
