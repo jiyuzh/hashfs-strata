@@ -68,15 +68,12 @@ endif
 	MLFS_FLAGS += -DINDEX_NAME=\"ext\ \"
 endif
 
+OPT_ARGS ?= -g -O3
+
 ########
 # Testing definitions
 ########
 MLFS_FLAGS += -DSIMULATE_FRAGMENTATION
-
-#DEBUG = -O0 -gdwarf-2 -g3 -rdynamic
-#DEBUG = -g -Ofast
-#DEBUG = -g -O3
-DEBUG = -g -O0
 
 ########
 #  vpath and compile function for each file
@@ -85,7 +82,7 @@ vpath %.c $(SRC_DIR)
 
 define make-goal
 $1/%.o: %.c
-	$(CC) $(INCLUDES) $(MLFS_FLAGS) $(DEBUG) -fPIC -c $$< -o $$@ -DLIBFS
+	$(CC) $(INCLUDES) $(MLFS_FLAGS) $(OPT_ARGS) -fPIC -c $$< -o $$@ -DLIBFS
 endef
 
 ########
@@ -113,14 +110,14 @@ $(BUILD_DIR):
 #build/libmlfs.a: $(OBJ)
 libmlfs: $(OBJ) spdk
 	ar cr $(PREFIX)/libmlfs.a $(OBJ)
-	$(CC) -shared $(DEBUG) -o $(PREFIX)/libmlfs.so $(OBJ) $(LD_FLAGS) -DLIBFS $(MLFS_FLAGS) -L$(LIBSPDK_DIR) -lspdk -L$(JEMALLOC_DIR)/lib -Wl,-rpath=$(abspath $(JEMALLOC_DIR)/lib) -ljemalloc -ljson-c
+	$(CC) -shared $(OPT_ARGS) -o $(PREFIX)/libmlfs.so $(OBJ) $(LD_FLAGS) -DLIBFS $(MLFS_FLAGS) -L$(LIBSPDK_DIR) -lspdk -L$(JEMALLOC_DIR)/lib -Wl,-rpath=$(abspath $(JEMALLOC_DIR)/lib) -ljemalloc -ljson-c
 
 spdk: $(OBJ)
 	make -C src/storage/spdk/ MLFS_FLAGS="$(MLFS_FLAGS)" PREFIX="$(PREFIX)"
 
 mkfs: $(OBJ) libmlfs
-	$(CC) -o $(PREFIX)/mkfs.o -c src/mkfs/mkfs.c $(INCLUDES) $(MLFS_FLAGS)
-	$(CC) -g -o bin/mkfs.mlfs  $(PREFIX)/libmlfs.a $(INCLUDES) -L$(LIBSPDK_DIR) -lspdk $(LD_FLAGS) -DLIBFS -Wl,-rpath=$(abspath $(LIBSPDK_DIR)) -Wl,-rpath=$(abspath $(NVML_DIR)/nondebug) -ljson-c
+	$(CC) $(OPT_ARGS) -o $(PREFIX)/mkfs.o -c src/mkfs/mkfs.c $(INCLUDES) $(MLFS_FLAGS)
+	$(CC) $(OPT_ARGS) -o bin/mkfs.mlfs  $(PREFIX)/libmlfs.a $(INCLUDES) -L$(LIBSPDK_DIR) -lspdk $(LD_FLAGS) -DLIBFS -Wl,-rpath=$(abspath $(LIBSPDK_DIR)) -Wl,-rpath=$(abspath $(NVML_DIR)/nondebug) -ljson-c
 
 
 ########
