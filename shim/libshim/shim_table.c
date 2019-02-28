@@ -2,6 +2,7 @@
 #include "shim_syscall_macro.h"
 #include "shim_table.h"
 #include "shim_syscalls.h"
+#include <asm/unistd.h>
 
 void syscall_instruction(void)
 {
@@ -11,7 +12,6 @@ void syscall_instruction(void)
 shim_fp shim_table [SHIM_NSYSCALLS] = {
 	// For system call passthrough
 	[0 ... (SHIM_NSYSCALLS - 1)] = (shim_fp) syscall_instruction, 
-#include <asm/unistd.h>
 
 #undef DEFINE_SHIM_SYSCALL
 #define DEFINE_SHIM_SYSCALL(name, n, func, ...) \

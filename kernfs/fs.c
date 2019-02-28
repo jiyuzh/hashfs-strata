@@ -199,7 +199,7 @@ void show_kernfs_stats(void)
 
 	printf("\n");
 	//printf("CPU clock : %.3f MHz\n", clock_speed_mhz);
-	printf("----------------------- kernfs statistics\n");
+	printf("-----%s ---------------- kernfs statistics\n", INDEX_NAME);
 	printf("digest          : %lu\n",
 			g_perf_stats.digest_time_tsc);
 	printf("- replay        : %lu\n",
@@ -586,8 +586,6 @@ int digest_file(uint8_t from_dev, uint8_t to_dev, uint32_t file_inum,
 
 		sync_inode_from_dinode(file_inode, &dip);
 
-		file_inode->i_sb = sb;
-
 		mlfs_assert(dip.dev != 0);
 	}
 
@@ -860,9 +858,6 @@ int digest_file_iovec(uint8_t from_dev, uint8_t to_dev,
 		mlfs_assert(dip.dev != 0);
 
 		sync_inode_from_dinode(file_inode, &dip);
-
-		file_inode->i_sb = sb;
-
 	}
 
 	mlfs_assert(file_inode->dev != 0);
@@ -883,8 +878,6 @@ int digest_file_iovec(uint8_t from_dev, uint8_t to_dev,
 
 			mlfs_assert(dip.itype != 0);
 			sync_inode_from_dinode(sync_file_inode, &dip);
-
-			file_inode->i_sb = sb;
 		}
 
 		file_inode->size = offset + length;
@@ -2279,7 +2272,7 @@ void read_superblock(uint8_t dev)
 
 	// The partition is GC unit (1 GB) in SSD.
 	// disk_sb[dev].size : total # of blocks
-#if 1
+#ifdef GLOBAL_EXTENT_TREES
 #define shift_size 19
 	sb[dev]->n_partition = disk_sb[dev].size >> shift_size;
 

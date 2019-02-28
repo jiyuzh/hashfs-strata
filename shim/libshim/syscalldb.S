@@ -9,31 +9,33 @@
 syscalldb:
         .cfi_startproc
 
-		//pushq %rbp
-		//movq  %rsp, %rbp
-		pushq %rbx
+        //pushq %rbp
+        //movq  %rsp, %rbp
+        // allocate big buffer on stack, to avoid overlapping with glibc call, e.g. sigaction
+        sub $0x400, %rsp
+        pushq %rbx
 
-		//int $3
+        //int $3
         movq shim_table@GOTPCREL(%rip), %rbx
         movq (%rbx,%rax,8), %rbx
-		
+
         cmp $0, (%rbx)
         je isundef
 
 isdef:
-	/* Kernel stores %rsp to %rdi before seting up 
-	   a frame for signal handling. In entry_64.S
-	   -----------------------------------------------
-		GLOBAL(retint_user)
-		mov %rsp,%rdi
-		call    prepare_exit_to_usermode  //this calls do_signal().
-		TRACE_IRQS_IRETQ
-		SWAPGS
-		jmp restore_regs_and_iret
-	   -----------------------------------------------
-	   %rdi must not be restored if a signal is delivered 
-	   while handling io syscalls. 
-	*/
+        /* Kernel stores %rsp to %rdi before seting up 
+           a frame for signal handling. In entry_64.S
+           -----------------------------------------------
+            GLOBAL(retint_user)
+            mov %rsp,%rdi
+            call    prepare_exit_to_usermode  //this calls do_signal().
+            TRACE_IRQS_IRETQ
+            SWAPGS
+            jmp restore_regs_and_iret
+           -----------------------------------------------
+           %rdi must not be restored if a signal is delivered 
+           while handling io syscalls. 
+        */
         //pushq %rdi
         pushq %rsi
         pushq %rdx
@@ -45,7 +47,10 @@ isdef:
         pushq %r14
         pushq %r15
 
-		//int $3
+        //int $3
+        // conver from syscall to funcall
+        // refer to glibc-2.19/sysdeps/unix/sysv/linux/x86_64/sysdep.h
+        movq %r10, %rcx
         call *%rbx
 
         popq %r15
@@ -66,7 +71,8 @@ isundef:
 
 ret:
         popq %rbx
-		//leaveq
+        add $0x400, %rsp
+        //leaveq
         retq
 
         .cfi_endproc

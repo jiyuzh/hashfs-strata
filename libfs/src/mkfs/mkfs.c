@@ -337,8 +337,8 @@ int main(int argc, char *argv[])
 	iappend(dev_id, rootino, &de, sizeof(de));
 
 	// clean /mlfs directory
-	read_inode(dev_id, mlfs_dir_ino, &din);
-	wsect(din.l1_addrs[0], (uint8_t *)zeroes);
+	//read_inode(dev_id, mlfs_dir_ino, &din);
+	//wsect(din.l1_addrs[0], (uint8_t *)zeroes);
 
 #if 0
 	for(i = 3; i < argc; i++){

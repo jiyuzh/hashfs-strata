@@ -8,9 +8,8 @@
 //#define NEVER_REUSE_BLOCKS
 
 #if !defined(HASHTABLE)
-#define GLOBAL_EXTENT_TREES
+#undef GLOBAL_EXTENT_TREES
 #endif
-//#undef GLOBAL_EXTENT_TREES
 
 uint64_t size_of_bitmap(mlfs_fsblk_t nrblocks)
 {

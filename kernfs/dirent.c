@@ -370,7 +370,7 @@ empty_found:
 // If parent != 0, return the inode for the parent and copy the final
 // path element into name, which must have room for DIRSIZ bytes.
 // Must be called inside a transaction since it calls iput().
-static struct inode* namex(char *path, int nameiparent, char *name)
+static struct inode* namex(const char *path, int nameiparent, char *name)
 {
 	struct inode *ip, *next;
 
@@ -408,7 +408,7 @@ static struct inode* namex(char *path, int nameiparent, char *name)
 	return ip;
 }
 
-struct inode* namei(char *path)
+struct inode* namei(const char *path)
 {
 	char name[DIRSIZ];
 	return namex(path, 0, name);
@@ -490,7 +490,7 @@ void dbg_dump_dir(uint8_t dev, uint32_t inum)
 }
 
 // Walking through to path and snapshoting dentry and inode.
-void dbg_path_walk(char *path)
+void dbg_path_walk(const char *path)
 {
 	struct inode *inode, *next_inode;
 	char name[DIRSIZ];

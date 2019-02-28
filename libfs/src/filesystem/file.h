@@ -33,12 +33,12 @@ struct file *mlfs_file_alloc(void);
 struct file *mlfs_file_dup(struct file *f);
 
 int mlfs_file_close(struct file *f);
-struct inode *mlfs_object_create(char *path, unsigned short mode);
+struct inode *mlfs_object_create(const char *path, unsigned short mode, uint8_t *exist);
 
 int mlfs_file_stat(struct file *f, struct stat *st);
 ssize_t mlfs_file_read(struct file *f, uint8_t *buf, size_t n);
 int mlfs_file_read_offset(struct file *f, uint8_t *bug, 
 		size_t n, offset_t off);
-int mlfs_file_write(struct file *f, uint8_t *buf, size_t n);
+int mlfs_file_write(struct file *f, uint8_t *buf, offset_t offset, size_t n);
 
 #endif

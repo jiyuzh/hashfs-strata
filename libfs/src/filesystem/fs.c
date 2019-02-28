@@ -41,7 +41,7 @@ uint8_t g_log_dev = 0;
 uint8_t g_ssd_dev = 0;
 uint8_t g_hdd_dev = 0;
 
-uint8_t initialized = 0;
+uint8_t strata_initialized = 0;
 
 // statistics
 uint8_t enable_perf_stats;
@@ -206,7 +206,7 @@ void shutdown_fs(void)
   int ret;
   int _enable_perf_stats = enable_perf_stats;
 
-  if (!initialized) {
+  if (!strata_initialized) {
     return;
   }
 
@@ -364,7 +364,7 @@ void init_fs(void)
   unsigned long memsize_gb = 4;
 #endif
 
-  if (!initialized) {
+  if (!strata_initialized) {
     const char *perf_profile;
     const char *device_id;
     uint8_t dev_id;
@@ -427,7 +427,7 @@ void init_fs(void)
 
     mlfs_info("LibFS is initialized with id %d\n", g_log_dev);
 
-    initialized = 1;
+    strata_initialized = 1;
 
     perf_profile = getenv("MLFS_PROFILE");
 
@@ -746,6 +746,7 @@ int idealloc(struct inode *inode)
 
   /* delete inode data (log) pointers */
   //printf("fcache del?\n");
+  //FIXME why don't delete all fcache here?
   //fcache_del_all(inode);
   //inode->fcache_hash = kh_init(fcache);
   //printf("fcache del!\n");
@@ -1091,7 +1092,17 @@ void stati(struct inode *ip, struct stat *st)
 
   st->st_dev = ip->dev;
   st->st_ino = ip->inum;
-  st->st_mode = 0;
+  switch (ip->itype) {
+      case T_DIR:
+          st->st_mode = S_IFDIR;
+          break;
+      case T_FILE:
+          st->st_mode = S_IFREG;
+          break;
+      default:
+          panic("unknown file type");
+  }
+  st->st_mode |= S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH;
   st->st_nlink = ip->nlink;
   st->st_uid = 0;
   st->st_gid = 0;

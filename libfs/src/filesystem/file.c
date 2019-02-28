@@ -167,8 +167,10 @@ int mlfs_file_read_offset(struct file *f, uint8_t *buf, size_t n, offset_t off)
 	return -1;
 }
 
-// Write to file f.
-int mlfs_file_write(struct file *f, uint8_t *buf, size_t n)
+// Write `n' bytes from buffer `buf' start at `offset' to file `f'.
+// return value: the bytes wrote to file or -1 if error occurs
+// NOTE: This function will NOT update f->off
+int mlfs_file_write(struct file *f, uint8_t *buf, offset_t offset, size_t n)
 {
 	int r;
 	uint32_t max_io_size = (128 << 20);
@@ -201,11 +203,17 @@ int mlfs_file_write(struct file *f, uint8_t *buf, size_t n)
 		 */
 
 		mlfs_debug("%s\n", "+++ start transaction");
+        if (offset > f->ip->size) {
+            mlfs_info("write to file inum %lu out of boundary, \
+                    file size %lu, offset %lu, write size %lu\n",
+                    f->ip->inum, f->ip->size, offset, n);
+            return 0;
+        }
 
 		start_log_tx();
 
-		offset_start = f->off;
-		offset_end = f->off + n;
+		offset_start = offset;
+		offset_end = offset + n;
 
 		offset_aligned = ALIGN(offset_start, g_block_size_bytes);
 
@@ -235,20 +243,20 @@ int mlfs_file_write(struct file *f, uint8_t *buf, size_t n)
 		if (size_prepended > 0) {
 			ilock(f->ip);
 
-			r = add_to_log(f->ip, buf, f->off, size_prepended);
+			r = add_to_log(f->ip, buf, offset, size_prepended);
 
 			iunlock(f->ip);
 
 			mlfs_assert(r > 0);
 
-			f->off += r;
+			offset += r;
 
 			i += r;
 		}
 
 		// add aligned portion to log
 		while(i < n - size_appended) {
-			mlfs_assert((f->off % g_block_size_bytes) == 0);
+			mlfs_assert((offset % g_block_size_bytes) == 0);
 			
 			io_size = n - size_appended - i;
 			
@@ -261,8 +269,8 @@ int mlfs_file_write(struct file *f, uint8_t *buf, size_t n)
 			/* do not copy user buffer to page cache */
 			
 			/* add buffer to log header */
-			if ((r = add_to_log(f->ip, buf + i, f->off, io_size)) > 0)
-				f->off += r;
+			if ((r = add_to_log(f->ip, buf + i, offset, io_size)) > 0)
+				offset += r;
 
 			iunlock(f->ip);
 
@@ -279,13 +287,13 @@ int mlfs_file_write(struct file *f, uint8_t *buf, size_t n)
 		if (size_appended > 0) {
 			ilock(f->ip);
 
-			r = add_to_log(f->ip, buf + i, f->off, size_appended);
+			r = add_to_log(f->ip, buf + i, offset, size_appended);
 
 			iunlock(f->ip);
 
 			mlfs_assert(r > 0);
 
-			f->off += r;
+			offset += r;
 
 			i += r;
 		}
@@ -308,7 +316,10 @@ int mlfs_file_write(struct file *f, uint8_t *buf, size_t n)
 }
 
 //supporting type : T_FILE, T_DIR
-struct inode *mlfs_object_create(char *path, unsigned short type)
+// output value: exist == 0 if newly created, exist == 1 if already exists
+//               only make sense when return value is non-null
+// return value: non-null if created successfully, null if part of the path doesn't exist
+struct inode *mlfs_object_create(const char *path, unsigned short type, uint8_t *exist)
 {
 	offset_t offset;
 	struct inode *inode = NULL, *parent_inode = NULL;
@@ -332,7 +343,7 @@ struct inode *mlfs_object_create(char *path, unsigned short type)
 
 			mlfs_get_time(&inode->ctime);
 			inode->atime = inode->mtime = inode->ctime;
-
+			*exist = 1;
 			return inode;
 		}
 	}
@@ -365,13 +376,11 @@ struct inode *mlfs_object_create(char *path, unsigned short type)
 		// To avoid cyclic ref count, do not bump link for "."
 		parent_inode->nlink++;
 
-#if 0
 		if (dir_add_entry(inode, ".", inode->inum) < 0)
 			panic("cannot add . entry");
 
 		if (dir_add_entry(inode, "..", parent_inode->inum) < 0)
 			panic("cannot add .. entry");
-#endif
 
 		iupdate(parent_inode);
 	}
@@ -383,6 +392,6 @@ struct inode *mlfs_object_create(char *path, unsigned short type)
 
 	if (!dlookup_find(g_root_dev, path))
 		dlookup_alloc_add(g_root_dev, inode, path);
-
+	*exist = 0;
 	return inode;
 }

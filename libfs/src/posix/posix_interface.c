@@ -13,6 +13,7 @@
 #include "filesystem/fs.h"
 #include "filesystem/file.h"
 #include "log/log.h"
+#include "posix/posix_interface.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -49,12 +50,58 @@ static int isdirempty(struct inode *dp)
 	return 1;
 }
 #endif
+int mlfs_posix_chdir(const char *pathname)
+{
+    if (pathname == NULL) {
+        return -ENOENT;
+    }
+    else if (*pathname == '/') { // pathname is absolute
+        struct inode *inode = namei(pathname);
+        if (inode == NULL) {
+            return -ENOENT;
+        }
+        if (inode->itype == T_FILE) {
+            return -ENOTDIR;
+        }
+        strncpy(pwd, pathname, MAX_PATH);
+        return 0;
+    }
+    else { // pathname is relative
+        size_t len = strlen(pwd);
+        strncat(pwd, pathname, MAX_PATH - len);
+        struct inode *inode = namei(pwd);
+        if (inode == NULL) {
+            pwd[len] = 0; // reset pwd to origin path
+            return -ENOENT;
+        }
+        if (inode->itype == T_FILE) {
+            pwd[len] = 0; // reset pwd to origin path
+            return -ENOTDIR;
+        }
+        // pwd has already been concatenated above
+        return 0;
+    }
 
-int mlfs_posix_open(char *path, int flags, uint16_t mode)
+}
+
+int mlfs_posix_open(const char *input_path, int flags, uint16_t mode)
 {
 	struct file *f;
 	struct inode *inode;
 	int fd;
+    char fullpath[MAX_PATH + 1];
+    const char *path;
+    if (input_path == NULL) {
+        return -ENOENT;
+    }
+    else if (*input_path != '/') { // path is relative
+        strncpy(fullpath, pwd, MAX_PATH);
+        strncat(fullpath, input_path, MAX_PATH - strlen(fullpath));
+        path = fullpath;
+    }
+    else { // path is absolute
+        path = input_path;
+    }
 
 	start_log_tx();
 
@@ -62,13 +109,19 @@ int mlfs_posix_open(char *path, int flags, uint16_t mode)
 		if (flags & O_DIRECTORY)
 			panic("O_DIRECTORY cannot be set with O_CREAT\n");
 
-		inode = mlfs_object_create(path, T_FILE);
+		uint8_t exist;
+		inode = mlfs_object_create(path, T_FILE, &exist);
 
 		mlfs_debug("create file %s - inum %u\n", path, inode->inum);
 
 		if (!inode) {
-			commit_log_tx();
+			abort_log_tx();
 			return -ENOENT;
+		}
+
+		if ((flags & O_EXCL) && exist) {
+			abort_log_tx();
+			return -EEXIST;
 		}
 	} else {
 		// opendir API
@@ -80,13 +133,13 @@ int mlfs_posix_open(char *path, int flags, uint16_t mode)
 		}
 
 		if ((inode = namei(path)) == NULL) {
-			commit_log_tx();
+			abort_log_tx();
 			return -ENOENT;
 		}
 
 		if (inode->itype == T_DIR) {
 			if (!(flags |= (O_RDONLY|O_DIRECTORY))) {
-				commit_log_tx();
+				abort_log_tx();
 				return -EACCES;
 			}
 		}
@@ -96,8 +149,7 @@ int mlfs_posix_open(char *path, int flags, uint16_t mode)
 
 	if (f == NULL) {
 		iunlockput(inode);
-		commit_log_tx();
-
+		abort_log_tx();
 		return -ENOMEM;
 	}
 
@@ -134,7 +186,7 @@ int mlfs_posix_open(char *path, int flags, uint16_t mode)
 	return SET_MLFS_FD(fd);
 }
 
-int mlfs_posix_access(char *pathname, int mode)
+int mlfs_posix_access(const char *pathname, int mode)
 {
 	struct inode *inode;
 
@@ -157,7 +209,7 @@ int mlfs_posix_creat(char *path, uint16_t mode)
 	return mlfs_posix_open(path, O_CREAT|O_RDWR, mode);
 }
 
-int mlfs_posix_read(int fd, uint8_t *buf, int count)
+int mlfs_posix_read(int fd, void *buf, size_t count)
 {
 	int ret = 0;
 	struct file *f;
@@ -173,14 +225,14 @@ int mlfs_posix_read(int fd, uint8_t *buf, int count)
 		return -EBADF;
 	}
 
-	ret = mlfs_file_read(f, buf, count);
+	ret = mlfs_file_read(f, (uint8_t*)buf, count);
 
 	pthread_rwlock_unlock(&f->rwlock);
 
 	return ret;
 }
 
-int mlfs_posix_pread64(int fd, uint8_t *buf, int count, loff_t off)
+int mlfs_posix_pread64(int fd, void *buf, size_t count, loff_t off)
 {
 	int ret = 0;
 	struct file *f;
@@ -196,14 +248,14 @@ int mlfs_posix_pread64(int fd, uint8_t *buf, int count, loff_t off)
 		return -EBADF;
 	}
 
-	ret = mlfs_file_read_offset(f, buf, count, off);
+	ret = mlfs_file_read_offset(f, (uint8_t*)buf, count, off);
 
 	pthread_rwlock_unlock(&f->rwlock);
 
 	return ret;
 }
 
-int mlfs_posix_write(int fd, uint8_t *buf, size_t count)
+int mlfs_posix_write(int fd, void *buf, size_t count)
 {
 	int ret;
 	struct file *f;
@@ -219,7 +271,34 @@ int mlfs_posix_write(int fd, uint8_t *buf, size_t count)
 		return -EBADF;
 	}
 
-	ret = mlfs_file_write(f, buf, count);
+	ret = mlfs_file_write(f, (uint8_t*)buf, f->off, count);
+	// change offset here since mlfs_file_write doesn't touch f->off
+	if (ret > 0) {
+		f->off += ret;
+	}
+
+	pthread_rwlock_unlock(&f->rwlock);
+
+	return ret;
+}
+
+int mlfs_posix_pwrite64(int fd, void *buf, size_t count, loff_t off)
+{
+	int ret;
+	struct file *f;
+
+	f = &g_fd_table.open_files[fd];
+
+	pthread_rwlock_wrlock(&f->rwlock);
+
+	mlfs_assert(f);
+
+	if (f->ref == 0) {
+		panic("file descriptor is wrong\n");
+		return -EBADF;
+	}
+
+	ret = mlfs_file_write(f, (uint8_t*)buf, off, count);
 
 	pthread_rwlock_unlock(&f->rwlock);
 
@@ -280,11 +359,12 @@ int mlfs_posix_mkdir(char *path, mode_t mode)
 {
 	int ret = 0;
 	struct inode *inode;
+	uint8_t exist;
 
 	start_log_tx();
 
 	// return inode with holding ilock.
-	inode = mlfs_object_create(path, T_DIR);
+	inode = mlfs_object_create(path, T_DIR, &exist);
 
 	if (!inode) {
 		abort_log_tx();
@@ -293,11 +373,18 @@ int mlfs_posix_mkdir(char *path, mode_t mode)
 
 exit_mkdir:
 	commit_log_tx();
-	return ret;
+	if (exist) {
+		return -EEXIST;
+	}
+	else {
+		return ret;
+	}
 }
 
 int mlfs_posix_rmdir(char *path)
 {
+    return mlfs_posix_unlink(path);
+/*
 	int ret = 0;
 	struct inode *dir_inode;
 
@@ -322,6 +409,7 @@ int mlfs_posix_rmdir(char *path)
 exit_rmdir:
 	commit_log_tx();
 	return ret;
+*/
 }
 
 int mlfs_posix_stat(const char *filename, struct stat *stat_buf)
@@ -374,22 +462,25 @@ int mlfs_posix_fallocate(int fd, offset_t offset, offset_t len)
 
 	if (offset > f->ip->size)
 		panic("does not support sparse file\n");
+	else if (offset + len > f->ip->size) {
+		// only append 0 at the end of the file when
+		// offset <= file size && offset + len > file_size
+		// First, make sure offset and len start from the end of the file
+		len -= f->ip->size - offset;
+		offset = f->ip->size;
 
-	f->off = offset;
+		for (i = 0; i < len; i += ALLOC_IO_SIZE) {
+			io_size = _min(len - i, ALLOC_IO_SIZE);
 
-	for (i = 0; i < len; i += ALLOC_IO_SIZE) {
-		io_size = _min(len - i, ALLOC_IO_SIZE);
-
-		f->off += io_size;
-
-		ret = mlfs_file_write(f, (uint8_t *)falloc_buf, io_size);
-
-		if (ret < 0) {
-			panic("fail to do fallocate\n");
-			return ret;
+			ret = mlfs_file_write(f, (uint8_t *)falloc_buf, offset, io_size);
+			// keep accumulating offset, here should hold `ret == io_size'
+			offset += ret;
+			if (ret < 0) {
+				panic("fail to do fallocate\n");
+				return ret;
+			}
 		}
 	}
-
 	return 0;
 }
 
@@ -528,7 +619,7 @@ int mlfs_posix_rename(char *oldpath, char *newpath)
 }
 
 size_t mlfs_posix_getdents(int fd, struct linux_dirent *buf,
-		size_t nbytes, offset_t off)
+		size_t nbytes)
 {
 	struct file *f;
 	int bytes;
@@ -552,10 +643,10 @@ size_t mlfs_posix_getdents(int fd, struct linux_dirent *buf,
 	if (f->off >= f->ip->size)
 		return 0;
 
-	bytes = dir_get_entry(f->ip, buf, f->off);
+	bytes = dir_get_linux_dirent(f->ip, buf, f->off, nbytes);
 	f->off += bytes;
 
-	return sizeof(struct linux_dirent);
+	return bytes;
 }
 
 int mlfs_posix_fcntl(int fd, int cmd, void *arg)

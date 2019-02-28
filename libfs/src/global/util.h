@@ -123,9 +123,9 @@ static inline int collapse_name(const char *input, char *_output)
 //   get_next_name("a", name) = "", setting name = "a"
 //   get_next_name("", name) = get_next_name("////", name) = 0
 //
-static inline char* get_next_name(char *path, char *name)
+static inline const char* get_next_name(const char *path, char *name)
 {
-	char *s;
+	const char *s;
 	int len;
 
 	while (*path == '/')
@@ -148,10 +148,10 @@ static inline char* get_next_name(char *path, char *name)
 }
 
 /* /mlfs/aa/bb/c -> /mlfs/aa/bb (parent path) and c (name) */
-static inline char* get_parent_path(char *path, char *parent_path, char *name)
+static inline char* get_parent_path(const char *path, char *parent_path, char *name)
 {
 	int len = strlen(path);
-	char *_path = path;
+	const char *_path = path;
 
 	path += (len - 1);
 

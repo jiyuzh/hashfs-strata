@@ -31,6 +31,7 @@ extern "C" {
 
 // MLFS includes
 #include "global/global.h"
+#include "storage/storage.h"
 #include "balloc.h"
 #include "fs.h"
 

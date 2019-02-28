@@ -15,7 +15,6 @@ extern uint8_t g_hdd_dev;
 /**
  * Allocates all structures using the global values.
  */
-void mlfs_setup(void);
 
 #define g_n_devices			4
 #define g_root_dev			1
@@ -24,7 +23,7 @@ void mlfs_setup(void);
 #define g_block_size_shift	12UL
 // 2 is for microbenchmark
 // 6 is generally too big. but Redis AOF mode requires at least 6.
-#define g_max_blocks_per_operation 3
+#define g_max_blocks_per_operation 5
 #define g_hdd_block_size_bytes 4194304UL
 #define g_hdd_block_size_shift 22UL
 #define g_directory_shift  16UL
@@ -77,6 +76,7 @@ void mlfs_setup(void);
 // extern uint	g_max_extent_size_blks; /* filesystem size in blocks, old MAX_EXTENT_SIZE*/
 // extern uint	g_block_reservation_size_blks; /* reservation size in blocks, old BRESRV_SIZE*/
 // extern uint	g_fd_start; /* offset start of fds used by mlfs, old FD_START*/
+extern char pwd[MAX_PATH + 1];
 
 #ifdef __cplusplus
 }
