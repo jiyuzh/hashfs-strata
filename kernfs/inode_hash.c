@@ -60,7 +60,7 @@ void init_hash(struct super_block *sb) {
   printf("Initializing NVM hashtable... (sb = %p)\n", sb);
   paddr_t metadata_block = sb->ondisk->api_metadata_block;
   printf("metadata block %lu\n", metadata_block);
-  int ret = hash_fns.im_init(&strata_hash_spec, &hash_idx, &metadata_block);
+  int ret = hash_fns.im_init(&strata_idx_spec, &hash_idx, &metadata_block);
   if (ret) return;
   printf("Finished initializing NVM hashtable.\n");
 #endif

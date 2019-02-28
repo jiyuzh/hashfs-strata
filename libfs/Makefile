@@ -120,7 +120,7 @@ spdk: $(OBJ)
 
 mkfs: $(OBJ) libmlfs
 	$(CC) -o $(PREFIX)/mkfs.o -c src/mkfs/mkfs.c $(INCLUDES) $(MLFS_FLAGS)
-	$(CC) -g -o bin/mkfs.mlfs  $(PREFIX)/libmlfs.a $(INCLUDES) -L$(LIBSPDK_DIR) -lspdk $(LD_FLAGS) -DLIBFS -Wl,-rpath=$(abspath $(LIBSPDK_DIR)) -Wl,-rpath=$(abspath $(NVML_DIR)/nondebug)
+	$(CC) -g -o bin/mkfs.mlfs  $(PREFIX)/libmlfs.a $(INCLUDES) -L$(LIBSPDK_DIR) -lspdk $(LD_FLAGS) -DLIBFS -Wl,-rpath=$(abspath $(LIBSPDK_DIR)) -Wl,-rpath=$(abspath $(NVML_DIR)/nondebug) -ljson-c
 
 
 ########

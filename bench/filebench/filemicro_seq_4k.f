@@ -28,7 +28,7 @@
 
 set $dir=/mlfs
 #set $cached=false
-set $filesize=4g
+set $filesize=2g
 set $iosize=4k
 set $nthreads=1
 

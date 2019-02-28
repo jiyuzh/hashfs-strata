@@ -5,7 +5,8 @@ OBJS = syscalldb.o shim_init.o \
 	   shim_sys_fs.o \
 	   shim_syscalls.o \
 	   syscall_trace.o \
-	   shim_table.o
+	   shim_table.o \
+	   fd_map.o
 
 HEADERS = $(wildcard *.h)
 
@@ -18,8 +19,8 @@ NVML_DIR= $(abspath $(CUR_DIR)/../../libfs/lib/nvml/src/nondebug)
 #TRACE=-DSYS_TRACE
 TRACE=
 
-CFLAGS = -fno-strict-aliasing -Wall -fno-omit-frame-pointer -I$(LIBFS_SRC_DIR) #-Wno-initializer-overrides  
-#ASFLAGS = -Wa,--noexecstack -x assembler-with-cpp 
+CFLAGS = -fno-strict-aliasing -Wall -fno-omit-frame-pointer -I$(LIBFS_SRC_DIR) #-Wno-initializer-overrides
+#ASFLAGS = -Wa,--noexecstack -x assembler-with-cpp
 LDFLAGS =  -Wl,-rpath=$(abspath $(LIBFS_BUILD_DIR)) \
 		   -Wl,-rpath=$(abspath $(LIBSPDK_DIR)) \
 		   -Wl,-rpath=$(abspath $(NVML_DIR)) \

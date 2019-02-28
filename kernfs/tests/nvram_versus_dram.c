@@ -149,12 +149,52 @@ void dax_test(char *dev_name) {
     close(f);
 }
 
+void dax_test_seq(char *dev_name) {
+  int ret, f;
+  uint8_t *addr;
+  size_t size = 4 * KB;
+  struct time_stats wstats, rstats;
+
+  f = open(dev_name, O_RDWR);
+  if (f < 0) {
+    perror("dax test (open)");
+    goto end;
+  }
+
+  addr = (uint8_t*)mmap(NULL, DEVSIZE, PROT_READ | PROT_WRITE, MAP_SHARED, f, 0);
+
+  if (addr == MAP_FAILED) {
+    perror("dax test (mmap)");
+    goto end;
+  }
+
+  int ntrials = 100;
+  time_stats_init(&wstats, ntrials);
+
+  //write_mem(addr, size, &wstats);
+  for (int i = 0; i < ntrials; ++i) {
+      read_mem(addr, size, &wstats);
+  }
+  time_stats_print(&wstats, "dax_test (hot)");
+
+  time_stats_init(&rstats, ntrials);
+  size_t smaller = size;
+  for (int i = 0; i < ntrials; ++i) {
+      size_t off = rand() % (DEVSIZE - smaller);
+      read_mem(addr + (off), smaller, &rstats);
+  }
+  time_stats_print(&rstats, "dax_test (spread)");
+
+  end:
+    close(f);
+}
+
 int main(char argc, char **argv) {
   set_affin();
 
   //mem_test();
 
-  dax_test("/dev/dax1.0");
+  dax_test("/dev/dax1.4");
 
   return 0;
 }

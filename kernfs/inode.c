@@ -83,6 +83,13 @@ int write_ondisk_inode(uint8_t dev, struct inode *ip)
 		bh->b_offset = sizeof(struct dinode) * (ip->inum % IPB);
 		ret = mlfs_write(bh);
 		mlfs_io_wait(dev, 0);
+
+#ifdef USE_API_FOR_EXTENTS
+        if (ip->ext_idx) {
+            FN(ip->ext_idx, im_print_stats,
+               ip->ext_idx);
+        }
+#endif
 	} else {
 		bh->b_size = g_block_size_bytes;
 		bh->b_data = mlfs_zalloc(g_block_size_bytes);

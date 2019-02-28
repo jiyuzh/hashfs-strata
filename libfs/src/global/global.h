@@ -87,5 +87,7 @@ extern char pwd[MAX_PATH + 1];
 #else
 #define HASHCACHE
 #endif
+
 #undef EXTCACHE
+
 #endif

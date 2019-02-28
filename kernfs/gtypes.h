@@ -111,7 +111,7 @@ typedef void            (*GFreeFunc)            (gpointer       data);
 typedef const gchar *   (*GTranslateFunc)       (const gchar   *str,
 						 gpointer       data);
 
-
+#if 0
 /* Define some mathematical constants that aren't available
  * symbolically in some strict ISO C implementations.
  *
@@ -530,5 +530,6 @@ struct _GTimeVal
 #    define GLIB_VAR _GLIB_EXTERN
 #  endif /* !G_PLATFORM_WIN32 */
 #endif /* GLIB_VAR */
+#endif
 
 #endif /* __G_TYPES_MOD_H__ */

@@ -8,6 +8,8 @@
 #include "ds/bitmap.h"
 #include "ds/khash.h"
 
+#include "file_indexing.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -268,6 +270,9 @@ struct inode {
 	struct dirent_data *de_cache;
 	uint32_t n_de_cache_entry;
 
+    /* for file indexing API */
+    idx_struct_t *ext_idx;
+
 	// kernfs only
 	struct rb_node i_rb_node;      // rb node link for s_dirty_root.
 	struct rb_root i_dirty_dblock; // rb root for dirty directory block.
@@ -289,6 +294,7 @@ struct inode {
 	struct db_handle *i_db;
 	int (*i_writeback)(struct inode *inode);
 	///////////////////////////////////////////////////////////////////
+
 };
 
 typedef struct inode inode_t;

@@ -99,32 +99,32 @@ typedef struct bmap_request {
 // statistics
 typedef struct mlfs_libfs_stats {
 	uint64_t digest_wait_tsc;
-	uint32_t digest_wait_nr;
+	uint64_t digest_wait_nr;
 	uint64_t l0_search_tsc;
-	uint32_t l0_search_nr;
+	uint64_t l0_search_nr;
 	uint64_t tree_search_tsc;
-	uint32_t tree_search_nr;
+	uint64_t tree_search_nr;
 	uint64_t log_write_tsc;
-	uint32_t loghdr_write_nr;
+	uint64_t loghdr_write_nr;
 	uint64_t loghdr_write_tsc;
-	uint32_t log_write_nr;
+	uint64_t log_write_nr;
 	uint64_t log_commit_tsc;
-	uint32_t log_commit_nr;
+	uint64_t log_commit_nr;
 	uint64_t read_data_tsc;
 	stats_dist_t read_data_bytes;
 	uint64_t dir_search_tsc;
-	uint32_t dir_search_nr_hit;
-	uint32_t dir_search_nr_miss;
-	uint32_t dir_search_nr_notfound;
+	uint64_t dir_search_nr_hit;
+	uint64_t dir_search_nr_miss;
+	uint64_t dir_search_nr_notfound;
 	uint64_t ialloc_tsc;
-	uint32_t ialloc_nr;
-	uint32_t tmp_nr;
+	uint64_t ialloc_nr;
+	uint64_t tmp_nr;
 	uint64_t tmp_tsc;
 	uint64_t bcache_search_tsc;
-	uint32_t bcache_search_nr;
-	uint32_t dir_search_ext_nr;
+	uint64_t bcache_search_nr;
+	uint64_t dir_search_ext_nr;
 	uint64_t dir_search_ext_tsc;
-	uint32_t path_storage_nr;
+	uint64_t path_storage_nr;
 	uint64_t path_storage_tsc;
 	stats_dist_t read_per_index;
   // hash table stuff

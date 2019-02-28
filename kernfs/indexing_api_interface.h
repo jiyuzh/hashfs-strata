@@ -10,14 +10,8 @@ extern "C" {
 #include <string.h>
 #include "shared.h"
 #include "fs.h"
-#include "extents.h"
 #include "global/util.h"
-#include "ghash.h"
-#ifdef KERNFS
 #include "balloc.h"
-#include "migrate.h"
-#endif
-
 
 #include "file_indexing.h"
 
@@ -38,7 +32,7 @@ int get_dev_info(device_info_t* di);
 
 extern mem_man_fns_t strata_mem_man;
 extern callback_fns_t strata_callbacks;
-extern idx_spec_t strata_hash_spec;
+extern idx_spec_t strata_idx_spec;
 
 #ifdef __cplusplus
 };

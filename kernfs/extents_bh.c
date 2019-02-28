@@ -39,6 +39,9 @@ out:
 struct buffer_head *fs_get_bh(uint8_t dev, mlfs_fsblk_t block,
 		int *ret)
 {
+#if !defined(EXTCACHE)
+    return fs_bread(dev, block, ret);
+#endif
 	int err = 0;
 	struct buffer_head *bh;
 	bh = sb_getblk(dev, block);

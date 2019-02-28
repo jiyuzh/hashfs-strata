@@ -10,6 +10,7 @@
 #if !defined(HASHTABLE)
 #undef GLOBAL_EXTENT_TREES
 #endif
+#undef GLOBAL_EXTENT_TREES
 
 uint64_t size_of_bitmap(mlfs_fsblk_t nrblocks)
 {

@@ -24,7 +24,7 @@
 #
 
 set $dir=/mlfs
-set $filesize=4g
+set $filesize=2g
 set $iosize=4k
 set $nthreads=1
 set $workingset=0
@@ -34,7 +34,7 @@ define file name=largefile1,path=$dir,size=$filesize,prealloc,reuse
 
 define process name=rand-read,instances=1
 {
-  thread name=rand-thread,memsize=5m,instances=$nthreads
+  thread name=rand-thread,memsize=10m,instances=$nthreads
   {
     flowop read name=rand-read1,filename=largefile1,iosize=$iosize,random,workingset=$workingset,directio=$directio
   }
@@ -42,4 +42,4 @@ define process name=rand-read,instances=1
 
 echo "Random Read Version 3.0 personality successfully loaded"
 
-run 60
+run 20
