@@ -46,8 +46,8 @@ volatile struct log_superblock *g_log_sb;
 int g_sock_fd;
 static struct sockaddr_un g_srv_addr, g_addr;
 
-static void read_log_superblock(struct log_superblock *log_sb);
-static void write_log_superblock(struct log_superblock *log_sb);
+static void read_log_superblock(volatile struct log_superblock *log_sb);
+static void write_log_superblock(volatile struct log_superblock *log_sb);
 static void commit_log(void);
 static void digest_log(void);
 
@@ -78,13 +78,13 @@ void init_log(int dev)
 	g_fs_log->dev = dev;
 	g_fs_log->nloghdr = 0;
 
-	ret = pipe(g_fs_log->digest_fd);
+	ret = pipe(((struct fs_log*)g_fs_log)->digest_fd);
 	if (ret < 0)
 		panic("cannot create pipe for digest\n");
 
 	read_log_superblock(g_log_sb);
 
-	g_fs_log->log_sb = g_log_sb;
+	g_fs_log->log_sb = (struct log_superblock*)g_log_sb;
 
 	// Assuming all logs are digested by recovery.
 	g_fs_log->next_avail_header = disk_sb[dev].log_start + 1; // +1: log superblock
@@ -141,7 +141,7 @@ void shutdown_log(void)
 	unlink(g_addr.sun_path);
 }
 
-static void read_log_superblock(struct log_superblock *log_sb)
+static void read_log_superblock(volatile struct log_superblock *log_sb)
 {
 	int ret;
 	struct buffer_head *bh;
@@ -159,7 +159,7 @@ static void read_log_superblock(struct log_superblock *log_sb)
 	return;
 }
 
-static void write_log_superblock(struct log_superblock *log_sb)
+static void write_log_superblock(volatile struct log_superblock *log_sb)
 {
 	int ret;
 	struct buffer_head *bh;
@@ -740,6 +740,7 @@ static int persist_log_file(struct logheader_meta *loghdr_meta,
 			ret = check_write_log_invalidation(fc_block);
 			// fc_block is invalid. update it
 			if (ret) {
+				//FIXME: what if async digest happens after checking log invalidation but before finish using log value
 				if (!check_read_log_invalidation(fc_block) && fc_block->start_offset < offset_in_block) { // patch data from Read Only log area to this new partial update log block
 
 					uint8_t buffer[g_block_size_bytes];
@@ -798,10 +799,10 @@ static int persist_log_file(struct logheader_meta *loghdr_meta,
 		// case 1. the IO fits into one block.
 		if (offset_in_block + size <= g_block_size_bytes) {
 			io_size = size;
-		// case 2. the IO incurs two blocks write (unaligned).
-    } else {
+			// case 2. the IO incurs two blocks write (unaligned).
+		} else {
 			panic("do not support this case yet\n");
-    }
+		}
 
 		log_bh->b_data = loghdr_meta->io_vec[n_iovec].base;
 		log_bh->b_size = io_size;

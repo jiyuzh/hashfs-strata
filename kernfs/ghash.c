@@ -225,7 +225,6 @@ g_hash_table_set_shift_from_size (GHashTable *hash_table, int size) {
  *
  * Returns: index of the described node
  */
-__attribute__((optimize("unroll-loops")))
 static inline uint32_t
 g_hash_table_lookup_node (GHashTable    *hash_table,
                           mlfs_fsblk_t   key,

@@ -18,7 +18,7 @@ static void install_log_group(struct logheader *loghdr,
 		addr_t hdr_blkno);
 */
 
-extern unsigned char initialized;
+extern unsigned char strata_initialized;
 
 //utils
 int bms_search(char *txt, char *pat);

@@ -27,7 +27,7 @@ DEFINE_SHIM_SYSCALL (pread64, 4, shim_do_pread64, size_t, int, fd, char *, buf,
 DEFINE_SHIM_SYSCALL (write, 3, shim_do_write, size_t, int, fd, void *,
                      buf, size_t, count)
 
-DEFINE_SHIM_SYSCALL (pwrite64, 4, shim_do_pwrite64, size_t, int, fd, char *,
+DEFINE_SHIM_SYSCALL (pwrite64, 4, shim_do_pwrite64, size_t, int, fd, void *,
                      buf,  size_t, count, loff_t, pos)
 
 DEFINE_SHIM_SYSCALL (close, 1, shim_do_close, int, int, fd)
@@ -85,6 +85,7 @@ DEFINE_SHIM_SYSCALL (getdents, 3, shim_do_getdents, size_t, int, fd,
 DEFINE_SHIM_SYSCALL (getdents64, 3, shim_do_getdents64, size_t, int, fd,
 		struct linux_dirent64 *, buf, size_t, count)
 
+DEFINE_SHIM_SYSCALL (chdir, 1, shim_do_chdir, int, const char *, filename)
 /*
 DEFINE_SHIM_SYSCALL (readv, 3, shim_do_readv, ssize_t, int, fd,
                      const struct iovec *, vec, int, vlen)
@@ -92,8 +93,6 @@ DEFINE_SHIM_SYSCALL (readv, 3, shim_do_readv, ssize_t, int, fd,
 DEFINE_SHIM_SYSCALL (writev, 3, shim_do_writev, ssize_t, int, fd,
                      const struct iovec *, vec, int, vlen)
 DEFINE_SHIM_SYSCALL (getcwd, 2, shim_do_getcwd, int, char *, buf, size_t, size)
-
-DEFINE_SHIM_SYSCALL (chdir, 1, shim_do_chdir, int, const char *, filename)
 
 DEFINE_SHIM_SYSCALL (fchdir, 1, shim_do_fchdir, int, int, fd)
 DEFINE_SHIM_SYSCALL (symlink, 2, shim_do_symlink, int, const char *, old, const char *, new)

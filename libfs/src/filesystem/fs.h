@@ -247,8 +247,12 @@ static inline struct fcache_block *fcache_find(struct inode *inode, offset_t key
 	khiter_t k;
 	struct fcache_block *fc_block = NULL;
 
+	if (inode->fcache_hash == NULL) {
+		pthread_rwlock_wrlock(&inode->fcache_rwlock);
+		inode->fcache_hash = kh_init(fcache);
+		pthread_rwlock_unlock(&inode->fcache_rwlock);
+	}
 	pthread_rwlock_rdlock(&inode->fcache_rwlock);
-
 	k = kh_get(fcache, inode->fcache_hash, key);
 	if (k == kh_end(inode->fcache_hash)) {
 		pthread_rwlock_unlock(&inode->fcache_rwlock);
@@ -284,6 +288,10 @@ static inline struct fcache_block *fcache_alloc_add(struct inode *inode,
 	INIT_LIST_HEAD(&fc_block->l);
 
 	pthread_rwlock_wrlock(&inode->fcache_rwlock);
+
+	if (inode->fcache_hash == NULL) {
+		inode->fcache_hash = kh_init(fcache);
+	}
 
 	k = kh_put(fcache, inode->fcache_hash, key, &ret);
 	if (ret < 0)
@@ -349,6 +357,7 @@ static inline int fcache_del_all(struct inode *inode)
 
 	mlfs_debug("destroy hash %u\n", inode->inum);
 	kh_destroy(fcache, inode->fcache_hash);
+	inode->fcache_hash = NULL;
 	return 0;
 }
 // UTHash version
@@ -570,13 +579,13 @@ int bmap(struct inode *ip, struct bmap_request *bmap_req);
 
 int dir_check_entry_fast(struct inode *dir_inode);
 struct inode* dir_lookup(struct inode*, char*, offset_t *);
-int dir_get_entry(struct inode *dir_inode, struct linux_dirent *buf, offset_t off);
+int dir_get_linux_dirent(struct inode *dir_inode, struct linux_dirent *buf, offset_t off, size_t nbytes);
 int dir_add_entry(struct inode *inode, char *name, uint32_t inum);
 int dir_remove_entry(struct inode *inode,char *name, uint32_t inum);
 int dir_change_entry(struct inode *dir_inode, char *oldname, char *newname);
 int namecmp(const char*, const char*);
-struct inode* namei(char*);
-struct inode* nameiparent(char*, char*);
+struct inode* namei(const char*);
+struct inode* nameiparent(const char*, char*);
 int readi_unopt(struct inode*, uint8_t *, offset_t, uint32_t);
 int readi(struct inode*, uint8_t *, offset_t, uint32_t);
 void stati(struct inode*, struct stat *);
@@ -592,7 +601,7 @@ void dbg_dump_inode(uint8_t dev, uint32_t inum);
 void dbg_check_inode(void *data);
 void dbg_check_dir(void *data);
 void dbg_dir_dump(uint8_t dev, uint32_t inum);
-void dbg_path_walk(char *path);
+void dbg_path_walk(const char *path);
 
 // mempool slab for libfs
 extern ncx_slab_pool_t *mlfs_slab_pool;

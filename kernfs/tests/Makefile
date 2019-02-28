@@ -71,7 +71,7 @@ scrub: clean
 	@rm -rfv *.txt *.out *.log
 
 time_stat.o: time_stat.c
-	$(CC) time_stat.c -c -o time_stat.o -D_BSD_SOURCE
+	$(CC) time_stat.c -c -o time_stat.o
 
 nvram_versus_dram: nvram_versus_dram.c time_stat.o
 	gcc $^ -o $@ -lm

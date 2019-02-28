@@ -83,7 +83,7 @@ uint8_t *get_dirent_block(struct inode *dir_inode, offset_t offset)
 	mlfs_assert(dir_inode->itype == T_DIR);
 	mlfs_assert(offset <= dir_inode->size + sizeof(struct mlfs_dirent));
 
-	d_block = dcache_find(dev, dir_inode->inum, offset, g_fs_log);
+	d_block = dcache_find(dev, dir_inode->inum, offset, (struct fs_log*)g_fs_log);
 
 	if (d_block)
 		return d_block->dirent_array;
@@ -93,7 +93,7 @@ uint8_t *get_dirent_block(struct inode *dir_inode, offset_t offset)
 		if (!(dir_inode->dinode_flags & DI_VALID))
 			panic("dir_inode is not synchronized with on-disk inode\n");
 
-		d_block = dcache_alloc_add(dev, dir_inode->inum, 0, NULL, 0, g_fs_log);
+		d_block = dcache_alloc_add(dev, dir_inode->inum, 0, NULL, 0, (struct fs_log*)g_fs_log);
 	} else {
 		bmap_req_t bmap_req = {
 			.dev = dev,
@@ -114,7 +114,7 @@ uint8_t *get_dirent_block(struct inode *dir_inode, offset_t offset)
 
 		// requested directory block is not allocated in kernfs.
 		if (bmap_req.blk_count_found == 0) {
-			d_block = dcache_alloc_add(dev, dir_inode->inum, offset, NULL, 0, g_fs_log);
+			d_block = dcache_alloc_add(dev, dir_inode->inum, offset, NULL, 0, (struct fs_log*)g_fs_log);
 			mlfs_assert(d_block);
 		} else {
 			uint8_t *data = mlfs_alloc(g_block_size_bytes);
@@ -128,7 +128,7 @@ uint8_t *get_dirent_block(struct inode *dir_inode, offset_t offset)
 			mlfs_io_wait(dir_inode->dev, 1);
 
 			d_block = dcache_alloc_add(dev, dir_inode->inum,
-					offset, data, bmap_req.block_no, g_fs_log);
+					offset, data, bmap_req.block_no, (struct fs_log*)g_fs_log);
 
 			mlfs_assert(d_block);
 		}
@@ -269,7 +269,11 @@ struct inode* dir_lookup(struct inode *dir_inode, char *name, offset_t *poff)
 
 /* linux_dirent must be identical to gblic kernel_dirent
  * defined in sysdeps/unix/sysv/linux/getdents.c */
-int dir_get_entry(struct inode *dir_inode, struct linux_dirent *buf, offset_t off)
+/*
+ * Known Bug FIXME
+ * will only return the first directory block
+ */
+int dir_get_linux_dirent(struct inode *dir_inode, struct linux_dirent *buf, offset_t off, size_t nbytes)
 {
 	struct inode *ip;
 	uint8_t *dirent_array;
@@ -278,13 +282,28 @@ int dir_get_entry(struct inode *dir_inode, struct linux_dirent *buf, offset_t of
 	de = get_dirent(dir_inode, off);
 
 	mlfs_assert(de);
+    offset_t buf_off = 0, de_off = off % g_block_size_bytes;
+    while (de_off < g_block_size_bytes) {
+        if (de->inum != 0) {
+            size_t namelen = strlen(de->name);
+            size_t next_entry_size = sizeof(struct linux_dirent) + namelen;
+            if (buf_off + next_entry_size < nbytes) {
+                buf->d_ino = de->inum;
+                buf->d_off = de_off;
+                buf->d_reclen = next_entry_size;
+                strncpy(buf->d_name, de->name, DIRSIZ);
+                buf = (struct linux_dirent*)(((uint8_t*)buf) + buf->d_reclen);
+                buf_off += next_entry_size;
+            }
+            else {
+                break;
+            }
+        }
+        de_off += sizeof(struct mlfs_dirent);
+        de++;
+    }
 
-	buf->d_ino = de->inum;
-	buf->d_off = (off/sizeof(*de)) * sizeof(struct linux_dirent);
-	buf->d_reclen = sizeof(struct linux_dirent);
-	memmove(buf->d_name, de->name, DIRSIZ);
-
-	return sizeof(struct mlfs_dirent);
+    return buf_off;
 }
 
 /* Workflows when renaming to existing one (newname exists in the directory).
@@ -520,6 +539,7 @@ empty_found:
 	}
 
 	strncpy(de->name, name, DIRSIZ);
+    de->name[DIRSIZ - 1] = 0; // make sure null-terminated
 	de->inum = inum;
 
 	//dir_inode->size += sizeof(struct mlfs_dirent);
@@ -558,7 +578,7 @@ empty_found:
 // If parent != 0, return the inode for the parent and copy the final
 // path element into name, which must have room for DIRSIZ bytes.
 // Must be called inside a transaction since it calls iput().
-static struct inode* namex(char *path, int parent, char *name)
+static struct inode* namex(const char *path, int parent, char *name)
 {
 	struct inode *ip, *next;
 
@@ -598,7 +618,7 @@ static struct inode* namex(char *path, int parent, char *name)
 	return ip;
 }
 
-struct inode* namei(char *path)
+struct inode* namei(const char *path)
 {
 #if 0 // This is for debugging.
 	struct inode *inode, *_inode;
@@ -637,7 +657,7 @@ struct inode* namei(char *path)
 #endif
 }
 
-struct inode* nameiparent(char *path, char *name)
+struct inode* nameiparent(const char *path, char *name)
 {
 #if 0 // This is for debugging.
 	struct inode *inode, *_inode;
@@ -755,7 +775,7 @@ void dbg_dump_dir(uint8_t dev, uint32_t inum)
 }
 
 // Walking through to path and snapshoting dentry and inode.
-void dbg_path_walk(char *path)
+void dbg_path_walk(const char *path)
 {
 	struct inode *inode, *next_inode;
 	char name[DIRSIZ];

@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <assert.h>
 
 #include <mlfs/mlfs_interface.h>
 #include <posix/posix_interface.h>
@@ -21,13 +22,16 @@
  * return : %rax
  */
 
-#define PATH_BUF_SIZE 4095
+#define PATH_BUF_SIZE 1024
 #define MLFS_PREFIX (char *)"/mlfs"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+static char shim_pwd[PATH_BUF_SIZE];
 
+// _output can be uninitialized
+// return value: output length?
 static int collapse_name(const char *input, char *_output)
 {
 	char *output = _output;
@@ -43,7 +47,7 @@ static int collapse_name(const char *input, char *_output)
 				while (*(++input) == '/');
 				while(--output != _output && *(output - 1) != '/');
 				continue;
-			} else if (input[1] == '/') {
+			} else if (input[1] == '/' || input[1] == 0) {
 				/* A . component */
 				input += 1;
 				while (*(++input) == '/');
@@ -53,44 +57,128 @@ static int collapse_name(const char *input, char *_output)
 
 		/* Copy from here up until the first char of the next component */
 		while(1) {
+			if (*input == 0) {
+				*output = 0;
+				return output - _output;
+			}
 			*output++ = *input++;
 			if (*input == '/') {
 				*output++ = '/';
 				/* Consume any extraneous separators */
 				while (*(++input) == '/');
 				break;
-			} else if (*input == 0) {
-				*output = 0;
-				return output - _output;
 			}
 		}
 	}
 }
 
-int shim_do_open(char *filename, int flags, mode_t mode)
+// path is a potentially relative path
+// path_buf and dest_path are char buffer, whose size is buf_size
+// return value: a pointer to absolute path
+//     it will be path_buf if already absolute
+//     or dest_path, which is shim_pwd + path
+static char * get_absolute_path(const char *path, char *path_buf, char *dest_path, size_t buf_size) {
+    if (path == NULL || path_buf == NULL || dest_path == NULL) {
+        return NULL;
+    }
+    else {
+        collapse_name(path, path_buf);
+        if (*path_buf == '/') {
+            return path_buf;
+        }
+        else {
+            strncpy(dest_path, shim_pwd, buf_size);
+            strncat(dest_path, path_buf, buf_size - strlen(dest_path));
+            return dest_path;
+        }
+    }
+}
+
+#ifdef MIRROR_SYSCALL
+#define MLFS_FD_MAP_SIZE 1024
+static int fd_map[MLFS_FD_MAP_SIZE];
+static char fn_map[MLFS_FD_MAP_SIZE][PATH_BUF_SIZE];
+#define MLFS_RET mlfs_ret
+#define MLFS_RET_DEF int mlfs_ret
+#define MLFS_FD fd_map[fd]
+#define MLFS_FNAME fn_map[fd]
+#define MLFS_BUF mlfs_buf
+#define MLFS_BUF_DEF(type, count) type mlfs_buf = malloc(count)
+#define CMP_SUBFIELD(stat1, stat2, field_fmt, field, cmp) do {\
+		if (!(cmp(stat1->field, stat2->field))) {\
+            syscall_warn(#field " ("#stat1")" field_fmt " != " "("#stat2")" field_fmt "\n", stat1->field, stat2->field);\
+		}} while(0)
+#define NUM_CMP(a,b) (a == b)
+#define STRING_CMP(a,b) (!strcmp(a,b))
+#define ST_MODE_CMP(a,b) ((a&S_IFMT) == (b&S_IFMT))
+#define CMP_STAT(stat1, stat2)\
+		CMP_SUBFIELD(stat1, stat2, "%u", st_mode, ST_MODE_CMP);\
+		CMP_SUBFIELD(stat1, stat2, "%ld", st_size, NUM_CMP)
+/*		CMP_SUBFIELD(stat1, stat2, "%lu", st_dev, NUM_CMP);\
+		CMP_SUBFIELD(stat1, stat2, "%lu", st_ino, NUM_CMP);\
+		CMP_SUBFIELD(stat1, stat2, "%lu", st_nlink, NUM_CMP);\
+		CMP_SUBFIELD(stat1, stat2, "%u", st_uid, NUM_CMP);\
+		CMP_SUBFIELD(stat1, stat2, "%u", st_gid, NUM_CMP);\
+		CMP_SUBFIELD(stat1, stat2, "%lu", st_rdev, NUM_CMP);\
+		CMP_SUBFIELD(stat1, stat2, "%lu", st_blksize, NUM_CMP);\
+		CMP_SUBFIELD(stat1, stat2, "%lu", st_blocks, NUM_CMP)*/
+#else
+#define MLFS_RET ret
+#define MLFS_RET_DEF
+#define MLFS_FD fd
+#define MLFS_BUF buf
+#define MLFS_BUF_DEF(type, count)
+#endif
+int shim_do_chdir(const char *pathname)
 {
-	int ret;
-	char path_buf[PATH_BUF_SIZE];
-
-	memset(path_buf, 0, PATH_BUF_SIZE);
-	collapse_name(filename, path_buf);
-
-	if (strncmp(path_buf, MLFS_PREFIX, 5) != 0){
-		//printf("%s : will not go to libfs\n", path_buf);
-		;
-		// fall through
-	} else {
-		ret = mlfs_posix_open(filename, flags, mode);
-
-		if (ret != -1 && !check_mlfs_fd(ret)) {
-			printf("incorrect fd %d: file %s\n", ret, filename);
-		}
-
-		syscall_trace(__func__, ret, 3, filename, flags, mode);
-
-		return ret;
+    int ret;
+    char path_buf[PATH_BUF_SIZE], dest_path[PATH_BUF_SIZE], *fullpath;
+    fullpath = get_absolute_path(pathname, path_buf, dest_path, PATH_BUF_SIZE);
+    uint8_t in_mlfs = (strncmp(fullpath, MLFS_PREFIX, 5) == 0);
+#ifdef MIRROR_SYSCALL
+	if (1) {
+#else
+	if (!in_mlfs) {
+#endif
+	asm("mov %1, %%rdi;"
+		"mov %2, %%eax;"
+		"syscall;\n\t"
+		"mov %%eax, %0;\n\t"
+		:"=r"(ret)
+		:"m"(fullpath), "r"(__NR_chdir)
+		:"rax", "rdi"
+	   );
 	}
 
+    if (in_mlfs) {
+		MLFS_RET_DEF;
+        MLFS_RET = mlfs_posix_chdir(fullpath);
+        syscall_dump("%d", MLFS_RET, "%s", fullpath);
+#ifdef MIRROR_SYSCALL
+		if (ret != MLFS_RET) {
+            syscall_abort(" path %s, inconsistent return value: ret %d, mlfs_ret %d\n",
+                    fullpath, ret, MLFS_RET);
+		}
+#endif
+    }
+
+    if (ret == 0) {
+        strncpy(shim_pwd, fullpath, PATH_BUF_SIZE);
+    }
+    return ret;
+}
+
+int shim_do_open(const char *filename, int flags, mode_t mode)
+{
+	int ret;
+    char path_buf[PATH_BUF_SIZE], dest_path[PATH_BUF_SIZE], *fullpath;
+    fullpath = get_absolute_path(filename, path_buf, dest_path, PATH_BUF_SIZE);
+    uint8_t in_mlfs = (strncmp(fullpath, MLFS_PREFIX, 5) == 0);
+#ifdef MIRROR_SYSCALL
+	if (1) {
+#else
+	if (!in_mlfs) {
+#endif
 	asm("mov %1, %%rdi;"
 		"mov %2, %%esi;"
 		"mov %3, %%edx;"
@@ -98,44 +186,39 @@ int shim_do_open(char *filename, int flags, mode_t mode)
 		"syscall;\n\t"
 		"mov %%eax, %0;\n\t"
 		:"=r"(ret)
-		:"r"(filename), "r"(flags), "r"(mode), "r"(__NR_open)
+		:"r"(fullpath), "r"(flags), "r"(mode), "r"(__NR_open)
 		:"rax", "rdi", "rsi", "rdx"
 		);
+	}
 
-	return ret;
+	if (in_mlfs) {	
+		MLFS_RET_DEF;
+        MLFS_RET = mlfs_posix_open(fullpath, flags, mode);
+        syscall_dump("%d", MLFS_RET, "%s", fullpath, "%d", flags, "%x", mode);
+
+		if (MLFS_RET >= 0 && !check_mlfs_fd(MLFS_RET)) {
+            syscall_warn("incorrect fd %d: path %s\n", MLFS_RET, fullpath);
+		}
+#ifdef MIRROR_SYSCALL
+		fd_map[ret] = MLFS_RET;
+		strncpy(fn_map[ret], fullpath, PATH_BUF_SIZE);
+#endif
+	}
+
+    return ret;
 }
 
 int shim_do_openat(int dfd, const char *filename, int flags, mode_t mode)
 {
 	int ret;
-	char path_buf[PATH_BUF_SIZE];
-
-	memset(path_buf, 0, PATH_BUF_SIZE);
-	collapse_name(filename, path_buf);
-
-	if (strncmp(path_buf, MLFS_PREFIX, 5) != 0){
-		//printf("%s : will not go to libfs\n", path_buf);
-		;
-		// fall through
-	} else {
-		//printf("%s -> MLFS \n", path_buf);
-
-		if (dfd != AT_FDCWD) {
-			fprintf(stderr, "Only support AT_FDCWD\n");
-			exit(-1);
-		}
-
-		ret = mlfs_posix_open((char *)filename, flags, mode);
-
-		if (ret != -1 && !check_mlfs_fd(ret)) {
-			printf("incorrect fd %d: file %s\n", ret, filename);
-		}
-
-		syscall_trace(__func__, ret, 4, filename, dfd, flags, mode);
-
-		return ret;
-	}
-
+    char path_buf[PATH_BUF_SIZE], dest_path[PATH_BUF_SIZE], *fullpath;
+    fullpath = get_absolute_path(filename, path_buf, dest_path, PATH_BUF_SIZE);
+    uint8_t in_mlfs = (strncmp(fullpath, MLFS_PREFIX, 5) == 0);
+#ifdef MIRROR_SYSCALL
+	if (1) {
+#else
+	if (!in_mlfs) {
+#endif
 	asm("mov %1, %%edi;"
 		"mov %2, %%rsi;"
 		"mov %3, %%edx;"
@@ -144,9 +227,27 @@ int shim_do_openat(int dfd, const char *filename, int flags, mode_t mode)
 		"syscall;\n\t"
 		"mov %%eax, %0;\n\t"
 		:"=r"(ret)
-		:"r"(dfd),"r"(filename), "r"(flags), "r"(mode), "r"(__NR_openat)
+		:"r"(dfd),"r"(fullpath), "r"(flags), "r"(mode), "r"(__NR_openat)
 		:"rax", "rdi", "rsi", "rdx", "r10"
 		);
+	}
+
+    if (in_mlfs) {
+		MLFS_RET_DEF;
+		if (dfd != AT_FDCWD) {
+            syscall_abort("%s\n", "Only support AT_FDCWD");
+		}
+        MLFS_RET = mlfs_posix_open(fullpath, flags, mode);
+        syscall_dump("%d", MLFS_RET, "%s", fullpath, "%d", dfd, "%d", flags, "%x", mode);
+
+		if (MLFS_RET >= 0 && !check_mlfs_fd(MLFS_RET)) {
+            syscall_warn("incorrect fd %d: path %s\n", MLFS_RET, fullpath);
+		}
+#ifdef MIRROR_SYSCALL
+		fd_map[ret] = MLFS_RET;
+		strncpy(fn_map[ret], fullpath, PATH_BUF_SIZE);
+#endif
+    }
 
 	return ret;
 }
@@ -154,36 +255,38 @@ int shim_do_openat(int dfd, const char *filename, int flags, mode_t mode)
 int shim_do_creat(char *filename, mode_t mode)
 {
 	int ret;
-	char path_buf[PATH_BUF_SIZE];
-
-	memset(path_buf, 0, PATH_BUF_SIZE);
-	collapse_name(filename, path_buf);
-
-	if (strncmp(path_buf, MLFS_PREFIX, 5) != 0){
-		//printf("%s : will not go to libfs\n", path_buf);
-		;
-		// fall through
-	} else {
-		ret = mlfs_posix_creat(filename, mode);
-
-		if (!check_mlfs_fd(ret)) {
-			printf("incorrect fd %d\n", ret);
-		}
-
-		syscall_trace(__func__, ret, 2, filename, mode);
-
-		return ret;
-	}
-
+    char path_buf[PATH_BUF_SIZE], dest_path[PATH_BUF_SIZE], *fullpath;
+    fullpath = get_absolute_path(filename, path_buf, dest_path, PATH_BUF_SIZE);
+    uint8_t in_mlfs = (strncmp(fullpath, MLFS_PREFIX, 5) == 0);
+#ifdef MIRROR_SYSCALL
+	if (1) {
+#else
+	if (!in_mlfs) {
+#endif
 	asm("mov %1, %%rdi;"
 		"mov %2, %%esi;"
 		"mov %3, %%eax;"
 		"syscall;\n\t"
 		"mov %%eax, %0;\n\t"
 		:"=r"(ret)
-		:"m"(filename), "r"(mode), "r"(__NR_creat)
+		:"m"(fullpath), "r"(mode), "r"(__NR_creat)
 		:"rax", "rdi", "rsi"
 		);
+	}
+
+	if (in_mlfs) {
+		MLFS_RET_DEF;
+		MLFS_RET = mlfs_posix_creat(fullpath, mode);
+        syscall_dump("%d", MLFS_RET, "%s", fullpath, "%x", mode);
+
+		if (MLFS_RET >= 0 && !check_mlfs_fd(MLFS_RET)) {
+            syscall_warn("incorrect fd %d: path %s\n", MLFS_RET, fullpath);
+		}
+#ifdef MIRROR_SYSCALL
+		fd_map[ret] = MLFS_RET;
+		strncpy(fn_map[ret], fullpath, PATH_BUF_SIZE);
+#endif
+	}
 
 	return ret;
 }
@@ -191,24 +294,46 @@ int shim_do_creat(char *filename, mode_t mode)
 size_t shim_do_read(int fd, void *buf, size_t count)
 {
 	int ret;
+	uint8_t in_mlfs = check_mlfs_fd(MLFS_FD);
 
-	if (check_mlfs_fd(fd)) {
-		ret = mlfs_posix_read(get_mlfs_fd(fd), buf, count);
-		syscall_trace(__func__, ret, 3, fd, buf, count);
-
-		return ret;
+#ifdef MIRROR_SYSCALL
+	if (1) {
+#else
+	if (!in_mlfs) {
+#endif
+		asm("mov %1, %%edi;"
+			"mov %2, %%rsi;"
+			"mov %3, %%rdx;"
+			"mov %4, %%eax;"
+			"syscall;\n\t"
+			"mov %%eax, %0;\n\t"
+			:"=r"(ret)
+			:"r"(fd), "m"(buf), "r"(count), "r"(__NR_read)
+			:"rax", "rdi", "rsi", "rdx"
+			);
 	}
 
-	asm("mov %1, %%edi;"
-		"mov %2, %%rsi;"
-		"mov %3, %%rdx;"
-		"mov %4, %%eax;"
-		"syscall;\n\t"
-		"mov %%eax, %0;\n\t"
-		:"=r"(ret)
-		:"r"(fd), "m"(buf), "r"(count), "r"(__NR_read)
-		:"rax", "rdi", "rsi", "rdx"
-		);
+	if (in_mlfs) {
+		MLFS_RET_DEF;
+		MLFS_BUF_DEF(void*, count);
+		MLFS_RET = mlfs_posix_read(get_mlfs_fd(MLFS_FD), MLFS_BUF, count);
+        syscall_dump("%d", MLFS_RET, "%d", MLFS_FD, "%lu", count);
+#ifdef MIRROR_SYSCALL
+		if (MLFS_RET != ret) {
+            syscall_abort("fd %d path %s, inconsistent return value: ret %d, mlfs_ret %d\n",
+                    fd, MLFS_FNAME, ret, MLFS_RET);
+		}
+		for (size_t i=0; i < ret; ++i) {
+			if (((char*)buf)[i] != ((char*)mlfs_buf)[i]) {
+				syscall_abort("inconsistent at fd %d(%s), ret %d(%d),\
+						count %lu, @%lu buf %#1x, mlfs_buf %#1x\n",
+						fd, MLFS_FNAME, ret, MLFS_RET, count, 
+						i, ((char*)buf)[i], ((char*)mlfs_buf)[i]);
+			}
+		}
+		free(MLFS_BUF);
+#endif
+	}
 
 	return ret;
 }
@@ -216,14 +341,12 @@ size_t shim_do_read(int fd, void *buf, size_t count)
 size_t shim_do_pread64(int fd, void *buf, size_t count, loff_t off)
 {
 	int ret;
-
-	if (check_mlfs_fd(fd)) {
-		ret = mlfs_posix_pread64(get_mlfs_fd(fd), buf, count, off);
-		syscall_trace(__func__, ret, 4, fd, buf, count, off);
-
-		return ret;
-	}
-
+	uint8_t in_mlfs = check_mlfs_fd(MLFS_FD);
+#ifdef MIRROR_SYSCALL
+	if (1) {
+#else
+	if (!in_mlfs) {
+#endif
 	asm("mov %1, %%edi;"
 		"mov %2, %%rsi;"
 		"mov %3, %%rdx;"
@@ -235,6 +358,29 @@ size_t shim_do_pread64(int fd, void *buf, size_t count, loff_t off)
 		:"r"(fd), "m"(buf), "r"(count), "r"(off), "r"(__NR_pread64)
 		:"rax", "rdi", "rsi", "rdx", "r10"
 		);
+	}
+
+	if (in_mlfs) {
+		MLFS_RET_DEF;
+		MLFS_BUF_DEF(void*, count);
+		MLFS_RET = mlfs_posix_pread64(get_mlfs_fd(MLFS_FD), MLFS_BUF, count, off);
+        syscall_dump("%d", MLFS_RET, "%d", MLFS_FD, "%lu", count, "%lu", off);
+#ifdef MIRROR_SYSCALL
+		if (MLFS_RET != ret) {
+            syscall_abort("fd %d path %s, inconsistent return value: ret %d, mlfs_ret %d\n",
+                    fd, MLFS_FNAME, ret, MLFS_RET);
+		}
+		for (size_t i=0; i < ret; ++i) {
+			if (((char*)buf)[i] != ((char*)mlfs_buf)[i]) {
+				syscall_abort("inconsistent at fd %d(%s), ret %d(%d),\
+						count %lu, @%lu buf %#1x, mlfs_buf %#1x\n",
+						fd, MLFS_FNAME, ret, MLFS_RET, count, 
+						i, ((char*)buf)[i], ((char*)mlfs_buf)[i]);
+			}
+		}
+		free(MLFS_BUF);
+#endif
+	}
 
 	return ret;
 }
@@ -242,14 +388,12 @@ size_t shim_do_pread64(int fd, void *buf, size_t count, loff_t off)
 size_t shim_do_write(int fd, void *buf, size_t count)
 {
 	int ret;
-
-	if (check_mlfs_fd(fd)) {
-		ret = mlfs_posix_write(get_mlfs_fd(fd), buf, count);
-		syscall_trace(__func__, ret, 3, fd, buf, count);
-
-		return ret;
-	}
-
+	uint8_t in_mlfs = check_mlfs_fd(MLFS_FD);
+#ifdef MIRROR_SYSCALL
+	if (1) {
+#else
+	if (!in_mlfs) {
+#endif
 	asm("mov %1, %%edi;"
 		"mov %2, %%rsi;"
 		"mov %3, %%rdx;"
@@ -260,6 +404,19 @@ size_t shim_do_write(int fd, void *buf, size_t count)
 		:"r"(fd), "m"(buf), "r"(count), "r"(__NR_write)
 		:"rax", "rdi", "rsi", "rdx"
 		);
+	}
+
+	if (in_mlfs) {
+		MLFS_RET_DEF;
+		MLFS_RET = mlfs_posix_write(get_mlfs_fd(MLFS_FD), buf, count);
+        syscall_dump("%d", MLFS_RET, "%d", fd, "%lu", count);
+#ifdef MIRROR_SYSCALL
+		if (MLFS_RET != ret) {
+            syscall_abort("fd %d path %s, inconsistent return value: ret %d, mlfs_ret %d\n",
+                    fd, MLFS_FNAME, ret, MLFS_RET);
+		}
+#endif
+	}
 
 	return ret;
 }
@@ -267,18 +424,12 @@ size_t shim_do_write(int fd, void *buf, size_t count)
 size_t shim_do_pwrite64(int fd, void *buf, size_t count, loff_t off)
 {
 	int ret;
-
-	if (check_mlfs_fd(fd)) {
-		/*
-		ret = mlfs_posix_pwrite64(get_mlfs_fd(fd), buf, count, off);
-		syscall_trace(__func__, ret, 4, fd, buf, count, off);
-
-		return ret;
-		*/
-		printf("%s: does not support yet\n", __func__);
-		exit(-1);
-	}
-
+	uint8_t in_mlfs = check_mlfs_fd(MLFS_FD);
+#ifdef MIRROR_SYSCALL
+	if (1) {
+#else
+	if (!in_mlfs) {
+#endif
 	asm("mov %1, %%edi;"
 		"mov %2, %%rsi;"
 		"mov %3, %%rdx;"
@@ -290,6 +441,19 @@ size_t shim_do_pwrite64(int fd, void *buf, size_t count, loff_t off)
 		:"r"(fd), "m"(buf), "r"(count),"r"(off), "r"(__NR_pwrite64)
 		:"rax", "rdi", "rsi", "rdx", "r10"
 		);
+	}
+
+	if (in_mlfs) {
+		MLFS_RET_DEF;
+		MLFS_RET = mlfs_posix_pwrite64(get_mlfs_fd(MLFS_FD), buf, count, off);
+        syscall_dump("%d", MLFS_RET, "%d", MLFS_FD, "%lu", count, "%lu", off);
+#ifdef MIRROR_SYSCALL
+		if (MLFS_RET != ret) {
+            syscall_abort("fd %d path %s, inconsistent return value: ret %d, mlfs_ret %d\n",
+                    fd, MLFS_FNAME, ret, MLFS_RET);
+		}
+#endif
+	}
 
 	return ret;
 }
@@ -297,14 +461,12 @@ size_t shim_do_pwrite64(int fd, void *buf, size_t count, loff_t off)
 int shim_do_close(int fd)
 {
 	int ret;
-
-	if (check_mlfs_fd(fd)) {
-		ret = mlfs_posix_close(get_mlfs_fd(fd));
-		syscall_trace(__func__, ret, 1, fd);
-
-		return ret;
-	}
-
+	uint8_t in_mlfs = check_mlfs_fd(MLFS_FD);
+#ifdef MIRROR_SYSCALL
+	if (1) {
+#else
+	if (!in_mlfs) {
+#endif
 	asm("mov %1, %%edi;"
 		"mov %2, %%eax;"
 		"syscall;\n\t"
@@ -313,6 +475,21 @@ int shim_do_close(int fd)
 		:"r"(fd), "r"(__NR_close)
 		:"rax", "rdi"
 		);
+	}
+
+	if (in_mlfs) {
+		MLFS_RET_DEF;
+		MLFS_RET = mlfs_posix_close(get_mlfs_fd(MLFS_FD));
+        syscall_dump("%d", MLFS_RET, "%d", MLFS_FD);
+#ifdef MIRROR_SYSCALL
+		if (MLFS_RET != ret) {
+            syscall_abort("fd %d path %s, inconsistent return value: ret %d, mlfs_ret %d\n",
+                    fd, MLFS_FNAME, ret, MLFS_RET);
+		}
+		fd_map[fd] = 0;
+		MLFS_FNAME[0] = 0;
+#endif
+	}
 
 	return ret;
 }
@@ -320,14 +497,12 @@ int shim_do_close(int fd)
 int shim_do_lseek(int fd, off_t offset, int origin)
 {
 	int ret;
-
-	if (check_mlfs_fd(fd)) {
-		ret = mlfs_posix_lseek(get_mlfs_fd(fd), offset, origin);
-		syscall_trace(__func__, ret, 3, fd, offset, origin);
-
-		return ret;
-	}
-
+	uint8_t in_mlfs = check_mlfs_fd(MLFS_FD);
+#ifdef MIRROR_SYSCALL
+	if (1) {
+#else
+	if (!in_mlfs) {
+#endif
 	asm("mov %1, %%edi;"
 		"mov %2, %%rsi;"
 		"mov %3, %%edx;"
@@ -338,6 +513,19 @@ int shim_do_lseek(int fd, off_t offset, int origin)
 		:"r"(fd), "r"(offset), "r"(origin), "r"(__NR_lseek)
 		:"rax", "rdi", "rsi", "rdx"
 		);
+	}
+
+	if (in_mlfs) {
+		MLFS_RET_DEF;
+		MLFS_RET = mlfs_posix_lseek(get_mlfs_fd(MLFS_FD), offset, origin);
+        syscall_dump("%d", MLFS_RET, "%d", MLFS_FD, "%lu", offset, "%d", origin);
+#ifdef MIRROR_SYSCALL
+		if (MLFS_RET != ret) {
+            syscall_abort("fd %d path %s, inconsistent return value: ret %d, mlfs_ret %d\n",
+                    fd, MLFS_FNAME, ret, MLFS_RET);
+		}
+#endif
+	}
 
 	return ret;
 }
@@ -345,30 +533,36 @@ int shim_do_lseek(int fd, off_t offset, int origin)
 int shim_do_mkdir(void *path, mode_t mode)
 {
 	int ret;
-	char path_buf[PATH_BUF_SIZE];
-
-	memset(path_buf, 0, PATH_BUF_SIZE);
-	collapse_name((char *)path, path_buf);
-
-	if (strncmp(path_buf, MLFS_PREFIX, 5) != 0){
-		;
-	} else {
-		//printf("%s: go to mlfs\n", path_buf);
-		ret = mlfs_posix_mkdir(path_buf, mode);
-		syscall_trace(__func__, ret, 2, path, mode);
-
-		return ret;
-	}
-
+    char path_buf[PATH_BUF_SIZE], dest_path[PATH_BUF_SIZE], *fullpath;
+    fullpath = get_absolute_path(path, path_buf, dest_path, PATH_BUF_SIZE);
+    uint8_t in_mlfs = (strncmp(fullpath, MLFS_PREFIX, 5) == 0);
+#ifdef MIRROR_SYSCALL
+	if (1) {
+#else
+	if (!in_mlfs) {
+#endif
 	asm("mov %1, %%rdi;"
 		"mov %2, %%esi;"
 		"mov %3, %%eax;"
 		"syscall;\n\t"
 		"mov %%eax, %0;\n\t"
 		:"=r"(ret)
-		:"m"(path), "r"(mode), "r"(__NR_mkdir)
+		:"m"(fullpath), "r"(mode), "r"(__NR_mkdir)
 		:"rax", "rdi", "rsi"
 		);
+	}
+
+	if (in_mlfs) {
+		MLFS_RET_DEF;
+		MLFS_RET = mlfs_posix_mkdir(fullpath, mode);
+        syscall_dump("%d", MLFS_RET, "%s", fullpath, "%x", mode);
+#ifdef MIRROR_SYSCALL
+		if (MLFS_RET != ret) {
+            syscall_abort("path %s, inconsistent return value: ret %d, mlfs_ret %d\n",
+                    fullpath, ret, MLFS_RET);
+		}
+#endif
+	}
 
 	return ret;
 }
@@ -376,26 +570,35 @@ int shim_do_mkdir(void *path, mode_t mode)
 int shim_do_rmdir(const char *path)
 {
 	int ret;
-	char path_buf[PATH_BUF_SIZE];
-
-	memset(path_buf, 0, PATH_BUF_SIZE);
-	collapse_name(path, path_buf);
-
-	if (strncmp(path_buf, MLFS_PREFIX, 5) != 0){
-		;
-	} else {
-		ret = mlfs_posix_rmdir((char *)path);
-		return ret;
-	}
-
+    char path_buf[PATH_BUF_SIZE], dest_path[PATH_BUF_SIZE], *fullpath;
+    fullpath = get_absolute_path(path, path_buf, dest_path, PATH_BUF_SIZE);
+    uint8_t in_mlfs = (strncmp(fullpath, MLFS_PREFIX, 5) == 0);
+#ifdef MIRROR_SYSCALL
+	if (1) {
+#else
+	if (!in_mlfs) {
+#endif
 	asm("mov %1, %%rdi;"
 		"mov %2, %%eax;"
 		"syscall;\n\t"
 		"mov %%eax, %0;\n\t"
 		:"=r"(ret)
-		:"m"(path), "r"(__NR_rmdir)
+		:"m"(fullpath), "r"(__NR_rmdir)
 		:"rax", "rdi"
 		);
+	}
+
+	if (in_mlfs) {
+		MLFS_RET_DEF;
+		MLFS_RET = mlfs_posix_rmdir(fullpath);
+        syscall_dump("%d", MLFS_RET, "%s", fullpath);
+#ifdef MIRROR_SYSCALL
+		if (MLFS_RET != ret) {
+            syscall_abort("path %s, inconsistent return value: ret %d, mlfs_ret %d\n",
+                    fullpath, ret, MLFS_RET);
+		}
+#endif
+	}
 
 	return ret;
 }
@@ -403,31 +606,38 @@ int shim_do_rmdir(const char *path)
 int shim_do_rename(char *oldname, char *newname)
 {
 	int ret;
-	char path_buf[PATH_BUF_SIZE];
-
-	memset(path_buf, 0, PATH_BUF_SIZE);
-	collapse_name(oldname, path_buf);
-
-	if (strncmp(path_buf, MLFS_PREFIX, 5) != 0){
-		//printf("%s : will not go to libfs\n", path_buf);
-		;
-		// fall through
-	} else {
-		ret = mlfs_posix_rename(oldname, newname);
-		syscall_trace(__func__, ret, 2, oldname, newname);
-
-		return ret;
-	}
-
+    char old_path_buf[PATH_BUF_SIZE], old_dest_path[PATH_BUF_SIZE], *old_fullpath;
+    char new_path_buf[PATH_BUF_SIZE], new_dest_path[PATH_BUF_SIZE], *new_fullpath;
+    old_fullpath = get_absolute_path(oldname, old_path_buf, old_dest_path, PATH_BUF_SIZE);
+    new_fullpath = get_absolute_path(newname, new_path_buf, new_dest_path, PATH_BUF_SIZE);
+	uint8_t in_mlfs = (strncmp(old_fullpath, MLFS_PREFIX, 5) == 0) && (strncmp(new_fullpath, MLFS_PREFIX, 5) == 0);
+#ifdef MIRROR_SYSCALL
+	if (1) {
+#else
+	if (!in_mlfs) {
+#endif
 	asm("mov %1, %%rdi;"
 		"mov %2, %%rsi;"
 		"mov %3, %%eax;"
 		"syscall;\n\t"
 		"mov %%eax, %0;\n\t"
 		:"=r"(ret)
-		:"m"(oldname), "m"(newname), "r"(__NR_rename)
+		:"m"(old_fullpath), "m"(new_fullpath), "r"(__NR_rename)
 		:"rax", "rdi", "rsi"
 		);
+	}
+
+	if (in_mlfs) {
+		MLFS_RET_DEF;
+		MLFS_RET = mlfs_posix_rename(old_fullpath, new_fullpath);
+        syscall_dump("%d", MLFS_RET, "%s", old_fullpath, "%s", new_fullpath);
+#ifdef MIRROR_SYSCALL
+		if (MLFS_RET != ret) {
+            syscall_abort("oldpath %s, newpath %s, inconsistent return value: ret %d, mlfs_ret %d\n",
+                    old_fullpath, new_fullpath, ret, MLFS_RET);
+		}
+#endif
+	}
 
 	return ret;
 }
@@ -435,14 +645,12 @@ int shim_do_rename(char *oldname, char *newname)
 int shim_do_fallocate(int fd, int mode, off_t offset, off_t len)
 {
 	int ret;
-
-	if (check_mlfs_fd(fd)) {
-		ret = mlfs_posix_fallocate(get_mlfs_fd(fd), offset, len);
-		syscall_trace(__func__, ret, 4, fd, mode, offset, len);
-
-		return ret;
-	}
-
+    uint8_t in_mlfs = check_mlfs_fd(MLFS_FD);
+#ifdef MIRROR_SYSCALL
+	if (1) {
+#else
+	if (!in_mlfs) {
+#endif
 	asm("mov %1, %%edi;"
 		"mov %2, %%esi;"
 		"mov %3, %%rdx;"
@@ -454,96 +662,145 @@ int shim_do_fallocate(int fd, int mode, off_t offset, off_t len)
 		:"r"(fd), "r"(mode), "r"(offset), "r"(len), "r"(__NR_fallocate)
 		:"rax", "rdi", "rsi", "rdx", "r10"
 		);
+	}
+
+	if (in_mlfs) {
+		MLFS_RET_DEF;
+		MLFS_RET = mlfs_posix_fallocate(get_mlfs_fd(MLFS_FD), offset, len);
+        syscall_dump("%d", MLFS_RET, "%d", MLFS_FD, "%x", mode, "%lu", offset, "%lu", len);
+#ifdef MIRROR_SYSCALL
+		if (MLFS_RET != ret) {
+            syscall_abort("fd %d path %s, inconsistent return value: ret %d, mlfs_ret %d\n",
+                    fd, MLFS_FNAME, ret, MLFS_RET);
+		}
+#endif
+	}
 
 	return ret;
 }
 
-int shim_do_stat(const char *filename, struct stat *statbuf)
+int shim_do_stat(const char *filename, struct stat *buf)
 {
 	int ret;
-	char path_buf[PATH_BUF_SIZE];
-
-	memset(path_buf, 0, PATH_BUF_SIZE);
-	collapse_name(filename, path_buf);
-
-	if (strncmp(path_buf, MLFS_PREFIX, 5) != 0){
-		//printf("%s : will not go to libfs\n", path_buf);
-		;
-		// fall through
-	} else {
-		ret = mlfs_posix_stat(filename, statbuf);
-		syscall_trace(__func__, ret, 2, filename, statbuf);
-
-		return ret;
-	}
-
+    char path_buf[PATH_BUF_SIZE], dest_path[PATH_BUF_SIZE], *fullpath;
+    fullpath = get_absolute_path(filename, path_buf, dest_path, PATH_BUF_SIZE);
+    uint8_t in_mlfs = (strncmp(fullpath, MLFS_PREFIX, 5) == 0);
+#ifdef MIRROR_SYSCALL
+	if (1) {
+#else
+	if (!in_mlfs) {
+#endif
 	asm("mov %1, %%rdi;"
 		"mov %2, %%rsi;"
 		"mov %3, %%eax;"
 		"syscall;\n\t"
 		"mov %%eax, %0;\n\t"
 		:"=r"(ret)
-		:"m"(filename), "m"(statbuf), "r"(__NR_stat)
+		:"m"(fullpath), "m"(buf), "r"(__NR_stat)
 		:"rax", "rdi", "rsi"
 		);
+	}
+
+	if (in_mlfs) {
+		MLFS_RET_DEF;
+		MLFS_BUF_DEF(struct stat*, sizeof(struct stat));
+		MLFS_RET = mlfs_posix_stat(fullpath, MLFS_BUF);
+        syscall_dump("%d", MLFS_RET, "%s", fullpath);
+#ifdef MIRROR_SYSCALL
+		if (MLFS_RET != ret) {
+            syscall_abort("path %s, inconsistent return value: ret %d, mlfs_ret %d\n",
+                    fullpath, ret, MLFS_RET);
+		}
+		if (ret == 0) {
+			CMP_STAT(buf, MLFS_BUF);
+		}
+		free(MLFS_BUF);
+#endif
+	}
 
 	return ret;
 }
 
-int shim_do_lstat(const char *filename, struct stat *statbuf)
+int shim_do_lstat(const char *filename, struct stat *buf)
 {
 	int ret;
-	char path_buf[PATH_BUF_SIZE];
+    char path_buf[PATH_BUF_SIZE], dest_path[PATH_BUF_SIZE], *fullpath;
+    fullpath = get_absolute_path(filename, path_buf, dest_path, PATH_BUF_SIZE);
+    uint8_t in_mlfs = (strncmp(fullpath, MLFS_PREFIX, 5) == 0);
+#ifdef MIRROR_SYSCALL
+	if (1) {
+#else
+	if (!in_mlfs) {
+#endif
+	asm("mov %1, %%rdi;"
+		"mov %2, %%rsi;"
+		"mov %3, %%eax;"
+		"syscall;\n\t"
+		"mov %%eax, %0;\n\t"
+		:"=r"(ret)
+		:"m"(fullpath), "m"(buf), "r"(__NR_lstat)
+		:"rax", "rdi", "rsi"
+		);
+	}
 
-	memset(path_buf, 0, PATH_BUF_SIZE);
-	collapse_name(filename, path_buf);
-
-	if (strncmp(path_buf, MLFS_PREFIX, 5) != 0){
-		//printf("%s : will not go to libfs\n", path_buf);
-		;
-		// fall through
-	} else {
+	if (in_mlfs) {
 		// Symlink does not implemented yet
 		// so stat and lstat is identical now.
-		ret = mlfs_posix_stat(filename, statbuf);
-		syscall_trace(__func__, ret, 2, filename, statbuf);
-
-		return ret;
+		MLFS_RET_DEF;
+		MLFS_BUF_DEF(struct stat*, sizeof(struct stat));
+		MLFS_RET = mlfs_posix_stat(fullpath, MLFS_BUF);
+        syscall_dump("%d", MLFS_RET, "%s", fullpath);
+#ifdef MIRROR_SYSCALL
+		if (MLFS_RET != ret) {
+            syscall_abort("path %s, inconsistent return value: ret %d, mlfs_ret %d\n",
+                    fullpath, ret, MLFS_RET);
+		}
+		if (ret == 0) {
+			CMP_STAT(buf, MLFS_BUF);
+		}
+		free(MLFS_BUF);
+#endif
 	}
-
-	asm("mov %1, %%rdi;"
-		"mov %2, %%rsi;"
-		"mov %3, %%eax;"
-		"syscall;\n\t"
-		"mov %%eax, %0;\n\t"
-		:"=r"(ret)
-		:"m"(filename), "m"(statbuf), "r"(__NR_lstat)
-		:"rax", "rdi", "rsi"
-		);
 
 	return ret;
 }
 
-int shim_do_fstat(int fd, struct stat *statbuf)
+int shim_do_fstat(int fd, struct stat *buf)
 {
 	int ret;
-
-	if (check_mlfs_fd(fd)) {
-		ret = mlfs_posix_fstat(get_mlfs_fd(fd), statbuf);
-		syscall_trace(__func__, ret, 2, fd, statbuf);
-
-		return ret;
-	}
-
+	uint8_t in_mlfs = check_mlfs_fd(MLFS_FD);
+#ifdef MIRROR_SYSCALL
+	if (1) {
+#else
+	if (!in_mlfs) {
+#endif
 	asm("mov %1, %%edi;"
 		"mov %2, %%rsi;"
 		"mov %3, %%eax;"
 		"syscall;\n\t"
 		"mov %%eax, %0;\n\t"
 		:"=r"(ret)
-		:"r"(fd), "m"(statbuf), "r"(__NR_fstat)
+		:"r"(fd), "m"(buf), "r"(__NR_fstat)
 		:"rax", "rdi", "rsi"
 		);
+	}
+
+	if (in_mlfs) {
+		MLFS_RET_DEF;
+		MLFS_BUF_DEF(struct stat*, sizeof(struct stat));
+		MLFS_RET = mlfs_posix_fstat(get_mlfs_fd(MLFS_FD), MLFS_BUF);
+        syscall_dump("%d", MLFS_RET, "%d", MLFS_FD);
+#ifdef MIRROR_SYSCALL
+		if (MLFS_RET != ret) {
+            syscall_abort("fd %d path %s, inconsistent return value: ret %d, mlfs_ret %d\n",
+                    fd, MLFS_FNAME, ret, MLFS_RET);
+		}
+		if (ret == 0) {
+			CMP_STAT(buf, MLFS_BUF);
+		}
+		free(MLFS_BUF);
+#endif
+	}
 
 	return ret;
 }
@@ -551,31 +808,36 @@ int shim_do_fstat(int fd, struct stat *statbuf)
 int shim_do_truncate(const char *filename, off_t length)
 {
 	int ret;
-	char path_buf[PATH_BUF_SIZE];
-
-	memset(path_buf, 0, PATH_BUF_SIZE);
-	collapse_name(filename, path_buf);
-
-	if (strncmp(path_buf, MLFS_PREFIX, 5) != 0){
-		//printf("%s : will not go to libfs\n", path_buf);
-		;
-		// fall through
-	} else {
-		ret = mlfs_posix_truncate(filename, length);
-		syscall_trace(__func__, ret, 2, filename, length);
-
-		return ret;
-	}
-
+    char path_buf[PATH_BUF_SIZE], dest_path[PATH_BUF_SIZE], *fullpath;
+    fullpath = get_absolute_path(filename, path_buf, dest_path, PATH_BUF_SIZE);
+    uint8_t in_mlfs = (strncmp(fullpath, MLFS_PREFIX, 5) == 0);
+#ifdef MIRROR_SYSCALL
+	if (1) {
+#else
+	if (!in_mlfs) {
+#endif
 	asm("mov %1, %%rdi;"
 		"mov %2, %%rsi;"
 		"mov %3, %%eax;"
 		"syscall;\n\t"
 		"mov %%eax, %0;\n\t"
 		:"=r"(ret)
-		:"m"(filename), "r"(length), "r"(__NR_truncate)
+		:"m"(fullpath), "r"(length), "r"(__NR_truncate)
 		:"rax", "rdi", "rsi"
 		);
+	}
+
+	if (in_mlfs) {
+		MLFS_RET_DEF;
+		MLFS_RET = mlfs_posix_truncate(fullpath, length);
+        syscall_dump("%d", MLFS_RET, "%s", fullpath, "%lu", length);
+#ifdef MIRROR_SYSCALL
+		if (MLFS_RET != ret) {
+            syscall_abort("path %s, inconsistent return value: ret %d, mlfs_ret %d\n",
+                    fullpath, ret, MLFS_RET);
+		}
+#endif
+	}
 
 	return ret;
 }
@@ -583,14 +845,12 @@ int shim_do_truncate(const char *filename, off_t length)
 int shim_do_ftruncate(int fd, off_t length)
 {
 	int ret;
-
-	if (check_mlfs_fd(fd)) {
-		ret = mlfs_posix_ftruncate(get_mlfs_fd(fd), length);
-		syscall_trace(__func__, ret, 2, fd, length);
-
-		return ret;
-	}
-
+    uint8_t in_mlfs = check_mlfs_fd(MLFS_FD);
+#ifdef MIRROR_SYSCALL
+	if (1) {
+#else
+	if (!in_mlfs) {
+#endif
 	asm("mov %1, %%edi;"
 		"mov %2, %%rsi;"
 		"mov %3, %%eax;"
@@ -600,6 +860,20 @@ int shim_do_ftruncate(int fd, off_t length)
 		:"r"(fd), "r"(length), "r"(__NR_ftruncate)
 		:"rax", "rdi", "rsi"
 		);
+	}
+
+	if (in_mlfs) {
+		MLFS_RET_DEF;
+		MLFS_RET = mlfs_posix_ftruncate(get_mlfs_fd(MLFS_FD), length);
+		syscall_trace(__func__, ret, 2, MLFS_FD, length);
+        syscall_dump("%d", MLFS_RET, "%d", MLFS_FD, "%lu", length);
+#ifdef MIRROR_SYSCALL
+		if (MLFS_RET != ret) {
+            syscall_abort("fd %d path %s, inconsistent return value: ret %d, mlfs_ret %d\n",
+                    fd, MLFS_FNAME, ret, MLFS_RET);
+		}
+#endif
+	}
 
 	return ret;
 }
@@ -607,27 +881,35 @@ int shim_do_ftruncate(int fd, off_t length)
 int shim_do_unlink(const char *path)
 {
 	int ret;
-	char path_buf[PATH_BUF_SIZE];
-
-	memset(path_buf, 0, PATH_BUF_SIZE);
-	collapse_name(path, path_buf);
-
-	if (strncmp(path_buf, MLFS_PREFIX, 5) != 0){
-		;
-	} else {
-		ret = mlfs_posix_unlink(path);
-		syscall_trace(__func__, ret, 1, path);
-		return ret;
-	}
-
+    char path_buf[PATH_BUF_SIZE], dest_path[PATH_BUF_SIZE], *fullpath;
+    fullpath = get_absolute_path(path, path_buf, dest_path, PATH_BUF_SIZE);
+    uint8_t in_mlfs = (strncmp(fullpath, MLFS_PREFIX, 5) == 0);
+#ifdef MIRROR_SYSCALL
+	if (1) {
+#else
+	if (!in_mlfs) {
+#endif
 	asm("mov %1, %%rdi;"
 		"mov %2, %%eax;"
 		"syscall;\n\t"
 		"mov %%eax, %0;\n\t"
 		:"=r"(ret)
-		:"m"(path), "r"(__NR_unlink)
+		:"m"(fullpath), "r"(__NR_unlink)
 		:"rax", "rdi"
 		);
+	}
+
+	if (in_mlfs) {
+		MLFS_RET_DEF;
+		MLFS_RET = mlfs_posix_unlink(fullpath);
+        syscall_dump("%d", MLFS_RET, "%s", fullpath);
+#ifdef MIRROR_SYSCALL
+		if (MLFS_RET != ret) {
+            syscall_abort("path %s, inconsistent return value: ret %d, mlfs_ret %d\n",
+                    fullpath, ret, MLFS_RET);
+		}
+#endif
+	}
 
 	return ret;
 }
@@ -635,21 +917,14 @@ int shim_do_unlink(const char *path)
 int shim_do_symlink(const char *target, const char *linkpath)
 {
 	int ret;
-	char path_buf[PATH_BUF_SIZE];
-
-	memset(path_buf, 0, PATH_BUF_SIZE);
-	collapse_name(target, path_buf);
-
-	if (strncmp(path_buf, MLFS_PREFIX, 5) != 0){
-		//printf("%s : will not go to libfs\n", path_buf);
-		;
-		// fall through
-	} else {
-		printf("%s\n", target);
-		printf("symlink: do not support yet\n");
-		exit(-1);
-	}
-
+    char path_buf[PATH_BUF_SIZE], dest_path[PATH_BUF_SIZE], *fullpath;
+    fullpath = get_absolute_path(target, path_buf, dest_path, PATH_BUF_SIZE);
+    uint8_t in_mlfs = (strncmp(fullpath, MLFS_PREFIX, 5) == 0);
+#ifdef MIRROR_SYSCALL
+	if (1) {
+#else
+	if (!in_mlfs) {
+#endif
 	asm("mov %1, %%rdi;"
 		"mov %2, %%rsi;"
 		"mov %3, %%eax;"
@@ -659,6 +934,13 @@ int shim_do_symlink(const char *target, const char *linkpath)
 		:"m"(target), "m"(linkpath), "r"(__NR_symlink)
 		:"rax", "rdi", "rsi"
 		);
+	}
+
+	if (in_mlfs) {
+		printf("%s\n", target);
+		printf("symlink: do not support yet\n");
+		exit(-1);
+	}
 
 	return ret;
 }
@@ -666,31 +948,36 @@ int shim_do_symlink(const char *target, const char *linkpath)
 int shim_do_access(const char *pathname, int mode)
 {
 	int ret;
-	char path_buf[PATH_BUF_SIZE];
-
-	memset(path_buf, 0, PATH_BUF_SIZE);
-	collapse_name(pathname, path_buf);
-
-	if (strncmp(path_buf, MLFS_PREFIX, 5) != 0){
-		//printf("%s : will not go to libfs\n", path_buf);
-		;
-		// fall through
-	} else {
-		ret = mlfs_posix_access((char *)pathname, mode);
-		syscall_trace(__func__, ret, 2, pathname, mode);
-
-		return ret;
-	}
-
+    char path_buf[PATH_BUF_SIZE], dest_path[PATH_BUF_SIZE], *fullpath;
+    fullpath = get_absolute_path(pathname, path_buf, dest_path, PATH_BUF_SIZE);
+    uint8_t in_mlfs = (strncmp(fullpath, MLFS_PREFIX, 5) == 0);
+#ifdef MIRROR_SYSCALL
+	if (1) {
+#else
+	if (!in_mlfs) {
+#endif
 	asm("mov %1, %%rdi;"
 		"mov %2, %%esi;"
 		"mov %3, %%eax;"
 		"syscall;\n\t"
 		"mov %%eax, %0;\n\t"
 		:"=r"(ret)
-		:"m"(pathname), "r"(mode), "r"(__NR_access)
+		:"m"(fullpath), "r"(mode), "r"(__NR_access)
 		:"rax", "rdi", "rsi"
 		);
+	}
+
+	if (in_mlfs) {
+		MLFS_RET_DEF;
+		MLFS_RET = mlfs_posix_access(fullpath, mode);
+        syscall_dump("%d", MLFS_RET, "%s", fullpath, "%x", mode);
+#ifdef MIRROR_SYSCALL
+		if (MLFS_RET != ret) {
+            syscall_abort("path %s, inconsistent return value: ret %d, mlfs_ret %d\n",
+                    fullpath, ret, MLFS_RET);
+		}
+#endif
+	}
 
 	return ret;
 }
@@ -698,13 +985,12 @@ int shim_do_access(const char *pathname, int mode)
 int shim_do_fsync(int fd)
 {
 	int ret;
-
-	if (check_mlfs_fd(fd)) {
-		// libfs has quick persistency guarantee.
-		// fsync is nop.
-		return 0;
-	}
-
+    uint8_t in_mlfs = check_mlfs_fd(MLFS_FD);
+#ifdef MIRROR_SYSCALL
+	if (1) {
+#else
+	if (!in_mlfs) {
+#endif
 	asm("mov %1, %%edi;"
 		"mov %2, %%eax;"
 		"syscall;\n\t"
@@ -713,6 +999,22 @@ int shim_do_fsync(int fd)
 		:"r"(fd), "r"(__NR_fsync)
 		:"rax", "rdi"
 		);
+	}
+
+	if (in_mlfs) {
+		// libfs has quick persistency guarantee.
+		// fsync is nop.
+		MLFS_RET_DEF;
+		MLFS_RET = 0;
+        syscall_dump("%d", MLFS_RET, "%d", MLFS_FD);
+#ifdef MIRROR_SYSCALL
+		if (MLFS_RET != ret) {
+            syscall_abort("fd %d path %s, inconsistent return value: ret %d, mlfs_ret %d\n",
+                    fd, MLFS_FNAME, ret, MLFS_RET);
+		}
+#endif
+	}
+
 
 	return ret;
 }
@@ -720,14 +1022,12 @@ int shim_do_fsync(int fd)
 int shim_do_fdatasync(int fd)
 {
 	int ret;
-
-	if (check_mlfs_fd(fd)) {
-		// fdatasync is nop.
-		syscall_trace(__func__, 0, 1, fd);
-
-		return 0;
-	}
-
+    uint8_t in_mlfs = check_mlfs_fd(MLFS_FD);
+#ifdef MIRROR_SYSCALL
+	if (1) {
+#else
+	if (!in_mlfs) {
+#endif
 	asm("mov %1, %%edi;"
 		"mov %2, %%eax;"
 		"syscall;\n\t"
@@ -736,6 +1036,20 @@ int shim_do_fdatasync(int fd)
 		:"r"(fd), "r"(__NR_fdatasync)
 		:"rax", "rdi"
 		);
+	}
+
+	if (in_mlfs) {
+		// fdatasync is nop.
+		MLFS_RET_DEF;
+		MLFS_RET = 0;
+        syscall_dump("%d", MLFS_RET, "%d", MLFS_FD);
+#ifdef MIRROR_SYSCALL
+		if (MLFS_RET != ret) {
+            syscall_abort("fd %d path %s, inconsistent return value: ret %d, mlfs_ret %d\n",
+                    fd, MLFS_FNAME, ret, MLFS_RET);
+		}
+#endif
+	}
 
 	return ret;
 }
@@ -762,13 +1076,12 @@ int shim_do_fcntl(int fd, int cmd, void *arg)
 {
 	int ret;
 
-	if (check_mlfs_fd(fd)) {
-		ret = mlfs_posix_fcntl(get_mlfs_fd(fd), cmd, arg);
-		syscall_trace(__func__, ret, 3, fd, cmd, arg);
-
-		return ret;
-	}
-
+    uint8_t in_mlfs = check_mlfs_fd(MLFS_FD);
+#ifdef MIRROR_SYSCALL
+	if (1) {
+#else
+	if (!in_mlfs) {
+#endif
 	asm("mov %1, %%edi;"
 		"mov %2, %%esi;"
 		"mov %3, %%rdx;"
@@ -779,6 +1092,19 @@ int shim_do_fcntl(int fd, int cmd, void *arg)
 		:"r"(fd), "r"(cmd), "m"(arg), "r"(__NR_fcntl)
 		:"rax", "rdi", "rsi", "rdx"
 		);
+	}
+
+	if (in_mlfs) {
+		MLFS_RET_DEF;
+		MLFS_RET = mlfs_posix_fcntl(get_mlfs_fd(MLFS_FD), cmd, arg);
+        syscall_dump("%d", MLFS_RET, "%d", MLFS_FD, "%x", cmd);
+#ifdef MIRROR_SYSCALL
+		if (MLFS_RET != ret) {
+            syscall_warn("fd %d path %s, inconsistent return value: ret %d, mlfs_ret %d\n",
+                    fd, MLFS_FNAME, ret, MLFS_RET);
+		}
+#endif
+	}
 
 	return ret;
 }
@@ -788,7 +1114,7 @@ void* shim_do_mmap(void *addr, size_t length, int prot,
 {
 	void* ret;
 
-	if (check_mlfs_fd(fd)) {
+	if (check_mlfs_fd(MLFS_FD)) {
 		printf("mmap: not implemented\n");
 		exit(-1);
 	}
@@ -830,15 +1156,12 @@ int shim_do_munmap(void *addr, size_t length)
 size_t shim_do_getdents(int fd, struct linux_dirent *buf, size_t count)
 {
 	int ret;
-
-	if (check_mlfs_fd(fd)) {
-		ret = mlfs_posix_getdents(get_mlfs_fd(fd), buf, count);
-
-		syscall_trace(__func__, ret, 3, fd, buf, count);
-
-		return ret;
-	}
-
+    uint8_t in_mlfs = check_mlfs_fd(MLFS_FD);
+#ifdef MIRROR_SYSCALL
+	if (1) {
+#else
+	if (!in_mlfs) {
+#endif
 	asm("mov %1, %%edi;"
 		"mov %2, %%rsi;"
 		"mov %3, %%rdx;"
@@ -849,6 +1172,34 @@ size_t shim_do_getdents(int fd, struct linux_dirent *buf, size_t count)
 		:"r"(fd), "m"(buf), "r"(count), "r"(__NR_getdents)
 		:"rax", "rdi", "rsi", "rdx", "r10"
 		);
+	}
+
+	if (in_mlfs) {
+		MLFS_RET_DEF;
+		MLFS_BUF_DEF(struct linux_dirent*, count);
+		MLFS_RET = mlfs_posix_getdents(get_mlfs_fd(MLFS_FD), MLFS_BUF, count);
+        syscall_dump("%d", MLFS_RET, "%d", MLFS_FD, "%lu", count);
+#ifdef MIRROR_SYSCALL
+        // shouldn't compare return value, since it represents the size read to the buffer
+        // should be fs dependent
+		size_t n_entry = 0, mlfs_n_entry = 0;
+		for (struct linux_dirent *dir = buf;
+			(uint8_t*)dir < (uint8_t*)buf + ret;
+			dir = (struct linux_dirent*)((uint8_t*)dir + dir->d_reclen)) {
+			++n_entry;
+		}
+		for (struct linux_dirent *mlfs_dir = MLFS_BUF;
+			(uint8_t*)mlfs_dir < (uint8_t*)MLFS_BUF + MLFS_RET;
+			mlfs_dir = (struct linux_dirent*)((uint8_t*)mlfs_dir + mlfs_dir->d_reclen)) {
+			++mlfs_n_entry;
+		}
+		if (n_entry != mlfs_n_entry) {
+            syscall_abort("fd %d path %s, inconsistent n_entry %lu, mlfs %lu\n",
+                    fd, MLFS_FNAME, n_entry, mlfs_n_entry);
+		}
+		free(MLFS_BUF);
+#endif
+	}
 
 	return ret;
 }
@@ -856,12 +1207,12 @@ size_t shim_do_getdents(int fd, struct linux_dirent *buf, size_t count)
 size_t shim_do_getdents64(int fd, struct linux_dirent64 *buf, size_t count)
 {
 	int ret;
-
-	if (check_mlfs_fd(fd)) {
-		printf("getdent64 is not supported\n");
-		exit(-1);
-	}
-
+    uint8_t in_mlfs = check_mlfs_fd(MLFS_FD);
+#ifdef MIRROR_SYSCALL
+	if (1) {
+#else
+	if (!in_mlfs) {
+#endif
 	asm("mov %1, %%edi;"
 		"mov %2, %%rsi;"
 		"mov %3, %%rdx;"
@@ -872,6 +1223,11 @@ size_t shim_do_getdents64(int fd, struct linux_dirent64 *buf, size_t count)
 		:"r"(fd), "m"(buf), "r"(count), "r"(__NR_getdents)
 		:"rax", "rdi", "rsi", "rdx", "r10"
 		);
+	}
+
+	if (in_mlfs) {
+        syscall_abort("%s\n", "getdent64 is not supported\n");
+	}
 
 	return ret;
 }
