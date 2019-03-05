@@ -1,8 +1,5 @@
-#ifdef HASHTABLE
-
 #include <stdbool.h>
 #include "inode_hash.h"
-
 
 #define GPOINTER_TO_UINT(x) ((uint64_t)x)
 
@@ -368,4 +365,3 @@ int mlfs_hash_cache_invalidate() {
 #endif
 }
 
-#endif

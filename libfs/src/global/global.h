@@ -78,6 +78,16 @@ extern uint8_t g_hdd_dev;
 // extern uint	g_fd_start; /* offset start of fds used by mlfs, old FD_START*/
 extern char pwd[MAX_PATH + 1];
 
+typedef enum indexing_api_choice {
+    EXTENT_TREES,
+    GLOBAL_HASH_TABLE,
+    NONE
+} indexing_choice_t;
+
+extern indexing_choice_t g_idx_choice;
+
+indexing_choice_t get_indexing_choice(void);
+
 #ifdef __cplusplus
 }
 #endif

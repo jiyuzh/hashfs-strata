@@ -14,10 +14,6 @@
 extern "C" {
 #endif
 
-#ifndef HASHTABLE
-#define USE_API_FOR_EXTENTS
-
-#endif
 
 uint32_t mlfs_crc32c(uint32_t crc, const void *buf, size_t size);
 

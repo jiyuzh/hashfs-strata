@@ -17,9 +17,7 @@
 #include "filesystem/slru.h"
 #include "storage/storage.h"
 
-#ifdef HASHTABLE
 #include "inode_hash.h"
-#endif
 
 #define _min(a, b) ({\
     __typeof__(a) _a = a;\
@@ -189,14 +187,6 @@ void show_libfs_stats(const char *title)
   printf("directory search hit  (nr) : %lu \n", g_perf_stats.dir_search_nr_hit);
   printf("directory search miss (nr) : %lu \n", g_perf_stats.dir_search_nr_miss);
   printf("directory search notfound (nr) : %lu \n", g_perf_stats.dir_search_nr_notfound);
-#endif
-#ifdef HASHTABLE
-  printf("--------------------------------------\n");
-  printf("HASH: entries per lookup   : %f \n", (double)g_perf_stats.n_entries_read/ g_perf_stats.n_lookups);
-  printf("HASH TIME (tsc/op)         : %f \n", (double)g_perf_stats.tree_search_tsc / g_perf_stats.tree_search_nr);
-  printf("--- HASH: hash fn (tsc/op) : %f \n", (double)g_perf_stats.hash_fn_tsc/ g_perf_stats.hash_fn_nr);
-  printf("--- HASH: iterate (tsc/op) : %f \n", (double)g_perf_stats.hash_loop_tsc/ g_perf_stats.hash_loop_nr);
-  printf("--- HASH: avg iter / op    : %f \n", (double)g_perf_stats.hash_iter_nr/ g_perf_stats.hash_loop_nr);
 #endif
   printf("--------------------------------------\n");
 }
@@ -371,6 +361,7 @@ void init_fs(void)
     int i;
 
     device_id = getenv("DEV_ID");
+    g_idx_choice = get_indexing_choice();
 
     // TODO: range check.
     if (device_id)
@@ -421,9 +412,9 @@ void init_fs(void)
     // read root inode in NVM
     read_root_inode(g_root_dev);
 
-#ifdef HASHTABLE
-    init_hash(sb[g_root_dev]);
-#endif
+    if (g_idx_choice == GLOBAL_HASH_TABLE) {
+        init_hash(sb[g_root_dev]);
+    }
 
     mlfs_info("LibFS is initialized with id %d\n", g_log_dev);
 
@@ -564,43 +555,17 @@ int sync_inode_ext_tree(uint8_t dev, struct inode *inode)
     read_ondisk_inode(dev, inode->inum, &dinode);
 
     pthread_mutex_lock(&inode->i_mutex);
-#ifdef HASHTABLE
-#if 0
-    handle_t handle = {.dev = g_root_dev};
-    struct mlfs_map_blocks map;
-    size_t nblocks = ((size_t)inode->size) >> g_block_size_shift;
-    if ((nblocks << g_block_size_shift) < ((size_t)inode->size)) {
-      nblocks++;
-    }
-
-    map.m_lblk = 0;
-    map.m_len = nblocks;
-
-    //int err = mlfs_hash_get_blocks(&handle, inode, &map, 0, true);
-    //if (err < 0);
-    size_t total = 0;
-    int ret = 1;
-    while (ret > 0 && total < nblocks) {
-      ret = mlfs_hash_get_blocks(&handle, inode, &map, 0, true);
-      mlfs_assert(ret >= 0);
-      map.m_lblk += ret;
-      map.m_len -= ret;
-      total += ret;
-    }
-    //fprintf(stderr, "%llu == %llu\n", total, nblocks);
-    //mlfs_assert(total == nblocks);
-#else
+    if (g_idx_choice == GLOBAL_HASH_TABLE) {
     mlfs_hash_cache_invalidate();
-#endif
-#else
-    memmove(inode->l1.addrs, dinode.l1_addrs, sizeof(addr_t) * (NDIRECT + 1));
-#endif
+    } else {
+        memmove(inode->l1.addrs, dinode.l1_addrs, sizeof(addr_t) * (NDIRECT + 1));
 #ifdef USE_SSD
-    memmove(inode->l2.addrs, dinode.l2_addrs, sizeof(addr_t) * (NDIRECT + 1));
+        memmove(inode->l2.addrs, dinode.l2_addrs, sizeof(addr_t) * (NDIRECT + 1));
 #endif
 #ifdef USE_HDD
-    memmove(inode->l3.addrs, dinode.l3_addrs, sizeof(addr_t) * (NDIRECT + 1));
+        memmove(inode->l3.addrs, dinode.l3_addrs, sizeof(addr_t) * (NDIRECT + 1));
 #endif
+    }
 
     pthread_mutex_unlock(&inode->i_mutex);
 

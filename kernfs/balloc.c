@@ -7,9 +7,6 @@
 #define HASHTABLE_ALIGNMENT_HACK
 //#define NEVER_REUSE_BLOCKS
 
-#if !defined(HASHTABLE)
-#undef GLOBAL_EXTENT_TREES
-#endif
 #undef GLOBAL_EXTENT_TREES
 
 uint64_t size_of_bitmap(mlfs_fsblk_t nrblocks)
@@ -816,15 +813,13 @@ static unsigned long mlfs_alloc_blocks_in_free_list(struct super_block *sb,
     last_blk_num += num_blocks;
 #endif
 
-#if 1
-#ifndef HASHTABLE
-    for (unsigned long i = 0; i < num_blocks; ++i) {
-        ensure_block_is_clear(sb->s_bdev, (*new_blocknr) + i);
+    if (g_idx_choice != GLOBAL_HASH_TABLE) {
+        for (unsigned long i = 0; i < num_blocks; ++i) {
+            ensure_block_is_clear(sb->s_bdev, (*new_blocknr) + i);
+        }
+    } else {
+        sync_all_buffers(sb->s_bdev);
     }
-#endif
-#else
-    sync_all_buffers(sb->s_bdev);
-#endif
 
 	return num_blocks;
 }

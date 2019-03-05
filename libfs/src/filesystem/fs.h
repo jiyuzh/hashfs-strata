@@ -127,14 +127,14 @@ typedef struct mlfs_libfs_stats {
 	uint64_t path_storage_nr;
 	uint64_t path_storage_tsc;
 	stats_dist_t read_per_index;
-  // hash table stuff
-  uint64_t n_entries_read;
-  uint64_t n_lookups;
-  uint64_t hash_fn_tsc;
-  uint64_t hash_fn_nr;
-  uint64_t hash_loop_tsc;
-  uint64_t hash_loop_nr;
-  uint64_t hash_iter_nr;
+    // hash table stuff
+    uint64_t n_entries_read;
+    uint64_t n_lookups;
+    uint64_t hash_fn_tsc;
+    uint64_t hash_fn_nr;
+    uint64_t hash_loop_tsc;
+    uint64_t hash_loop_nr;
+    uint64_t hash_iter_nr;
 } libfs_stat_t;
 
 extern struct lru g_fcache_head;

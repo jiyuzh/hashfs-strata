@@ -9,10 +9,7 @@
 #include "migrate.h"
 #endif
 
-#ifdef HASHTABLE
 #include "inode_hash.h"
-#include "math.h"
-#endif
 
 /*
  * used by extent splitting.
@@ -409,8 +406,10 @@ int mlfs_ext_tree_init(handle_t *handle, struct inode *inode)
 	eh->eh_magic = cpu_to_le16(MLFS_EXT_MAGIC);
 	eh->eh_max = cpu_to_le16(mlfs_ext_space_root(inode, 0));
 	mlfs_mark_inode_dirty(inode);
-#if defined(USE_API_FOR_EXTENTS) && defined(KERNFS)
-    write_ondisk_inode(handle->dev, inode);
+#if defined(KERNFS)
+    if (g_idx_choice == EXTENT_TREES) {
+        write_ondisk_inode(handle->dev, inode);
+    }
 #endif
 	return 0;
 }
@@ -2792,75 +2791,76 @@ int mlfs_ext_get_blocks(handle_t *handle, struct inode *inode,
 #endif
 
 
-#ifdef USE_API_FOR_EXTENTS
-    if (!inode->ext_idx) {
-        static bool notify = false;
-        if (!notify) {
-            printf("Init API extent trees!!!\n");
-            notify = true;
+    if (g_idx_choice == EXTENT_TREES) {
+        if (!inode->ext_idx) {
+            static bool notify = false;
+            if (!notify) {
+                printf("Init API extent trees!!!\n");
+                notify = true;
+            }
+
+            paddr_range_t direct_extents = {
+                .pr_start      = get_inode_block(handle->dev, inode->inum),
+                .pr_blk_offset = (sizeof(struct dinode) * (inode->inum % IPB)) + 64,
+                .pr_nbytes     = 64
+            };
+            inode->ext_idx = mlfs_zalloc(sizeof(*inode->ext_idx));
+            int init_err = extent_tree_fns.im_init_prealloc(&strata_idx_spec,
+                                                            &direct_extents,
+                                                            inode->ext_idx);
+            if (init_err) {
+                fprintf(stderr, "Error in extent tree API init: %d\n", init_err);
+                panic("Could not initialize API extent trees!\n");
+            }
+
+            FN(inode->ext_idx, im_set_stats, 
+               inode->ext_idx, true);
         }
 
-        paddr_range_t direct_extents = {
-            .pr_start      = get_inode_block(handle->dev, inode->inum),
-            .pr_blk_offset = (sizeof(struct dinode) * (inode->inum % IPB)) + 64,
-            .pr_nbytes     = 64
-        };
-        inode->ext_idx = mlfs_zalloc(sizeof(*inode->ext_idx));
-        int init_err = extent_tree_fns.im_init_prealloc(&strata_idx_spec,
-                                                        &direct_extents,
-                                                        inode->ext_idx);
-        if (init_err) {
-            fprintf(stderr, "Error in extent tree API init: %d\n", init_err);
-            panic("Could not initialize API extent trees!\n");
-        }
+        if (create) {
+            ssize_t nblk = FN(inode->ext_idx, im_create,
+                              inode->ext_idx, inode->inum, map->m_lblk, 
+                              map->m_len, &map->m_pblk);
+            map->m_len = nblk > 0 ? nblk : map->m_len;
+            // Ensure write_ondisk_inode doesn't screw us.
+            /*
+            ext_meta_t *ext_meta = (ext_meta_t*)(inode->ext_idx->idx_metadata);
+            memmove(inode->_dinode->l1_addrs, ext_meta->et_direct_data, 64);
+            */
+            (void)read_ondisk_inode(handle->dev, inode->inum, inode->_dinode);
+            //(void)sync_inode_from_dinode(inode, inode->_dinode);
+            return nblk;
+        } else {
+            ssize_t nblk = FN(inode->ext_idx, im_lookup,
+                              inode->ext_idx, inode->inum, map->m_lblk, 
+                              &map->m_pblk);
+            nblk = nblk > map->m_len ? map->m_len : nblk;
 
-        FN(inode->ext_idx, im_set_stats, 
-           inode->ext_idx, true);
+            if (enable_perf_stats) {
+                update_stats_dist(&(g_perf_stats.read_per_index),
+                                  g_perf_stats.path_storage_nr);
+            }
+            //FN(inode->ext_idx, im_print_stats, inode->ext_idx);
+            return nblk;
+        }
     }
 
-    if (create) {
-        ssize_t nblk = FN(inode->ext_idx, im_create,
-                          inode->ext_idx, inode->inum, map->m_lblk, 
-                          map->m_len, &map->m_pblk);
-        map->m_len = nblk > 0 ? nblk : map->m_len;
-        // Ensure write_ondisk_inode doesn't screw us.
-        /*
-        ext_meta_t *ext_meta = (ext_meta_t*)(inode->ext_idx->idx_metadata);
-        memmove(inode->_dinode->l1_addrs, ext_meta->et_direct_data, 64);
-        */
-        (void)read_ondisk_inode(handle->dev, inode->inum, inode->_dinode);
-        //(void)sync_inode_from_dinode(inode, inode->_dinode);
-        return nblk;
-    } else {
-        ssize_t nblk = FN(inode->ext_idx, im_lookup,
-                          inode->ext_idx, inode->inum, map->m_lblk, 
-                          &map->m_pblk);
-        nblk = nblk > map->m_len ? map->m_len : nblk;
 
+
+    if (g_idx_choice == GLOBAL_HASH_TABLE) {
+        int hash_ret = mlfs_hash_get_blocks(handle, inode, map, flags, false);
+#ifdef KERNFS
+        if (enable_perf_stats) {
+            g_perf_stats.path_search_tsc += (asm_rdtscp() - tsc_start);
+        }
+#else
         if (enable_perf_stats) {
             update_stats_dist(&(g_perf_stats.read_per_index),
-                              g_perf_stats.path_storage_nr);
+                                g_perf_stats.path_storage_nr);
         }
-        //FN(inode->ext_idx, im_print_stats, inode->ext_idx);
-        return nblk;
+#endif
+        return hash_ret;
     }
-#endif
-
-
-
-#ifdef HASHTABLE
-  int hash_ret = mlfs_hash_get_blocks(handle, inode, map, flags, false);
-#ifdef KERNFS
-	if (enable_perf_stats)
-		g_perf_stats.path_search_tsc += (asm_rdtscp() - tsc_start);
-#else
-    if (enable_perf_stats) {
-        update_stats_dist(&(g_perf_stats.read_per_index),
-                            g_perf_stats.path_storage_nr);
-    }
-#endif
-  return hash_ret;
-#endif
 
 	/*mutex_lock(&inode->truncate_mutex);*/
 
@@ -3098,38 +3098,37 @@ int mlfs_ext_truncate(handle_t *handle, struct inode *inode,
 
 	mlfs_assert(handle != NULL);
 
-#ifdef USE_API_FOR_EXTENTS
-    if (!inode->ext_idx) {
-        if (!notify) {
-            printf("Init API extent trees!!!\n");
-            notify = true;
+    if (g_idx_choice == EXTENT_TREES) {
+        if (!inode->ext_idx) {
+            if (!notify) {
+                printf("Init API extent trees!!!\n");
+                notify = true;
+            }
+
+            paddr_range_t direct_extents = {
+                .pr_start      = get_inode_block(handle->dev, inode->inum),
+                .pr_blk_offset = (sizeof(struct dinode) * (inode->inum % IPB)) + 59,
+                .pr_nbytes     = 64
+            };
+            inode->ext_idx = mlfs_zalloc(sizeof(*inode->ext_idx));
+            int init_err = extent_tree_fns.im_init_prealloc(&strata_idx_spec,
+                                                            &direct_extents,
+                                                            inode->ext_idx);
+            if (init_err) {
+                fprintf(stderr, "Error in extent tree API init: %d\n", init_err);
+                panic("Could not initialize API extent trees!\n");
+            }
         }
 
-        paddr_range_t direct_extents = {
-            .pr_start      = get_inode_block(handle->dev, inode->inum),
-            .pr_blk_offset = (sizeof(struct dinode) * (inode->inum % IPB)) + 59,
-            .pr_nbytes     = 64
-        };
-        inode->ext_idx = mlfs_zalloc(sizeof(*inode->ext_idx));
-        int init_err = extent_tree_fns.im_init_prealloc(&strata_idx_spec,
-                                                        &direct_extents,
-                                                        inode->ext_idx);
-        if (init_err) {
-            fprintf(stderr, "Error in extent tree API init: %d\n", init_err);
-            panic("Could not initialize API extent trees!\n");
-        }
+        ret = FN(inode->ext_idx, im_remove, inode->ext_idx, inode->inum, start, 
+                 (end - start) + 1);
+
+        if (ret == (end - start + 1)) ret = 0;
+    } else if (g_idx_choice == GLOBAL_HASH_TABLE) {
+        ret = mlfs_hash_truncate(handle, inode, start, end);
+    } else {
+        ret = mlfs_ext_remove_space(handle, inode, start, end);
     }
-
-    ret = FN(inode->ext_idx, im_remove, inode->ext_idx, inode->inum, start, 
-             (end - start) + 1);
-
-    if (ret == (end - start + 1)) ret = 0;
-
-#elif defined(HASHTABLE)
-    ret = mlfs_hash_truncate(handle, inode, start, end);
-#else
-	ret = mlfs_ext_remove_space(handle, inode, start, end);
-#endif
 
 	/* Save modifications on i_blocks field of the inode. */
 	if (!ret)

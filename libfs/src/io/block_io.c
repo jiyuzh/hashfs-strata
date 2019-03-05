@@ -144,14 +144,15 @@ static struct buffer_head *buffer_alloc_fast(struct block_device *bdev,
 	bh->b_count = 0;
 	bh->b_size = 0;
 	bh->b_offset = 0;
-#ifdef HASHTABLE
-  bh->b_cacheline_size = 256; // units of 64 bytes
-  bh->b_bitmap_size = (g_block_size_bytes / bh->b_cacheline_size);
-  //printf("--- hello? %lu %lu\n", bh->b_cacheline_size, bh->b_bitmap_size);
-  bh->b_dirty_bitmap = (uint64_t*)mlfs_alloc(bh->b_bitmap_size / sizeof(uint8_t));
-  bh->b_use_bitmap = 0;
-  bitmap_zero(bh->b_dirty_bitmap, bh->b_bitmap_size);
-#endif
+
+    if (g_idx_choice == GLOBAL_HASH_TABLE) {
+        bh->b_cacheline_size = 256; // units of 64 bytes
+        bh->b_bitmap_size = (g_block_size_bytes / bh->b_cacheline_size);
+        bh->b_dirty_bitmap = (uint64_t*)mlfs_alloc(bh->b_bitmap_size / sizeof(uint8_t));
+        bh->b_use_bitmap = 0;
+        bitmap_zero(bh->b_dirty_bitmap, bh->b_bitmap_size);
+    }
+
 	INIT_LIST_HEAD(&bh->b_io_list);
 
 	//pthread_spin_init(&bh->b_spinlock, PTHREAD_PROCESS_SHARED);
@@ -317,80 +318,78 @@ int mlfs_write(struct buffer_head *b)
 
 	mlfs_assert(b->b_size > 0);
 
-  //printf("size = %llu\n", b->b_size);
-#ifdef HASHTABLE
-	storage_engine = g_bdev[b->b_dev]->storage_engine;
-  // (iangneal): Support bitmap for byte-addressable storage.
-	if (b->b_offset || b->b_use_bitmap) {
-    //printf("byte addressable\n");
-    if (b->b_use_bitmap) {
-      //printf("bitmap write (size of bitmap: %lu)\n", b->b_bitmap_size);
-      //printf("(size of cacheline: %lu)\n", b->b_cacheline_size);
-      //printf("(size of block: %lu)\n", g_block_size_bytes);
-      mlfs_assert(b->b_dirty_bitmap);
-      size_t total = 0;
-      // iangneal: find dirty regions, write them back one snippet at a time.
-      for (int i = 0; i < b->b_bitmap_size;) {
-        size_t region_size = 0;
-        uint32_t start = find_next_bit(b->b_dirty_bitmap, b->b_bitmap_size, i);
-        uint32_t next = 0;
+    if (g_idx_choice == GLOBAL_HASH_TABLE) {
+        storage_engine = g_bdev[b->b_dev]->storage_engine;
+        // (iangneal): Support bitmap for byte-addressable storage.
+        if (b->b_offset || b->b_use_bitmap) {
+        //printf("byte addressable\n");
+        if (b->b_use_bitmap) {
+          //printf("bitmap write (size of bitmap: %lu)\n", b->b_bitmap_size);
+          //printf("(size of cacheline: %lu)\n", b->b_cacheline_size);
+          //printf("(size of block: %lu)\n", g_block_size_bytes);
+          mlfs_assert(b->b_dirty_bitmap);
+          size_t total = 0;
+          // iangneal: find dirty regions, write them back one snippet at a time.
+          for (int i = 0; i < b->b_bitmap_size;) {
+            size_t region_size = 0;
+            uint32_t start = find_next_bit(b->b_dirty_bitmap, b->b_bitmap_size, i);
+            uint32_t next = 0;
 
-        if (start == b->b_bitmap_size) {
-          break;
+            if (start == b->b_bitmap_size) {
+              break;
+            } else {
+              i = start;
+            }
+
+            do {
+              __clear_bit(i, b->b_dirty_bitmap);
+              region_size++;
+              i++;
+              next = find_next_bit(b->b_dirty_bitmap, b->b_bitmap_size, i);
+            } while (next == start + region_size && next < b->b_bitmap_size);
+
+            size_t byte_off = start * b->b_cacheline_size;
+
+            ret = storage_engine->write_unaligned(
+                b->b_dev,
+                b->b_data + byte_off, /* need this because b_data is a whole page */
+                b->b_blocknr,
+                byte_off,
+                region_size * b->b_cacheline_size);
+
+            if (ret != region_size * b->b_cacheline_size) {
+              fprintf(stderr, "%d (ret) != %lu\n", ret,
+                  region_size * b->b_cacheline_size);
+              panic("failed to write dirty bitmap range");
+            } else {
+              total += region_size;
+            }
+          }
+
+          ret = total;
         } else {
-          i = start;
+          ret = storage_engine->write_unaligned(b->b_dev, b->b_data,
+              b->b_blocknr, b->b_offset, b->b_size);
         }
-
-        do {
-          __clear_bit(i, b->b_dirty_bitmap);
-          region_size++;
-          i++;
-          next = find_next_bit(b->b_dirty_bitmap, b->b_bitmap_size, i);
-        } while (next == start + region_size && next < b->b_bitmap_size);
-
-        size_t byte_off = start * b->b_cacheline_size;
-
-        ret = storage_engine->write_unaligned(
-            b->b_dev,
-            b->b_data + byte_off, /* need this because b_data is a whole page */
-            b->b_blocknr,
-            byte_off,
-            region_size * b->b_cacheline_size);
-
-        if (ret != region_size * b->b_cacheline_size) {
-          fprintf(stderr, "%d (ret) != %lu\n", ret,
-              region_size * b->b_cacheline_size);
-          panic("failed to write dirty bitmap range");
-        } else {
-          total += region_size;
-        }
+      } else {
+            ret = storage_engine->write(b->b_dev, b->b_data, b->b_blocknr, b->b_size);
       }
 
-      ret = total;
+        if (ret != b->b_size) {
+        fprintf(stderr, "ret = %d, size = %u\n", ret, b->b_size);
+            panic("failed to write storage\n");
+      }
     } else {
-      ret = storage_engine->write_unaligned(b->b_dev, b->b_data,
-          b->b_blocknr, b->b_offset, b->b_size);
+        storage_engine = g_bdev[b->b_dev]->storage_engine;
+        if (b->b_offset)
+            ret = storage_engine->write_unaligned(b->b_dev, b->b_data,
+                    b->b_blocknr, b->b_offset, b->b_size);
+        else
+            ret = storage_engine->write(b->b_dev, b->b_data, b->b_blocknr, b->b_size);
+
+        if (ret != b->b_size)
+            panic("fail to write storage\n");
     }
-  } else {
-		ret = storage_engine->write(b->b_dev, b->b_data, b->b_blocknr, b->b_size);
-  }
-
-	if (ret != b->b_size) {
-    fprintf(stderr, "ret = %d, size = %u\n", ret, b->b_size);
-		panic("failed to write storage\n");
-  }
-
-#else
-	storage_engine = g_bdev[b->b_dev]->storage_engine;
-	if (b->b_offset)
-		ret = storage_engine->write_unaligned(b->b_dev, b->b_data,
-				b->b_blocknr, b->b_offset, b->b_size);
-	else
-		ret = storage_engine->write(b->b_dev, b->b_data, b->b_blocknr, b->b_size);
-
-	if (ret != b->b_size)
-		panic("fail to write storage\n");
-#endif
 	set_buffer_uptodate(b);
 
 	ret = 0;

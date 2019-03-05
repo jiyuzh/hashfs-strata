@@ -13,10 +13,6 @@
 #include "kernfs_interface.h"
 #include "extents_bh.h"
 
-#ifdef HASHTABLE
-#include "inode_hash.h"
-#endif
-
 void read_root_inode(uint8_t dev_id)
 {
 	struct dinode _dinode;
@@ -84,12 +80,10 @@ int write_ondisk_inode(uint8_t dev, struct inode *ip)
 		ret = mlfs_write(bh);
 		mlfs_io_wait(dev, 0);
 
-#ifdef USE_API_FOR_EXTENTS
-        if (ip->ext_idx) {
+        if (g_idx_choice == EXTENT_TREES && ip->ext_idx) {
             FN(ip->ext_idx, im_print_stats,
                ip->ext_idx);
         }
-#endif
 	} else {
 		bh->b_size = g_block_size_bytes;
 		bh->b_data = mlfs_zalloc(g_block_size_bytes);
