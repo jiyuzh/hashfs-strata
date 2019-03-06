@@ -5,8 +5,7 @@ OBJS = syscalldb.o shim_init.o \
 	   shim_sys_fs.o \
 	   shim_syscalls.o \
 	   syscall_trace.o \
-	   shim_table.o \
-	   fd_map.o
+	   shim_table.o
 
 HEADERS = $(wildcard *.h)
 

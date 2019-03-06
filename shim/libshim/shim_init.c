@@ -4,8 +4,6 @@
 #include <dlfcn.h>
 #include <mlfs/mlfs_interface.h>
 
-#include "fd_map.h"
-
 void shim_init() __attribute((constructor));
 void shim_fini() __attribute((destructor));
 
@@ -18,7 +16,6 @@ void shim_init(void)
 	if (!shim_initialized) {
 		//asm("int $3");
 		init_fs();
-        init_maps();
 		shim_initialized = 1;
 	}
 }
