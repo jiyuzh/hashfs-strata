@@ -60,6 +60,9 @@ long __shim_mmap(long __arg1, long __arg2, long __arg3, long __arg4,
 long __shim_munmap(long __arg1, long __arg2);
 long __shim_getdents(long __arg1, long __arg2, long __arg3);
 long __shim_getdents64(long __arg1, long __arg2, long __arg3);
+long __shim_chmod(long __arg1, long __arg2);
+long __shim_fchmod(long __arg1, long __arg2);
+long __shim_getcwd(long __arg1, long __arg2);
 
 // Actual system call handlers.
 int shim_do_chdir(const char *pathname);
@@ -94,6 +97,9 @@ void *shim_do_mmap(void *addr, size_t length, int prot, int flags, int fd, off_t
 int shim_do_munmap(void *addr, size_t length);
 size_t shim_do_getdents(int fd, struct linux_dirent *buf, size_t count);
 size_t shim_do_getdents64(int fd, struct linux_dirent64 *buf, size_t count);
+int shim_do_chmod(const char *pathname, mode_t mode);
+int shim_do_fchmod(int fd, mode_t mode);
+char *shim_do_getcwd(char *buf, size_t size);
 
 #ifdef __cplusplus
 }
