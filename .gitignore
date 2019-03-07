@@ -83,6 +83,7 @@ bench/filebench/ylwrap
 
 # Graphs.
 *.pdf
+__pycache__
 
 # CTags/CScope
 tags

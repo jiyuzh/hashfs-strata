@@ -27,9 +27,9 @@ class Grapher:
     SHAPES  = ['o', 'v', '8', 's', 'P', '*', 'X']
 
     D       = 5
-    HATCH   = [D*'..', D*'\\\\', D*'//', D*'', D*'xx', D*'*', D*'+', D*'\\']
+    HATCH   = [ D*'\\\\', D*'',  D*'//', D*'..', D*'xx', D*'*', D*'+', D*'\\']
 
-    COLORS = [ '#91bfdb', '#fc8d59', '#fee090', '#4575b4', '#d73027', '#e0f3f8' ]
+    COLORS = [ '#91bfdb', '#fee090', '#fc8d59', '#4575b4', '#d73027', '#e0f3f8' ]
 
     @staticmethod
     def _hex_color_to_tuple(color_str):
@@ -148,7 +148,9 @@ class Grapher:
 
             return artist, ybounds
 
-    def _graph_subplot_stacked(self, dataframes, grid_spec, xlabel, cutoff=None, which_legend=None, no_yticks=False, ylabel=str()):
+    def _graph_subplot_stacked(self, dataframes, grid_spec, xlabel,
+            cutoff=None, which_legend=None, no_yticks=False, ylabel=str(),
+            totals=None, totals_label='rel. mb/s: '):
         '''
         '''
         once = False
@@ -207,6 +209,8 @@ class Grapher:
                 if labels is None:
                     labels = df[reason].index
 
+
+
             config_patches += [Patch(facecolor='white',
                                      edgecolor='black',
                                      hatch=hatch,
@@ -217,6 +221,19 @@ class Grapher:
                     reason_patches += [Patch(facecolor=color,
                                              edgecolor='black',
                                              label=reason)]
+
+        # Repeat after we accumulate the bottom.
+        for reason, slot in zip(df.columns, count()):
+            new_index = index - ((slot + 1.0 - (num_slots / 2.0)) * width)
+            if totals is not None:
+                for i, d, name in zip(new_index, bottom[reason], df[reason].index):
+                    s = '{0}{1:.3f}'.format(totals_label, totals[reason][name])
+                    print(s, reason, name)
+                    print(i-(0.5*width))
+                    txt = axis.text(d * 0.8, i - (0.3 * width), s, color='white',
+                                    fontweight='bold', fontfamily='sans',
+                                    fontsize=6)
+                    txt.set_path_effects([PathEffects.withStroke(linewidth=1, foreground='black')])
 
 
         plt.sca(axis)
@@ -270,17 +287,18 @@ class Grapher:
                 additional_artists=artist)
         plt.close()
 
-    def graph_dataframes_stacked(self, df_dicts, ylabel=str()):
+    def graph_dataframes_stacked(self, df_dicts, df_totals, ylabel=str()):
         if not isinstance(df_dicts, dict):
             df_dicts = {'default': df_dicts}
 
         gridspecs = GridSpec(1, len(df_dicts))
 
         artists = []
-        for testname, letter, df_dict, gs, legend in zip(df_dicts.keys(), list(string.ascii_uppercase), df_dicts.values(), gridspecs, count()):
+        for testname, letter, df_dict, df_total, gs, legend in zip(df_dicts.keys(), list(string.ascii_uppercase), df_dicts.values(), df_totals.values(), gridspecs, count()):
             label = '{}) {}'.format(letter, testname)
             legends = self._graph_subplot_stacked(df_dict, gs, label,
-                    which_legend=legend, no_yticks=legend > 0 and False, ylabel=ylabel)
+                    which_legend=legend, no_yticks=legend > 0 and False, ylabel=ylabel,
+                    totals=df_total)
             artists += legends
 
         plt.subplots_adjust(wspace=0.05, hspace=0.0)
