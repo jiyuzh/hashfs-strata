@@ -67,6 +67,8 @@ endif
 	MLFS_FLAGS += -DINDEX_NAME=\"ext\ \"
 endif
 
+OPT_ARGS ?= -g -O3
+
 #######
 # Optimization definitions
 #######
@@ -76,10 +78,6 @@ MLFS_FLAGS += -DREUSE_PREVIOUS_PATH  # optimization for extent trees
 # Testing definitions
 ########
 MLFS_FLAGS += -DSIMULATE_FRAGMENTATION
-
-DEBUG = -g -O0
-#DEBUG = -g -Ofast
-#DEBUG = -g -O3
 
 ########
 #  vpath and compile function for each file
@@ -92,7 +90,7 @@ CXX = g++ -std=c++11
 
 define make-goal
 $1/%.o: %.c
-	$(CC) $(INCLUDES) $(DEBUG) -fPIC -c $$< -o $$@ -DKERNFS $(MLFS_FLAGS)
+	$(CC) $(INCLUDES) -fPIC $(OPT_ARGS) -c $$< -o $$@ -DKERNFS $(MLFS_FLAGS)
 endef
 
 ########
@@ -115,8 +113,8 @@ $(BUILD_DIR):
 #  Targets
 ########
 filesystem: $(OBJ) $(SRC) $(HDER)
-	#$(CC) -shared $(DEBUG) -o $(PREFIX)/libkernfs.so $(OBJ) $(CUCKOO_FILTER_DIR)/libcuckoofilter.a $(LD_FLAGS) $(MLFS_FLAGS)
-	$(CC) -shared $(DEBUG) -o $(PREFIX)/libkernfs.so $(OBJ) $(LD_FLAGS) $(MLFS_FLAGS)
+	#$(CC) -shared $(OPT_ARGS) -o $(PREFIX)/libkernfs.so $(OBJ) $(CUCKOO_FILTER_DIR)/libcuckoofilter.a $(LD_FLAGS) $(MLFS_FLAGS)
+	$(CC) -shared $(OPT_ARGS) -o $(PREFIX)/libkernfs.so $(OBJ) $(LD_FLAGS) $(MLFS_FLAGS)
 
 ########
 #  Compile each source into an object

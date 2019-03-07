@@ -1,4 +1,5 @@
 #include "indexing_api_interface.h"
+#include "storage/storage.h"
 
 #if 0
 #define trace_me() \

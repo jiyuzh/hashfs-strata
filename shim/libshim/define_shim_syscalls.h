@@ -86,13 +86,16 @@ DEFINE_SHIM_SYSCALL (getdents64, 3, shim_do_getdents64, size_t, int, fd,
 		struct linux_dirent64 *, buf, size_t, count)
 
 DEFINE_SHIM_SYSCALL (chdir, 1, shim_do_chdir, int, const char *, filename)
+DEFINE_SHIM_SYSCALL (chmod, 2, shim_do_chmod, int, const char *, pathname,
+mode_t, mode)
+DEFINE_SHIM_SYSCALL (fchmod, 2, shim_do_fchmod, int, int, fd, mode_t, mode)
+DEFINE_SHIM_SYSCALL (getcwd, 2, shim_do_getcwd, char *, char *, buf, size_t, size)
 /*
 DEFINE_SHIM_SYSCALL (readv, 3, shim_do_readv, ssize_t, int, fd,
                      const struct iovec *, vec, int, vlen)
 
 DEFINE_SHIM_SYSCALL (writev, 3, shim_do_writev, ssize_t, int, fd,
                      const struct iovec *, vec, int, vlen)
-DEFINE_SHIM_SYSCALL (getcwd, 2, shim_do_getcwd, int, char *, buf, size_t, size)
 
 DEFINE_SHIM_SYSCALL (fchdir, 1, shim_do_fchdir, int, int, fd)
 DEFINE_SHIM_SYSCALL (symlink, 2, shim_do_symlink, int, const char *, old, const char *, new)
@@ -100,10 +103,7 @@ DEFINE_SHIM_SYSCALL (symlink, 2, shim_do_symlink, int, const char *, old, const 
 DEFINE_SHIM_SYSCALL (readlink, 3, shim_do_readlink, int, const char *, path,
 char *, buf, int, bufsize)
 
-DEFINE_SHIM_SYSCALL (chmod, 2, shim_do_chmod, int, const char *, filename,
-mode_t, mode)
 
-DEFINE_SHIM_SYSCALL (fchmod, 2, shim_do_fchmod, int, int, fd, mode_t, mode)
 
 DEFINE_SHIM_SYSCALL (chown, 3, shim_do_chown, int, const char *, filename,
 uid_t, user, gid_t, group)
