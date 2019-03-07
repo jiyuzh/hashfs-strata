@@ -957,7 +957,14 @@ int digest_unlink(uint8_t from_dev, uint8_t to_dev, uint32_t inum)
 	mlfs_debug("[UNLINK] (%d->%d) inum %d\n", from_dev, to_dev, inum);
 
 	inode = icache_find(to_dev, inum);
-	mlfs_assert(inode);
+	if (!inode) {
+		struct dinode dip;
+		inode = icache_alloc_add(g_root_dev, inum);
+		read_ondisk_inode(g_root_dev, inum, &dip);
+		mlfs_assert(dip.itype != 0);
+		sync_inode_from_dinode(inode, &dip);
+		mlfs_assert(dip.dev !=0);
+	}
 
 	mlfs_assert(!(inode->flags & I_DELETING));
 
