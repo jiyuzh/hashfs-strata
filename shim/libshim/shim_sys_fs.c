@@ -1201,7 +1201,7 @@ size_t shim_do_getdents(int fd, struct linux_dirent *buf, size_t count)
 		MLFS_RET_DEF;
 		MLFS_BUF_DEF(struct linux_dirent*, count);
 		MLFS_RET = mlfs_posix_getdents(get_mlfs_fd(MLFS_FD), MLFS_BUF, count);
-        syscall_dump("%d", MLFS_RET, "%d", MLFS_FD, "%lu", count);
+		syscall_dump("%d", MLFS_RET, "%d", MLFS_FD, "%s", MLFS_FNAME, "%lu", count);
 #ifdef MIRROR_SYSCALL
         // shouldn't compare return value, since it represents the size read to the buffer
         // should be fs dependent
@@ -1217,11 +1217,19 @@ size_t shim_do_getdents(int fd, struct linux_dirent *buf, size_t count)
 			++mlfs_n_entry;
 		}
 		if (n_entry != mlfs_n_entry) {
-            syscall_abort("fd %d path %s, inconsistent n_entry %lu, mlfs %lu\n",
-                    fd, MLFS_FNAME, n_entry, mlfs_n_entry);
+			for (struct linux_dirent *dir = buf;
+					(uint8_t*)dir < (uint8_t*)buf + ret;
+					dir = (struct linux_dirent*)((uint8_t*)dir + dir->d_reclen)) {
+				always_warn("name: %s\n", dir->d_name);
+			}
+			for (struct linux_dirent *mlfs_dir = MLFS_BUF;
+					(uint8_t*)mlfs_dir < (uint8_t*)MLFS_BUF + MLFS_RET;
+					mlfs_dir = (struct linux_dirent*)((uint8_t*)mlfs_dir + mlfs_dir->d_reclen)) {
+				always_warn("mlfs_name: %s\n", mlfs_dir->d_name);
+			}
+			syscall_abort("fd %d path %s, inconsistent n_entry %lu, mlfs %lu\n",
+					fd, MLFS_FNAME, n_entry, mlfs_n_entry);
 		}
-        memcpy(buf, MLFS_BUF, count);
-        ret = MLFS_RET;
 		free(MLFS_BUF);
 #endif
 	}
