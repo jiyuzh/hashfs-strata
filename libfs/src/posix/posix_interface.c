@@ -643,8 +643,7 @@ size_t mlfs_posix_getdents(int fd, struct linux_dirent *buf,
 	if (f->off >= f->ip->size)
 		return 0;
 
-	bytes = dir_get_linux_dirent(f->ip, buf, f->off, nbytes);
-	f->off += bytes;
+	bytes = dir_get_linux_dirent(f->ip, buf, &(f->off), nbytes);
 
 	return bytes;
 }
