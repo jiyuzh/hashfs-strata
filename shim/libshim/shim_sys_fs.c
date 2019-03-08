@@ -434,6 +434,8 @@ size_t shim_do_write(int fd, const void *buf, size_t count)
             syscall_abort("fd %d path %s, inconsistent return value: ret %d, mlfs_ret %d\n",
                     fd, MLFS_FNAME, ret, MLFS_RET);
 		}
+		struct stat stat_buf;
+		shim_do_fstat(fd, &stat_buf);
 #endif
 	}
 
@@ -471,6 +473,8 @@ size_t shim_do_pwrite64(int fd, const void *buf, size_t count, loff_t off)
             syscall_abort("fd %d path %s, inconsistent return value: ret %d, mlfs_ret %d\n",
                     fd, MLFS_FNAME, ret, MLFS_RET);
 		}
+		struct stat stat_buf;
+		shim_do_fstat(fd, &stat_buf);
 #endif
 	}
 
