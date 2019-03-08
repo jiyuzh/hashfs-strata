@@ -104,16 +104,16 @@ static char fn_map[MLFS_FD_MAP_SIZE][PATH_BUF_SIZE];
 #define MLFS_FNAME fn_map[fd]
 #define MLFS_BUF mlfs_buf
 #define MLFS_BUF_DEF(type, count) type mlfs_buf = malloc(count)
-#define CMP_SUBFIELD(stat1, stat2, field_fmt, field, cmp) do {\
+#define CMP_SUBFIELD(prestr, stat1, stat2, field_fmt, field, cmp) do {\
 		if (!(cmp(stat1->field, stat2->field))) {\
-            syscall_warn(#field " ("#stat1")" field_fmt " != " "("#stat2")" field_fmt "\n", stat1->field, stat2->field);\
+			syscall_warn("%s: " #field " ("#stat1")" field_fmt " != " "("#stat2")" field_fmt "\n", prestr, stat1->field, stat2->field);\
 		}} while(0)
 #define NUM_CMP(a,b) (a == b)
 #define STRING_CMP(a,b) (!strcmp(a,b))
 #define ST_MODE_CMP(a,b) ((a&S_IFMT) == (b&S_IFMT))
-#define CMP_STAT(stat1, stat2)\
-		CMP_SUBFIELD(stat1, stat2, "%u", st_mode, ST_MODE_CMP);\
-		CMP_SUBFIELD(stat1, stat2, "%ld", st_size, NUM_CMP)
+#define CMP_STAT(prestr, stat1, stat2)\
+		CMP_SUBFIELD(prestr, stat1, stat2, "%u", st_mode, ST_MODE_CMP);\
+		CMP_SUBFIELD(prestr, stat1, stat2, "%ld", st_size, NUM_CMP)
 /*		CMP_SUBFIELD(stat1, stat2, "%lu", st_dev, NUM_CMP);\
 		CMP_SUBFIELD(stat1, stat2, "%lu", st_ino, NUM_CMP);\
 		CMP_SUBFIELD(stat1, stat2, "%lu", st_nlink, NUM_CMP);\
@@ -730,7 +730,7 @@ int shim_do_stat(const char *filename, struct stat *buf)
                     fullpath, ret, MLFS_RET);
 		}
 		if (ret == 0) {
-			CMP_STAT(buf, MLFS_BUF);
+			CMP_STAT(fullpath, buf, MLFS_BUF);
 		}
 		free(MLFS_BUF);
 #endif
@@ -774,7 +774,7 @@ int shim_do_lstat(const char *filename, struct stat *buf)
                     fullpath, ret, MLFS_RET);
 		}
 		if (ret == 0) {
-			CMP_STAT(buf, MLFS_BUF);
+			CMP_STAT(fullpath, buf, MLFS_BUF);
 		}
 		free(MLFS_BUF);
 #endif
@@ -814,7 +814,7 @@ int shim_do_fstat(int fd, struct stat *buf)
                     fd, MLFS_FNAME, ret, MLFS_RET);
 		}
 		if (ret == 0) {
-			CMP_STAT(buf, MLFS_BUF);
+			CMP_STAT(MLFS_FNAME, buf, MLFS_BUF);
 		}
 		free(MLFS_BUF);
 #endif
