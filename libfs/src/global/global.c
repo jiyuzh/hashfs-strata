@@ -13,6 +13,9 @@ indexing_choice_t get_indexing_choice(void) {
     } else if (env != NULL && !strcmp(env, "GLOBAL_HASH_TABLE")) {
         printf("%s -> using API global hash table!\n", env);
         return GLOBAL_HASH_TABLE;
+    } else if (env != NULL && !strcmp(env, "LEVEL_HASH_TABLES")) {
+        printf("%s -> using API level hashing, which is per-inode!\n", env);
+        return LEVEL_HASH_TABLES;
     } else {
         printf("%s -> using Strata default indexing!\n", env);
         return NONE;

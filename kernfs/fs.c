@@ -401,10 +401,12 @@ int digest_inode(uint8_t from_dev, uint8_t to_dev,
 			handle_t handle;
 			handle.dev = src_dinode->dev;
 
-      // iangneal: fix truncate segmentation fault by bad end block calculation
-      mlfs_lblk_t start_blk = (src_dinode->size >> g_block_size_shift) +
-                              ((src_dinode->size & g_block_size_mask) != 0);
-      mlfs_lblk_t end_blk   = (inode->size >> g_block_size_shift);
+          // iangneal: fix truncate segmentation fault by bad end block calculation
+          mlfs_lblk_t start_blk = (src_dinode->size >> g_block_size_shift) +
+                                  ((src_dinode->size & g_block_size_mask) != 0);
+          mlfs_lblk_t end_blk   = (inode->size >> g_block_size_shift);
+
+            if (inode->size % g_block_size_bytes) end_blk -= 1;
 
 			ret = mlfs_ext_truncate(&handle, inode, start_blk, end_blk);
 
@@ -972,6 +974,7 @@ int digest_unlink(uint8_t from_dev, uint8_t to_dev, uint32_t inum)
 		if (inode->size > 0) {
 			handle_t handle = {.dev = to_dev};
 			mlfs_lblk_t end = (inode->size) >> g_block_size_shift;
+            if (inode->size % g_block_size_bytes) end -= 1;
 
 			//ret = mlfs_ext_truncate(&handle, inode, 0, end == 0 ? end : end - 1);
 			ret = mlfs_ext_truncate(&handle, inode, 0, end);
@@ -2196,7 +2199,7 @@ void read_superblock(uint8_t dev)
 
 	// The partition is GC unit (1 GB) in SSD.
 	// disk_sb[dev].size : total # of blocks
-#ifdef GLOBAL_EXTENT_TREES
+#if 0
 #define shift_size 19
 	sb[dev]->n_partition = disk_sb[dev].size >> shift_size;
 

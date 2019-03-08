@@ -81,6 +81,7 @@ extern char pwd[MAX_PATH + 1];
 typedef enum indexing_api_choice {
     EXTENT_TREES,
     GLOBAL_HASH_TABLE,
+    LEVEL_HASH_TABLES,
     NONE
 } indexing_choice_t;
 

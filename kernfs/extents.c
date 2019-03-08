@@ -407,7 +407,7 @@ int mlfs_ext_tree_init(handle_t *handle, struct inode *inode)
 	eh->eh_max = cpu_to_le16(mlfs_ext_space_root(inode, 0));
 	mlfs_mark_inode_dirty(inode);
 #if defined(KERNFS)
-    if (g_idx_choice == EXTENT_TREES) {
+    if (g_idx_choice == EXTENT_TREES || g_idx_choice == LEVEL_HASH_TABLES) {
         write_ondisk_inode(handle->dev, inode);
     }
 #endif
@@ -2791,7 +2791,7 @@ int mlfs_ext_get_blocks(handle_t *handle, struct inode *inode,
 #endif
 
 
-    if (g_idx_choice == EXTENT_TREES) {
+    if (g_idx_choice == EXTENT_TREES || g_idx_choice == LEVEL_HASH_TABLES) {
         if (!inode->ext_idx) {
             static bool notify = false;
             if (!notify) {
@@ -2805,12 +2805,19 @@ int mlfs_ext_get_blocks(handle_t *handle, struct inode *inode,
                 .pr_nbytes     = 64
             };
             inode->ext_idx = mlfs_zalloc(sizeof(*inode->ext_idx));
-            int init_err = extent_tree_fns.im_init_prealloc(&strata_idx_spec,
+            int init_err;
+            if (g_idx_choice == EXTENT_TREES) {
+                init_err = extent_tree_fns.im_init_prealloc(&strata_idx_spec,
                                                             &direct_extents,
                                                             inode->ext_idx);
+            } else {
+                init_err = levelhash_fns.im_init_prealloc(&strata_idx_spec,
+                                                          &direct_extents,
+                                                          inode->ext_idx);
+            }
             if (init_err) {
                 fprintf(stderr, "Error in extent tree API init: %d\n", init_err);
-                panic("Could not initialize API extent trees!\n");
+                panic("Could not initialize API per-inode structure!\n");
             }
 
             FN(inode->ext_idx, im_set_stats, 
@@ -2822,6 +2829,7 @@ int mlfs_ext_get_blocks(handle_t *handle, struct inode *inode,
                               inode->ext_idx, inode->inum, map->m_lblk, 
                               map->m_len, &map->m_pblk);
             map->m_len = nblk > 0 ? nblk : map->m_len;
+
             // Ensure write_ondisk_inode doesn't screw us.
             /*
             ext_meta_t *ext_meta = (ext_meta_t*)(inode->ext_idx->idx_metadata);
@@ -2829,6 +2837,7 @@ int mlfs_ext_get_blocks(handle_t *handle, struct inode *inode,
             */
             (void)read_ondisk_inode(handle->dev, inode->inum, inode->_dinode);
             //(void)sync_inode_from_dinode(inode, inode->_dinode);
+
             return nblk;
         } else {
             ssize_t nblk = FN(inode->ext_idx, im_lookup,
@@ -3098,10 +3107,10 @@ int mlfs_ext_truncate(handle_t *handle, struct inode *inode,
 
 	mlfs_assert(handle != NULL);
 
-    if (g_idx_choice == EXTENT_TREES) {
+    if (g_idx_choice == EXTENT_TREES || g_idx_choice == LEVEL_HASH_TABLES) {
         if (!inode->ext_idx) {
             if (!notify) {
-                printf("Init API extent trees!!!\n");
+                printf("Init API in truncate!!!\n");
                 notify = true;
             }
 
@@ -3111,9 +3120,17 @@ int mlfs_ext_truncate(handle_t *handle, struct inode *inode,
                 .pr_nbytes     = 64
             };
             inode->ext_idx = mlfs_zalloc(sizeof(*inode->ext_idx));
-            int init_err = extent_tree_fns.im_init_prealloc(&strata_idx_spec,
+            int init_err;
+            if (g_idx_choice == EXTENT_TREES) {
+                init_err = extent_tree_fns.im_init_prealloc(&strata_idx_spec,
                                                             &direct_extents,
                                                             inode->ext_idx);
+            } else {
+                init_err = levelhash_fns.im_init_prealloc(&strata_idx_spec,
+                                                          &direct_extents,
+                                                          inode->ext_idx);
+            }
+
             if (init_err) {
                 fprintf(stderr, "Error in extent tree API init: %d\n", init_err);
                 panic("Could not initialize API extent trees!\n");
