@@ -107,7 +107,7 @@ static char fn_map[MLFS_FD_MAP_SIZE][PATH_BUF_SIZE];
 #define MLFS_BUF_DEF(type, count) type mlfs_buf = malloc(count)
 #define CMP_SUBFIELD(prestr, stat1, stat2, field_fmt, field, cmp) do {\
 		if (!(cmp(stat1->field, stat2->field))) {\
-			syscall_warn("%s: " #field " ("#stat1")" field_fmt " != " "("#stat2")" field_fmt "\n", prestr, stat1->field, stat2->field);\
+			always_warn("%s: " #field " ("#stat1")" field_fmt " != " "("#stat2")" field_fmt "\n", prestr, stat1->field, stat2->field);\
 		}} while(0)
 #define NUM_CMP(a,b) (a == b)
 #define STRING_CMP(a,b) (!strcmp(a,b))
