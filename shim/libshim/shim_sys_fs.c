@@ -13,6 +13,7 @@
 #include "shim_types.h"
 #include "shim_syscall_macro.h"
 #include "shim_sys_fs.h"
+#include "shim_syscalls.h"
 
 
 /* System call ABIs
@@ -264,7 +265,7 @@ int shim_do_openat(int dfd, const char *filename, int flags, mode_t mode)
 	return ret;
 }
 
-int shim_do_creat(char *filename, mode_t mode)
+int shim_do_creat(const char *filename, mode_t mode)
 {
 	int ret;
     char path_buf[PATH_BUF_SIZE], dest_path[PATH_BUF_SIZE], *fullpath;
@@ -403,7 +404,7 @@ size_t shim_do_pread64(int fd, void *buf, size_t count, loff_t off)
 	return ret;
 }
 
-size_t shim_do_write(int fd, void *buf, size_t count)
+size_t shim_do_write(int fd, const void *buf, size_t count)
 {
 	int ret;
 	uint8_t in_mlfs = check_mlfs_fd(MLFS_FD);
@@ -439,7 +440,7 @@ size_t shim_do_write(int fd, void *buf, size_t count)
 	return ret;
 }
 
-size_t shim_do_pwrite64(int fd, void *buf, size_t count, loff_t off)
+size_t shim_do_pwrite64(int fd, const void *buf, size_t count, loff_t off)
 {
 	int ret;
 	uint8_t in_mlfs = check_mlfs_fd(MLFS_FD);

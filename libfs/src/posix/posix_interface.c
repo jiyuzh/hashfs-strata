@@ -255,7 +255,7 @@ int mlfs_posix_pread64(int fd, void *buf, size_t count, loff_t off)
 	return ret;
 }
 
-int mlfs_posix_write(int fd, void *buf, size_t count)
+int mlfs_posix_write(int fd, const void *buf, size_t count)
 {
 	int ret;
 	struct file *f;
@@ -282,7 +282,7 @@ int mlfs_posix_write(int fd, void *buf, size_t count)
 	return ret;
 }
 
-int mlfs_posix_pwrite64(int fd, void *buf, size_t count, loff_t off)
+int mlfs_posix_pwrite64(int fd, const void *buf, size_t count, loff_t off)
 {
 	int ret;
 	struct file *f;
