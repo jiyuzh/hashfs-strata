@@ -406,8 +406,6 @@ int digest_inode(uint8_t from_dev, uint8_t to_dev,
                                   ((src_dinode->size & g_block_size_mask) != 0);
           mlfs_lblk_t end_blk   = (inode->size >> g_block_size_shift);
 
-            if (inode->size % g_block_size_bytes) end_blk -= 1;
-
 			ret = mlfs_ext_truncate(&handle, inode, start_blk, end_blk);
 
 			mlfs_assert(!ret);
@@ -974,7 +972,6 @@ int digest_unlink(uint8_t from_dev, uint8_t to_dev, uint32_t inum)
 		if (inode->size > 0) {
 			handle_t handle = {.dev = to_dev};
 			mlfs_lblk_t end = (inode->size) >> g_block_size_shift;
-            if (inode->size % g_block_size_bytes) end -= 1;
 
 			//ret = mlfs_ext_truncate(&handle, inode, 0, end == 0 ? end : end - 1);
 			ret = mlfs_ext_truncate(&handle, inode, 0, end);

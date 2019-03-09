@@ -2835,7 +2835,9 @@ int mlfs_ext_get_blocks(handle_t *handle, struct inode *inode,
             ext_meta_t *ext_meta = (ext_meta_t*)(inode->ext_idx->idx_metadata);
             memmove(inode->_dinode->l1_addrs, ext_meta->et_direct_data, 64);
             */
-            (void)read_ondisk_inode(handle->dev, inode->inum, inode->_dinode);
+            struct dinode di;
+            (void)read_ondisk_inode(handle->dev, inode->inum, &di);
+            memmove(inode->l1.addrs, di.l1_addrs, sizeof(addr_t) * (NDIRECT + 1));
             //(void)sync_inode_from_dinode(inode, inode->_dinode);
 
             return nblk;
