@@ -1,0 +1,55 @@
+How to build mysql 8.0.15 with strata:
+
+0. Need build.env to define env SLDFLAGS. Need mysql-strata.patch, based on branch mysql-8.0.15
+    $ source build.env
+
+1. Build openssl version (git branch) OpenSSL_1_1_0g
+    $ cd openssl
+    $ git checkout OpenSSL_1_1_0g
+    $ ./Configure --prefix=$PWD/../openssl-install $SLDFLAGS linux-x86_64
+    $ make -j
+    $ make install -j
+
+2. Use MySQL cmake to download required boost
+    $ git clone xxx mysql-server
+    $ mkdir mysql-build
+    $ cd mysql-build
+    $ cmake ../mysql-server -DCMAKE_INSTALL_PREFIX=$PWD/../mysql-install -DDOWNLOAD_BOOST=1 -DWITH_BOOST=$PWD/../boost
+
+3. Build regular mysql (without strata)
+    $ cd mysql-build
+    $ cmake ../mysql-server -DCMAKE_INSTALL_PREFIX=$PWD/../mysql-opt-install -DWITH_BOOST=$PWD/../boost
+    you can add -DWITH_DEBUG=1 to enable debug build
+    $ make -j install
+
+4. Build mysql with strata
+    apply patch first
+    $ cd mysql-server
+    $ git checkout mysql-8.0.15
+    $ git apply ../mysql-strata.patch
+    $ cd ../ && mkdir mysql-strata-build
+    $ cd mysql-strata-build
+    $ cmake ../mysql-server -DCMAKE_INSTALL_PREFIX=$PWD/../mysql-strata-opt-install -DWITH_BOOST=$PWD/../boost -DCMAKE_C_LINK_FLAGS=$SLDFLAGS -DCMAKE_CXX_LINK_FLAGS=$SLDFLAGS -DWITH_SSL=$PWD/../openssl-install
+    you can add -DWITH_DEBUG=1 to enable debug build
+    $ make -j install
+
+5. Build tpcc-mysql
+    $ cd tpcc-mysql/src
+    $ PATH=$PATH:../../mysql-opt-install/bin make
+    NOTE: here should build with regular mysql
+
+6. How to run mysqld with strata
+    need to add customized openssl into LD_LIBRARY_PATH (aka run.sh)
+    
+    1) initialize mysqld (built with strata)
+    $ sudo -E numactl -N 0 -m 0 ./run.sh mysql-strata-opt-install/bin/mysqld --defaults-file=mysql-strata.cnf --initialize-insecure
+    2) start mysqld daemon (built with strata)
+    $ sudo -E numactl -N 0 -m 0 ./run.sh mysql-strata-opt-install/bin/mysqld --defaults-file=mysql-strata.cnf
+    3) use regular mysql client (built without strata) to initialize tpcc database
+    $ sudo mysql-opt-install/bin/mysql -h 127.0.0.1 -P 3306 -u root "create database tpcc10;"
+    $ sudo mysql-opt-install/bin/mysql -h 127.0.0.1 -P 3306 -u root tpcc10 < tpcc-mysql/create_table.sql
+    4) populate tpcc database. Use `tpcc_load` and regular mysql library (built without strata)
+    $ LD_LIBRARY_PATH=mysql-install/lib tpcc-mysql/tpcc_load -h 127.0.0.1 -d tpcc10 -u root -p "" -w 10
+    NOTE: -w means number of warehouses, 
+    5) run tpcc bench. Use `tpcc_start` and regular mysql library (built without strata)
+    $ LD_LIBRARY_PATH=mysql-opt-install/lib tpcc-mysql/tpcc_start -h 127.0.0.1 -P 3306 -d tpcc10 -u root -p "" -w 10 -c 64 -r 10 -l 120 -f report_file -t trx_file

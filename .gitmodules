@@ -7,3 +7,12 @@
 [submodule "bench/leveldb"]
 	path = bench/leveldb
 	url = https://github.com/Alkaid-Benetnash/leveldb.git
+[submodule "bench/openssl"]
+	path = bench/openssl
+	url = https://github.com/openssl/openssl.git
+[submodule "bench/mysql-server"]
+	path = bench/mysql-server
+	url = https://github.com/mysql/mysql-server.git
+[submodule "bench/tpcc-mysql"]
+	path = bench/tpcc-mysql
+	url = https://github.com/Percona-Lab/tpcc-mysql.git
