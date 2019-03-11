@@ -272,38 +272,41 @@ struct inode* dir_lookup(struct inode *dir_inode, char *name, offset_t *poff)
 /*
  * Known Bug FIXME
  * will only return the first directory block
+ *
+ * off will be updated to the last offset read from the dir data block
  */
-int dir_get_linux_dirent(struct inode *dir_inode, struct linux_dirent *buf, offset_t off, size_t nbytes)
+int dir_get_linux_dirent(struct inode *dir_inode, struct linux_dirent *buf, offset_t *p_off, size_t nbytes)
 {
 	struct inode *ip;
 	uint8_t *dirent_array;
 	struct mlfs_dirent *de;
+	offset_t off = *p_off;
 
 	de = get_dirent(dir_inode, off);
 
 	mlfs_assert(de);
-    offset_t buf_off = 0, de_off = off % g_block_size_bytes;
-    while (de_off < g_block_size_bytes) {
-        if (de->inum != 0) {
-            size_t namelen = strlen(de->name);
-            size_t next_entry_size = sizeof(struct linux_dirent) + namelen;
-            if (buf_off + next_entry_size < nbytes) {
-                buf->d_ino = de->inum;
-                buf->d_off = de_off;
-                buf->d_reclen = next_entry_size;
-                strncpy(buf->d_name, de->name, DIRSIZ);
-                buf = (struct linux_dirent*)(((uint8_t*)buf) + buf->d_reclen);
-                buf_off += next_entry_size;
-            }
-            else {
-                break;
-            }
-        }
-        de_off += sizeof(struct mlfs_dirent);
-        de++;
-    }
-
-    return buf_off;
+	offset_t buf_off = 0, de_off = off % g_block_size_bytes;
+	while (de_off < g_block_size_bytes) {
+		if (de->inum != 0) {
+			size_t namelen = strlen(de->name);
+			size_t next_entry_size = sizeof(struct linux_dirent) + namelen;
+			if (buf_off + next_entry_size < nbytes) {
+				buf->d_ino = de->inum;
+				buf->d_off = de_off;
+				buf->d_reclen = next_entry_size;
+				strncpy(buf->d_name, de->name, DIRSIZ);
+				buf = (struct linux_dirent*)(((uint8_t*)buf) + buf->d_reclen);
+				buf_off += next_entry_size;
+			}
+			else {
+				break;
+			}
+		}
+		de_off += sizeof(struct mlfs_dirent);
+		de++;
+	}
+	*p_off = de_off;
+	return buf_off;
 }
 
 /* Workflows when renaming to existing one (newname exists in the directory).

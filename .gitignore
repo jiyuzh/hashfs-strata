@@ -87,3 +87,4 @@ __pycache__
 
 # CTags/CScope
 tags
+cscope*

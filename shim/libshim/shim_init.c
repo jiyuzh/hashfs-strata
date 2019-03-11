@@ -18,6 +18,14 @@ void shim_init(void)
 		init_fs();
 		shim_initialized = 1;
 	}
+    printf("libshim init: "
+#ifdef MIRROR_SYSCALL
+            "MIRROR_SYSCALL "
+#endif
+#ifdef SYS_TRACE
+            "SYS_TRACE "
+#endif
+            "\n");
 }
 
 void shim_fini(void)
