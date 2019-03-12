@@ -579,7 +579,7 @@ int bmap(struct inode *ip, struct bmap_request *bmap_req);
 
 int dir_check_entry_fast(struct inode *dir_inode);
 struct inode* dir_lookup(struct inode*, char*, offset_t *);
-int dir_get_linux_dirent(struct inode *dir_inode, struct linux_dirent *buf, offset_t off, size_t nbytes);
+int dir_get_linux_dirent(struct inode *dir_inode, struct linux_dirent *buf, offset_t *p_off, size_t nbytes);
 int dir_add_entry(struct inode *inode, char *name, uint32_t inum);
 int dir_remove_entry(struct inode *inode,char *name, uint32_t inum);
 int dir_change_entry(struct inode *dir_inode, char *oldname, char *newname);

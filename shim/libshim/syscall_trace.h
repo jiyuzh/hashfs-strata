@@ -36,16 +36,16 @@ void do_trace(const char *name, int ret, int args, ...);
 #define EXPAND_OPT(fmt, var, ...) var
 #define DO_EXPAND_OPT(...) MAP_TUPLE_COMMA(EXPAND_OPT, __VA_ARGS__)
 
-#ifdef SYS_TRACE
-#define syscall_warn(fmt, ...) do {\
+#define always_warn(fmt, ...) do {\
     pid_t tid = syscall(SYS_gettid);\
     fprintf(stderr, "(%d)[%s:%d] " fmt, tid, __func__, __LINE__, __VA_ARGS__); \
     } while(0)
-#define syscall_abort(fmt, ...) do { syscall_warn(fmt, __VA_ARGS__); abort(); } while (0)
+#define syscall_abort(fmt, ...) do { always_warn(fmt, __VA_ARGS__); abort(); } while (0)
+#ifdef SYS_TRACE
+#define syscall_warn(fmt, ...) always_warn(fmt, __VA_ARGS__)
 #define syscall_dump(...) syscall_warn(EVAL(DO_EXPAND_FMT(__VA_ARGS__)), EVAL(DO_EXPAND_OPT(__VA_ARGS__)))
 #else
 #define syscall_warn(fmt, ...)
-#define syscall_abort(fmt, ...)
 #define syscall_dump(...)
 #endif
 

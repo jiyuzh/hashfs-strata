@@ -42,7 +42,9 @@ typedef mlfs_fsblk_t hash_value_t;
 
 
 #define MASK_32 ((1lu << 32) - 1)
+#ifndef MAKEKEY
 #define MAKEKEY(inode, key) (((uint64_t)inode->inum << 32) | key)
+#endif
 #define GET_INUM(hk) (hk >> 32)
 #define GET_LBLK(hk) (hk & MASK_32)
 #define GKEY2PTR(hk) ((void*)(hk))

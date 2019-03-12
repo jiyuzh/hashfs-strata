@@ -1,0 +1,73 @@
+From 0fab6a2189387031fcd8498e5e302375f8c9dad8 Mon Sep 17 00:00:00 2001
+From: Ian Glen Neal <ian.gl.neal@gmail.com>
+Date: Mon, 18 Feb 2019 11:14:37 -0800
+Subject: [PATCH] build with strata
+
+---
+ CMakeLists.txt                  | 1 +
+ libmysql/CMakeLists.txt         | 2 +-
+ storage/innobase/buf/buf0buf.cc | 1 +
+ utilities/CMakeLists.txt        | 4 ++--
+ 4 files changed, 5 insertions(+), 3 deletions(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 7680f0edb01..2bbcb72f0e9 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -726,6 +726,7 @@ FOREACH(LANG C CXX)
+   STRING_PREPEND(CMAKE_${LANG}_FLAGS_DEBUG "-DSAFE_MUTEX ")
+ ENDFOREACH()
+ 
++SET(STRATA_CROSSCOMPILING_EMULATOR LD_LIBRARY_PATH=/home/iangneal/workspace/strata/shim/glibc-build/:/usr/lib64/)
+ 
+ # Set commonly used variables
+ IF(WIN32)
+diff --git a/libmysql/CMakeLists.txt b/libmysql/CMakeLists.txt
+index bb7e0e0c2d6..ebde1ea2c42 100644
+--- a/libmysql/CMakeLists.txt
++++ b/libmysql/CMakeLists.txt
+@@ -375,6 +375,6 @@ ENDIF()
+ 
+ # Verify that libmysql_api_test runs OK
+ ADD_CUSTOM_COMMAND(TARGET libmysql_api_test POST_BUILD
+-  COMMAND $<TARGET_FILE:libmysql_api_test>
++  COMMAND ${STRATA_CROSSCOMPILING_EMULATOR} $<TARGET_FILE:libmysql_api_test>
+   > ${CMAKE_CURRENT_BINARY_DIR}/libmysql_api_test.out
+   )
+diff --git a/storage/innobase/buf/buf0buf.cc b/storage/innobase/buf/buf0buf.cc
+index 79424ada8c5..07dc56028ab 100644
+--- a/storage/innobase/buf/buf0buf.cc
++++ b/storage/innobase/buf/buf0buf.cc
+@@ -62,6 +62,7 @@ this program; if not, write to the Free Software Foundation, Inc.,
+ #include <errno.h>
+ #include <stdarg.h>
+ #include <sys/types.h>
++#include <sys/syscall.h>
+ #include <time.h>
+ #include <map>
+ #include <new>
+diff --git a/utilities/CMakeLists.txt b/utilities/CMakeLists.txt
+index 095c0770b25..3640f2833a3 100644
+--- a/utilities/CMakeLists.txt
++++ b/utilities/CMakeLists.txt
+@@ -36,7 +36,7 @@ MYSQL_ADD_EXECUTABLE(comp_client_err
+ TARGET_LINK_LIBRARIES(comp_client_err mysys mysys_ssl)
+ 
+ ADD_CUSTOM_COMMAND(OUTPUT ${PROJECT_BINARY_DIR}/include/mysqlclient_ername.h
+-  COMMAND comp_client_err
++  COMMAND ${STRATA_CROSSCOMPILING_EMULATOR} $<TARGET_FILE:comp_client_err>
+   --in_file=${PROJECT_SOURCE_DIR}/include/errmsg.h
+   --out_file=${PROJECT_BINARY_DIR}/include/mysqlclient_ername.h
+   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/comp_client_err.cc)
+@@ -59,7 +59,7 @@ FILE(MAKE_DIRECTORY ${PROJECT_BINARY_DIR}/${INSTALL_MYSQLSHAREDIR})
+ 
+ ADD_CUSTOM_COMMAND(OUTPUT ${PROJECT_BINARY_DIR}/include/mysqld_error.h 
+                    ${PROJECT_BINARY_DIR}/${INSTALL_MYSQLSHAREDIR}/english/errmsg.sys
+-                   COMMAND comp_err
++                   COMMAND ${STRATA_CROSSCOMPILING_EMULATOR} $<TARGET_FILE:comp_err>
+                     --charset=${PROJECT_SOURCE_DIR}/share/charsets
+                     --out-dir=${PROJECT_BINARY_DIR}/${INSTALL_MYSQLSHAREDIR}/
+                     --header_file=${PROJECT_BINARY_DIR}/include/mysqld_error.h 
+-- 
+2.14.5
+

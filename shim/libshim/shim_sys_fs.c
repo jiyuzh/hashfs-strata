@@ -13,6 +13,7 @@
 #include "shim_types.h"
 #include "shim_syscall_macro.h"
 #include "shim_sys_fs.h"
+#include "shim_syscalls.h"
 
 
 /* System call ABIs
@@ -104,16 +105,16 @@ static char fn_map[MLFS_FD_MAP_SIZE][PATH_BUF_SIZE];
 #define MLFS_FNAME fn_map[fd]
 #define MLFS_BUF mlfs_buf
 #define MLFS_BUF_DEF(type, count) type mlfs_buf = malloc(count)
-#define CMP_SUBFIELD(stat1, stat2, field_fmt, field, cmp) do {\
+#define CMP_SUBFIELD(prestr, stat1, stat2, field_fmt, field, cmp) do {\
 		if (!(cmp(stat1->field, stat2->field))) {\
-            syscall_warn(#field " ("#stat1")" field_fmt " != " "("#stat2")" field_fmt "\n", stat1->field, stat2->field);\
+			always_warn("%s: " #field " ("#stat1")" field_fmt " != " "("#stat2")" field_fmt "\n", prestr, stat1->field, stat2->field);\
 		}} while(0)
 #define NUM_CMP(a,b) (a == b)
 #define STRING_CMP(a,b) (!strcmp(a,b))
 #define ST_MODE_CMP(a,b) ((a&S_IFMT) == (b&S_IFMT))
-#define CMP_STAT(stat1, stat2)\
-		CMP_SUBFIELD(stat1, stat2, "%u", st_mode, ST_MODE_CMP);\
-		CMP_SUBFIELD(stat1, stat2, "%ld", st_size, NUM_CMP)
+#define CMP_STAT(prestr, stat1, stat2)\
+		CMP_SUBFIELD(prestr, stat1, stat2, "%u", st_mode, ST_MODE_CMP);\
+		CMP_SUBFIELD(prestr, stat1, stat2, "%ld", st_size, NUM_CMP)
 /*		CMP_SUBFIELD(stat1, stat2, "%lu", st_dev, NUM_CMP);\
 		CMP_SUBFIELD(stat1, stat2, "%lu", st_ino, NUM_CMP);\
 		CMP_SUBFIELD(stat1, stat2, "%lu", st_nlink, NUM_CMP);\
@@ -264,7 +265,7 @@ int shim_do_openat(int dfd, const char *filename, int flags, mode_t mode)
 	return ret;
 }
 
-int shim_do_creat(char *filename, mode_t mode)
+int shim_do_creat(const char *filename, mode_t mode)
 {
 	int ret;
     char path_buf[PATH_BUF_SIZE], dest_path[PATH_BUF_SIZE], *fullpath;
@@ -403,7 +404,7 @@ size_t shim_do_pread64(int fd, void *buf, size_t count, loff_t off)
 	return ret;
 }
 
-size_t shim_do_write(int fd, void *buf, size_t count)
+size_t shim_do_write(int fd, const void *buf, size_t count)
 {
 	int ret;
 	uint8_t in_mlfs = check_mlfs_fd(MLFS_FD);
@@ -433,13 +434,15 @@ size_t shim_do_write(int fd, void *buf, size_t count)
             syscall_abort("fd %d path %s, inconsistent return value: ret %d, mlfs_ret %d\n",
                     fd, MLFS_FNAME, ret, MLFS_RET);
 		}
+		struct stat stat_buf;
+		shim_do_fstat(fd, &stat_buf);
 #endif
 	}
 
 	return ret;
 }
 
-size_t shim_do_pwrite64(int fd, void *buf, size_t count, loff_t off)
+size_t shim_do_pwrite64(int fd, const void *buf, size_t count, loff_t off)
 {
 	int ret;
 	uint8_t in_mlfs = check_mlfs_fd(MLFS_FD);
@@ -470,6 +473,8 @@ size_t shim_do_pwrite64(int fd, void *buf, size_t count, loff_t off)
             syscall_abort("fd %d path %s, inconsistent return value: ret %d, mlfs_ret %d\n",
                     fd, MLFS_FNAME, ret, MLFS_RET);
 		}
+		struct stat stat_buf;
+		shim_do_fstat(fd, &stat_buf);
 #endif
 	}
 
@@ -730,7 +735,7 @@ int shim_do_stat(const char *filename, struct stat *buf)
                     fullpath, ret, MLFS_RET);
 		}
 		if (ret == 0) {
-			CMP_STAT(buf, MLFS_BUF);
+			CMP_STAT(fullpath, buf, MLFS_BUF);
 		}
 		free(MLFS_BUF);
 #endif
@@ -774,7 +779,7 @@ int shim_do_lstat(const char *filename, struct stat *buf)
                     fullpath, ret, MLFS_RET);
 		}
 		if (ret == 0) {
-			CMP_STAT(buf, MLFS_BUF);
+			CMP_STAT(fullpath, buf, MLFS_BUF);
 		}
 		free(MLFS_BUF);
 #endif
@@ -814,7 +819,7 @@ int shim_do_fstat(int fd, struct stat *buf)
                     fd, MLFS_FNAME, ret, MLFS_RET);
 		}
 		if (ret == 0) {
-			CMP_STAT(buf, MLFS_BUF);
+			CMP_STAT(MLFS_FNAME, buf, MLFS_BUF);
 		}
 		free(MLFS_BUF);
 #endif
@@ -1196,7 +1201,7 @@ size_t shim_do_getdents(int fd, struct linux_dirent *buf, size_t count)
 		MLFS_RET_DEF;
 		MLFS_BUF_DEF(struct linux_dirent*, count);
 		MLFS_RET = mlfs_posix_getdents(get_mlfs_fd(MLFS_FD), MLFS_BUF, count);
-        syscall_dump("%d", MLFS_RET, "%d", MLFS_FD, "%lu", count);
+		syscall_dump("%d", MLFS_RET, "%d", MLFS_FD, "%s", MLFS_FNAME, "%lu", count);
 #ifdef MIRROR_SYSCALL
         // shouldn't compare return value, since it represents the size read to the buffer
         // should be fs dependent
@@ -1212,11 +1217,19 @@ size_t shim_do_getdents(int fd, struct linux_dirent *buf, size_t count)
 			++mlfs_n_entry;
 		}
 		if (n_entry != mlfs_n_entry) {
-            syscall_abort("fd %d path %s, inconsistent n_entry %lu, mlfs %lu\n",
-                    fd, MLFS_FNAME, n_entry, mlfs_n_entry);
+			for (struct linux_dirent *dir = buf;
+					(uint8_t*)dir < (uint8_t*)buf + ret;
+					dir = (struct linux_dirent*)((uint8_t*)dir + dir->d_reclen)) {
+				always_warn("name: %s\n", dir->d_name);
+			}
+			for (struct linux_dirent *mlfs_dir = MLFS_BUF;
+					(uint8_t*)mlfs_dir < (uint8_t*)MLFS_BUF + MLFS_RET;
+					mlfs_dir = (struct linux_dirent*)((uint8_t*)mlfs_dir + mlfs_dir->d_reclen)) {
+				always_warn("mlfs_name: %s\n", mlfs_dir->d_name);
+			}
+			syscall_abort("fd %d path %s, inconsistent n_entry %lu, mlfs %lu\n",
+					fd, MLFS_FNAME, n_entry, mlfs_n_entry);
 		}
-        memcpy(buf, MLFS_BUF, count);
-        ret = MLFS_RET;
 		free(MLFS_BUF);
 #endif
 	}

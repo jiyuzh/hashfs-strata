@@ -1,0 +1,9 @@
+[mysqld]
+user=root
+datadir=/mlfs/
+innodb_use_native_aio=0
+bind_address=127.0.0.1
+socket=/tmp/mysql-strata.sock
+#innodb_read_io_threads=1
+#innodb_write_io_threads=1
+#innodb_parallel_read_threads=1
