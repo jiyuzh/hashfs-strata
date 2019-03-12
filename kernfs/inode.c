@@ -81,8 +81,7 @@ int write_ondisk_inode(uint8_t dev, struct inode *ip)
 		mlfs_io_wait(dev, 0);
 
         if (g_idx_choice == EXTENT_TREES && ip->ext_idx) {
-            FN(ip->ext_idx, im_print_stats,
-               ip->ext_idx);
+            //FN(ip->ext_idx, im_print_stats, ip->ext_idx);
         }
 	} else {
 		bh->b_size = g_block_size_bytes;

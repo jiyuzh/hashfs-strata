@@ -21,7 +21,7 @@ mem_man_fns_t strata_mem_man = {
 ssize_t nvm_write(paddr_t blk, off_t off, size_t nbytes, const char* buf) {
     trace_me();
 #ifdef LIBFS
-    printf("shouldn't get here!\n");
+    panic("shouldn't get here!\n");
 #endif
     return dax_write_unaligned(g_root_dev, (uint8_t*)buf, blk, off, nbytes);
 }

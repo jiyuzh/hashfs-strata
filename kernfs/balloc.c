@@ -4,10 +4,6 @@
 #include "balloc.h"
 
 #define SHARED_PARTITION (65536)
-#define HASHTABLE_ALIGNMENT_HACK
-//#define NEVER_REUSE_BLOCKS
-
-#undef GLOBAL_EXTENT_TREES
 
 uint64_t size_of_bitmap(mlfs_fsblk_t nrblocks)
 {
@@ -829,30 +825,6 @@ static int mlfs_find_free_list(struct super_block *sb,
 {
 	struct free_list *free_list;
 	int i;
-#if !defined(GLOBAL_EXTENT_TREES)
-	if (a_type == DATA_LOG) {
-		// FIXME: find out GCed segment.
-		for (i = 0; i < sb->n_partition; i++) {
-			free_list = mlfs_get_free_list(sb, i);
-			if (free_list->num_free_blocks > num) {
-				return i;
-			}
-		}
-	} else {
-		/* Find out the first free list to allocate requested blocks */
-		for (i = 0; i < sb->n_partition; i++) {
-			free_list = mlfs_get_free_list(sb, i);
-			if (free_list->num_free_blocks > num) {
-				return i;
-			}
-		}
-	}
-#else
-    static bool notify = false;
-    if (unlikely(!notify)) {
-        mlfs_info("ALLOC with global extent trees!%s\n","");
-        notify = true;
-    }
 
 	if (a_type == DATA_LOG) {
 		// FIXME: find out GCed segment.
@@ -862,27 +834,15 @@ static int mlfs_find_free_list(struct super_block *sb,
 				return i;
 			}
 		}
-	} else if (a_type == TREE) {
-        // iangneal: only check first partition
-        i = sb->n_partition - 1;
-        free_list = mlfs_get_free_list(sb, i);
-        if (free_list->num_free_blocks > num) {
-            return i;
-        } else {
-            panic("No more room for tree blocks in partition 0!");
-        }
 	} else {
 		/* Find out the first free list to allocate requested blocks */
-        // (iangneal): skip first partition
-        mlfs_assert(1 < sb->n_partition);
-		for (i = 0; i < sb->n_partition - 1; i++) {
+		for (i = 0; i < sb->n_partition; i++) {
 			free_list = mlfs_get_free_list(sb, i);
 			if (free_list->num_free_blocks > num) {
 				return i;
 			}
 		}
 	}
-#endif
 
 	return -1;
 }
@@ -986,29 +946,34 @@ retry:
   ret_blocks = 0;
   bool set = false;
 
-  for(size_t blk = 0; blk < num_blocks; ) {
-    int rnd = rand() % 100;
-    if (rnd < layout_score_percent) {
-      unsigned long dummy_block;
-      int real_block = mlfs_alloc_blocks_in_free_list(sb, free_list, btype,
-          1, &dummy_block);
+  if (atype == DATA) {
+      for(size_t blk = 0; blk < num_blocks; ) {
+        int rnd = rand() % 100;
+        if (rnd < layout_score_percent) {
+          unsigned long dummy_block;
+          int real_block = mlfs_alloc_blocks_in_free_list(sb, free_list, btype,
+              1, &dummy_block);
 
-      if (!set) {
-        new_blocknr = dummy_block;
-        set = true;
+          if (!set) {
+            new_blocknr = dummy_block;
+            set = true;
+          }
+
+          if(set && dummy_block != new_blocknr + ret_blocks) break;
+          ret_blocks += real_block;
+          blk += real_block;
+
+        } else {
+          unsigned long dummy_block;
+          int junk_block = mlfs_alloc_blocks_in_free_list(sb, free_list, btype,
+              1, &dummy_block);
+
+          if (set) break;
+        }
       }
-
-      if(set && dummy_block != new_blocknr + ret_blocks) break;
-      ret_blocks += real_block;
-      blk += real_block;
-
-    } else {
-      unsigned long dummy_block;
-      int junk_block = mlfs_alloc_blocks_in_free_list(sb, free_list, btype,
-          1, &dummy_block);
-
-      if (set) break;
-    }
+  } else {
+	ret_blocks = mlfs_alloc_blocks_in_free_list(sb, free_list, btype,
+			num_blocks, &new_blocknr);
   }
 
 #else

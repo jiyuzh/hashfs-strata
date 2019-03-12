@@ -131,176 +131,53 @@ int mlfs_hash_get_blocks(handle_t *handle, struct inode *inode,
 	mlfs_assert(handle);
 
 	create = flags & MLFS_GET_BLOCKS_CREATE_DATA;
-  int ret = 0;
-  map->m_pblk = 0;
 
-  // lookup all blocks.
-  uint32_t len = map->m_len;
-  bool set = false;
+    int ret = 0;
+    map->m_pblk = 0;
 
-  for (mlfs_lblk_t i = 0; i < max(map->m_len, 1); ) {
-#ifndef USE_API
-    hash_value_t index = 0;
-    hash_value_t value = 0;
-    hash_value_t size  = 0;
-    int pre = lookup_hash(inode, map->m_lblk + i, &value, &size, &index, force);
-#else
     paddr_t value = 0;
     hash_value_t index = 0; // to make life easier
     ssize_t size = FN(&hash_idx, im_lookup,
-                      &hash_idx, inode->inum, map->m_lblk + i, &value);
-    bool pre = size > 0;
-#endif
-    //printf("LDOWN value = %llu size = %llu index = %llu\n", value, size, index);
-    if (!pre) {
-      goto create;
+                      &hash_idx, inode->inum, map->m_lblk, &value);
+
+    if (size > 0) {
+        ret = size;
+        map->m_pblk = value;
+    } else {
+        goto create;
     }
 
-    if (!set) {
-      //printf("Setting to %lu + %lu\n", value, index);
-      map->m_pblk = value + index;
-      set = true;
-    } else if (value + index != map->m_pblk + i) {
-      // only return contiguous ranges
-      return i;
-    }
+    ret = min(ret, map->m_len);
 
-    len -= size - index;
-    i += size - index;
-    ret = i;
-  }
-
-  ret = min(ret, map->m_len);
-
-  return ret;
+    return ret;
 
 create:
-  if (create) {
+    if (create) {
 
-#ifndef USE_API
-    mlfs_fsblk_t blockp;
-    struct super_block *sb = get_inode_sb(handle->dev, inode);
-    enum alloc_type a_type;
+        inum_t inum   = inode->inum;
+        laddr_t lblk  = map->m_lblk;
+        size_t nalloc = map->m_len;
+        paddr_t pblk  = 0;
 
-    if (flags & MLFS_GET_BLOCKS_CREATE_DATA_LOG) {
-      a_type = DATA_LOG;
-    } else if (flags & MLFS_GET_BLOCKS_CREATE_META) {
-      a_type = TREE;
-    } else {
-      a_type = DATA;
+        ssize_t nret = FN(&hash_idx, im_create,
+                          &hash_idx, inum, lblk, nalloc, &pblk);
+
+        if (nret < 0) {
+            printf("im_create returned %ld, or %s\n", nret, strerror(-nret));
+            panic("wat");
+        }
+
+        ret = nret;
+        map->m_pblk = pblk;
+
+        mlfs_hash_persist();
     }
 
-    pthread_mutex_lock(&alloc_tex);
-    mlfs_lblk_t lb = map->m_lblk + (map->m_len - len);
-    int r = mlfs_new_blocks(sb, &blockp, len, 0, 0, a_type, 0);
-    if (r > 0) {
-      bitmap_bits_set_range(sb->s_blk_bitmap, blockp, r);
-      sb->used_blocks += r;
-    } else if (r == -ENOSPC) {
-      panic("Failed to allocate block -- no space!\n");
-    } else if (r == -EINVAL) {
-      panic("Failed to allocate block -- invalid arguments!\n");
-    } else {
-      panic("Failed to allocate block -- unknown error!\n");
-    }
+    ret = min(ret, map->m_len);
 
-    ret = r;
-    pthread_mutex_unlock(&alloc_tex);
+    if_then_panic(ret == 0, "Likely to loop infinitely!\n");
 
-    //printf("Starting insert: %u, %lu, %lu\n", map->m_lblk, map->m_len, len);
-    for (int c = 0; c < ret; ) {
-      int offset = ((lb + c) & RANGE_BITS);
-      int aligned = offset == 0;
-      if (unlikely(ret >= (RANGE_SIZE / 2) && aligned)) {
-        /*
-         * It's possible part of the range has already been allocated.
-         * Say if someone requests (RANGE_SIZE + 1) blocks, but the blocks from
-         * (RANGE_SIZE, RANGE_SIZE + RANGE_SIZE) have already been allocated,
-         * we need to skip the last block.
-         */
-        hash_value_t index;
-        hash_value_t value;
-        hash_value_t size;
-        // Doesn't make sense to do this on the first pass though, we just
-        // looked it up.
-        if (c > 0) {
-          int pre = lookup_hash(inode, lb + c, &value, &size, &index, force);
-          if (pre) {
-            c += size;
-            if (!set) {
-              map->m_pblk = value + index;
-              set = true;
-            }
-            continue;
-          }
-        }
-
-        uint32_t nblocks = min(ret - c, RANGE_SIZE);
-        //printf("Insert to big.\n");
-        hash_key_t k = RANGE_KEY(inode->inum, lb + c);
-        int already_exists = !insert_hash(gsuper, inode, k, blockp, nblocks);
-        if (already_exists) {
-          //panic("Could not insert huge range!\n");
-          printf("Weird, already exists?\n");
-        }
-
-        if (!set) {
-          map->m_pblk = blockp;
-          set = true;
-        }
-
-        c += nblocks;
-        blockp += nblocks;
-
-      } else {
-        uint32_t nblocks_to_alloc = min(ret - c, RANGE_SIZE - offset);
-
-        if (!set) {
-          map->m_pblk = blockp;
-          set = true;
-        }
-
-        //printf("Insert to small: %u.\n", nblocks_to_alloc);
-        for (uint32_t i = 0; i < nblocks_to_alloc; ++i) {
-          hash_key_t k = MAKEKEY(inode, lb + i + c);
-          int already_exists = !insert_hash(ghash, inode, k, blockp + i,
-              nblocks_to_alloc - i);
-
-          if (already_exists) {
-            fprintf(stderr, "could not insert: key = %u, val = %0lx, already exists (small)\n",
-                lb + i + c, blockp);
-            //panic("Could not insert into small table!");
-          }
-
-        }
-
-        c += nblocks_to_alloc;
-        blockp += nblocks_to_alloc;
-      }
-    }
-#else
-      inum_t inum   = inode->inum;
-      laddr_t lblk  = map->m_lblk + ret;
-      size_t nalloc = map->m_len - ret;
-      paddr_t pblk  = 0;
-
-      ssize_t nret = FN(&hash_idx, im_create,
-                        &hash_idx, inum, lblk, nalloc, &pblk);
-
-      if (nret < 0) {
-          printf("im_create returned %ld, or %s\n", nret, strerror(-nret));
-          panic("wat");
-      }
-      ret += nret;
-      map->m_pblk = pblk;
-#endif
-
-    mlfs_hash_persist();
-  }
-
-  ret = min(ret, map->m_len);
-
-  return ret;
+    return ret;
 }
 
 int mlfs_hash_truncate(handle_t *handle, struct inode *inode,
@@ -319,7 +196,7 @@ int mlfs_hash_truncate(handle_t *handle, struct inode *inode,
   }
 #else
   size_t  nremove  = (end - start) + 1;
-  ssize_t nremoved = FN(&hash_idx, im_remove,
+  size_t nremoved = FN(&hash_idx, im_remove,
                         &hash_idx, inode->inum, start, nremove);
   if_then_panic(nremove != nremoved, "Could not remove all blocks!");
 #endif

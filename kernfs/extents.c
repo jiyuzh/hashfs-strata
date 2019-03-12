@@ -2828,7 +2828,8 @@ int mlfs_ext_get_blocks(handle_t *handle, struct inode *inode,
             ssize_t nblk = FN(inode->ext_idx, im_create,
                               inode->ext_idx, inode->inum, map->m_lblk, 
                               map->m_len, &map->m_pblk);
-            map->m_len = nblk > 0 ? nblk : map->m_len;
+            //map->m_len = nblk > 0 ? nblk : map->m_len;
+            //nblk = map->m_len < nblk ? map->m_len : nblk;
 
             // Ensure write_ondisk_inode doesn't screw us.
             /*
@@ -2840,6 +2841,7 @@ int mlfs_ext_get_blocks(handle_t *handle, struct inode *inode,
             memmove(inode->l1.addrs, di.l1_addrs, sizeof(addr_t) * (NDIRECT + 1));
             //(void)sync_inode_from_dinode(inode, inode->_dinode);
 
+            nblk = nblk > map->m_len ? map->m_len : nblk;
             return nblk;
         } else {
             ssize_t nblk = FN(inode->ext_idx, im_lookup,
