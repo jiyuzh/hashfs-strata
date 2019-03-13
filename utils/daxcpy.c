@@ -14,12 +14,12 @@
 #define CLFLUSH(addr)    asm volatile ("clflush (%0)\n" :: "r"(addr));
 #define SFENSE    asm volatile ("sfence\n" : : );
 
-#define OPTSTRING "i:o:h"
+#define OPTSTRING "i:o:s:h"
 #define OPTNUM 2
 #define MAX_PATH_LEN 256
 #define DAX_PREFIX "/dev/dax"
 void print_help(char **argv) {
-    printf("usage: %s -i path1 -o path2\n", argv[0]);
+    printf("usage: %s [-s insize] -i path1 -o path2\n", argv[0]);
 }
 uint32_t get_unit(char c) {
     switch (c) {
@@ -42,6 +42,7 @@ int main(int argc, char **argv) {
     char inpath[MAX_PATH_LEN];
     char outpath[MAX_PATH_LEN];
     int optnum = 0;
+    size_t insize = 0;
     while ((c = getopt(argc, argv, OPTSTRING)) != -1) {
         switch (c) {
             case 'i': // device path
@@ -52,13 +53,15 @@ int main(int argc, char **argv) {
                 strncpy(outpath, optarg, MAX_PATH_LEN);
                 optnum++;
                 break;
+            case 's':
+                insize = atol(optarg);
+                break;
         }
     }
     if (optnum < OPTNUM) {
         print_help(argv);
         exit(-1);
     }
-    size_t insize = 0;
     int infd, outfd;
     infd = open(inpath, O_RDWR);
     if (infd == -1) {
@@ -70,26 +73,28 @@ int main(int argc, char **argv) {
         perror("outfile open failed");
         exit(-1);
     }
-    if (memcmp(inpath, DAX_PREFIX, strlen(DAX_PREFIX)) == 0) { // prefix with /dev/daxX.X
-        int region, namespace;
-        sscanf(inpath, "/dev/dax%d.%d", &region, &namespace);
-        char sysfs_path[MAX_PATH_LEN];
-        snprintf(sysfs_path, MAX_PATH_LEN, "/sys/class/dax/dax%1d.%1d/size", region, namespace);
-        FILE *sys_size_file = fopen(sysfs_path, "r");
-        if (sys_size_file == NULL) {
-            perror("Open sys size file failed");
-            exit(-1);
+    if (insize == 0) { // insize isn't initialized through cmd arg
+        if (memcmp(inpath, DAX_PREFIX, strlen(DAX_PREFIX)) == 0) { // prefix with /dev/daxX.X
+            int region, namespace;
+            sscanf(inpath, "/dev/dax%d.%d", &region, &namespace);
+            char sysfs_path[MAX_PATH_LEN];
+            snprintf(sysfs_path, MAX_PATH_LEN, "/sys/class/dax/dax%1d.%1d/size", region, namespace);
+            FILE *sys_size_file = fopen(sysfs_path, "r");
+            if (sys_size_file == NULL) {
+                perror("Open sys size file failed");
+                exit(-1);
+            }
+            fscanf(sys_size_file, "%lu", &insize);
+            fclose(sys_size_file);
         }
-        fscanf(sys_size_file, "%lu", &insize);
-        fclose(sys_size_file);
-    }
-    else { // a normal file, use fstat
-        struct stat fst;
-        if (fstat(infd, &fst) != 0) {
-            perror("fstat failed");
-            exit(-1);
+        else { // a normal file, use fstat
+            struct stat fst;
+            if (fstat(infd, &fst) != 0) {
+                perror("fstat failed");
+                exit(-1);
+            }
+            insize = fst.st_size;
         }
-        insize = fst.st_size;
     }
     if (memcmp(outpath, DAX_PREFIX, strlen(DAX_PREFIX)) == 0) { // outfile is a dax device
         ;
