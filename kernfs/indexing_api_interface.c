@@ -39,23 +39,42 @@ ssize_t nvm_read(paddr_t blk, off_t off, size_t nbytes, char* buf) {
     return ret;
 }
 
+pthread_mutex_t alloc_mutex = PTHREAD_MUTEX_INITIALIZER; 
+
+static inline void balloc_lock(void) {
+    int err = pthread_mutex_lock(&alloc_mutex);
+    if_then_panic(err, "Could not lock! %s\n", strerror(err));
+}
+
+static inline void balloc_unlock(void) {
+    int err = pthread_mutex_unlock(&alloc_mutex);
+    if_then_panic(err, "Could not unlock! %s\n", strerror(err));
+}
+
 static inline ssize_t alloc_generic(size_t nblk,
                                     paddr_t* pblk,
                                     enum alloc_type a_type) {
     trace_me();
+
+    balloc_lock();
     struct super_block *sblk = sb[g_root_dev];
 
     int r = mlfs_new_blocks(sblk, pblk, nblk, 0, 0, a_type, 0);
     if (r > 0) {
-      bitmap_bits_set_range(sblk->s_blk_bitmap, *pblk, r);
-      sblk->used_blocks += r;
+        bitmap_bits_set_range(sblk->s_blk_bitmap, *pblk, r);
+        sblk->used_blocks += r;
     } else if (r == -ENOSPC) {
-      panic("Failed to allocate block -- no space!\n");
+        balloc_unlock();
+        panic("Failed to allocate block -- no space!\n");
     } else if (r == -EINVAL) {
-      panic("Failed to allocate block -- invalid arguments!\n");
+        balloc_unlock();
+        panic("Failed to allocate block -- invalid arguments!\n");
     } else {
-      panic("Failed to allocate block -- unknown error!\n");
+        balloc_unlock();
+        panic("Failed to allocate block -- unknown error!\n");
     }
+
+    balloc_unlock();
 
     return (ssize_t)r;
 }
@@ -73,6 +92,9 @@ ssize_t alloc_data_blocks(size_t nblocks, paddr_t *pblk) {
 
 static inline ssize_t dealloc_generic(size_t nblk, paddr_t pblk) {
     trace_me();
+
+    balloc_lock();
+
     struct super_block *sblk = sb[g_root_dev];
     int ret = mlfs_free_blocks_node(sblk, pblk, nblk, 0, 0);
     if (ret == 0) {
@@ -80,6 +102,8 @@ static inline ssize_t dealloc_generic(size_t nblk, paddr_t pblk) {
         sblk->used_blocks -= nblk;
         ret = nblk;
     }
+
+    balloc_unlock();
 
     return (ssize_t) ret;
 }
