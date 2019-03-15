@@ -1,4 +1,4 @@
-#! /bin/bash
+#! /usr/bin/env /bin/bash
 
 PATH=$PATH:.
 SRC_ROOT=../../

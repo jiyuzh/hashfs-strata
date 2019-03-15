@@ -400,17 +400,19 @@ int mlfs_ext_tree_init(handle_t *handle, struct inode *inode)
 {
 	struct mlfs_extent_header *eh;
 
-	eh = ext_inode_hdr(handle, inode);
-	eh->eh_depth = 0;
-	eh->eh_entries = 0;
-	eh->eh_magic = cpu_to_le16(MLFS_EXT_MAGIC);
-	eh->eh_max = cpu_to_le16(mlfs_ext_space_root(inode, 0));
-	mlfs_mark_inode_dirty(inode);
+    if (g_idx_choice == NONE) {
+        eh = ext_inode_hdr(handle, inode);
+        eh->eh_depth = 0;
+        eh->eh_entries = 0;
+        eh->eh_magic = cpu_to_le16(MLFS_EXT_MAGIC);
+        eh->eh_max = cpu_to_le16(mlfs_ext_space_root(inode, 0));
+        mlfs_mark_inode_dirty(inode);
 #if defined(KERNFS)
-    if (g_idx_choice == EXTENT_TREES || g_idx_choice == LEVEL_HASH_TABLES) {
-        write_ondisk_inode(handle->dev, inode);
-    }
+        if (g_idx_choice == EXTENT_TREES || g_idx_choice == LEVEL_HASH_TABLES) {
+            write_ondisk_inode(handle->dev, inode);
+        }
 #endif
+    }
 	return 0;
 }
 

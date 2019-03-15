@@ -138,6 +138,7 @@ void show_libfs_stats(const char *title)
   const char *js_str = json_object_get_string(root);
   if (enable_perf_stats) {
     write(prof_fd, js_str, strlen(js_str));
+    write(prof_fd, "\n", 2);
   }
   json_object_put(root);
   printf("\n");
