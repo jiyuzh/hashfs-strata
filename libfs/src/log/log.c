@@ -702,7 +702,6 @@ static int persist_log_file(struct logheader_meta *loghdr_meta,
 	struct inode *inode;
 	lru_key_t lru_entry;
 	uint64_t start_tsc;
-	int ret;
 
 	inode = icache_find(g_root_dev, loghdr->inode_no[idx]);
 
@@ -719,9 +718,12 @@ static int persist_log_file(struct logheader_meta *loghdr_meta,
 		// 3. if fc_block is not valid, then skip coalescing and update fc_block.
 
 		uint32_t offset_in_block;
+		int write_log_invalid;
 
 		key = (loghdr->data[idx] >> g_block_size_shift);
 		offset_in_block = (loghdr->data[idx] % g_block_size_bytes);
+		logblk_no = loghdr_meta->log_blocks + loghdr_meta->pos;
+		loghdr_meta->pos++;
 
 		if (enable_perf_stats)
 			start_tsc = asm_rdtscp();
@@ -732,57 +734,14 @@ static int persist_log_file(struct logheader_meta *loghdr_meta,
 			g_perf_stats.l0_search_tsc += (asm_rdtscp() - start_tsc);
 			g_perf_stats.l0_search_nr++;
 		}
-
-		logblk_no = loghdr_meta->log_blocks + loghdr_meta->pos;
-		loghdr_meta->pos++;
-
 		if (fc_block) {
-			ret = check_write_log_invalidation(fc_block);
-			// fc_block is invalid. update it
-			if (ret) {
-				//FIXME: what if async digest happens after checking log invalidation but before finish using log value
-				if (!check_read_log_invalidation(fc_block) && fc_block->start_offset < offset_in_block) { // patch data from Read Only log area to this new partial update log block
-
-					uint8_t buffer[g_block_size_bytes];
-
-					log_bh = bh_get_sync_IO(g_log_dev, fc_block->log_addr, BH_NO_DATA_ALLOC);
-					log_bh->b_offset = fc_block->start_offset;
-					log_bh->b_data = buffer;
-					log_bh->b_size = offset_in_block - fc_block->start_offset;
-					bh_submit_read_sync_IO(log_bh);
-					bh_release(log_bh);
-
-					log_bh = bh_get_sync_IO(g_log_dev, logblk_no, BH_NO_DATA_ALLOC);
-					log_bh->b_offset = fc_block->start_offset;
-					log_bh->b_data = buffer;
-					log_bh->b_size = offset_in_block - fc_block->start_offset;
-					mlfs_write(log_bh);
-					bh_release(log_bh);
-
-					mlfs_debug("patch partial write log %lu, from %lu, offset from %lu to %lu\n", logblk_no, fc_block->log_addr, fc_block->start_offset, offset_in_block);
-				}
-				else {
-					fc_block->start_offset = offset_in_block;
-				}
-				fc_block->log_version = g_fs_log->avail_version;
-				fc_block->log_addr = logblk_no;
-			}
-			// fc_block is valid
-			else {
-				if (fc_block->log_addr)  {
-					logblk_no = fc_block->log_addr;
-					mlfs_debug("write is coalesced %lu @ %lu\n", loghdr->data[idx], logblk_no);
-				}
+			write_log_invalid = check_write_log_invalidation(fc_block);
+			if (!write_log_invalid) { // fc_block is write valid, coalesce current write
+				logblk_no = fc_block->log_addr;
 			}
 		}
 
-		if (!fc_block) {
-			mlfs_assert(loghdr_meta->pos <= loghdr_meta->nr_log_blocks);
-
-			fc_block = fcache_alloc_add(inode, key, logblk_no, offset_in_block);
-			fc_block->log_version = g_fs_log->avail_version;
-		}
-
+		// now write to log before update any fcache structure
 		if (enable_perf_stats)
 			start_tsc = asm_rdtscp();
 
@@ -793,7 +752,7 @@ static int persist_log_file(struct logheader_meta *loghdr_meta,
 			g_perf_stats.bcache_search_nr++;
 		}
 
-		// the logblk_no could be either a new block or existing one (patching case).
+		// the logblk_no could be either a new block or existing one (coalescing case).
 		loghdr->blocks[idx] = logblk_no;
 
 		// case 1. the IO fits into one block.
@@ -816,6 +775,51 @@ static int persist_log_file(struct logheader_meta *loghdr_meta,
 		mlfs_write(log_bh);
 
 		bh_release(log_bh);
+
+		// after finish writing to log, let's update fcache structure
+		if (fc_block) {
+			if (write_log_invalid) { // fc_block is write invalid. need update
+				//FIXME: what if async digest happens after checking log invalidation but before finish using log value
+				if (!check_read_log_invalidation(fc_block) && fc_block->start_offset < offset_in_block) { // fc_block is read valid, can patch data from Read Only log area to current partially new log block
+					uint8_t buffer[g_block_size_bytes];
+
+					log_bh = bh_get_sync_IO(g_log_dev, fc_block->log_addr, BH_NO_DATA_ALLOC);
+					log_bh->b_offset = fc_block->start_offset;
+					log_bh->b_data = buffer;
+					log_bh->b_size = offset_in_block - fc_block->start_offset;
+					bh_submit_read_sync_IO(log_bh);
+					bh_release(log_bh);
+
+					log_bh = bh_get_sync_IO(g_log_dev, logblk_no, BH_NO_DATA_ALLOC);
+					log_bh->b_offset = fc_block->start_offset;
+					log_bh->b_data = buffer;
+					log_bh->b_size = offset_in_block - fc_block->start_offset;
+					mlfs_write(log_bh);
+					bh_release(log_bh);
+
+					mlfs_debug("patch partial write log %lu, from %lu, offset from %lu to %lu\n", logblk_no, fc_block->log_addr, fc_block->start_offset, offset_in_block);
+				}
+				else { // fc_block is read invalid, can't patch data, keep the current valid offset in block as it is
+					fc_block->start_offset = offset_in_block;
+				}
+				// here we actually update fcache structure
+				fc_block->log_version = g_fs_log->avail_version;
+				fc_block->log_addr = logblk_no;
+			}
+			else { // fc_block is write valid, new write has already been coalesced
+				if (fc_block->log_addr)  {
+					mlfs_debug("write is coalesced %lu @ %lu\n", loghdr->data[idx], logblk_no);
+				}
+			}
+		}
+
+        // if there is no fcache before, let's add this new cache after write has been logged
+		if (!fc_block) {
+			mlfs_assert(loghdr_meta->pos <= loghdr_meta->nr_log_blocks);
+
+			fc_block = fcache_alloc_add(inode, key, logblk_no, offset_in_block);
+			fc_block->log_version = g_fs_log->avail_version;
+		}
 	}
 	// Handling large (possibly multi-block) write.
 	else {
@@ -844,6 +848,10 @@ static int persist_log_file(struct logheader_meta *loghdr_meta,
 		log_bh->b_offset = 0;
 
 		loghdr->blocks[idx] = logblk_no;
+
+		mlfs_write(log_bh);
+
+		bh_release(log_bh);
 
 		// Update log address hash table.
 		// This is performance bottleneck of sequential write.
@@ -874,10 +882,6 @@ static int persist_log_file(struct logheader_meta *loghdr_meta,
 
 		mlfs_debug("inum %u offset %lu size %u @ blockno %lx (aligned)\n",
 				loghdr->inode_no[idx], cur_offset, size, logblk_no);
-
-		mlfs_write(log_bh);
-
-		bh_release(log_bh);
 	}
 
 	return 0;
