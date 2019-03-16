@@ -636,6 +636,13 @@ static int persist_log_directory_unopt(struct logheader_meta *loghdr_meta, uint3
  *  digesting, situation (6).. (11) can be colaesced with situation (1) .. (4),
  *  thus simplify invalidation logic
  */
+/**
+ * FIXME: determine a proper value for `READ_LOG_INVALIDATION_GUARD', current value is ad-hoc.
+ * This guard is necessary because:
+ *     1. do_(un)aligned_read might determine if a fcache block is valid `a long time` before actually read the data from log block. e.g. store valid fcache log block (valid when actually check invalidation) in an io_list, and only read data from log block when every serving 4k block is ready.
+ *     2. At the same time, other threads may concurrently `start_log_tx' and `commit_log'. Those threads will overwrite some log blocks, which may have already been remembered as `valid' fcache log.
+ */
+#define READ_LOG_INVALIDATION_GUARD 40
 int check_read_log_invalidation(struct fcache_block *_fcache_block)
 {
 	int ret = 0;
@@ -644,13 +651,13 @@ int check_read_log_invalidation(struct fcache_block *_fcache_block)
 
 	//mlfs_assert(!(version_diff == 0 && _fcache_block->log_version >= g_fs_log->next_avail) && "impossible scenario happened");
 
-  // FIXME: remove unused invalidate_rwlock
+	// FIXME: remove unused invalidate_rwlock
 	pthread_rwlock_wrlock(&log_version_rwlock);
 	int version_diff = g_fs_log->avail_version - _fcache_block->log_version;
 	mlfs_assert(version_diff >= 0);
 	if ((version_diff > 1) ||
 			(version_diff == 1 &&
-	   _fcache_block->log_addr < g_fs_log->next_avail)) {
+	   _fcache_block->log_addr < g_fs_log->next_avail + READ_LOG_INVALIDATION_GUARD)) {
 		mlfs_debug("invalidate: inum %u offset_key %lu -> addr %lu, start_offset %lu, version %d[%d](%d), start_blk %lu next_avail %lu\n",
 				_fcache_block->inum, _fcache_block->key, _fcache_block->log_addr, _fcache_block->start_offset, _fcache_block->log_version, _fcache_block->log_version_should_be, g_fs_log->avail_version, g_fs_log->start_blk, g_fs_log->next_avail);
 		ret = 1;
@@ -820,7 +827,7 @@ static int persist_log_file(struct logheader_meta *loghdr_meta,
 			}
 		}
 
-        // if there is no fcache before, let's add this new cache after write has been logged
+		// if there is no fcache before, let's add this new cache after write has been logged
 		if (!fc_block) {
 			mlfs_assert(loghdr_meta->pos <= loghdr_meta->nr_log_blocks);
 
