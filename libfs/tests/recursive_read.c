@@ -42,20 +42,15 @@ void recursive_readdir(const char *path) {
 
             if (nread == 0)
                 break;
-            printf("--------------- nread=%d ---------------\n", nread);
-            printf("inode#    file type  d_reclen  d_off   d_name\n");
             for (bpos = 0; bpos < nread;) {
                 n_file++;
                 d = (struct linux_dirent *) (buf + bpos);
-                printf("%8ld  ", d->d_ino);
                 //d_type = *(buf + bpos + d->d_reclen - 1);
                 if (strcmp(d->d_name, ".") != 0 && strcmp(d->d_name, "..") != 0) {
                     char entry_path[MAX_PATH_LEN];
                     snprintf(entry_path, MAX_PATH_LEN, "%s/%s", path, d->d_name);
                     recursive_readdir(entry_path);
                 }
-                printf("%4d %10lld  %s\n", d->d_reclen,
-                        (long long) d->d_off, d->d_name);
                 bpos += d->d_reclen;
             }
         }
