@@ -52,6 +52,7 @@ static void commit_log(void);
 static void digest_log(void);
 
 pthread_mutex_t *g_log_mutex_shared;
+static pthread_rwlock_t log_version_rwlock = PTHREAD_RWLOCK_INITIALIZER;
 
 //pthread_t is unsigned long
 static unsigned long digest_thread_id;
@@ -235,9 +236,11 @@ inline addr_t log_alloc(uint32_t nr_blocks)
 	// next_avail reaches the end of log.
 	//if (g_fs_log->next_avail + nr_blocks > g_fs_log->log_sb_blk + g_fs_log->size) {
 	if (g_fs_log->next_avail + nr_blocks > g_fs_log->size) {
+		pthread_rwlock_wrlock(&log_version_rwlock);
 		g_fs_log->next_avail = g_fs_log->log_sb_blk + 1;
 
 		atomic_add(&g_fs_log->avail_version, 1);
+		pthread_rwlock_unlock(&log_version_rwlock);
 
 		mlfs_debug("-- log tail is rotated: new start %lu\n", g_fs_log->next_avail);
 	}
@@ -636,15 +639,15 @@ static int persist_log_directory_unopt(struct logheader_meta *loghdr_meta, uint3
 int check_read_log_invalidation(struct fcache_block *_fcache_block)
 {
 	int ret = 0;
-	int version_diff = g_fs_log->avail_version - _fcache_block->log_version;
-
-	mlfs_assert(version_diff >= 0);
 
 	mlfs_assert(!_fcache_block->is_data_cached && "This code doesn't consider cached data, only for non-cachable NVM read");
 
 	//mlfs_assert(!(version_diff == 0 && _fcache_block->log_version >= g_fs_log->next_avail) && "impossible scenario happened");
 
-	pthread_rwlock_wrlock(invalidate_rwlock);
+  // FIXME: remove unused invalidate_rwlock
+	pthread_rwlock_wrlock(&log_version_rwlock);
+	int version_diff = g_fs_log->avail_version - _fcache_block->log_version;
+	mlfs_assert(version_diff >= 0);
 	if ((version_diff > 1) ||
 			(version_diff == 1 &&
 	   _fcache_block->log_addr < g_fs_log->next_avail)) {
@@ -652,14 +655,15 @@ int check_read_log_invalidation(struct fcache_block *_fcache_block)
 				_fcache_block->inum, _fcache_block->key, _fcache_block->log_addr, _fcache_block->start_offset, _fcache_block->log_version, _fcache_block->log_version_should_be, g_fs_log->avail_version, g_fs_log->start_blk, g_fs_log->next_avail);
 		ret = 1;
 	}
-
-	pthread_rwlock_unlock(invalidate_rwlock);
+	pthread_rwlock_unlock(&log_version_rwlock);
 
 	return ret;
 }
 
 int check_write_log_invalidation(struct fcache_block *_fcache_block)
 {
+	int ret = 0;
+	pthread_rwlock_wrlock(&log_version_rwlock);
 	int version_diff = g_fs_log->avail_version - _fcache_block->log_version;
 	addr_t head;
 	addr_t tail = g_fs_log->next_avail;
@@ -679,11 +683,14 @@ int check_write_log_invalidation(struct fcache_block *_fcache_block)
 	   ) {
 		mlfs_debug("invalidate: inum %u offset_key %lu -> addr %lu, start_offset %lu, version %d[%d](%d), start_blk %lu next_avail %lu, digesting %u, next_avail_digest %lu\n",
         _fcache_block->inum, _fcache_block->key, _fcache_block->log_addr, _fcache_block->start_offset,_fcache_block->log_version, _fcache_block->log_version_should_be, g_fs_log->avail_version, g_fs_log->start_blk, g_fs_log->next_avail, g_fs_log->digesting, g_log_sb->next_avail_digest);
-		return 1;
+		ret = 1;
 	}
 	else {
-		return 0;
+		ret = 0;
 	}
+	pthread_rwlock_unlock(&log_version_rwlock);
+
+	return ret;
 }
 
 /* This is a critical path for write performance.
@@ -1172,7 +1179,6 @@ int make_digest_request_async(int percent)
 	sprintf(cmd_buf, "|digest |%d|", percent);
 
 	if (!g_fs_log->digesting && atomic_load(&g_log_sb->n_digest) > 0) {
-		set_digesting();
 		mlfs_debug("Send digest command: %s\n", cmd_buf);
 		ret = write(g_fs_log->digest_fd[1], cmd_buf, MAX_CMD_BUF);
 		return 0;
@@ -1189,6 +1195,8 @@ uint32_t make_digest_request_sync(int percent)
 	addr_t loghdr_blkno = g_fs_log->start_blk;
 	struct inode *ip;
 
+	// FIXME: should protect digesting and next_avail_digest and start_blk with rwlock?
+	set_digesting();
 	g_log_sb->start_digest = g_fs_log->start_blk;
 	g_log_sb->next_avail_digest = g_fs_log->next_avail;
 	write_log_superblock(g_log_sb);
