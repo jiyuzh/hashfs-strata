@@ -809,7 +809,7 @@ static unsigned long mlfs_alloc_blocks_in_free_list(struct super_block *sb,
     last_blk_num += num_blocks;
 #endif
 
-    if (g_idx_choice != GLOBAL_HASH_TABLE) {
+    if (g_idx_choice != GLOBAL_HASH_TABLE && g_idx_choice != GLOBAL_RADIX_TREE) {
         for (unsigned long i = 0; i < num_blocks; ++i) {
             ensure_block_is_clear(sb->s_bdev, (*new_blocknr) + i);
         }

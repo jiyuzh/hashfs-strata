@@ -413,7 +413,8 @@ void init_fs(void)
     // read root inode in NVM
     read_root_inode(g_root_dev);
 
-    if (g_idx_choice == GLOBAL_HASH_TABLE) {
+    if (g_idx_choice == GLOBAL_HASH_TABLE ||
+        g_idx_choice == GLOBAL_RADIX_TREE) {
         init_hash(sb[g_root_dev]);
     }
 
@@ -556,8 +557,9 @@ int sync_inode_ext_tree(uint8_t dev, struct inode *inode)
     read_ondisk_inode(dev, inode->inum, &dinode);
 
     pthread_mutex_lock(&inode->i_mutex);
-    if (g_idx_choice == GLOBAL_HASH_TABLE) {
-    mlfs_hash_cache_invalidate();
+    if (g_idx_choice == GLOBAL_HASH_TABLE ||
+        g_idx_choice == GLOBAL_RADIX_TREE) {
+        mlfs_hash_cache_invalidate();
     } else {
         memmove(inode->l1.addrs, dinode.l1_addrs, sizeof(addr_t) * (NDIRECT + 1));
 #ifdef USE_SSD

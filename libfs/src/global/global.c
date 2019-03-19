@@ -16,6 +16,9 @@ indexing_choice_t get_indexing_choice(void) {
     } else if (env != NULL && !strcmp(env, "LEVEL_HASH_TABLES")) {
         printf("%s -> using API level hashing, which is per-inode!\n", env);
         return LEVEL_HASH_TABLES;
+    } else if (env != NULL && !strcmp(env, "GLOBAL_RADIX_TREE")) {
+        printf("%s -> using API global radix tree!\n", env);
+        return GLOBAL_RADIX_TREE;
     } else {
         printf("%s -> using Strata default indexing!\n", env);
         return NONE;

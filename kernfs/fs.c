@@ -2114,7 +2114,8 @@ void init_fs(void)
 	balloc_init(g_hdd_dev, sb[g_hdd_dev]);
 #endif
 
-    if (g_idx_choice == GLOBAL_HASH_TABLE) {
+    if (g_idx_choice == GLOBAL_HASH_TABLE || 
+        g_idx_choice == GLOBAL_RADIX_TREE) {
         init_hash(sb[g_root_dev]);
     }
 

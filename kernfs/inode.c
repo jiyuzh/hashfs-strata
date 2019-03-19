@@ -137,6 +137,8 @@ struct inode* ialloc(uint8_t dev, uint8_t type, uint32_t inode_nr)
 				ip->i_generation = 0;
 				ip->i_data_dirty = 0;
 				ip->nlink = 1;
+                // iangneal: memory leak
+                //ip->ext_idx = NULL;
 			}
 
 		}
@@ -167,7 +169,8 @@ struct inode* ialloc(uint8_t dev, uint8_t type, uint32_t inode_nr)
 		ip->i_generation = 0;
 		ip->i_data_dirty = 0;
 		ip->nlink = 1;
-
+        // iangneal: memory leak
+        //ip->ext_idx = NULL;
 	}
 
   if (!ip) panic("ialloc: no inodes");

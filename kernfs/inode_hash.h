@@ -15,6 +15,7 @@
 
 #include "indexing_api_interface.h"
 extern idx_fns_t hash_fns;
+extern idx_fns_t radixtree_fns;
 
 #ifdef __cplusplus
 extern "C" {

@@ -2862,7 +2862,8 @@ int mlfs_ext_get_blocks(handle_t *handle, struct inode *inode,
 
 
 
-    if (g_idx_choice == GLOBAL_HASH_TABLE) {
+    if (g_idx_choice == GLOBAL_HASH_TABLE ||
+        g_idx_choice == GLOBAL_RADIX_TREE) {
         int hash_ret = mlfs_hash_get_blocks(handle, inode, map, flags, false);
 #ifdef KERNFS
         if (enable_perf_stats) {
@@ -3147,15 +3148,17 @@ int mlfs_ext_truncate(handle_t *handle, struct inode *inode,
                  (end - start) + 1);
 
         if (ret == (end - start + 1)) ret = 0;
-    } else if (g_idx_choice == GLOBAL_HASH_TABLE) {
+    } else if (g_idx_choice == GLOBAL_HASH_TABLE || 
+               g_idx_choice == GLOBAL_RADIX_TREE) {
         ret = mlfs_hash_truncate(handle, inode, start, end);
     } else {
         ret = mlfs_ext_remove_space(handle, inode, start, end);
     }
 
 	/* Save modifications on i_blocks field of the inode. */
-	if (!ret)
+	if (!ret) {
 		ret = mlfs_mark_inode_dirty(inode);
+    }
 
 	return ret;
 }

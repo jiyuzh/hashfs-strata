@@ -82,6 +82,7 @@ typedef enum indexing_api_choice {
     EXTENT_TREES,
     GLOBAL_HASH_TABLE,
     LEVEL_HASH_TABLES,
+    GLOBAL_RADIX_TREE,
     NONE
 } indexing_choice_t;
 
