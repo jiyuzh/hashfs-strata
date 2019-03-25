@@ -576,6 +576,7 @@ int digest_file(uint8_t from_dev, uint8_t to_dev, uint32_t file_inum,
 	}
 
 	mlfs_assert(file_inode->dev != 0);
+	mlfs_assert(!(file_inode->flags & I_DELETING));
 
 	// update file inode length and mtime.
 	if (file_inode->size < offset + length) {
