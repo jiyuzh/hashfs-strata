@@ -332,7 +332,9 @@ struct inode *mlfs_object_create(const char *path, unsigned short type, uint8_t 
 
 	ilock(parent_inode);
 
-	if (dir_check_entry_fast(parent_inode)) {
+	// FIXME: reimplementation of getdirent breaks check_entry_fast
+	// Here as a workaround, we just disable it.
+	//if (dir_check_entry_fast(parent_inode)) {
 		inode = dir_lookup(parent_inode, name, &offset);
 
 		if (inode) {
@@ -346,7 +348,7 @@ struct inode *mlfs_object_create(const char *path, unsigned short type, uint8_t 
 			*exist = 1;
 			return inode;
 		}
-	}
+	//}
 
 	if (enable_perf_stats) 
 		tsc_begin = asm_rdtscp();
