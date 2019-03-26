@@ -1666,6 +1666,12 @@ static int persist_dirty_objects_nvm(void)
 		mlfs_debug("[dev %d] write dirty inode %d size %lu\n",
 				ip->dev, ip->inum, ip->size);
 		rb_erase(&ip->i_rb_node, &get_inode_sb(g_root_dev, ip)->s_dirty_root);
+
+        if (g_idx_cached && ip->ext_idx) {
+            int api_err = FN(ip->ext_idx, im_persist, ip->ext_idx);
+            if (api_err) return api_err;
+        }
+
 		write_ondisk_inode(g_root_dev, ip);
 		ip->i_data_dirty = 0;
 
@@ -2081,6 +2087,7 @@ void init_fs(void)
 	const char *perf_profile;
 
     g_idx_choice = get_indexing_choice();
+    g_idx_cached = get_indexing_is_cached();
 
 	g_ssd_dev = 2;
 	g_hdd_dev = 3;

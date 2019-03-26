@@ -2817,6 +2817,13 @@ int mlfs_ext_get_blocks(handle_t *handle, struct inode *inode,
                                                           &direct_extents,
                                                           inode->ext_idx);
             }
+
+            if (g_idx_cached) {
+                FN(inode->ext_idx, im_set_caching, inode->ext_idx, true);
+            } else {
+                FN(inode->ext_idx, im_set_caching, inode->ext_idx, false);
+            }
+
             if (init_err) {
                 fprintf(stderr, "Error in extent tree API init: %d\n", init_err);
                 panic("Could not initialize API per-inode structure!\n");

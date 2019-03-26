@@ -363,6 +363,7 @@ void init_fs(void)
 
     device_id = getenv("DEV_ID");
     g_idx_choice = get_indexing_choice();
+    g_idx_cached = get_indexing_is_cached();
 
     // TODO: range check.
     if (device_id)
@@ -562,6 +563,10 @@ int sync_inode_ext_tree(uint8_t dev, struct inode *inode)
         mlfs_hash_cache_invalidate();
     } else {
         memmove(inode->l1.addrs, dinode.l1_addrs, sizeof(addr_t) * (NDIRECT + 1));
+        if (g_idx_cached && inode->ext_idx) {
+            int api_err = FN(inode->ext_idx, im_invalidate, inode->ext_idx);
+            if (api_err) return api_err;
+        }
 #ifdef USE_SSD
         memmove(inode->l2.addrs, dinode.l2_addrs, sizeof(addr_t) * (NDIRECT + 1));
 #endif

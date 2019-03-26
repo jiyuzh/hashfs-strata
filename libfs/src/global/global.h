@@ -87,8 +87,10 @@ typedef enum indexing_api_choice {
 } indexing_choice_t;
 
 extern indexing_choice_t g_idx_choice;
+extern bool g_idx_cached;
 
 indexing_choice_t get_indexing_choice(void);
+bool get_indexing_is_cached(void);
 
 #ifdef __cplusplus
 }
