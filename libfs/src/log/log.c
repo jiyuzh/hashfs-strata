@@ -52,6 +52,7 @@ static void commit_log(void);
 static void digest_log(void);
 
 pthread_mutex_t *g_log_mutex_shared;
+static pthread_rwlock_t log_version_rwlock = PTHREAD_RWLOCK_INITIALIZER;
 
 //pthread_t is unsigned long
 static unsigned long digest_thread_id;
@@ -235,9 +236,11 @@ inline addr_t log_alloc(uint32_t nr_blocks)
 	// next_avail reaches the end of log.
 	//if (g_fs_log->next_avail + nr_blocks > g_fs_log->log_sb_blk + g_fs_log->size) {
 	if (g_fs_log->next_avail + nr_blocks > g_fs_log->size) {
+		pthread_rwlock_wrlock(&log_version_rwlock);
 		g_fs_log->next_avail = g_fs_log->log_sb_blk + 1;
 
 		atomic_add(&g_fs_log->avail_version, 1);
+		pthread_rwlock_unlock(&log_version_rwlock);
 
 		mlfs_debug("-- log tail is rotated: new start %lu\n", g_fs_log->next_avail);
 	}
@@ -633,33 +636,41 @@ static int persist_log_directory_unopt(struct logheader_meta *loghdr_meta, uint3
  *  digesting, situation (6).. (11) can be colaesced with situation (1) .. (4),
  *  thus simplify invalidation logic
  */
+/**
+ * FIXME: determine a proper value for `READ_LOG_INVALIDATION_GUARD', current value is ad-hoc.
+ * This guard is necessary because:
+ *     1. do_(un)aligned_read might determine if a fcache block is valid `a long time` before actually read the data from log block. e.g. store valid fcache log block (valid when actually check invalidation) in an io_list, and only read data from log block when every serving 4k block is ready.
+ *     2. At the same time, other threads may concurrently `start_log_tx' and `commit_log'. Those threads will overwrite some log blocks, which may have already been remembered as `valid' fcache log.
+ */
+#define READ_LOG_INVALIDATION_GUARD 40
 int check_read_log_invalidation(struct fcache_block *_fcache_block)
 {
 	int ret = 0;
-	int version_diff = g_fs_log->avail_version - _fcache_block->log_version;
-
-	mlfs_assert(version_diff >= 0);
 
 	mlfs_assert(!_fcache_block->is_data_cached && "This code doesn't consider cached data, only for non-cachable NVM read");
 
 	//mlfs_assert(!(version_diff == 0 && _fcache_block->log_version >= g_fs_log->next_avail) && "impossible scenario happened");
 
-	pthread_rwlock_wrlock(invalidate_rwlock);
+	// FIXME: remove unused invalidate_rwlock
+	pthread_rwlock_wrlock(&log_version_rwlock);
+	int version_diff = g_fs_log->avail_version - _fcache_block->log_version;
+	mlfs_assert(version_diff >= 0);
 	if ((version_diff > 1) ||
 			(version_diff == 1 &&
-	   _fcache_block->log_addr < g_fs_log->next_avail)) {
+	   _fcache_block->log_addr < g_fs_log->next_avail + READ_LOG_INVALIDATION_GUARD)) {
 		mlfs_debug("invalidate: inum %u offset_key %lu -> addr %lu, start_offset %lu, version %d[%d](%d), start_blk %lu next_avail %lu\n",
 				_fcache_block->inum, _fcache_block->key, _fcache_block->log_addr, _fcache_block->start_offset, _fcache_block->log_version, _fcache_block->log_version_should_be, g_fs_log->avail_version, g_fs_log->start_blk, g_fs_log->next_avail);
 		ret = 1;
 	}
-
-	pthread_rwlock_unlock(invalidate_rwlock);
+	pthread_rwlock_unlock(&log_version_rwlock);
 
 	return ret;
 }
 
 int check_write_log_invalidation(struct fcache_block *_fcache_block)
 {
+	int ret = 0;
+	pthread_rwlock_wrlock(&log_version_rwlock);
 	int version_diff = g_fs_log->avail_version - _fcache_block->log_version;
 	addr_t head;
 	addr_t tail = g_fs_log->next_avail;
@@ -679,11 +690,14 @@ int check_write_log_invalidation(struct fcache_block *_fcache_block)
 	   ) {
 		mlfs_debug("invalidate: inum %u offset_key %lu -> addr %lu, start_offset %lu, version %d[%d](%d), start_blk %lu next_avail %lu, digesting %u, next_avail_digest %lu\n",
         _fcache_block->inum, _fcache_block->key, _fcache_block->log_addr, _fcache_block->start_offset,_fcache_block->log_version, _fcache_block->log_version_should_be, g_fs_log->avail_version, g_fs_log->start_blk, g_fs_log->next_avail, g_fs_log->digesting, g_log_sb->next_avail_digest);
-		return 1;
+		ret = 1;
 	}
 	else {
-		return 0;
+		ret = 0;
 	}
+	pthread_rwlock_unlock(&log_version_rwlock);
+
+	return ret;
 }
 
 /* This is a critical path for write performance.
@@ -702,7 +716,6 @@ static int persist_log_file(struct logheader_meta *loghdr_meta,
 	struct inode *inode;
 	lru_key_t lru_entry;
 	uint64_t start_tsc;
-	int ret;
 
 	inode = icache_find(g_root_dev, loghdr->inode_no[idx]);
 
@@ -719,9 +732,12 @@ static int persist_log_file(struct logheader_meta *loghdr_meta,
 		// 3. if fc_block is not valid, then skip coalescing and update fc_block.
 
 		uint32_t offset_in_block;
+		int write_log_invalid;
 
 		key = (loghdr->data[idx] >> g_block_size_shift);
 		offset_in_block = (loghdr->data[idx] % g_block_size_bytes);
+		logblk_no = loghdr_meta->log_blocks + loghdr_meta->pos;
+		loghdr_meta->pos++;
 
 		if (enable_perf_stats)
 			start_tsc = asm_rdtscp();
@@ -732,57 +748,14 @@ static int persist_log_file(struct logheader_meta *loghdr_meta,
 			g_perf_stats.l0_search_tsc += (asm_rdtscp() - start_tsc);
 			g_perf_stats.l0_search_nr++;
 		}
-
-		logblk_no = loghdr_meta->log_blocks + loghdr_meta->pos;
-		loghdr_meta->pos++;
-
 		if (fc_block) {
-			ret = check_write_log_invalidation(fc_block);
-			// fc_block is invalid. update it
-			if (ret) {
-				//FIXME: what if async digest happens after checking log invalidation but before finish using log value
-				if (!check_read_log_invalidation(fc_block) && fc_block->start_offset < offset_in_block) { // patch data from Read Only log area to this new partial update log block
-
-					uint8_t buffer[g_block_size_bytes];
-
-					log_bh = bh_get_sync_IO(g_log_dev, fc_block->log_addr, BH_NO_DATA_ALLOC);
-					log_bh->b_offset = fc_block->start_offset;
-					log_bh->b_data = buffer;
-					log_bh->b_size = offset_in_block - fc_block->start_offset;
-					bh_submit_read_sync_IO(log_bh);
-					bh_release(log_bh);
-
-					log_bh = bh_get_sync_IO(g_log_dev, logblk_no, BH_NO_DATA_ALLOC);
-					log_bh->b_offset = fc_block->start_offset;
-					log_bh->b_data = buffer;
-					log_bh->b_size = offset_in_block - fc_block->start_offset;
-					mlfs_write(log_bh);
-					bh_release(log_bh);
-
-					mlfs_debug("patch partial write log %lu, from %lu, offset from %lu to %lu\n", logblk_no, fc_block->log_addr, fc_block->start_offset, offset_in_block);
-				}
-				else {
-					fc_block->start_offset = offset_in_block;
-				}
-				fc_block->log_version = g_fs_log->avail_version;
-				fc_block->log_addr = logblk_no;
-			}
-			// fc_block is valid
-			else {
-				if (fc_block->log_addr)  {
-					logblk_no = fc_block->log_addr;
-					mlfs_debug("write is coalesced %lu @ %lu\n", loghdr->data[idx], logblk_no);
-				}
+			write_log_invalid = check_write_log_invalidation(fc_block);
+			if (!write_log_invalid) { // fc_block is write valid, coalesce current write
+				logblk_no = fc_block->log_addr;
 			}
 		}
 
-		if (!fc_block) {
-			mlfs_assert(loghdr_meta->pos <= loghdr_meta->nr_log_blocks);
-
-			fc_block = fcache_alloc_add(inode, key, logblk_no, offset_in_block);
-			fc_block->log_version = g_fs_log->avail_version;
-		}
-
+		// now write to log before update any fcache structure
 		if (enable_perf_stats)
 			start_tsc = asm_rdtscp();
 
@@ -793,7 +766,7 @@ static int persist_log_file(struct logheader_meta *loghdr_meta,
 			g_perf_stats.bcache_search_nr++;
 		}
 
-		// the logblk_no could be either a new block or existing one (patching case).
+		// the logblk_no could be either a new block or existing one (coalescing case).
 		loghdr->blocks[idx] = logblk_no;
 
 		// case 1. the IO fits into one block.
@@ -816,6 +789,51 @@ static int persist_log_file(struct logheader_meta *loghdr_meta,
 		mlfs_write(log_bh);
 
 		bh_release(log_bh);
+
+		// after finish writing to log, let's update fcache structure
+		if (fc_block) {
+			if (write_log_invalid) { // fc_block is write invalid. need update
+				//FIXME: what if async digest happens after checking log invalidation but before finish using log value
+				if (!check_read_log_invalidation(fc_block) && fc_block->start_offset < offset_in_block) { // fc_block is read valid, can patch data from Read Only log area to current partially new log block
+					uint8_t buffer[g_block_size_bytes];
+
+					log_bh = bh_get_sync_IO(g_log_dev, fc_block->log_addr, BH_NO_DATA_ALLOC);
+					log_bh->b_offset = fc_block->start_offset;
+					log_bh->b_data = buffer;
+					log_bh->b_size = offset_in_block - fc_block->start_offset;
+					bh_submit_read_sync_IO(log_bh);
+					bh_release(log_bh);
+
+					log_bh = bh_get_sync_IO(g_log_dev, logblk_no, BH_NO_DATA_ALLOC);
+					log_bh->b_offset = fc_block->start_offset;
+					log_bh->b_data = buffer;
+					log_bh->b_size = offset_in_block - fc_block->start_offset;
+					mlfs_write(log_bh);
+					bh_release(log_bh);
+
+					mlfs_debug("patch partial write log %lu, from %lu, offset from %lu to %lu\n", logblk_no, fc_block->log_addr, fc_block->start_offset, offset_in_block);
+				}
+				else { // fc_block is read invalid, can't patch data, keep the current valid offset in block as it is
+					fc_block->start_offset = offset_in_block;
+				}
+				// here we actually update fcache structure
+				fc_block->log_version = g_fs_log->avail_version;
+				fc_block->log_addr = logblk_no;
+			}
+			else { // fc_block is write valid, new write has already been coalesced
+				if (fc_block->log_addr)  {
+					mlfs_debug("write is coalesced %lu @ %lu\n", loghdr->data[idx], logblk_no);
+				}
+			}
+		}
+
+		// if there is no fcache before, let's add this new cache after write has been logged
+		if (!fc_block) {
+			mlfs_assert(loghdr_meta->pos <= loghdr_meta->nr_log_blocks);
+
+			fc_block = fcache_alloc_add(inode, key, logblk_no, offset_in_block);
+			fc_block->log_version = g_fs_log->avail_version;
+		}
 	}
 	// Handling large (possibly multi-block) write.
 	else {
@@ -844,6 +862,10 @@ static int persist_log_file(struct logheader_meta *loghdr_meta,
 		log_bh->b_offset = 0;
 
 		loghdr->blocks[idx] = logblk_no;
+
+		mlfs_write(log_bh);
+
+		bh_release(log_bh);
 
 		// Update log address hash table.
 		// This is performance bottleneck of sequential write.
@@ -874,10 +896,6 @@ static int persist_log_file(struct logheader_meta *loghdr_meta,
 
 		mlfs_debug("inum %u offset %lu size %u @ blockno %lx (aligned)\n",
 				loghdr->inode_no[idx], cur_offset, size, logblk_no);
-
-		mlfs_write(log_bh);
-
-		bh_release(log_bh);
 	}
 
 	return 0;
@@ -1168,7 +1186,6 @@ int make_digest_request_async(int percent)
 	sprintf(cmd_buf, "|digest |%d|", percent);
 
 	if (!g_fs_log->digesting && atomic_load(&g_log_sb->n_digest) > 0) {
-		set_digesting();
 		mlfs_debug("Send digest command: %s\n", cmd_buf);
 		ret = write(g_fs_log->digest_fd[1], cmd_buf, MAX_CMD_BUF);
 		return 0;
@@ -1185,6 +1202,8 @@ uint32_t make_digest_request_sync(int percent)
 	addr_t loghdr_blkno = g_fs_log->start_blk;
 	struct inode *ip;
 
+	// FIXME: should protect digesting and next_avail_digest and start_blk with rwlock?
+	set_digesting();
 	g_log_sb->start_digest = g_fs_log->start_blk;
 	g_log_sb->next_avail_digest = g_fs_log->next_avail;
 	write_log_superblock(g_log_sb);

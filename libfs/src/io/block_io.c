@@ -799,15 +799,15 @@ static void remove_first_bh_from_freelist(struct block_device *bdev)
 	buffer_free(bh);
 }
 
-static void move_buffer_to_writeback(struct buffer_head *bh)
+void move_buffer_to_writeback(struct buffer_head *bh)
 {
-	struct block_device *bdev = bh->b_bdev;
-	pthread_mutex_lock(&bdev->bd_bh_dirty_lock);
-	if (list_empty(&bh->b_dirty_list)) {
-		list_add_tail(&bh->b_dirty_list, &bh->b_bdev->bd_bh_dirty);
-		buffer_dirty_count++;
-	}
-	pthread_mutex_unlock(&bdev->bd_bh_dirty_lock);
+    struct block_device *bdev = bh->b_bdev;
+    if (list_empty(&bh->b_dirty_list)) {
+        pthread_mutex_lock(&bdev->bd_bh_dirty_lock);
+        list_add_tail(&bh->b_dirty_list, &bh->b_bdev->bd_bh_dirty);
+        buffer_dirty_count++;
+        pthread_mutex_unlock(&bdev->bd_bh_dirty_lock);
+    }
 }
 
 static struct buffer_head *

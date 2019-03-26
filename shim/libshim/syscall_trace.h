@@ -40,6 +40,7 @@ void do_trace(const char *name, int ret, int args, ...);
     pid_t tid = syscall(SYS_gettid);\
     fprintf(stderr, "(%d)[%s:%d] " fmt, tid, __func__, __LINE__, __VA_ARGS__); \
     } while(0)
+#define always_dump(...) always_warn(EVAL(DO_EXPAND_FMT(__VA_ARGS__)), EVAL(DO_EXPAND_OPT(__VA_ARGS__)))
 #define syscall_abort(fmt, ...) do { always_warn(fmt, __VA_ARGS__); abort(); } while (0)
 #ifdef SYS_TRACE
 #define syscall_warn(fmt, ...) always_warn(fmt, __VA_ARGS__)

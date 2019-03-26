@@ -62,6 +62,8 @@ void fs_brelse(struct buffer_head *bh)
 
 void fs_mark_buffer_dirty(struct buffer_head *bh)
 {
+	mlfs_debug("buffer %lu is dirty\n", bh->b_blocknr);
+	move_buffer_to_writeback(bh);
 	set_buffer_uptodate(bh);
 	set_buffer_dirty(bh);
 }

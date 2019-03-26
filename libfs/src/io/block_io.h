@@ -95,6 +95,7 @@ void brelse(struct buffer_head *bh);
 void wait_on_buffer(struct buffer_head *bh, int isread);
 void sync_all_buffers(struct block_device *bdev);
 void sync_writeback_buffers(struct block_device *bdev);
+void move_buffer_to_writeback(struct buffer_head *bh);
 void remove_buffer_from_writeback(struct buffer_head *bh);
 
 void ensure_block_is_clear(struct block_device *bdev, mlfs_fsblk_t blk);
