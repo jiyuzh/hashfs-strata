@@ -798,18 +798,6 @@ struct inode* idup(struct inode *ip)
   return ip;
 }
 
-void ilock(struct inode *ip)
-{
-  pthread_mutex_lock(&ip->i_mutex);
-  ip->flags |= I_BUSY;
-}
-
-void iunlock(struct inode *ip)
-{
-  pthread_mutex_unlock(&ip->i_mutex);
-  ip->flags &= ~I_BUSY;
-}
-
 /* iput does not deallocate inode. it just drops reference count.
  * An inode is explicitly deallocated by ideallc()
  */
@@ -1062,6 +1050,7 @@ int itrunc(struct inode *ip, offset_t length)
 void stati(struct inode *ip, struct stat *st)
 {
   mlfs_assert(ip);
+  ilock(ip);
 
   st->st_dev = ip->dev;
   st->st_ino = ip->inum;
@@ -1088,6 +1077,7 @@ void stati(struct inode *ip, struct stat *st)
   st->st_mtime = (time_t)ip->mtime.tv_sec;
   st->st_ctime = (time_t)ip->ctime.tv_sec;
   st->st_atime = (time_t)ip->atime.tv_sec;
+  iunlock(ip);
 }
 
 // TODO: Now, eviction is simply discarding. Extend this function

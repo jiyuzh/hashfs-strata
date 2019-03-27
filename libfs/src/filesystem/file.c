@@ -211,6 +211,7 @@ int mlfs_file_write(struct file *f, uint8_t *buf, offset_t offset, size_t n)
         }
 
 		start_log_tx();
+		ilock(f->ip);
 
 		offset_start = offset;
 		offset_end = offset + n;
@@ -238,14 +239,10 @@ int mlfs_file_write(struct file *f, uint8_t *buf, offset_t offset, size_t n)
 
 			size_aligned = n - size_prepended - size_appended; 
 		}
-
 		// add preprended portion to log
 		if (size_prepended > 0) {
-			ilock(f->ip);
 
 			r = add_to_log(f->ip, buf, offset, size_prepended);
-
-			iunlock(f->ip);
 
 			mlfs_assert(r > 0);
 
@@ -264,15 +261,12 @@ int mlfs_file_write(struct file *f, uint8_t *buf, offset_t offset, size_t n)
 				io_size = max_io_size;
 
 			/* add_to_log updates inode block pointers */
-			ilock(f->ip);
 
 			/* do not copy user buffer to page cache */
 			
 			/* add buffer to log header */
 			if ((r = add_to_log(f->ip, buf + i, offset, io_size)) > 0)
 				offset += r;
-
-			iunlock(f->ip);
 
 			if(r < 0)
 				break;
@@ -285,11 +279,7 @@ int mlfs_file_write(struct file *f, uint8_t *buf, offset_t offset, size_t n)
 
 		// add appended portion to log
 		if (size_appended > 0) {
-			ilock(f->ip);
-
 			r = add_to_log(f->ip, buf + i, offset, size_appended);
-
-			iunlock(f->ip);
 
 			mlfs_assert(r > 0);
 
@@ -303,6 +293,7 @@ int mlfs_file_write(struct file *f, uint8_t *buf, offset_t offset, size_t n)
 		 * by looking up offset in a logheader and also mtime in a logheader */
 		// iupdate(f->ip);
 		
+		iunlock(f->ip);
 		commit_log_tx();
 
 		mlfs_debug("%s\n", "--- end transaction");

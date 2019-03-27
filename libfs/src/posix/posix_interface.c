@@ -319,6 +319,7 @@ int mlfs_posix_lseek(int fd, int64_t offset, int origin)
 	mlfs_assert(f);
 
 	//lock file
+	pthread_rwlock_rdlock(&f->rwlock);
 
 	switch(origin) {
 		case SEEK_SET:
@@ -329,12 +330,15 @@ int mlfs_posix_lseek(int fd, int64_t offset, int origin)
 			break;
 		case SEEK_END:
 			//f->ip->size += offset;
+			ilock(f->ip);
 			f->off = f->ip->size + offset;
+			iunlock(f->ip);
 			break;
 		default:
 			ret = -EINVAL;
 			break;
 	}
+	pthread_rwlock_unlock(&f->rwlock);
 
 	//unlock file
 	return f->off;
