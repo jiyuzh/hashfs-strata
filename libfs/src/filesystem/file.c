@@ -203,14 +203,14 @@ int mlfs_file_write(struct file *f, uint8_t *buf, offset_t offset, size_t n)
 		 */
 
 		mlfs_debug("%s\n", "+++ start transaction");
-        if (offset > f->ip->size) {
-            mlfs_info("write to file inum %lu out of boundary, \
-                    file size %lu, offset %lu, write size %lu\n",
-                    f->ip->inum, f->ip->size, offset, n);
-            return 0;
-        }
+		while (offset > f->ip->size) {
+			mlfs_debug("sparse write to inum %u, offset %lu, len %lu, file size %lu, force fallocate\n",
+					f->ip->inum, offset, n, f->ip->size);
+			mlfs_file_fallocate(f, f->ip->size, offset - f->ip->size);
+		}
 
 		start_log_tx();
+		ilock(f->ip);
 
 		offset_start = offset;
 		offset_end = offset + n;
@@ -238,14 +238,10 @@ int mlfs_file_write(struct file *f, uint8_t *buf, offset_t offset, size_t n)
 
 			size_aligned = n - size_prepended - size_appended; 
 		}
-
 		// add preprended portion to log
 		if (size_prepended > 0) {
-			ilock(f->ip);
 
 			r = add_to_log(f->ip, buf, offset, size_prepended);
-
-			iunlock(f->ip);
 
 			mlfs_assert(r > 0);
 
@@ -264,15 +260,12 @@ int mlfs_file_write(struct file *f, uint8_t *buf, offset_t offset, size_t n)
 				io_size = max_io_size;
 
 			/* add_to_log updates inode block pointers */
-			ilock(f->ip);
 
 			/* do not copy user buffer to page cache */
 			
 			/* add buffer to log header */
 			if ((r = add_to_log(f->ip, buf + i, offset, io_size)) > 0)
 				offset += r;
-
-			iunlock(f->ip);
 
 			if(r < 0)
 				break;
@@ -285,11 +278,7 @@ int mlfs_file_write(struct file *f, uint8_t *buf, offset_t offset, size_t n)
 
 		// add appended portion to log
 		if (size_appended > 0) {
-			ilock(f->ip);
-
 			r = add_to_log(f->ip, buf + i, offset, size_appended);
-
-			iunlock(f->ip);
 
 			mlfs_assert(r > 0);
 
@@ -303,6 +292,7 @@ int mlfs_file_write(struct file *f, uint8_t *buf, offset_t offset, size_t n)
 		 * by looking up offset in a logheader and also mtime in a logheader */
 		// iupdate(f->ip);
 		
+		iunlock(f->ip);
 		commit_log_tx();
 
 		mlfs_debug("%s\n", "--- end transaction");
@@ -313,6 +303,46 @@ int mlfs_file_write(struct file *f, uint8_t *buf, offset_t offset, size_t n)
 	panic("filewrite");
 
 	return -1;
+}
+/*!
+ * Allocate zero to change file size
+ */
+#define ALLOC_IO_SIZE (64UL << 10)
+#define _min(a, b) ({\
+		__typeof__(a) _a = a;\
+		__typeof__(b) _b = b;\
+		_a < _b ? _a : _b; })
+
+int mlfs_file_fallocate(struct file *f, offset_t offset, size_t len)
+{
+	struct inode *ip = f->ip;
+	char falloc_buf[ALLOC_IO_SIZE];
+
+	mlfs_assert(ip);
+	memset(falloc_buf, 0, ALLOC_IO_SIZE);
+	if (offset > ip->size) {
+		panic("doesn't support sparse file\n");
+	}
+	if (offset + len > ip->size) {
+		// only append 0 at the end of the file when
+		// offset <= file size && offset + len > file_size
+		// First, make sure offset and len start from the end of the file
+		len -= ip->size - offset;
+		offset = ip->size;
+
+		for (size_t i = 0; i < len; i += ALLOC_IO_SIZE) {
+			size_t io_size = _min(len - i, ALLOC_IO_SIZE);
+
+			int ret = mlfs_file_write(f, (uint8_t *)falloc_buf, offset, io_size);
+			// keep accumulating offset, here should hold `ret == io_size'
+			offset += ret;
+			if (ret < 0) {
+				panic("fail to do fallocate\n");
+				return ret;
+			}
+		}
+	}
+	return 0;
 }
 
 //supporting type : T_FILE, T_DIR

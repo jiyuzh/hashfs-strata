@@ -569,9 +569,7 @@ struct inode* ialloc(uint8_t dev, uint32_t inum, struct dinode *dip);
 int idealloc(struct inode *inode);
 struct inode* idup(struct inode*);
 struct inode* iget(uint8_t dev, uint32_t inum);
-void ilock(struct inode*);
 void iput(struct inode*);
-void iunlock(struct inode*);
 void iunlockput(struct inode*);
 void iupdate(struct inode*);
 int itrunc(struct inode *inode, offset_t length);
@@ -624,6 +622,18 @@ extern uint64_t *bandwidth_consumption;
 static inline addr_t get_inode_block(uint8_t dev, uint32_t inum)
 {
 	return (inum / IPB) + disk_sb[dev].inode_start;
+}
+
+static inline void ilock(struct inode *ip)
+{
+	pthread_mutex_lock(&ip->i_mutex);
+	ip->flags |= I_BUSY;
+}
+
+static inline void iunlock(struct inode *ip)
+{
+	pthread_mutex_unlock(&ip->i_mutex);
+	ip->flags &= ~I_BUSY;
 }
 
 // Bitmap bits per block
