@@ -1681,6 +1681,13 @@ static int persist_dirty_objects_nvm(void)
 		mlfs_debug("[dev %d] write dirty inode complete\n", ip->dev);
 	}
 
+    if (g_idx_cached &&
+        (g_idx_choice == GLOBAL_HASH_TABLE || g_idx_choice == GLOBAL_RADIX_TREE )) {
+
+        int api_err = mlfs_hash_persist();
+        if (api_err) return api_err;
+    }
+
 	// save block allocation bitmap
 	store_all_bitmap(g_root_dev, sb[g_root_dev]->s_blk_bitmap);
 

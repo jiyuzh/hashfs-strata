@@ -558,9 +558,11 @@ int sync_inode_ext_tree(uint8_t dev, struct inode *inode)
     read_ondisk_inode(dev, inode->inum, &dinode);
 
     pthread_mutex_lock(&inode->i_mutex);
-    if (g_idx_choice == GLOBAL_HASH_TABLE ||
-        g_idx_choice == GLOBAL_RADIX_TREE) {
-        mlfs_hash_cache_invalidate();
+    if (g_idx_cached &&
+        (g_idx_choice == GLOBAL_HASH_TABLE || g_idx_choice == GLOBAL_RADIX_TREE )) {
+
+        int api_err = mlfs_hash_cache_invalidate();
+        if (api_err) return api_err;
     } else {
         memmove(inode->l1.addrs, dinode.l1_addrs, sizeof(addr_t) * (NDIRECT + 1));
         if (g_idx_cached && inode->ext_idx) {

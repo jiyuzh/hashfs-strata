@@ -66,6 +66,10 @@ void init_hash(struct super_block *sb) {
       panic("Bad path!");
   }
   if (ret) return;
+
+  ret = FN(&hash_idx, im_set_caching, &hash_idx, g_idx_cached);
+  if (ret) return;
+
   printf("Finished initializing NVM hashtable.\n");
 #endif
 }
@@ -176,8 +180,6 @@ create:
 
         ret = nret;
         map->m_pblk = pblk;
-
-        mlfs_hash_persist();
     }
 
     ret = min(ret, map->m_len);
@@ -208,7 +210,6 @@ int mlfs_hash_truncate(handle_t *handle, struct inode *inode,
   if_then_panic(nremove != nremoved, "Could not remove all blocks!");
 #endif
 
-  //return mlfs_hash_persist();
   return 0;
 }
 
@@ -221,9 +222,7 @@ double check_load_factor(struct inode *inode) {
 }
 
 int mlfs_hash_persist() {
-#if 1
-  return 0;
-#else
+#if 0
   pthread_mutex_lock(ghash->metalock);
   pthread_mutex_lock(gsuper->metalock);
 
@@ -235,6 +234,8 @@ int mlfs_hash_persist() {
   pthread_mutex_unlock(ghash->metalock);
 
   return 0;
+#elif defined(USE_API)
+  return FN(&hash_idx, im_persist, &hash_idx);
 #endif
 }
 
@@ -244,8 +245,8 @@ int mlfs_hash_cache_invalidate() {
 #if !defined(USE_API) && defined(HASHCACHE)
   bitmap_set(ghash->cache_bitmap, 0, ghash->cache_bitmap_size);
   bitmap_set(gsuper->cache_bitmap, 0, gsuper->cache_bitmap_size);
-#elif defined(USE_API) && defined(HASHCACHE)
-  printf("TODO implement invalidate for API!\n");
+#elif defined(USE_API)
+  return FN(&hash_idx, im_invalidate, &hash_idx);
 #endif
 }
 

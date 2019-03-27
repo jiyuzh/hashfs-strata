@@ -2792,7 +2792,6 @@ int mlfs_ext_get_blocks(handle_t *handle, struct inode *inode,
 		tsc_start = asm_rdtscp();
 #endif
 
-
     if (g_idx_choice == EXTENT_TREES || g_idx_choice == LEVEL_HASH_TABLES) {
         if (!inode->ext_idx) {
             static bool notify = false;
@@ -2865,9 +2864,7 @@ int mlfs_ext_get_blocks(handle_t *handle, struct inode *inode,
             //FN(inode->ext_idx, im_print_stats, inode->ext_idx);
             return nblk;
         }
-    }
-
-
+    } 
 
     if (g_idx_choice == GLOBAL_HASH_TABLE ||
         g_idx_choice == GLOBAL_RADIX_TREE) {
