@@ -40,5 +40,6 @@ ssize_t mlfs_file_read(struct file *f, uint8_t *buf, size_t n);
 int mlfs_file_read_offset(struct file *f, uint8_t *bug, 
 		size_t n, offset_t off);
 int mlfs_file_write(struct file *f, uint8_t *buf, offset_t offset, size_t n);
+int mlfs_file_fallocate(struct file *f, offset_t offset, size_t n);
 
 #endif

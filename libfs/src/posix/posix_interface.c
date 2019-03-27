@@ -19,11 +19,6 @@
 extern "C" {
 #endif
 
-#define _min(a, b) ({\
-		__typeof__(a) _a = a;\
-		__typeof__(b) _b = b;\
-		_a < _b ? _a : _b; })
-
 /* note for this posix handlers' (syscall handler) return value and errno.
  * glibc checks syscall return value in INLINE_SYSCALL macro.
  * if the return value is negative, it sets the value as errno
@@ -447,44 +442,16 @@ int mlfs_posix_fstat(int fd, struct stat *stat_buf)
 	return 0;
 }
 
-#define ALLOC_IO_SIZE (64UL << 10)
 int mlfs_posix_fallocate(int fd, offset_t offset, offset_t len)
 {
 	struct file *f;
 	int ret = 0;
-	size_t i, io_size;
-	char falloc_buf[ALLOC_IO_SIZE];
 
 	f = &g_fd_table.open_files[fd];
 
 	if (f->ref == 0)
 		return -EBADF;
-
-	memset(falloc_buf, 0, ALLOC_IO_SIZE);
-
-	mlfs_assert(f->ip);
-
-	if (offset > f->ip->size)
-		panic("does not support sparse file\n");
-	else if (offset + len > f->ip->size) {
-		// only append 0 at the end of the file when
-		// offset <= file size && offset + len > file_size
-		// First, make sure offset and len start from the end of the file
-		len -= f->ip->size - offset;
-		offset = f->ip->size;
-
-		for (i = 0; i < len; i += ALLOC_IO_SIZE) {
-			io_size = _min(len - i, ALLOC_IO_SIZE);
-
-			ret = mlfs_file_write(f, (uint8_t *)falloc_buf, offset, io_size);
-			// keep accumulating offset, here should hold `ret == io_size'
-			offset += ret;
-			if (ret < 0) {
-				panic("fail to do fallocate\n");
-				return ret;
-			}
-		}
-	}
+	ret = mlfs_file_fallocate(f, offset, len);
 	return 0;
 }
 
