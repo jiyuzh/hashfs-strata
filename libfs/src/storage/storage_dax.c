@@ -60,7 +60,7 @@ static inline void PERSISTENT_BARRIER(void)
 
 ///////////////////////////////////////////////////////
 
-static uint8_t *dax_addr[g_n_devices + 1];
+uint8_t *dax_addr[g_n_devices + 1];
 static size_t mapped_len[g_n_devices + 1];
 
 static inline void emulate_latency_ns(int ns)
