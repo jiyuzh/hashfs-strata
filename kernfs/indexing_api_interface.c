@@ -39,6 +39,21 @@ ssize_t nvm_read(paddr_t blk, off_t off, size_t nbytes, char* buf) {
     return ret;
 }
 
+extern uint8_t *dax_addr[];
+
+ssize_t nvm_get_addr(paddr_t blk, off_t off, char** buf) {
+    trace_me();
+#ifdef STORAGE_PERF
+    uint64_t tsc_begin = asm_rdtscp();
+#endif
+    *buf = dax_addr[g_root_dev] + (blk * g_block_size_bytes) + off;
+#ifdef STORAGE_PERF
+    g_perf_stats.path_storage_tsc += asm_rdtscp() - tsc_begin;
+    g_perf_stats.path_storage_nr++;
+#endif
+    return 0;
+}
+
 pthread_mutex_t alloc_mutex = PTHREAD_MUTEX_INITIALIZER; 
 
 static inline void balloc_lock(void) {
@@ -128,6 +143,7 @@ int get_dev_info(device_info_t* di) {
 callback_fns_t strata_callbacks = {
     .cb_write            = nvm_write,
     .cb_read             = nvm_read,
+    .cb_get_addr         = nvm_get_addr,
     .cb_alloc_metadata   = alloc_metadata_blocks,
     .cb_alloc_data       = alloc_data_blocks,
     .cb_dealloc_metadata = dealloc_metadata_blocks,
