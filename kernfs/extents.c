@@ -2854,7 +2854,7 @@ int mlfs_ext_get_blocks(handle_t *handle, struct inode *inode,
         } else {
             ssize_t nblk = FN(inode->ext_idx, im_lookup,
                               inode->ext_idx, inode->inum, map->m_lblk, 
-                              &map->m_pblk);
+                              map->m_len, &map->m_pblk);
             nblk = nblk > map->m_len ? map->m_len : nblk;
 
             if (enable_perf_stats) {

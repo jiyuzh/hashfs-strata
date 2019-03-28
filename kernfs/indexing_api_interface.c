@@ -47,6 +47,20 @@ ssize_t nvm_get_addr(paddr_t blk, off_t off, char** buf) {
     uint64_t tsc_begin = asm_rdtscp();
 #endif
     *buf = dax_addr[g_root_dev] + (blk * g_block_size_bytes) + off;
+#if 0
+    if (blk >= disk_sb[g_root_dev].inode_start && 
+        (blk + (off / g_block_size_bytes) < 
+            (disk_sb[g_root_dev].inode_start + (disk_sb[g_root_dev].ninodes*sizeof(struct dinode)/g_block_size_bytes)))) {
+
+        paddr_t blk_from_start = blk - disk_sb[g_root_dev].inode_start;
+        paddr_t off_from_start = off + (blk_from_start * g_block_size_bytes);
+        int inum = off_from_start / sizeof(struct dinode); 
+        struct inode *ip = icache_find(g_root_dev, inum);
+        if (ip) {
+            *buf = (char*)ip->l1.addrs;
+        }
+    }
+#endif
 #ifdef STORAGE_PERF
     g_perf_stats.path_storage_tsc += asm_rdtscp() - tsc_begin;
     g_perf_stats.path_storage_nr++;

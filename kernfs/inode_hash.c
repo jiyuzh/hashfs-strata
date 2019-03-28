@@ -152,7 +152,7 @@ int mlfs_hash_get_blocks(handle_t *handle, struct inode *inode,
     paddr_t value = 0;
     hash_value_t index = 0; // to make life easier
     ssize_t size = FN(&hash_idx, im_lookup,
-                      &hash_idx, inode->inum, map->m_lblk, &value);
+                      &hash_idx, inode->inum, map->m_lblk, map->m_len, &value);
 
     if (size > 0) {
         ret = size;
