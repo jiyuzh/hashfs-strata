@@ -598,7 +598,7 @@ static struct inode* namex(const char *path, int parent, char *name)
 
 	// directory walking of a given path
 	while ((path = get_next_name(path, name)) != 0) {
-		ilock(ip);
+		irdlock(ip);
 		if (ip->itype != T_DIR){
 			iunlockput(ip);
 			return NULL;

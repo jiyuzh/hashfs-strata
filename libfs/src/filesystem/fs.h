@@ -207,7 +207,7 @@ static inline struct inode *icache_alloc_add(uint8_t dev, uint32_t inum)
 	//pthread_rwlock_wrlock(icache_rwlock);
 
 	HASH_ADD(hash_handle, inode_hash[dev], inum,
-	 		sizeof(uint32_t), inode);
+			sizeof(uint32_t), inode);
 
 	//pthread_rwlock_unlock(icache_rwlock);
 
@@ -217,8 +217,8 @@ static inline struct inode *icache_alloc_add(uint8_t dev, uint32_t inum)
 static inline struct inode *icache_add(struct inode *inode)
 {
 	uint32_t inum = inode->inum;
-
-	pthread_mutex_init(&inode->i_mutex, NULL);
+	// here seem suspicious, ialloc also initializes this rwlock
+	pthread_rwlock_init(&inode->i_rwlock, NULL);
 
 	pthread_rwlock_wrlock(icache_rwlock);
 
@@ -624,16 +624,23 @@ static inline addr_t get_inode_block(uint8_t dev, uint32_t inum)
 	return (inum / IPB) + disk_sb[dev].inode_start;
 }
 
-static inline void ilock(struct inode *ip)
+static inline void irdlock(struct inode *ip)
 {
-	pthread_mutex_lock(&ip->i_mutex);
-	ip->flags |= I_BUSY;
+	pthread_rwlock_rdlock(&ip->i_rwlock);
+	// It seems that no one is using I_BUSY. comment it out
+	// ip->flags |= I_BUSY;
+}
+
+static inline void iwrlock(struct inode *ip)
+{
+	pthread_rwlock_wrlock(&ip->i_rwlock);
 }
 
 static inline void iunlock(struct inode *ip)
 {
-	pthread_mutex_unlock(&ip->i_mutex);
-	ip->flags &= ~I_BUSY;
+	pthread_rwlock_unlock(&ip->i_rwlock);
+	// It seems that no one is using I_BUSY. comment it out
+	// ip->flags &= ~I_BUSY;
 }
 
 // Bitmap bits per block

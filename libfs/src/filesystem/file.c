@@ -98,7 +98,7 @@ int mlfs_file_close(struct file *f)
 int mlfs_file_stat(struct file *f, struct stat *st)
 {
 	if(f->type == FD_INODE){
-		ilock(f->ip);
+		irdlock(f->ip);
 		stati(f->ip, st);
 		iunlock(f->ip);
 		return 0;
@@ -115,7 +115,7 @@ ssize_t mlfs_file_read(struct file *f, uint8_t *buf, size_t n)
 		return -EPERM;
 
 	if (f->type == FD_INODE) {
-		ilock(f->ip);
+		irdlock(f->ip);
 
 		if (f->off >= f->ip->size) {
 			iunlock(f->ip);
@@ -146,7 +146,7 @@ int mlfs_file_read_offset(struct file *f, uint8_t *buf, size_t n, offset_t off)
 		return -EPERM;
 
 	if (f->type == FD_INODE) {
-		ilock(f->ip);
+		irdlock(f->ip);
 
 		if (off >= f->ip->size) {
 			iunlock(f->ip);
@@ -210,7 +210,7 @@ int mlfs_file_write(struct file *f, uint8_t *buf, offset_t offset, size_t n)
 		}
 
 		start_log_tx();
-		ilock(f->ip);
+		iwrlock(f->ip);
 
 		offset_start = offset;
 		offset_end = offset + n;
@@ -360,7 +360,7 @@ struct inode *mlfs_object_create(const char *path, unsigned short type, uint8_t 
 	if ((parent_inode = nameiparent(path, name)) == 0)
 		return NULL;
 
-	ilock(parent_inode);
+	iwrlock(parent_inode);
 
 	// FIXME: reimplementation of getdirent breaks check_entry_fast
 	// Here as a workaround, we just disable it.

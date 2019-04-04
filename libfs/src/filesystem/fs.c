@@ -556,7 +556,7 @@ int sync_inode_ext_tree(uint8_t dev, struct inode *inode)
 
     read_ondisk_inode(dev, inode->inum, &dinode);
 
-    pthread_mutex_lock(&inode->i_mutex);
+    iwrlock(inode);
     if (g_idx_cached && IDXAPI_IS_GLOBAL()) {
         int api_err = mlfs_hash_cache_invalidate();
         if (api_err) return api_err;
@@ -574,7 +574,7 @@ int sync_inode_ext_tree(uint8_t dev, struct inode *inode)
 #endif
     }
 
-    pthread_mutex_unlock(&inode->i_mutex);
+    iunlock(inode);
 
     /*
     if (inode->itype == T_DIR)
@@ -640,7 +640,7 @@ struct inode* ialloc(uint8_t dev, uint32_t inum, struct dinode *dip)
 
   INIT_LIST_HEAD(&ip->i_slru_head);
 
-  pthread_mutex_init(&ip->i_mutex, NULL);
+  pthread_rwlock_init(&ip->i_rwlock, NULL);
 
   bitmap_set(sb[dev]->s_inode_bitmap, inum, 1);
 
@@ -709,7 +709,7 @@ int idealloc(struct inode *inode)
     inode->flags &= ~I_BUSY;
   }
 
-  ilock(inode);
+  iwrlock(inode);
   inode->size = 0;
   /* After persisting the inode, libfs moves it to
    * deleted inode hash table in persist_log_inode() */
@@ -724,7 +724,7 @@ int idealloc(struct inode *inode)
   //printf("fcache del!\n");
 
   pthread_spin_destroy(&inode->de_cache_spinlock);
-  pthread_mutex_destroy(&inode->i_mutex);
+  pthread_rwlock_destroy(&inode->i_rwlock);
   pthread_rwlock_destroy(&inode->fcache_rwlock);
 
   iunlock(inode);
@@ -773,9 +773,9 @@ struct inode* iget(uint8_t dev, uint32_t inum)
     if ((ip->flags & I_VALID) && (ip->flags & I_DELETING))
       return NULL;
 
-    pthread_mutex_lock(&ip->i_mutex);
+    iwrlock(ip);
     ip->i_ref++;
-    pthread_mutex_unlock(&ip->i_mutex);
+    iunlock(ip);
   } else {
     struct dinode dip;
     // allocate new in-memory inode
@@ -802,14 +802,14 @@ struct inode* idup(struct inode *ip)
  */
 void iput(struct inode *ip)
 {
-  pthread_mutex_lock(&ip->i_mutex);
+  iwrlock(ip);
 
   mlfs_muffled("iput num %u ref %u nlink %u\n",
       ip->inum, ip->ref, ip->nlink);
 
   ip->i_ref--;
 
-  pthread_mutex_unlock(&ip->i_mutex);
+  iunlock(ip);
 }
 
 // Common idiom: unlock, then put.
@@ -900,13 +900,13 @@ int bmap(struct inode *ip, struct bmap_request *bmap_req)
       if (!(l2_ip->dinode_flags & DI_VALID)) {
         read_ondisk_inode(g_ssd_dev, ip->inum, &l2_dip);
 
-        pthread_mutex_lock(&l2_ip->i_mutex);
+        iwrlock(l2_ip);
 
         l2_ip->_dinode = (struct dinode *)l2_ip;
         sync_inode_from_dinode(l2_ip, &l2_dip);
         l2_ip->flags |= I_VALID;
 
-        pthread_mutex_unlock(&l2_ip->i_mutex);
+        iunlock(l2_ip);
       }
 
       map.m_lblk = (offset >> g_block_size_shift);
@@ -952,13 +952,13 @@ L3_search:
       if (!(l3_ip->dinode_flags & DI_VALID)) {
         read_ondisk_inode(g_hdd_dev, ip->inum, &l3_dip);
 
-        pthread_mutex_lock(&l3_ip->i_mutex);
+        iwrlock(l3_ip);
 
         l3_ip->_dinode = (struct dinode *)l3_ip;
         sync_inode_from_dinode(l3_ip, &l3_dip);
         l3_ip->flags |= I_VALID;
 
-        pthread_mutex_unlock(&l3_ip->i_mutex);
+        iunlock(l3_ip);
       }
 
       map.m_lblk = (offset >> g_block_size_shift);
@@ -970,10 +970,10 @@ L3_search:
 
       mlfs_debug("search l3 tree: ret %d\n", ret);
 
-      pthread_mutex_lock(&l3_ip->i_mutex);
+      iwrlock(l3_ip);
       // iput() without deleting
       ip->i_ref--;
-      pthread_mutex_unlock(&l3_ip->i_mutex);
+      iunlock(l3_ip);
 
       /* No blocks are found in all trees */
       if (ret == 0)
@@ -1033,11 +1033,11 @@ int itrunc(struct inode *ip, offset_t length)
     }
   }
 
-  pthread_mutex_lock(&ip->i_mutex);
+  iwrlock(ip);
 
   ip->size = length;
 
-  pthread_mutex_unlock(&ip->i_mutex);
+  iunlock(ip);
 
   mlfs_get_time(&ip->mtime);
 
@@ -1049,7 +1049,7 @@ int itrunc(struct inode *ip, offset_t length)
 void stati(struct inode *ip, struct stat *st)
 {
   mlfs_assert(ip);
-  ilock(ip);
+  irdlock(ip);
 
   st->st_dev = ip->dev;
   st->st_ino = ip->inum;

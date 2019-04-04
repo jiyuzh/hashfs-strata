@@ -325,7 +325,7 @@ int mlfs_posix_lseek(int fd, int64_t offset, int origin)
 			break;
 		case SEEK_END:
 			//f->ip->size += offset;
-			ilock(f->ip);
+			irdlock(f->ip);
 			f->off = f->ip->size + offset;
 			iunlock(f->ip);
 			break;
