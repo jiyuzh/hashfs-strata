@@ -1,6 +1,8 @@
 #ifndef _SYSCALL_TRACE_H_
 #define _SYSCALL_TRACE_H_
 
+#include <unistd.h>
+#include <sys/syscall.h>
 #include <stdio.h>
 #include "macromap.h"
 
