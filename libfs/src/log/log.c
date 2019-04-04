@@ -1,6 +1,8 @@
 #include <sys/epoll.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <fcntl.h>
+#include <sys/stat.h>
 
 #include "mlfs/mlfs_user.h"
 #include "log/log.h"
@@ -1346,6 +1348,12 @@ void *digest_thread(void *arg)
 	if (bind(g_sock_fd, (struct sockaddr *)&g_addr,
 				sizeof(struct sockaddr_un)) == -1)
 		panic("bind error\n");
+
+	ret = chmod(g_addr.sun_path, S_IRWXU | S_IRWXG | S_IRWXO);
+	if (ret < 0) {
+		perror("chmod failed");
+		panic("chmod failed");
+	}
 
 	flags = fcntl(g_sock_fd, F_GETFL, 0);
 	flags |= O_NONBLOCK;
