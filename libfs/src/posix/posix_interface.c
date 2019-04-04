@@ -433,7 +433,7 @@ int mlfs_posix_fstat(int fd, struct stat *stat_buf)
 	f = &g_fd_table.open_files[fd];
 
 	if (f->ref == 0)
-		return -ENOENT;
+		return -EBADF;
 
 	mlfs_assert(f->ip);
 
