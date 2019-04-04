@@ -282,13 +282,13 @@ int dir_get_linux_dirent(struct inode *dir_inode, struct linux_dirent *buf, offs
 	struct inode *ip;
 	uint8_t *dirent_array;
 	struct mlfs_dirent *de;
-	offset_t off = *p_off;
+	offset_t de_off = *p_off;
 
-	de = get_dirent(dir_inode, off);
+	de = get_dirent(dir_inode, de_off);
 
 	mlfs_assert(de);
-	offset_t buf_off = 0, de_off = off % g_block_size_bytes;
-	while (de_off < g_block_size_bytes) {
+	offset_t buf_off = 0;
+	while (de_off < dir_inode->size) {
 		if (de->inum != 0) {
 			size_t namelen = strlen(de->name);
 			size_t next_entry_size = sizeof(struct linux_dirent) + namelen;
@@ -306,6 +306,9 @@ int dir_get_linux_dirent(struct inode *dir_inode, struct linux_dirent *buf, offs
 		}
 		de_off += sizeof(struct mlfs_dirent);
 		de++;
+		if ((de_off % g_block_size_bytes) == 0) {
+			de = get_dirent(dir_inode, de_off);
+		}
 	}
 	*p_off = de_off;
 	return buf_off;
