@@ -1,3 +1,5 @@
+#include <libgen.h>
+
 #include "filesystem/fs.h"
 #include "io/block_io.h"
 #include "log/log.h"
@@ -683,9 +685,13 @@ struct inode* nameiparent(const char *path, char *name)
 	return inode;
 #else
 	struct inode *inode;
-	char parent_path[MAX_PATH];
-
-	get_parent_path(path, parent_path, name);
+	char *parent_path;
+	char dirname_copy[MAX_PATH];
+	char basename_copy[MAX_PATH];
+	strncpy(dirname_copy, path, MAX_PATH);
+	strncpy(basename_copy, path, MAX_PATH);
+	parent_path = dirname(dirname_copy);
+	strncpy(name, basename(basename_copy), DIRSIZ);
 
 	inode = dlookup_find(g_root_dev, parent_path);
 
