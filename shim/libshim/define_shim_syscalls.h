@@ -89,7 +89,7 @@ DEFINE_SHIM_SYSCALL (chdir, 1, shim_do_chdir, int, const char *, filename)
 DEFINE_SHIM_SYSCALL (chmod, 2, shim_do_chmod, int, const char *, pathname,
 mode_t, mode)
 DEFINE_SHIM_SYSCALL (fchmod, 2, shim_do_fchmod, int, int, fd, mode_t, mode)
-DEFINE_SHIM_SYSCALL (getcwd, 2, shim_do_getcwd, char *, char *, buf, size_t, size)
+DEFINE_SHIM_SYSCALL (getcwd, 2, shim_do_getcwd, int, char *, buf, size_t, size)
 /*
 DEFINE_SHIM_SYSCALL (readv, 3, shim_do_readv, ssize_t, int, fd,
                      const struct iovec *, vec, int, vlen)

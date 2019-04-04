@@ -99,7 +99,7 @@ size_t shim_do_getdents(int fd, struct linux_dirent *buf, size_t count);
 size_t shim_do_getdents64(int fd, struct linux_dirent64 *buf, size_t count);
 int shim_do_chmod(const char *pathname, mode_t mode);
 int shim_do_fchmod(int fd, mode_t mode);
-char *shim_do_getcwd(char *buf, size_t size);
+int shim_do_getcwd(char *buf, size_t size);
 
 #ifdef __cplusplus
 }

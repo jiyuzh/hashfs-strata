@@ -31,6 +31,13 @@ extern "C" {
 #endif
 static char shim_pwd[PATH_BUF_SIZE];
 
+__attribute((constructor)) static void shim_sys_fs_init()
+{
+    shim_pwd[0] = 0;
+    shim_do_getcwd(shim_pwd, PATH_BUF_SIZE);
+    always_warn("shim_pwd %p %s\n", shim_pwd, shim_pwd);
+}
+
 // _output can be uninitialized
 // return value: output length?
 static int collapse_name(const char *input, char *_output)
@@ -88,8 +95,7 @@ static char * get_absolute_path(const char *path, char *path_buf, char *dest_pat
             return path_buf;
         }
         else {
-            strncpy(dest_path, shim_pwd, buf_size);
-            strncat(dest_path, path_buf, buf_size - strlen(dest_path));
+            snprintf(dest_path, buf_size, "%s/%s", shim_pwd, path_buf);
             return dest_path;
         }
     }
@@ -1361,23 +1367,25 @@ int shim_do_fchmod(int fd, mode_t mode)
 	return ret;
 }
 
-char *shim_do_getcwd(char *buf, size_t size)
+int shim_do_getcwd(char *buf, size_t size)
 {
-	char *ret;
+	int ret;
 	if (shim_pwd[0] == 0) { // haven't called chdir
 		asm("mov %1, %%rdi;"
 			"mov %2, %%rsi;"
 			"mov %3, %%eax;"
 			"syscall;\n\t"
-			"mov %%rax, %0;\n\t"
+			"mov %%eax, %0;\n\t"
 			:"=r"(ret)
 			:"m"(buf), "r"(size), "r"(__NR_getcwd)
 			:"rax", "rdi", "rsi"
 	   );
+		syscall_dump("%d", ret, "%p", buf, "%lu", size);
 	}
 	else { // have called chdir, return shim_pwd
 		strncpy(buf, shim_pwd, size);
-		ret = buf;
+		ret = strlen(buf);
+		syscall_dump("%d", ret, "%p", buf, "%lu", size);
 	}
 	return ret;
 }
