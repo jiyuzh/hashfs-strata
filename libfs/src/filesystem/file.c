@@ -138,9 +138,9 @@ ssize_t mlfs_file_read(struct file *f, uint8_t *buf, size_t n)
 	return -1;
 }
 
-int mlfs_file_read_offset(struct file *f, uint8_t *buf, size_t n, offset_t off)
+ssize_t mlfs_file_read_offset(struct file *f, uint8_t *buf, size_t n, offset_t off)
 {
-	int r;
+	ssize_t r;
 
 	if (f->readable == 0)
 		return -EPERM;
@@ -170,9 +170,9 @@ int mlfs_file_read_offset(struct file *f, uint8_t *buf, size_t n, offset_t off)
 // Write `n' bytes from buffer `buf' start at `offset' to file `f'.
 // return value: the bytes wrote to file or -1 if error occurs
 // NOTE: This function will NOT update f->off
-int mlfs_file_write(struct file *f, uint8_t *buf, offset_t offset, size_t n)
+ssize_t mlfs_file_write(struct file *f, uint8_t *buf, offset_t offset, size_t n)
 {
-	int r;
+	size_t r;
 	uint32_t max_io_size = (128 << 20);
 	offset_t i = 0, file_size;
 	uint32_t io_size = 0;

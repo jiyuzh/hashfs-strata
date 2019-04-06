@@ -21,13 +21,13 @@ DEFINE_SHIM_SYSCALL (creat, 2, shim_do_creat, int, char *, file, mode_t, mode)
 DEFINE_SHIM_SYSCALL (read, 3, shim_do_read, size_t, int, fd, void *, buf,
                      size_t, count)
 
-DEFINE_SHIM_SYSCALL (pread64, 4, shim_do_pread64, size_t, int, fd, char *, buf,
+DEFINE_SHIM_SYSCALL (pread64, 4, shim_do_pread64, ssize_t, int, fd, char *, buf,
                      size_t, count, loff_t, pos)
 
-DEFINE_SHIM_SYSCALL (write, 3, shim_do_write, size_t, int, fd, void *,
+DEFINE_SHIM_SYSCALL (write, 3, shim_do_write, ssize_t, int, fd, void *,
                      buf, size_t, count)
 
-DEFINE_SHIM_SYSCALL (pwrite64, 4, shim_do_pwrite64, size_t, int, fd, void *,
+DEFINE_SHIM_SYSCALL (pwrite64, 4, shim_do_pwrite64, ssize_t, int, fd, void *,
                      buf,  size_t, count, loff_t, pos)
 
 DEFINE_SHIM_SYSCALL (close, 1, shim_do_close, int, int, fd)
@@ -79,11 +79,11 @@ DEFINE_SHIM_SYSCALL (mmap, 6, shim_do_mmap, void *, void *, addr, size_t, length
 
 DEFINE_SHIM_SYSCALL (munmap, 2, shim_do_munmap, int, void *, addr, size_t, length)
 
-DEFINE_SHIM_SYSCALL (getdents, 3, shim_do_getdents, size_t, int, fd,
-		struct linux_dirent *, buf, size_t, count)
+DEFINE_SHIM_SYSCALL (getdents, 3, shim_do_getdents, int, int, fd,
+		struct linux_dirent *, buf, unsigned int, count)
 
-DEFINE_SHIM_SYSCALL (getdents64, 3, shim_do_getdents64, size_t, int, fd,
-		struct linux_dirent64 *, buf, size_t, count)
+DEFINE_SHIM_SYSCALL (getdents64, 3, shim_do_getdents64, int, int, fd,
+		struct linux_dirent64 *, buf, unsigned int, count)
 
 DEFINE_SHIM_SYSCALL (chdir, 1, shim_do_chdir, int, const char *, filename)
 DEFINE_SHIM_SYSCALL (chmod, 2, shim_do_chmod, int, const char *, pathname,

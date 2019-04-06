@@ -1134,9 +1134,10 @@ static struct fcache_block *add_to_read_cache(struct inode *inode,
   return _fcache_block;
 }
 
-int do_unaligned_read(struct inode *ip, uint8_t *dst, offset_t off, uint32_t io_size)
+ssize_t do_unaligned_read(struct inode *ip, uint8_t *dst, offset_t off, size_t io_size)
 {
-  int io_done = 0, ret;
+  ssize_t io_done = 0;
+  int ret;
   offset_t key, off_aligned;
   struct fcache_block *_fcache_block;
   uint64_t start_tsc;
@@ -1314,7 +1315,7 @@ int do_unaligned_read(struct inode *ip, uint8_t *dst, offset_t off, uint32_t io_
   return io_size;
 }
 
-int do_aligned_read(struct inode *ip, uint8_t *dst, offset_t off, uint32_t io_size)
+ssize_t do_aligned_read(struct inode *ip, uint8_t *dst, offset_t off, size_t io_size)
 {
   int io_to_be_done = 0, ret, i;
   offset_t key, _off, pos;
@@ -1591,13 +1592,13 @@ do_io_aligned:
   return io_size;
 }
 
-int readi(struct inode *ip, uint8_t *dst, offset_t off, uint32_t io_size)
+ssize_t readi(struct inode *ip, uint8_t *dst, offset_t off, size_t io_size)
 {
-  int ret = 0;
+  ssize_t ret = 0;
   uint8_t *_dst;
   offset_t _off, offset_end, offset_aligned, offset_small = 0;
   offset_t size_aligned = 0, size_prepended = 0, size_appended = 0, size_small = 0;
-  int io_done;
+  ssize_t io_done;
 
   mlfs_assert(off < ip->size);
 
@@ -1683,10 +1684,10 @@ int readi(struct inode *ip, uint8_t *dst, offset_t off, uint32_t io_size)
 // add_to_log should handle the logging for both directory and file.
 // 1. allocate blocks for log
 // 2. add to log_header
-int add_to_log(struct inode *ip, uint8_t *data, offset_t off, uint32_t size)
+size_t add_to_log(struct inode *ip, uint8_t *data, offset_t off, size_t size)
 {
   offset_t total;
-  uint32_t io_size, nr_iovec = 0;
+  uint32_t nr_iovec = 0;
   addr_t block_no;
   struct logheader_meta *loghdr_meta;
 
@@ -1715,7 +1716,7 @@ int add_to_log(struct inode *ip, uint8_t *data, offset_t off, uint32_t size)
   } else
     panic("unknown inode type\n");
 
-  if (size > 0 && (off + size) > ip->size)
+  if ((off + size) > ip->size)
     ip->size = off + size;
 
   return size;

@@ -204,9 +204,9 @@ int mlfs_posix_creat(char *path, uint16_t mode)
 	return mlfs_posix_open(path, O_CREAT|O_RDWR, mode);
 }
 
-int mlfs_posix_read(int fd, void *buf, size_t count)
+ssize_t mlfs_posix_read(int fd, void *buf, size_t count)
 {
-	int ret = 0;
+	ssize_t ret = 0;
 	struct file *f;
 
 	f = &g_fd_table.open_files[fd];
@@ -227,9 +227,9 @@ int mlfs_posix_read(int fd, void *buf, size_t count)
 	return ret;
 }
 
-int mlfs_posix_pread64(int fd, void *buf, size_t count, loff_t off)
+ssize_t mlfs_posix_pread64(int fd, void *buf, size_t count, loff_t off)
 {
-	int ret = 0;
+	ssize_t ret = 0;
 	struct file *f;
 
 	f = &g_fd_table.open_files[fd];
@@ -250,9 +250,9 @@ int mlfs_posix_pread64(int fd, void *buf, size_t count, loff_t off)
 	return ret;
 }
 
-int mlfs_posix_write(int fd, const void *buf, size_t count)
+ssize_t mlfs_posix_write(int fd, const void *buf, size_t count)
 {
-	int ret;
+	ssize_t ret;
 	struct file *f;
 
 	f = &g_fd_table.open_files[fd];
@@ -277,7 +277,7 @@ int mlfs_posix_write(int fd, const void *buf, size_t count)
 	return ret;
 }
 
-int mlfs_posix_pwrite64(int fd, const void *buf, size_t count, loff_t off)
+ssize_t mlfs_posix_pwrite64(int fd, const void *buf, size_t count, loff_t off)
 {
 	int ret;
 	struct file *f;
@@ -300,10 +300,10 @@ int mlfs_posix_pwrite64(int fd, const void *buf, size_t count, loff_t off)
 	return ret;
 }
 
-int mlfs_posix_lseek(int fd, int64_t offset, int origin)
+off_t mlfs_posix_lseek(int fd, int64_t offset, int origin)
 {
 	struct file *f;
-	int ret = 0;
+	off_t ret = 0;
 
 	f = &g_fd_table.open_files[fd];
 
@@ -319,24 +319,27 @@ int mlfs_posix_lseek(int fd, int64_t offset, int origin)
 	switch(origin) {
 		case SEEK_SET:
 			f->off = offset;
+			ret = f->off;
 			break;
 		case SEEK_CUR:
 			f->off += offset;
+			ret = f->off;
 			break;
 		case SEEK_END:
 			//f->ip->size += offset;
 			irdlock(f->ip);
 			f->off = f->ip->size + offset;
 			iunlock(f->ip);
+			ret = f->off;
 			break;
 		default:
 			ret = -EINVAL;
 			break;
 	}
+	//unlock file
 	pthread_rwlock_unlock(&f->rwlock);
 
-	//unlock file
-	return f->off;
+	return ret;
 }
 
 int mlfs_posix_close(int fd)
@@ -503,7 +506,7 @@ int mlfs_posix_unlink(const char *filename)
 	return ret;
 }
 
-int mlfs_posix_truncate(const char *filename, offset_t length)
+int mlfs_posix_truncate(const char *filename, off_t length)
 {
 	struct inode *inode;
 
@@ -524,7 +527,7 @@ int mlfs_posix_truncate(const char *filename, offset_t length)
 	return 0;
 }
 
-int mlfs_posix_ftruncate(int fd, offset_t length)
+int mlfs_posix_ftruncate(int fd, off_t length)
 {
 	struct file *f;
 	int ret = 0;
