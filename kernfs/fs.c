@@ -172,6 +172,7 @@ void reset_kernfs_stats(void)
     reset_stats_dist(&storage_wnr);
 #endif
 	memset(&g_perf_stats, 0, sizeof(kernfs_stats_t));
+    cache_stats_init();
 }
 void show_kernfs_stats(void)
 {
@@ -216,6 +217,8 @@ void show_kernfs_stats(void)
 			((float)g_perf_stats.n_digest_skipped * 100.0) / (float)n_digest);
 	printf("path search     : %lu\n",
 			g_perf_stats.path_search_tsc);
+    printf("  path search cache (misses/accesses)  : %lu / %lu(%.2f)\n", 
+            tri_ratio(g_perf_stats.idx_cache_misses,g_perf_stats.idx_cache_accesses));
 	printf("total migrated  : %lu MB\n", g_perf_stats.total_migrated_mb);
 	printf("--------------------------------------\n");
 #ifdef STORAGE_PERF

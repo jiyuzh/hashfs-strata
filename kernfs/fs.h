@@ -10,6 +10,7 @@
 #include "ds/uthash.h"
 #include "ds/rbtree.h"
 #include "shared.h"
+#include "cache_stats.h"
 #include "concurrency/synchronization.h"
 
 #ifdef __cplusplus
@@ -36,6 +37,9 @@ typedef struct mlfs_kernfs_stats {
 	uint64_t n_digest_skipped;
 	uint64_t total_migrated_mb;
 	stats_dist_t read_per_index;
+    // Indexing cache rates
+    uint64_t idx_cache_accesses;
+    uint64_t idx_cache_misses;
 } kernfs_stats_t;
 
 extern struct disk_superblock disk_sb[g_n_devices];

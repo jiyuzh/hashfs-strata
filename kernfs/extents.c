@@ -9,6 +9,7 @@
 #include "migrate.h"
 #endif
 
+#include "cache_stats.h"
 #include "inode_hash.h"
 
 /*
@@ -2788,8 +2789,10 @@ int mlfs_ext_get_blocks(handle_t *handle, struct inode *inode,
 
 #ifdef STORAGE_PERF
     g_perf_stats.path_storage_nr = 0;
-	if (enable_perf_stats)
+	if (enable_perf_stats) {
 		tsc_start = asm_rdtscp();
+        start_cache_stats();
+    }
 #endif
 
     if (IDXAPI_IS_PER_FILE()) {
@@ -2856,6 +2859,14 @@ int mlfs_ext_get_blocks(handle_t *handle, struct inode *inode,
             //(void)sync_inode_from_dinode(inode, inode->_dinode);
 
             nblk = nblk > map->m_len ? map->m_len : nblk;
+#ifdef KERNFS
+            if (enable_perf_stats) {
+                g_perf_stats.path_search_tsc += (asm_rdtscp() - tsc_start);
+                end_cache_stats();
+                g_perf_stats.idx_cache_accesses += get_cache_accesses();
+                g_perf_stats.idx_cache_misses   += get_cache_misses();
+            }
+#endif
             return nblk;
         } else {
             ssize_t nblk = FN(inode->ext_idx, im_lookup,
@@ -2866,6 +2877,9 @@ int mlfs_ext_get_blocks(handle_t *handle, struct inode *inode,
             if (enable_perf_stats) {
                 update_stats_dist(&(g_perf_stats.read_per_index),
                                   g_perf_stats.path_storage_nr);
+                end_cache_stats();
+                g_perf_stats.idx_cache_accesses += get_cache_accesses();
+                g_perf_stats.idx_cache_misses   += get_cache_misses();
             }
             //FN(inode->ext_idx, im_print_stats, inode->ext_idx);
             return nblk;
@@ -2877,11 +2891,17 @@ int mlfs_ext_get_blocks(handle_t *handle, struct inode *inode,
 #ifdef KERNFS
         if (enable_perf_stats) {
             g_perf_stats.path_search_tsc += (asm_rdtscp() - tsc_start);
+            end_cache_stats();
+            g_perf_stats.idx_cache_accesses += get_cache_accesses();
+            g_perf_stats.idx_cache_misses   += get_cache_misses();
         }
 #else
         if (enable_perf_stats) {
             update_stats_dist(&(g_perf_stats.read_per_index),
                                 g_perf_stats.path_storage_nr);
+            end_cache_stats();
+            g_perf_stats.idx_cache_accesses += get_cache_accesses();
+            g_perf_stats.idx_cache_misses   += get_cache_misses();
         }
 #endif
         return hash_ret;
@@ -3105,11 +3125,19 @@ out2:
 	/*mutex_unlock(&inode->truncate_mutex);*/
 
 #ifdef KERNFS
-	if (enable_perf_stats)
+	if (enable_perf_stats) {
 		g_perf_stats.path_search_tsc += (asm_rdtscp() - tsc_start);
+        end_cache_stats();
+        g_perf_stats.idx_cache_accesses += get_cache_accesses();
+        g_perf_stats.idx_cache_misses   += get_cache_misses();
+    }
 #else
-    if (enable_perf_stats)
+    if (enable_perf_stats) {
         update_stats_dist(&(g_perf_stats.read_per_index), g_perf_stats.path_storage_nr);
+        end_cache_stats();
+        g_perf_stats.idx_cache_accesses += get_cache_accesses();
+        g_perf_stats.idx_cache_misses   += get_cache_misses();
+    }
 #endif
 
 	return err ? err : allocated;
@@ -3122,6 +3150,11 @@ int mlfs_ext_truncate(handle_t *handle, struct inode *inode,
     static bool notify = false;
 
 	mlfs_assert(handle != NULL);
+#if defined(STORAGE_PERF) && defined(KERNFS)
+	if (enable_perf_stats) {
+        start_cache_stats();
+    }
+#endif
 
     if (IDXAPI_IS_PER_FILE()) {
         if (!inode->ext_idx) {
@@ -3167,6 +3200,14 @@ int mlfs_ext_truncate(handle_t *handle, struct inode *inode,
 	if (!ret) {
 		ret = mlfs_mark_inode_dirty(inode);
     }
+
+#if defined(STORAGE_PERF) && defined(KERNFS)
+	if (enable_perf_stats) {
+        end_cache_stats();
+        g_perf_stats.idx_cache_accesses += get_cache_accesses();
+        g_perf_stats.idx_cache_misses   += get_cache_misses();
+    }
+#endif
 
 	return ret;
 }
