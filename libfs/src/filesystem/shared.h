@@ -256,7 +256,7 @@ struct inode {
 
 	mlfs_hash_t hash_handle;
 
-	pthread_mutex_t i_mutex;
+	pthread_rwlock_t i_rwlock;
 
 	// For extent tree search optimization.
 	struct mlfs_ext_path *previous_path;

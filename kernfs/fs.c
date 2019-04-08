@@ -1893,8 +1893,16 @@ static void wait_for_event(void)
 
 	unlink(SRV_SOCK_PATH);
 
-	if (bind(sock_fd, (struct sockaddr*)&addr, sizeof(addr)) < 0)
+	if (bind(sock_fd, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
+		perror("bind error");
 		panic("bind error");
+	}
+
+	ret = chmod(addr.sun_path, S_IRWXU | S_IRWXG | S_IRWXO);
+	if (ret < 0) {
+		perror("chmod failed");
+		panic("chmod failed");
+	}
 
 	// make it non-blocking
 	flags = fcntl(sock_fd, F_GETFL, 0);
@@ -1995,6 +2003,7 @@ void shutdown_fs(void)
 	if (enable_perf_stats)
 		close(prof_fd);
 
+	unlink(SRV_SOCK_PATH);
 	device_shutdown();
 	return ;
 }

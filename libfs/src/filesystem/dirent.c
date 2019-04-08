@@ -1,3 +1,5 @@
+#include <libgen.h>
+
 #include "filesystem/fs.h"
 #include "io/block_io.h"
 #include "log/log.h"
@@ -280,13 +282,13 @@ int dir_get_linux_dirent(struct inode *dir_inode, struct linux_dirent *buf, offs
 	struct inode *ip;
 	uint8_t *dirent_array;
 	struct mlfs_dirent *de;
-	offset_t off = *p_off;
+	offset_t de_off = *p_off;
 
-	de = get_dirent(dir_inode, off);
+	de = get_dirent(dir_inode, de_off);
 
 	mlfs_assert(de);
-	offset_t buf_off = 0, de_off = off % g_block_size_bytes;
-	while (de_off < g_block_size_bytes) {
+	offset_t buf_off = 0;
+	while (de_off < dir_inode->size) {
 		if (de->inum != 0) {
 			size_t namelen = strlen(de->name);
 			size_t next_entry_size = sizeof(struct linux_dirent) + namelen;
@@ -304,6 +306,9 @@ int dir_get_linux_dirent(struct inode *dir_inode, struct linux_dirent *buf, offs
 		}
 		de_off += sizeof(struct mlfs_dirent);
 		de++;
+		if ((de_off % g_block_size_bytes) == 0) {
+			de = get_dirent(dir_inode, de_off);
+		}
 	}
 	*p_off = de_off;
 	return buf_off;
@@ -593,7 +598,7 @@ static struct inode* namex(const char *path, int parent, char *name)
 
 	// directory walking of a given path
 	while ((path = get_next_name(path, name)) != 0) {
-		ilock(ip);
+		irdlock(ip);
 		if (ip->itype != T_DIR){
 			iunlockput(ip);
 			return NULL;
@@ -683,9 +688,13 @@ struct inode* nameiparent(const char *path, char *name)
 	return inode;
 #else
 	struct inode *inode;
-	char parent_path[MAX_PATH];
-
-	get_parent_path(path, parent_path, name);
+	char *parent_path;
+	char dirname_copy[MAX_PATH];
+	char basename_copy[MAX_PATH];
+	strncpy(dirname_copy, path, MAX_PATH);
+	strncpy(basename_copy, path, MAX_PATH);
+	parent_path = dirname(dirname_copy);
+	strncpy(name, basename(basename_copy), DIRSIZ);
 
 	inode = dlookup_find(g_root_dev, parent_path);
 
