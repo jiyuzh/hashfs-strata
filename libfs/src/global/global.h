@@ -82,12 +82,17 @@ typedef enum indexing_api_choice {
     EXTENT_TREES,
     GLOBAL_HASH_TABLE,
     LEVEL_HASH_TABLES,
-    GLOBAL_RADIX_TREE,
+    RADIX_TREES,
     NONE
 } indexing_choice_t;
 
 extern indexing_choice_t g_idx_choice;
 extern bool g_idx_cached;
+
+#define IDXAPI_IS_PER_FILE() (g_idx_choice == EXTENT_TREES || g_idx_choice == LEVEL_HASH_TABLES \
+        || g_idx_choice == RADIX_TREES)
+
+#define IDXAPI_IS_GLOBAL() (g_idx_choice == GLOBAL_HASH_TABLE)
 
 indexing_choice_t get_indexing_choice(void);
 bool get_indexing_is_cached(void);
@@ -103,5 +108,6 @@ bool get_indexing_is_cached(void);
 #endif
 
 #undef EXTCACHE
+#define EXTCACHE
 
 #endif

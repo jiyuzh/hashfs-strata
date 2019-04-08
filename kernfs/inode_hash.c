@@ -63,8 +63,6 @@ void init_hash(struct super_block *sb) {
 #ifdef KERNFS
       FN(&hash_idx, im_set_locking, &hash_idx, true);
 #endif
-  } else if (g_idx_choice == GLOBAL_RADIX_TREE) {
-      ret = radixtree_fns.im_init(&strata_idx_spec, &hash_idx, &metadata_block);
   } else {
       panic("Bad path!");
   }

@@ -11,7 +11,7 @@ char *g_dev_path[] = {
 	(char *)"/backup/mlfs_hdd",
 	(char *)"/dev/dax3.3",
 	//(char *)"/tmp/devtwo",
-	(char *)"/dev/dax2.0",
+	//(char *)"/dev/dax2.0",
 };
 #else
 char *g_dev_path[] = {

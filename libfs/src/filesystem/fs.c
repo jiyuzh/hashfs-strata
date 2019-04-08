@@ -414,8 +414,7 @@ void init_fs(void)
     // read root inode in NVM
     read_root_inode(g_root_dev);
 
-    if (g_idx_choice == GLOBAL_HASH_TABLE ||
-        g_idx_choice == GLOBAL_RADIX_TREE) {
+    if (IDXAPI_IS_GLOBAL()) {
         init_hash(sb[g_root_dev]);
     }
 
@@ -558,9 +557,7 @@ int sync_inode_ext_tree(uint8_t dev, struct inode *inode)
     read_ondisk_inode(dev, inode->inum, &dinode);
 
     pthread_mutex_lock(&inode->i_mutex);
-    if (g_idx_cached &&
-        (g_idx_choice == GLOBAL_HASH_TABLE || g_idx_choice == GLOBAL_RADIX_TREE )) {
-
+    if (g_idx_cached && IDXAPI_IS_GLOBAL()) {
         int api_err = mlfs_hash_cache_invalidate();
         if (api_err) return api_err;
     } else {

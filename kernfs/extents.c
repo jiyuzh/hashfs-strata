@@ -408,7 +408,7 @@ int mlfs_ext_tree_init(handle_t *handle, struct inode *inode)
         eh->eh_max = cpu_to_le16(mlfs_ext_space_root(inode, 0));
         mlfs_mark_inode_dirty(inode);
 #if defined(KERNFS)
-        if (g_idx_choice == EXTENT_TREES || g_idx_choice == LEVEL_HASH_TABLES) {
+        if (IDXAPI_IS_PER_FILE()) {
             write_ondisk_inode(handle->dev, inode);
         }
 #endif
@@ -2792,7 +2792,7 @@ int mlfs_ext_get_blocks(handle_t *handle, struct inode *inode,
 		tsc_start = asm_rdtscp();
 #endif
 
-    if (g_idx_choice == EXTENT_TREES || g_idx_choice == LEVEL_HASH_TABLES) {
+    if (IDXAPI_IS_PER_FILE()) {
         if (!inode->ext_idx) {
             static bool notify = false;
             if (!notify) {
@@ -2811,8 +2811,12 @@ int mlfs_ext_get_blocks(handle_t *handle, struct inode *inode,
                 init_err = extent_tree_fns.im_init_prealloc(&strata_idx_spec,
                                                             &direct_extents,
                                                             inode->ext_idx);
-            } else {
+            } else if (g_idx_choice == LEVEL_HASH_TABLES) {
                 init_err = levelhash_fns.im_init_prealloc(&strata_idx_spec,
+                                                          &direct_extents,
+                                                          inode->ext_idx);
+            } else {
+                init_err = radixtree_fns.im_init_prealloc(&strata_idx_spec,
                                                           &direct_extents,
                                                           inode->ext_idx);
             }
@@ -2828,8 +2832,10 @@ int mlfs_ext_get_blocks(handle_t *handle, struct inode *inode,
                 panic("Could not initialize API per-inode structure!\n");
             }
 
-            FN(inode->ext_idx, im_set_stats, 
-               inode->ext_idx, true);
+            if (inode->ext_idx->idx_fns->im_set_stats) {
+                FN(inode->ext_idx, im_set_stats, 
+                   inode->ext_idx, true);
+            }
         }
 
         if (create) {
@@ -2866,8 +2872,7 @@ int mlfs_ext_get_blocks(handle_t *handle, struct inode *inode,
         }
     } 
 
-    if (g_idx_choice == GLOBAL_HASH_TABLE ||
-        g_idx_choice == GLOBAL_RADIX_TREE) {
+    if (IDXAPI_IS_GLOBAL()) {
         int hash_ret = mlfs_hash_get_blocks(handle, inode, map, flags, false);
 #ifdef KERNFS
         if (enable_perf_stats) {
@@ -3118,7 +3123,7 @@ int mlfs_ext_truncate(handle_t *handle, struct inode *inode,
 
 	mlfs_assert(handle != NULL);
 
-    if (g_idx_choice == EXTENT_TREES || g_idx_choice == LEVEL_HASH_TABLES) {
+    if (IDXAPI_IS_PER_FILE()) {
         if (!inode->ext_idx) {
             if (!notify) {
                 printf("Init API in truncate!!!\n");
@@ -3152,8 +3157,7 @@ int mlfs_ext_truncate(handle_t *handle, struct inode *inode,
                  (end - start) + 1);
 
         if (ret == (end - start + 1)) ret = 0;
-    } else if (g_idx_choice == GLOBAL_HASH_TABLE || 
-               g_idx_choice == GLOBAL_RADIX_TREE) {
+    } else if (IDXAPI_IS_GLOBAL()) {
         ret = mlfs_hash_truncate(handle, inode, start, end);
     } else {
         ret = mlfs_ext_remove_space(handle, inode, start, end);

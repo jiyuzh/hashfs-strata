@@ -1681,9 +1681,7 @@ static int persist_dirty_objects_nvm(void)
 		mlfs_debug("[dev %d] write dirty inode complete\n", ip->dev);
 	}
 
-    if (g_idx_cached &&
-        (g_idx_choice == GLOBAL_HASH_TABLE || g_idx_choice == GLOBAL_RADIX_TREE )) {
-
+    if (g_idx_cached && IDXAPI_IS_GLOBAL()) {
         int api_err = mlfs_hash_persist();
         if (api_err) return api_err;
     }
@@ -2129,8 +2127,7 @@ void init_fs(void)
 	balloc_init(g_hdd_dev, sb[g_hdd_dev]);
 #endif
 
-    if (g_idx_choice == GLOBAL_HASH_TABLE || 
-        g_idx_choice == GLOBAL_RADIX_TREE) {
+    if (IDXAPI_IS_GLOBAL()) {
         init_hash(sb[g_root_dev]);
     }
 

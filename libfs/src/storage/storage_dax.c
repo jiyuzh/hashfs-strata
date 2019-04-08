@@ -134,6 +134,16 @@ static void perfmodel_add_delay(int read, size_t size)
 		emulate_latency_ns(extra_latency);
 
 #endif
+
+#if 1
+    char *val = getenv("MLFS_LATENCY");
+    if (val) {
+        struct timespec spec;
+        spec.tv_sec = 0;
+        spec.tv_nsec = atoi(val) * 1000;
+        (void)nanosleep(&spec, NULL);
+    }
+#endif
 	return;
 }
 
@@ -179,7 +189,7 @@ int dax_read(uint8_t dev, uint8_t *buf, addr_t blockno, uint32_t io_size)
     //printf("dax_read: %llu @ %llu\n", blockno, io_size);
 	memmove(buf, dax_addr[dev] + (blockno * g_block_size_bytes), io_size);
 
-//	perfmodel_add_delay(1, io_size);
+	perfmodel_add_delay(1, io_size);
 
 	//mlfs_debug("read block number %d\n", blockno);
 #ifdef STORAGE_PERF
@@ -199,7 +209,7 @@ int dax_read_unaligned(uint8_t dev, uint8_t *buf, addr_t blockno, uint32_t offse
 	memmove(buf, dax_addr[dev] + (blockno * g_block_size_bytes) + offset,
 			io_size);
 
-//	perfmodel_add_delay(1, io_size);
+	perfmodel_add_delay(1, io_size);
 
 	/*
 	mlfs_debug("read block number %lu, address %lu size %u\n",
