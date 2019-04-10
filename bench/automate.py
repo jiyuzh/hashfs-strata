@@ -18,6 +18,7 @@ from warnings import warn
 
 from BenchmarkProcesses import KernFSThread
 from FileBenchProcess import FileBenchRunner
+from MTCCProcess import MTCCRunner
 
 
 ################################################################################
@@ -29,6 +30,11 @@ def add_arguments(parser):
     filebench = subparsers.add_parser('filebench')
     filebench.set_defaults(cls=FileBenchRunner)
     FileBenchRunner.add_arguments(filebench)
+
+    mtcc = subparsers.add_parser('mtcc')
+    mtcc.set_defaults(cls=MTCCRunner)
+    MTCCRunner.add_arguments(mtcc)
+
     '''
     all_cmds = []
     leveldb = subparsers.add_parser('leveldb')

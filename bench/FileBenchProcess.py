@@ -162,66 +162,71 @@ class FileBenchRunner(BenchRunner):
             self.update_bar_proc = Process(target=update_bar, args=(shared_q,))
             self.update_bar_proc.start()
 
-            for workload in workloads:
-                stat_objs = []
-                workload_name = Path(workload).name.split('.')[0]
-                for layout in self.layout_scores:
-                    for struct in self.structs:
-                        self.env['MLFS_IDX_STRUCT'] = struct
-                        self.env['MLFS_LAYOUT_SCORE'] = layout
-                        self.env['MLFS_CACHE_PERF'] = '0'
+            try:
+                for workload in workloads:
+                    stat_objs = []
+                    workload_name = Path(workload).name.split('.')[0]
+                    for layout in self.layout_scores:
+                        for struct in self.structs:
+                            self.env['MLFS_IDX_STRUCT'] = struct
+                            self.env['MLFS_LAYOUT_SCORE'] = layout
+                            self.env['MLFS_CACHE_PERF'] = '0'
 
-                        for trialno in range(self.args.trials):
-                            #print('Running workload "{}" with layout "{}", trial #{}.'.format(
-                            #    workload_name, layout, trialno + 1))
+                            for trialno in range(self.args.trials):
+                                filebench_args = shlex.split(
+                                    '{0}/run.sh numactl -N 1 -m 1 {0}/filebench -f {1}'.format(
+                                        str(filebench_path), workload))
 
-                            filebench_args = shlex.split(
-                                '{0}/run.sh {0}/filebench -f {1}'.format(
-                                    str(filebench_path), workload))
-
-                            mb_s = self._run_trial(filebench_args, filebench_path,
-                                                   self._parse_filebench_throughput)
-
-                            if mb_s is None or not mb_s:
-                                raise Exception('Could not parse filebench results!')
-
-                            # Get the stats.
-                            stat_obj = self._parse_trial_stat_files(
-                                    workload_name, layout, struct, mb_s)
-
-                            if self.args.measure_cache_perf:
-                                self.env['MLFS_CACHE_PERF'] = '1'
-                                mb_s_cache = self._run_trial(filebench_args, filebench_path,
+                                mb_s = self._run_trial(filebench_args, filebench_path,
                                                        self._parse_filebench_throughput)
 
-                                if mb_s_cache is None or not mb_s_cache:
-                                    raise Exception('Could not parse filebench results!')
+                                if mb_s is None or not mb_s:
+                                    warn('Could not parse filebench results!',
+                                            UserWarning)
+                                    continue
 
-                                cache_stat_obj = self._parse_trial_stat_files_cache(
-                                        workload_name, layout, struct)
-                                stat_obj['cache'] = cache_stat_obj['cache']
+                                # Get the stats.
+                                stat_obj = self._parse_trial_stat_files(
+                                        workload_name, layout, struct, mb_s)
 
-                            stat_objs += [stat_obj]
+                                stat_obj['kernfs'] = self._get_kernfs_stats()
 
-                            counter += 1
-                            shared_q.put(counter)
+                                if self.args.measure_cache_perf:
+                                    self.env['MLFS_CACHE_PERF'] = '1'
+                                    mb_s_cache = self._run_trial(filebench_args, filebench_path,
+                                                           self._parse_filebench_throughput)
 
-                timestamp_str = datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
-                fname = 'filebench_{}_{}.json'.format(workload_name, timestamp_str)
-                self._write_bench_output(stat_objs, fname)
-                # also write a summarized version
-                keys = ['layout', 'throughput', 'struct', 'bench', 'workload', 'cache']
-                stat_summary = []
-                for stat_obj in stat_objs:
-                    small_obj = { k: stat_obj[k] for k in keys }
-                    stat_summary += [small_obj]
-                sname = 'filebench_summary_{}_{}.json'.format(workload_name, 
-                                                              timestamp_str)
-                self._write_bench_output(stat_summary, sname)
+                                    if mb_s_cache is None or not mb_s_cache:
+                                        raise Exception('Could not parse filebench results!')
 
-            self.update_bar_proc.terminate()
-            self.update_bar_proc.join()
-            assert self.update_bar_proc is not None
+                                    cache_stat_obj = self._parse_trial_stat_files_cache(
+                                            workload_name, layout, struct)
+                                    stat_obj['cache'] = cache_stat_obj['cache']
+                                    stat_obj['cache']['kernfs'] = self._get_kernfs_stats()
+
+                                stat_objs += [stat_obj]
+
+                                counter += 1
+                                shared_q.put(counter)
+
+                    timestamp_str = datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
+                    fname = 'filebench_{}_{}.json'.format(workload_name, timestamp_str)
+                    self._write_bench_output(stat_objs, fname)
+                    # also write a summarized version
+                    keys = ['layout', 'throughput', 'struct', 'bench', 'workload', 'cache']
+                    stat_summary = []
+                    for stat_obj in stat_objs:
+                        small_obj = { k: stat_obj[k] for k in keys }
+                        stat_summary += [small_obj]
+                    sname = 'filebench_summary_{}_{}.json'.format(workload_name, 
+                                                                  timestamp_str)
+                    self._write_bench_output(stat_summary, sname)
+            except:
+                raise
+            finally:
+                self.update_bar_proc.terminate()
+                self.update_bar_proc.join()
+                assert self.update_bar_proc is not None
 
    
     @classmethod
