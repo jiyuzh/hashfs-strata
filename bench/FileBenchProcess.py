@@ -119,7 +119,7 @@ class FileBenchRunner(BenchRunner):
                 str(stat_file))), check=True)
 
         assert len(stat_objs) == 1
-        return stat_objs
+        return stat_objs[0]
 
     def _run_filebench(self):
         print('Running FileBench profiles.')
@@ -198,7 +198,8 @@ class FileBenchRunner(BenchRunner):
                                     raise Exception('Could not parse filebench results!')
 
                                 cache_stat_obj = self._parse_trial_stat_files_cache(
-                                        workload_name, layout, struct, mb_s)
+                                        workload_name, layout, struct)
+                                stat_obj['cache'] = cache_stat_obj['cache']
 
                             stat_objs += [stat_obj]
 
@@ -209,7 +210,7 @@ class FileBenchRunner(BenchRunner):
                 fname = 'filebench_{}_{}.json'.format(workload_name, timestamp_str)
                 self._write_bench_output(stat_objs, fname)
                 # also write a summarized version
-                keys = ['layout', 'throughput', 'struct', 'bench', 'workload']
+                keys = ['layout', 'throughput', 'struct', 'bench', 'workload', 'cache']
                 stat_summary = []
                 for stat_obj in stat_objs:
                     small_obj = { k: stat_obj[k] for k in keys }
