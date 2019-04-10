@@ -1,0 +1,16 @@
+display_options:
+  config_names:
+    hdd: HDD
+    ssd: SSD
+    nvm: NVM
+
+  config_colors:
+    HDD: '#a8ddb5'
+    SSD: '#7bccc4'
+    NVM: '#fed98e'
+
+  config_order:
+    - HDD
+    - SSD
+    - NVM
+

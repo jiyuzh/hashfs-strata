@@ -1,0 +1,54 @@
+config_sets:
+  default:
+    - hdd
+    - ssd
+    - nvm
+  no_hdd:
+    - ssd
+    - nvm
+
+schemes:
+  breakdown:
+    dimensions: [2, 1]
+    plots: [
+              {
+                pos: [0, 0],
+                size: [1, 1],
+                type: single_stat,
+                stat: throughput,
+                options: {
+                  label: "A) Random file read (size 4kB) throughput\non various storage devices (mB/s)",
+                  label_bars: False,
+                  exclude_tick_labels: True,
+                  config_legend: True,
+                  breakdown_legend: True,
+                  xscale: symlog,
+                  add_numbers: True,
+                  cutoff: 40000,
+                  legend: {
+                    prop: {size: 6,},
+                    loc: right,
+                    ncol: 1,
+                  }
+                },
+              },
+              {
+                pos: [1, 0],
+                size: [1, 1],
+                type: cpi_breakdown,
+                options: {
+                  label: 'B) Breakdown of random file read overhead',
+                  label_bars: False,
+                  config_legend: False,
+                  breakdown_legend: True,
+                  legend: {
+                    prop: {size: 6,},
+                    loc: best,
+                    ncol: 1,
+                  }
+                },
+              }
+           ]
+    print_size: [3.5, 2.0]
+    file_name: breakdown_graph.png
+
