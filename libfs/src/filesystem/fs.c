@@ -79,6 +79,7 @@ void reset_libfs_stats(void)
     reset_stats_dist(&storage_wnr);
 #endif
     memset(&g_perf_stats, 0, sizeof(libfs_stat_t));
+    memset(&(g_perf_stats.cache_stats), 0, sizeof(cache_stats_t));
     reset_stats_dist(&(g_perf_stats.read_per_index));
     reset_stats_dist(&(g_perf_stats.read_data_bytes));
     cache_stats_init();
@@ -151,7 +152,7 @@ void show_libfs_stats(const char *title)
   printf("bcache search (tsc/op)    : %lu / %lu(%.2f)\n", tri_ratio(g_perf_stats.bcache_search_tsc,g_perf_stats.bcache_search_nr));
   printf("search l0 tree  (tsc/op)  : %lu / %lu(%.2f)\n", tri_ratio(g_perf_stats.l0_search_tsc,g_perf_stats.l0_search_nr));
   printf("search lsm tree (tsc/op)  : %lu / %lu(%.2f)\n", tri_ratio(g_perf_stats.tree_search_tsc,g_perf_stats.tree_search_nr));
-  printf("  search lsm tree cache hits (misses/accesses)  : %lu / %lu(%.2f)\n", tri_ratio(g_perf_stats.idx_cache_misses,g_perf_stats.idx_cache_accesses));
+  printf("  LLC miss latency : %lu \n", calculate_llc_latency(&(g_perf_stats.cache_stats)));
   printf("log commit (tsc/op)       : %lu / %lu(%.2f)\n", tri_ratio(g_perf_stats.log_commit_tsc,g_perf_stats.log_commit_nr));
   printf("  log writes (tsc/op)     : %lu / %lu(%.2f)\n", tri_ratio(g_perf_stats.log_write_tsc,g_perf_stats.log_write_nr));
   printf("  loghdr writes (tsc/op)  : %lu / %lu(%.2f)\n", tri_ratio(g_perf_stats.loghdr_write_tsc,g_perf_stats.loghdr_write_nr));

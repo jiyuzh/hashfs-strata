@@ -217,8 +217,7 @@ void show_kernfs_stats(void)
 			((float)g_perf_stats.n_digest_skipped * 100.0) / (float)n_digest);
 	printf("path search     : %lu\n",
 			g_perf_stats.path_search_tsc);
-    printf("  path search cache (misses/accesses)  : %lu / %lu(%.2f)\n", 
-            tri_ratio(g_perf_stats.idx_cache_misses,g_perf_stats.idx_cache_accesses));
+    printf("  LLC miss latency : %lu \n", calculate_llc_latency(&(g_perf_stats.cache_stats)));
 	printf("total migrated  : %lu MB\n", g_perf_stats.total_migrated_mb);
 	printf("--------------------------------------\n");
 #ifdef STORAGE_PERF
@@ -2143,12 +2142,6 @@ void init_fs(void)
         init_hash(sb[g_root_dev]);
     }
 
-	// initialzie profiling
-	char prof_fn[256];
-	sprintf(prof_fn, "/tmp/kernfs_prof.%d", getpid());
-	if (enable_perf_stats)
-		assert((prof_fd = open(prof_fn, O_CREAT | O_TRUNC | O_WRONLY, 0666)) != -1);
-	reset_kernfs_stats();
 	inode_version_table =
 		(uint16_t *)mlfs_zalloc(sizeof(uint16_t) * NINODES);
 
@@ -2159,6 +2152,14 @@ void init_fs(void)
 	} else {
 		enable_perf_stats = 0;
 	}
+
+	// initialize profiling
+	char prof_fn[256];
+	sprintf(prof_fn, "/tmp/kernfs_prof.%d", getpid());
+	if (enable_perf_stats) {
+		assert((prof_fd = open(prof_fn, O_CREAT | O_TRUNC | O_WRONLY, 0666)) != -1);
+    }
+	reset_kernfs_stats();
 
 	mlfs_debug("%s\n", "LIBFS is initialized");
 

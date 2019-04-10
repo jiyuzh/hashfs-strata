@@ -2862,9 +2862,7 @@ int mlfs_ext_get_blocks(handle_t *handle, struct inode *inode,
 #ifdef KERNFS
             if (enable_perf_stats) {
                 g_perf_stats.path_search_tsc += (asm_rdtscp() - tsc_start);
-                end_cache_stats();
-                g_perf_stats.idx_cache_accesses += get_cache_accesses();
-                g_perf_stats.idx_cache_misses   += get_cache_misses();
+                end_cache_stats(&(g_perf_stats.cache_stats));
             }
 #endif
             return nblk;
@@ -2877,9 +2875,7 @@ int mlfs_ext_get_blocks(handle_t *handle, struct inode *inode,
             if (enable_perf_stats) {
                 update_stats_dist(&(g_perf_stats.read_per_index),
                                   g_perf_stats.path_storage_nr);
-                end_cache_stats();
-                g_perf_stats.idx_cache_accesses += get_cache_accesses();
-                g_perf_stats.idx_cache_misses   += get_cache_misses();
+                end_cache_stats(&(g_perf_stats.cache_stats));
             }
             //FN(inode->ext_idx, im_print_stats, inode->ext_idx);
             return nblk;
@@ -2891,17 +2887,13 @@ int mlfs_ext_get_blocks(handle_t *handle, struct inode *inode,
 #ifdef KERNFS
         if (enable_perf_stats) {
             g_perf_stats.path_search_tsc += (asm_rdtscp() - tsc_start);
-            end_cache_stats();
-            g_perf_stats.idx_cache_accesses += get_cache_accesses();
-            g_perf_stats.idx_cache_misses   += get_cache_misses();
+            end_cache_stats(&(g_perf_stats.cache_stats));
         }
 #else
         if (enable_perf_stats) {
             update_stats_dist(&(g_perf_stats.read_per_index),
                                 g_perf_stats.path_storage_nr);
-            end_cache_stats();
-            g_perf_stats.idx_cache_accesses += get_cache_accesses();
-            g_perf_stats.idx_cache_misses   += get_cache_misses();
+            end_cache_stats(&(g_perf_stats.cache_stats));
         }
 #endif
         return hash_ret;
@@ -3127,16 +3119,12 @@ out2:
 #ifdef KERNFS
 	if (enable_perf_stats) {
 		g_perf_stats.path_search_tsc += (asm_rdtscp() - tsc_start);
-        end_cache_stats();
-        g_perf_stats.idx_cache_accesses += get_cache_accesses();
-        g_perf_stats.idx_cache_misses   += get_cache_misses();
+        end_cache_stats(&(g_perf_stats.cache_stats));
     }
 #else
     if (enable_perf_stats) {
         update_stats_dist(&(g_perf_stats.read_per_index), g_perf_stats.path_storage_nr);
-        end_cache_stats();
-        g_perf_stats.idx_cache_accesses += get_cache_accesses();
-        g_perf_stats.idx_cache_misses   += get_cache_misses();
+        end_cache_stats(&(g_perf_stats.cache_stats));
     }
 #endif
 
@@ -3203,9 +3191,7 @@ int mlfs_ext_truncate(handle_t *handle, struct inode *inode,
 
 #if defined(STORAGE_PERF) && defined(KERNFS)
 	if (enable_perf_stats) {
-        end_cache_stats();
-        g_perf_stats.idx_cache_accesses += get_cache_accesses();
-        g_perf_stats.idx_cache_misses   += get_cache_misses();
+        end_cache_stats(&(g_perf_stats.cache_stats));
     }
 #endif
 

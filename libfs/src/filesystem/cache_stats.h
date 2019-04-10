@@ -1,0 +1,290 @@
+#ifndef __CACHE_STATS_H__
+#define __CACHE_STATS_H__
+
+#define _GNU_SOURCE // has to be before any headers
+#include <stdio.h>
+#include <sched.h>
+#include <errno.h>
+#include <stdio.h>
+#include <stdarg.h>
+#include <string.h>
+#include <stdint.h>
+#include <sys/time.h>
+#include <sys/ioctl.h>
+#include <sys/resource.h>
+#include <linux/perf_event.h>
+#include <linux/hw_breakpoint.h>
+#include <asm/unistd.h>
+#include <unistd.h>
+#include <sys/syscall.h>
+
+#include "global/global.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+typedef struct cache_stats {
+    double l1_accesses;
+    double l1_misses;
+    double l2_accesses;
+    double l2_misses;
+    double l3_accesses;
+    double l3_misses;
+    double perf_event_time;
+} cache_stats_t;
+
+typedef struct perf_event_attr perf_event_attr_t;
+
+static perf_event_attr_t cache_access_attr;
+static perf_event_attr_t cache_misses_attr;
+static perf_event_attr_t l1_cache_access_attr;
+static perf_event_attr_t l1_cache_misses_attr;
+
+extern int cache_access_fd;
+extern int cache_misses_fd;
+extern int l1_cache_access_fd;
+extern int l1_cache_misses_fd;
+
+extern bool enable_cache_stats;
+extern bool cache_stats_done_init;
+
+#define LL_CA PERF_COUNT_HW_CACHE_LL \
+                | (PERF_COUNT_HW_CACHE_OP_READ << 8) \
+                | (PERF_COUNT_HW_CACHE_RESULT_ACCESS << 16)
+
+#define LL_CM PERF_COUNT_HW_CACHE_LL \
+                | (PERF_COUNT_HW_CACHE_OP_READ << 8) \
+                | (PERF_COUNT_HW_CACHE_RESULT_MISS << 16)
+
+#define L1_CA PERF_COUNT_HW_CACHE_L1D \
+                | (PERF_COUNT_HW_CACHE_OP_READ << 8) \
+                | (PERF_COUNT_HW_CACHE_RESULT_ACCESS << 16)
+
+#define L1_CM PERF_COUNT_HW_CACHE_L1D \
+                | (PERF_COUNT_HW_CACHE_OP_READ << 8) \
+                | (PERF_COUNT_HW_CACHE_RESULT_MISS << 16)
+
+static void perf_event_attr_init(perf_event_attr_t *pe, uint64_t config){
+    memset(pe, 0, sizeof(*pe));
+    pe->type = PERF_TYPE_HW_CACHE;
+    pe->size = sizeof(*pe);
+    pe->config = config;
+    pe->disabled = 1;
+    //pe->mmap = 1;
+    pe->comm = 1;
+    pe->read_format = PERF_FORMAT_TOTAL_TIME_RUNNING;
+    pe->inherit = 1;
+    pe->exclude_kernel = 1;
+    pe->exclude_hv = 1;
+}
+
+static inline int perf_event_open(perf_event_attr_t *hw_event, pid_t pid,
+                    int cpu, int group_fd, unsigned long flags) {
+   return syscall(__NR_perf_event_open, hw_event, pid, cpu,
+                  group_fd, flags);
+}
+
+static bool get_is_cache_perf_enabled(void) {
+    const char *env = getenv("MLFS_CACHE_PERF");
+
+    if (!env) {
+        printf("MLFS_CACHE_PERF not set -> disabling cache measurements!\n");
+        return false;
+    }
+
+    if (!strcmp(env, "1") ||
+        !strcmp(env, "TRUE") || !strcmp(env, "true") ||
+        !strcmp(env, "YES") || !strcmp(env, "yes")) {
+        printf("%s -> enabling cache perf!\n", env);
+        return true;
+    } 
+    
+    printf("%s -> disabling cache measurements!\n", env);
+    return false;
+}
+
+static void cache_stats_init() {
+    enable_cache_stats = get_is_cache_perf_enabled();
+    if (!enable_cache_stats) return;
+    if (!cache_stats_done_init) {
+
+        perf_event_attr_init(&cache_access_attr, LL_CA);
+        perf_event_attr_init(&cache_misses_attr, LL_CM);
+        perf_event_attr_init(&l1_cache_access_attr, L1_CA);
+        perf_event_attr_init(&l1_cache_misses_attr, L1_CM);
+
+        cache_access_fd = perf_event_open(&cache_access_attr, 0, -1, -1, 0);
+        if (cache_access_fd < 0) {
+            perror("Opening cache access FD");
+            panic("Could not open perf event!");
+        }
+
+        cache_misses_fd = perf_event_open(&cache_misses_attr, 0, -1, -1, 0);
+        if (cache_misses_fd < 0) {
+            perror("Opening cache miss FD");
+            panic("Could not open perf event!");
+        }
+
+        l1_cache_access_fd = perf_event_open(&l1_cache_access_attr, 0, -1, -1, 0);
+        if (l1_cache_access_fd < 0) {
+            perror("Opening cache access FD");
+            panic("Could not open perf event!");
+        }
+
+        l1_cache_misses_fd = perf_event_open(&l1_cache_misses_attr, 0, -1, -1, 0);
+        if (l1_cache_misses_fd < 0) {
+            perror("Opening cache miss FD");
+            panic("Could not open perf event!");
+        }
+
+        cache_stats_done_init = true;
+    }
+}
+
+static void start_events(int count, ...){
+    va_list argp;
+    int i;
+    int fd = 0;
+    va_start(argp, count);
+    for( i = 0; i < count; i++ ){
+        fd = va_arg(argp, int);
+        int err = ioctl(fd, PERF_EVENT_IOC_RESET, 0);
+        if (err) {
+            printf("IOCTL RESET fd=%d (%d): %s\n", fd, errno, strerror(errno)); 
+            panic("");
+        }
+
+        err = ioctl(fd, PERF_EVENT_IOC_ENABLE, 0);
+        if (err) {
+            printf("IOCTL ENABLE (%d): %s\n", errno, strerror(errno)); 
+            panic("");
+        }
+    }
+    va_end(argp);
+}
+
+static void end_events(int count, ...){
+    va_list argp;
+    int i;
+    int fd = 0;
+    va_start(argp, count);
+    for( i = 0; i < count; i++ ){
+        fd = va_arg(argp, int);
+        int err = ioctl(fd, PERF_EVENT_IOC_DISABLE, 0);
+        if (err) {
+            printf("IOCTL DISABLE (%d): %s\n", errno, strerror(errno)); 
+            panic("");
+        }
+    }
+    va_end(argp);
+}
+
+static void start_cache_stats(void) {
+    if (!enable_cache_stats) return;
+    start_events(4, cache_access_fd, cache_misses_fd, l1_cache_access_fd,
+            l1_cache_misses_fd);
+}
+
+
+typedef struct read_format {
+	uint64_t value;         /* The value of the event */
+	//uint64_t time_enabled;  /* if PERF_FORMAT_TOTAL_TIME_ENABLED */
+	uint64_t time_running;  /* if PERF_FORMAT_TOTAL_TIME_RUNNING */
+	//uint64_t id;            /* if PERF_FORMAT_ID */
+} read_format_t;
+
+static ssize_t __read(int fd, char *buf, size_t size) {
+    ssize_t err;
+    //int err = read(fd, &res, sizeof(res));
+    asm("mov %1, %%edi;"
+        "mov %2, %%rsi;"
+        "mov %3, %%rdx;"
+        "mov %4, %%eax;"
+        "syscall;\n\t"
+        "mov %%rax, %0;\n\t"
+        :"=r"(err)
+        :"r"(fd), "m"(buf), "r"(size), "r"(__NR_read)
+        :"rax", "rdi", "rsi", "rdx"
+        );
+
+    return err;
+}
+
+static void get_stat(int fd, uint64_t *count, uint64_t *time) {
+    read_format_t res;
+    read_format_t *res_ptr = &res;
+
+    ssize_t err = __read(fd, (char*)&res, sizeof(res));
+
+    if (err < sizeof(res)) {
+        printf("Could not read perf stats! err(%lld) < size(%llu)\n",
+                err, sizeof(res));
+        ssize_t err = __read(fd, (char*)(&res) + 8, sizeof(res));
+        panic("");
+    }
+
+	*count = res.value;
+	*time = res.time_running;
+}
+
+static void update_stats(cache_stats_t *cs) {
+    uint64_t count, time;
+    get_stat(l1_cache_access_fd, &count, &time);
+    cs->l1_accesses += (double)count;
+    get_stat(l1_cache_misses_fd, &count, &time);
+    cs->l1_misses += (double)count;
+    cs->l2_accesses += (double)count;
+    cs->perf_event_time += (double)time;
+
+    get_stat(cache_access_fd, &count, &time);
+    cs->l3_accesses += (double)count;
+    cs->l2_misses += (double)count;
+
+    get_stat(cache_misses_fd, &count, &time);
+    cs->l3_misses += (double)count;
+}
+
+static void end_cache_stats(cache_stats_t *cs) {
+    if (!enable_cache_stats) return;
+    end_events(4, l1_cache_misses_fd, cache_access_fd, cache_misses_fd, 
+            l1_cache_access_fd);
+
+    update_stats(cs);
+}
+
+static uint64_t calculate_llc_latency(cache_stats_t *cs) 
+{
+    if (!enable_cache_stats) return 0;
+    double l1_hits = cs->l1_accesses - cs->l1_misses;
+    double l2_hits = cs->l2_accesses - cs->l2_misses;
+    double l3_hits = cs->l3_accesses - cs->l3_misses;
+    double l3_miss = cs->l3_misses;
+
+    double l1_latency = 4;
+    double l2_latency = 20;
+    double l3_latency = 40;
+
+    double l1_hit_time = l1_hits * l1_latency;
+    double l2_hit_time = l2_hits * (l1_latency + l2_latency);
+    double l3_hit_time = l3_hits * (l1_latency + l2_latency + l3_latency);
+
+    double remaining_time = cs->perf_event_time - (l1_hit_time + l2_hit_time + l3_hit_time);
+
+    printf("l1 (%.2f %.2f %.2f)\nl2 (%.2f %.2f %.2f)\nl3 (%.2f %.2f %.2f)\n",
+            cs->l1_accesses, l1_hits, cs->l1_misses,
+            cs->l2_accesses, l2_hits, cs->l2_misses,
+            cs->l3_accesses, l3_hits, cs->l3_misses);
+    printf("total (%.2f)\nremaining (%.2f)\n", cs->perf_event_time, remaining_time);
+
+    if (l3_miss == 0) return 0;
+    double nvm_latency = remaining_time / l3_miss;
+
+    return (uint64_t)nvm_latency;
+}
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif //__CACHE_STATS_H__

@@ -14,6 +14,8 @@
 #include "ds/uthash.h"
 #include "ds/khash.h"
 
+#include "filesystem/cache_stats.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -136,8 +138,7 @@ typedef struct mlfs_libfs_stats {
     uint64_t hash_loop_nr;
     uint64_t hash_iter_nr;
     // Indexing cache rates
-    uint64_t idx_cache_accesses;
-    uint64_t idx_cache_misses;
+    cache_stats_t cache_stats;
 } libfs_stat_t;
 
 extern struct lru g_fcache_head;
