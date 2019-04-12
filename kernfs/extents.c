@@ -2808,26 +2808,26 @@ int mlfs_ext_get_blocks(handle_t *handle, struct inode *inode,
                 .pr_blk_offset = (sizeof(struct dinode) * (inode->inum % IPB)) + 64,
                 .pr_nbytes     = 64
             };
-            inode->ext_idx = mlfs_zalloc(sizeof(*inode->ext_idx));
+            idx_struct_t *tmp = mlfs_zalloc(sizeof(*inode->ext_idx));
             int init_err;
             if (g_idx_choice == EXTENT_TREES) {
                 init_err = extent_tree_fns.im_init_prealloc(&strata_idx_spec,
                                                             &direct_extents,
-                                                            inode->ext_idx);
+                                                            tmp);
             } else if (g_idx_choice == LEVEL_HASH_TABLES) {
                 init_err = levelhash_fns.im_init_prealloc(&strata_idx_spec,
                                                           &direct_extents,
-                                                          inode->ext_idx);
+                                                          tmp);
             } else {
                 init_err = radixtree_fns.im_init_prealloc(&strata_idx_spec,
                                                           &direct_extents,
-                                                          inode->ext_idx);
+                                                          tmp);
             }
 
             if (g_idx_cached) {
-                FN(inode->ext_idx, im_set_caching, inode->ext_idx, true);
+                FN(tmp, im_set_caching, tmp, true);
             } else {
-                FN(inode->ext_idx, im_set_caching, inode->ext_idx, false);
+                FN(tmp, im_set_caching, tmp, false);
             }
 
             if (init_err) {
@@ -2835,10 +2835,11 @@ int mlfs_ext_get_blocks(handle_t *handle, struct inode *inode,
                 panic("Could not initialize API per-inode structure!\n");
             }
 
-            if (inode->ext_idx->idx_fns->im_set_stats) {
-                FN(inode->ext_idx, im_set_stats, 
-                   inode->ext_idx, true);
+            if (tmp->idx_fns->im_set_stats) {
+                FN(tmp, im_set_stats, tmp, true);
             }
+
+            inode->ext_idx = tmp;
         }
 
         if (create) {
