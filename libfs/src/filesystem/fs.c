@@ -1069,10 +1069,10 @@ void stati(struct inode *ip, struct stat *st)
       default:
           panic("unknown file type");
   }
-  st->st_mode |= S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH;
+  st->st_mode |= S_IRWXU | S_IRGRP | S_IXGRP;
   st->st_nlink = ip->nlink;
-  st->st_uid = 0;
-  st->st_gid = 0;
+  st->st_uid = 1000;
+  st->st_gid = 1000;
   st->st_rdev = 0;
   st->st_size = ip->size;
   st->st_blksize = g_block_size_bytes;
