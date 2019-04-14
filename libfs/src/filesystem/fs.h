@@ -315,17 +315,25 @@ static inline struct fcache_block *fcache_alloc_add(struct inode *inode,
 	return fc_block;
 }
 
+/*!
+ * try to delete key from inode's fcache hashtable
+ * @param[in] inode the file
+ * @param[in] key offset at block size granularity
+ * @return 0: already deleted 1: deleted successfully
+ */
 static inline int fcache_del(struct inode *inode,
-		struct fcache_block *fc_block)
+        offset_t key)
 {
-	khiter_t k;
+	khint_t k;
+    int ret = 0;
 	pthread_rwlock_wrlock(&inode->fcache_rwlock);
 
-	k = kh_get(fcache, inode->fcache_hash, fc_block->key);
+	k = kh_get(fcache, inode->fcache_hash, key);
 
-	if (kh_exist(inode->fcache_hash, k)) {
+	if (k != kh_end(inode->fcache_hash)) {
 		kh_del(fcache, inode->fcache_hash, k);
 		inode->n_fcache_entries--;
+        ret = 1;
 	}
 
 	/*
@@ -338,13 +346,14 @@ static inline int fcache_del(struct inode *inode,
 
 	pthread_rwlock_unlock(&inode->fcache_rwlock);
 
-	return 0;
+	return ret;
 }
 
 static inline int fcache_del_all(struct inode *inode)
 {
 	khiter_t k;
 	struct fcache_block *fc_block;
+	pthread_rwlock_wrlock(&inode->fcache_rwlock);
 
 	for (k = kh_begin(inode->fcache_hash);
 			k != kh_end(inode->fcache_hash); k++) {
@@ -355,13 +364,14 @@ static inline int fcache_del_all(struct inode *inode)
 				list_del(&fc_block->l);
 				mlfs_free(fc_block->data);
 			}
-			//mlfs_free(fc_block);
+			mlfs_free(fc_block);
 		}
 	}
 
 	mlfs_debug("destroy hash %u\n", inode->inum);
 	kh_destroy(fcache, inode->fcache_hash);
 	inode->fcache_hash = NULL;
+	pthread_rwlock_unlock(&inode->fcache_rwlock);
 	return 0;
 }
 // UTHash version
@@ -394,13 +404,13 @@ static inline struct fcache_block *fcache_alloc_add(struct inode *inode,
 	fc_block->log_addr = log_addr;
 	fc_block->invalidate = 0;
 	fc_block->is_data_cached = 0;
-	inode->n_fcache_entries++;
 	INIT_LIST_HEAD(&fc_block->l);
 
 	pthread_rwlock_wrlock(&inode->fcache_rwlock);
 
 	HASH_ADD(hash_handle, inode->fcache, key,
 	 		sizeof(offset_t), fc_block);
+	inode->n_fcache_entries++;
 
 	pthread_rwlock_unlock(&inode->fcache_rwlock);
 

@@ -63,12 +63,6 @@ struct dirent_block *dirent_hash[g_n_devices + 1];
 struct dlookup_data *dlookup_hash[g_n_devices + 1];
 
 int prof_fd;
-float clock_speed_mhz;
-
-static inline float tsc_to_ms(uint64_t tsc)
-{
-  return (float)tsc / (clock_speed_mhz * 1000.0);
-}
 
 void reset_libfs_stats(void)
 {
@@ -441,8 +435,6 @@ void init_fs(void)
     }
 
     reset_libfs_stats();
-
-    clock_speed_mhz = get_cpu_clock_speed();
   }
 
 }
@@ -1033,8 +1025,9 @@ int itrunc(struct inode *ip, offset_t length)
       if (fc_block) {
         if (fc_block->is_data_cached)
           list_del(&fc_block->l);
-        fcache_del(ip, fc_block);
-        mlfs_free(fc_block);
+        if (fcache_del(ip, key)) {
+            mlfs_free(fc_block);
+        };
       }
     }
   }
@@ -1102,8 +1095,9 @@ static void evict_read_cache(struct inode *inode, uint32_t n_entries_to_evict)
 
       //if (!_fcache_block->log_addr) {
         list_del(&_fcache_block->l);
-        fcache_del(inode, _fcache_block);
-        mlfs_free(_fcache_block);
+        if(fcache_del(inode, _fcache_block->key)) {
+            mlfs_free(_fcache_block);
+        }
       //}
 
       g_fcache_head.n--;
@@ -1172,8 +1166,9 @@ ssize_t do_unaligned_read(struct inode *ip, uint8_t *dst, offset_t off, size_t i
   if (_fcache_block) {
     ret = check_read_log_invalidation(_fcache_block);
     if (ret) {
-      fcache_del(ip, _fcache_block);
-      mlfs_free(_fcache_block);
+      if (fcache_del(ip, key)) {
+          mlfs_free(_fcache_block);
+      }
       _fcache_block = NULL;
     }
   }
@@ -1278,12 +1273,12 @@ ssize_t do_unaligned_read(struct inode *ip, uint8_t *dst, offset_t off, size_t i
     mlfs_debug("shared io size: %llu\n", io_size);
 
     bh_submit_read_sync_IO(bh);
-    bh_release(bh);
-
     if (enable_perf_stats) {
         g_perf_stats.read_data_tsc += (asm_rdtscp() - start_tsc);
         update_stats_dist(&(g_perf_stats.read_data_bytes), bh->b_size);
     }
+    bh_release(bh);
+
   }
   // SSD and HDD cache: do read caching.
   else {
@@ -1361,8 +1356,9 @@ ssize_t do_aligned_read(struct inode *ip, uint8_t *dst, offset_t off, size_t io_
     if (_fcache_block) {
       ret = check_read_log_invalidation(_fcache_block);
       if (ret) {
-        fcache_del(ip, _fcache_block);
-        mlfs_free(_fcache_block);
+        if (fcache_del(ip, key)) {
+            mlfs_free(_fcache_block);
+        }
         _fcache_block = NULL;
       }
     }
@@ -1438,11 +1434,11 @@ ssize_t do_aligned_read(struct inode *ip, uint8_t *dst, offset_t off, size_t io_
       start_tsc = asm_rdtscp();
 
     list_for_each_entry_safe(bh, _bh, &io_list_log, b_io_list) {
-      bh_submit_read_sync_IO(bh);
-      bh_release(bh);
       if (enable_perf_stats) {
         update_stats_dist(&(g_perf_stats.read_data_bytes), bh->b_size);
       }
+      bh_submit_read_sync_IO(bh);
+      bh_release(bh);
     }
 
     if (enable_perf_stats) {
@@ -1559,11 +1555,11 @@ do_io_aligned:
   // Read data from L1 ~ trees
   //int ii = 0;
   list_for_each_entry_safe(bh, _bh, &io_list, b_io_list) {
-    bh_submit_read_sync_IO(bh);
-    bh_release(bh);
     if (enable_perf_stats) {
         update_stats_dist(&(g_perf_stats.read_data_bytes), bh->b_size);
     }
+    bh_submit_read_sync_IO(bh);
+    bh_release(bh);
   }
   //if (enable_perf_stats) printf("\n");
 
@@ -1584,11 +1580,11 @@ do_io_aligned:
   // Patch data from log (L0) if up-to-date blocks are in the update log.
   // This is required when partial updates are in the update log.
   list_for_each_entry_safe(bh, _bh, &io_list_log, b_io_list) {
-    bh_submit_read_sync_IO(bh);
-    bh_release(bh);
     if (enable_perf_stats) {
       update_stats_dist(&(g_perf_stats.read_data_bytes), bh->b_size);
     }
+    bh_submit_read_sync_IO(bh);
+    bh_release(bh);
   }
 
   if (enable_perf_stats) {
