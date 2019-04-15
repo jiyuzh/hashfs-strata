@@ -7,6 +7,7 @@
 #include <assert.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/time.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <string.h>
@@ -20,10 +21,12 @@ static uint32_t n_threads;
 static double seq_ratio;
 static size_t read_total;
 static int opt_num;
-static int fd;
-static char filename[MAX_FILE_NAME_LEN];
+static uint32_t file_num;
+static int fd_v[MAX_FILE_NUM];
+static char filename_v[MAX_FILE_NUM][MAX_FILE_NAME_LEN];
 static pthread_t threads[MAX_THREADS];
 typedef struct {
+    int tid;
     size_t total_seq_read;
     size_t total_rand_read;
 } worker_result_t;
@@ -34,10 +37,10 @@ static void *worker_thread(void *);
 #ifndef PREFIX
 #define PREFIX "/mlfs"
 #endif
-#define OPTSTRING "b:j:s:r:f:h"
+#define OPTSTRING "b:j:s:r:n:h"
 #define OPTNUM 5
 void print_help(char **argv) {
-    printf("usage: %s -b block_size -j n_threads -s seq_ratio -f file_path -r read_total\n", argv[0]);
+    printf("usage: %s -b block_size -j n_threads -s seq_ratio -n num_files -r read_total\n", argv[0]);
 }
 uint32_t get_unit(char c) {
     switch (c) {
@@ -83,8 +86,11 @@ int main(int argc, char **argv) {
                 assert((read_total % block_size == 0) && "read_total should be dividable by block_size");
                 opt_num++;
                 break;
-            case 'f': // file_path
-                strcpy(filename, optarg);
+            case 'n': // how many files are operated concurrently
+                file_num = atoi(optarg);
+                if (file_num > MAX_FILE_NUM) {
+                    panic("too many files");
+                }
                 opt_num++;
                 break;
             case 'h':
@@ -101,33 +107,39 @@ int main(int argc, char **argv) {
         print_help(argv);
         panic("insufficient args\n");
     }
-    fd = open(filename, O_RDONLY);
-    if (fd == -1) {
-        fprintf(stderr, "can't find %s try to create it\n", filename);
-        fd = open(filename, O_CREAT | O_RDWR, 0644);
-        if (fd == -1) {
-            perror("cannot create file");
-            exit(-1);
-        }
-        void *read_buf = malloc(block_size);
-        for (size_t i=0; i < read_total; i += block_size) {
-            write(fd, read_buf, block_size);
-        }
-        free(read_buf);
-        lseek(fd, 0, SEEK_SET);
-    }
     show_libfs_stats("init done");
     reset_libfs_stats();
-    uint64_t tsc_begin = asm_rdtscp();
+    //uint64_t tsc_begin = asm_rdtscp();
+    struct timeval start, end;
+    int terr = gettimeofday(&start, NULL);
+    if (terr) panic("GETTIMEOFDAY\n");
+
+    for (int i=0; i < file_num; ++i) {
+        snprintf(filename_v[i], MAX_FILE_NAME_LEN, PREFIX "/MTCC-%d", i);
+        fd_v[i] = open(filename_v[i], O_RDWR);
+        if (fd_v[i] == -1) {
+            perror("open failed");
+            exit(-1);
+        }
+    }
     for (int i=0; i < n_threads; ++i) {
+        worker_results[i].tid = i;
         assert(pthread_create(&threads[i], NULL, worker_thread, (void*)(&worker_results[i])) == 0);
     }
     for (int i=0; i < n_threads; ++i) {
         assert(pthread_join(threads[i], NULL) == 0);
     }
-    uint64_t readtime = asm_rdtscp() - tsc_begin;
-    printf("elapsed time %lu\n", readtime);
-    close(fd);
+    //uint64_t readtime = asm_rdtscp() - tsc_begin;
+    //printf("elapsed time %lu\n", readtime);
+    terr = gettimeofday(&end, NULL);
+    if (terr) panic("GETTIMEOFDAY\n");
+    double usecs = ((double)(end.tv_sec - start.tv_sec)) + 
+                   ((double)(end.tv_usec - start.tv_usec) * 1e-6);
+    printf("elapsed time: %f\n", usecs);
+
+    for (int i=0; i < file_num; ++i) {
+        close(fd_v[i]);
+    }
     for (int i=0; i < n_threads; ++i) {
         printf("thread %d : read %lu (seq %lu rand %lu)\n", i,
                 worker_results[i].total_seq_read + worker_results[i].total_rand_read,
@@ -141,6 +153,7 @@ static void *worker_thread(void *arg) {
     struct stat file_stat;
     void *read_buf = malloc(block_size);
     while (1) {
+        int fd = fd_v[rand() % file_num];
         assert(fstat(fd, &file_stat) == 0 && "fstat failed");
         size_t size = file_stat.st_size;
         size_t block_num = size/block_size;

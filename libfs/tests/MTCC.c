@@ -6,7 +6,9 @@
 #include <time.h>
 #include <assert.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <string.h>
 #define MAX_FILE_NUM 1024
 #define MAX_FILE_NAME_LEN 1024
@@ -62,8 +64,6 @@ uint32_t get_unit(char c) {
 int main(int argc, char **argv) {
     int c;
     srand(time(NULL));
-    printf("getchar to launch!\n");
-    (void)getchar();
     while ((c = getopt(argc, argv, OPTSTRING)) != -1) {
         switch (c) {
             case 'b': // block_size
@@ -128,10 +128,10 @@ int main(int argc, char **argv) {
         write_buf[i] = i;
     }
     for (int i=0; i < file_num; ++i) {
-        strncpy(filename_v[i], PREFIX "/MTCC-XXXXXX", MAX_FILE_NAME_LEN);
-        fd_v[i] = mkstemp(filename_v[i]);
+        snprintf(filename_v[i], MAX_FILE_NAME_LEN, PREFIX "/MTCC-%d", i);
+        fd_v[i] = open(filename_v[i], O_RDWR | O_CREAT, 0666);
         if (fd_v[i] == -1) {
-            perror("make tempfile failed");
+            perror("open failed");
             exit(-1);
         }
         // init each file with read_unit data
