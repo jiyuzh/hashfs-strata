@@ -230,8 +230,9 @@ inline addr_t log_alloc(uint32_t nr_blocks)
 		if (nr_used_blk > ((30 * g_fs_log->size) / 100)) {
 
 			// digest 90% of log.
-			while(make_digest_request_async(100) != -EBUSY)
-			mlfs_debug("%s", "[L] log is getting full. asynchronous digest!\n");
+			make_digest_request_async(100);
+			mlfs_debug("[L] log is getting full. asynchronous digest! av(%u)sv(%u)na(%lu)sb(%lu)nr(%lu)\n",
+                    g_fs_log->avail_version, g_fs_log->start_version, g_fs_log->next_avail, g_fs_log->start_blk, nr_used_blk);
 		}
 	}
 
@@ -257,7 +258,7 @@ retry:
 	if (g_fs_log->avail_version > g_fs_log->start_version) {
 		if (g_fs_log->start_blk - g_fs_log->next_avail
 				< (g_fs_log->size/ 5)) {
-			mlfs_debug("%s", "\x1B[31m [L] synchronous digest request and wait! \x1B[0m\n");
+			mlfs_info("%s", "\x1B[31m [L] synchronous digest request and wait! \x1B[0m\n");
 			while (make_digest_request_async(95) != -EBUSY);
 
 			m_barrier();
@@ -1321,7 +1322,7 @@ void handle_digest_response(char *ack_cmd)
 	//	show_libfs_stats("digest response");
 }
 
-#define EVENT_COUNT 2
+#define EVENT_COUNT 1
 void *digest_thread(void *arg)
 {
 	int epfd, kernfs_epfd, ret, n, flags;
@@ -1383,13 +1384,6 @@ void *digest_thread(void *arg)
 	epev[0].events = EPOLLIN | EPOLLRDHUP | EPOLLHUP;
 	ret = epoll_ctl(epfd, EPOLL_CTL_ADD,
 			g_fs_log->digest_fd[0], &epev[0]);
-	if (ret < 0)
-		panic("fail to connect epoll fd\n");
-
-	// waiting for kernfs message
-	epev[1].data.fd = g_sock_fd;
-	epev[1].events = EPOLLIN | EPOLLRDHUP | EPOLLHUP;
-	ret = epoll_ctl(epfd, EPOLL_CTL_ADD, g_sock_fd, &epev[1]);
 	if (ret < 0)
 		panic("fail to connect epoll fd\n");
 
@@ -1484,13 +1478,7 @@ void *digest_thread(void *arg)
 					}
 				}
 			} else if (_fd == g_sock_fd) {
-				mlfs_debug("kernfs: event %d\n", epev[i].events);
-				ret = recvfrom(g_sock_fd, buf, MAX_SOCK_BUF, 0,
-						(struct sockaddr *)&srv_addr, &len);
-				if (ret == 0)
-					continue;
-
-				mlfs_debug("kernfs cmd: %s\n", buf);
+				panic("should receive this _fd in kernfs");
 			}
 		}
 	}
