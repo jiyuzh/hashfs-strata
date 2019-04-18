@@ -19,30 +19,15 @@ import progressbar
 from progressbar import ProgressBar
 
 from BenchmarkProcesses import BenchRunner
+from MTCCProcess import MTCCRunner
 
-class MTCCRunner(BenchRunner):
+class FragTestRunner(MTCCRunner):
 
     def __init__(self, args):
         super().__init__(args)
-        self.update_bar_proc = None
 
     def __del__(self):
         super().__del__()
-        if self.update_bar_proc is not None and self.update_bar_proc is None:
-            self.update_bar_proc.terminate()
-            self.update_bar_proc.join()
-            assert self.update_bar_proc is not None
-
-    def _parse_readfile_time(self, stdout):
-        lines = stdout.decode().splitlines()
-        for line in lines:
-            if 'elapsed time:' in line:
-                fields = line.split(':')
-                time = fields[1]
-                return float(time)
-     
-        pprint(lines)
-        raise Exception('Could not find throughput numbers!')
 
     def _parse_trial_stat_files(self, workload_name, layout, struct, time_elapsed):
         stat_objs = []
@@ -61,7 +46,7 @@ class MTCCRunner(BenchRunner):
                     obj = json.loads(data)
                     if 'lsm' not in obj or 'nr' not in obj['lsm'] or obj['lsm']['nr'] <= 0:
                         continue
-                    obj['bench'] = 'MTCC (readfile)'
+                    obj['bench'] = 'MTCC (frag test)'
                     obj['workload'] = workload_name
                     obj['layout'] = float(layout) / 100.0
                     obj['total_time'] = time_elapsed
@@ -94,9 +79,7 @@ class MTCCRunner(BenchRunner):
                     if len(data) < 2:
                         continue
                     obj = json.loads(data)
-                    if 'lsm' not in obj or 'nr' not in obj['lsm'] or obj['lsm']['nr'] <= 0:
-                        continue
-                    obj['bench'] = 'MTCC (readfile)'
+                    obj['bench'] = 'MTCC (frag test)'
                     obj['workload'] = workload_name
                     obj['layout'] = float(layout) / 100.0
                     obj['struct'] = struct.lower()
@@ -106,7 +89,6 @@ class MTCCRunner(BenchRunner):
             subprocess.run(shlex.split('sudo rm -f {}'.format(
                 str(stat_file))), check=True)
 
-        pprint(stat_objs)
         assert len(stat_objs) == 1
         return stat_objs[0]
 
@@ -115,7 +97,7 @@ class MTCCRunner(BenchRunner):
         mtcc_path = (self.root_path / 'libfs' / 'tests').resolve()
         assert mtcc_path.exists()
        
-        workloads = self.args.thread_nums
+        workloads = self.args.io_size
 
         old_stats_files = [Path(x) for x in glob.glob('/tmp/libfs_prof.*')]
         for old_file in old_stats_files:
@@ -151,15 +133,15 @@ class MTCCRunner(BenchRunner):
             self.update_bar_proc = Process(target=update_bar, args=(shared_q,))
             self.update_bar_proc.start()
 
-            mtcc_arg_str = ('{0}/run.sh numactl -N 1 -m 1 {0}/MTCC -b 4k -s 0 '
-                            '-j {1} -n {1} -M 1G -w 4k -r 0k')
+            mtcc_arg_str = ('{0}/run.sh numactl -N 1 -m 1 {0}/MTCC -b {1} -s 0 '
+                            '-j 1 -n 1 -M 4G -w {1} -r 0k')
             readfile_arg_str = ('{0}/run.sh numactl -N 1 -m 1 {0}/readfile '
-            '-b 4k -s %d -j {1} -n {1} -r {1}G') % (1 if self.args.sequential else 0)
+                                '-b {1} -s 1 -j 1 -n 1 -r 4G')
 
             try:
                 for workload in workloads:
                     stat_objs = []
-                    workload_name = '{}_threads'.format(workload)
+                    workload_name = 'fragtest_{}'.format(workload)
                     for layout in self.layout_scores:
                         for struct in self.structs:
                             self.env['MLFS_IDX_STRUCT'] = struct
@@ -187,28 +169,13 @@ class MTCCRunner(BenchRunner):
 
                                 stat_obj['kernfs'] = self._get_kernfs_stats()
 
-                                if self.args.measure_cache_perf:
-                                    self.env['MLFS_PROFILE'] = '0'
-                                    pprint(setup_args)
-                                    self._run_trial_continue(setup_args, mtcc_path, None, timeout=(10*60))
-                                    self.env['MLFS_PROFILE'] = '1'
-
-                                    self.env['MLFS_CACHE_PERF'] = '1'
-                                    pprint(readfile_args)
-                                    self._run_trial_end(readfile_args, mtcc_path, pr, no_warn=True, timeout=(10*60))
-
-                                    cache_stat_obj = self._parse_trial_stat_files_cache(
-                                            workload_name, layout, struct)
-                                    stat_obj['cache'] = cache_stat_obj['cache']
-                                    stat_obj['cache']['kernfs'] = self._get_kernfs_stats()
-
                                 stat_objs += [stat_obj]
 
                                 counter += 1
                                 shared_q.put(counter)
 
                     timestamp_str = datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
-                    fname = 'mtcc_{}_{}.json'.format(workload_name, timestamp_str)
+                    fname = 'fragtest_{}_{}.json'.format(workload_name, timestamp_str)
                     self._write_bench_output(stat_objs, fname)
                     # also write a summarized version
                     keys = ['layout', 'total_time', 'struct', 'bench', 'workload', 'cache']
@@ -216,7 +183,7 @@ class MTCCRunner(BenchRunner):
                     for stat_obj in stat_objs:
                         small_obj = { k: stat_obj[k] for k in keys if k in stat_obj}
                         stat_summary += [small_obj]
-                    sname = 'mtcc_summary_{}_{}.json'.format(workload_name, 
+                    sname = 'fragtest_summary_{}_{}.json'.format(workload_name, 
                                                              timestamp_str)
                     self._write_bench_output(stat_summary, sname)
             except:
@@ -230,10 +197,6 @@ class MTCCRunner(BenchRunner):
     @classmethod
     def add_arguments(cls, parser):
         parser.set_defaults(fn=cls._run_mtcc)
-        parser.add_argument('thread_nums', nargs='+', type=int,
-                help='Workloads of numbers of threads to run')
-        parser.add_argument('--measure-cache-perf', '-c', action='store_true',
-                            help='Measure cache perf as well.')
-        parser.add_argument('--sequential', '-s', action='store_true',
-                            help='Run reads sequentially rather than randomly')
+        parser.add_argument('io_size', nargs='+', type=str,
+                help='The size to perform IO in.')
         cls._add_common_arguments(parser)

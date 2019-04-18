@@ -19,6 +19,7 @@ from warnings import warn
 from BenchmarkProcesses import KernFSThread
 from FileBenchProcess import FileBenchRunner
 from MTCCProcess import MTCCRunner
+from FragTestProcess import FragTestRunner
 
 
 ################################################################################
@@ -34,6 +35,10 @@ def add_arguments(parser):
     mtcc = subparsers.add_parser('mtcc')
     mtcc.set_defaults(cls=MTCCRunner)
     MTCCRunner.add_arguments(mtcc)
+
+    fragtest = subparsers.add_parser('fragtest')
+    fragtest.set_defaults(cls=FragTestRunner)
+    FragTestRunner.add_arguments(fragtest)
 
     '''
     all_cmds = []

@@ -45,11 +45,13 @@ class KernFSThread:
 
     def start(self):
         'First we run mkfs, then start up the kernfs process.'
+        '''
         rm_args = shlex.split('sudo umount /mlfs')
         subprocess.run(rm_args, check=True, stdout=DEVNULL, stderr=DEVNULL)
 
         mkdir_args = shlex.split('sudo mount -t tmpfs tmpfs /mlfs')
         subprocess.run(mkdir_args, check=True, stdout=DEVNULL, stderr=DEVNULL)
+        '''
 
         mkfs_args = [ str(self.kernfs_path / 'mkfs.sh') ]
         proc = subprocess.run(mkfs_args, cwd=self.kernfs_path, check=True,
@@ -181,7 +183,7 @@ class BenchRunner:
     def _kill_process(self, proc):
         ' Make sure to start this process with a new session. '
         pgid = os.getpgid(proc.pid)
-        kill_args = [ 'kill', '-3', '--', '-'+str(pgid) ]
+        kill_args = [ 'sudo', 'kill', '-3', '--', '-'+str(pgid) ]
         subprocess.run(kill_args, check=True)
         proc.wait(timeout=10)
 
@@ -202,7 +204,7 @@ class BenchRunner:
         try:
             proc = subprocess.Popen(bench_args, 
                                     cwd=bench_cwd, env=self.env, 
-                                    stdout=PIPE, stderr=PIPE,
+                                    stdout=PIPE, stderr=STDOUT,
                                     start_new_session=True)
 
             stdout, stderr = proc.communicate(timeout=timeout)
@@ -216,8 +218,63 @@ class BenchRunner:
                 warn('Process "{}" hangs!'.format(' '.join(bench_args)),
                      UserWarning)
                 pprint(self.env)
-            #self._kill_process(proc)
-            proc.kill()
+            self._kill_process(proc)
+            #proc.kill()
+        finally:
+            self._finish_trial()
+        
+        return None 
+
+    def _run_trial_continue(self, bench_args, bench_cwd, processing_fn, timeout=(2*60),
+            no_warn=False):
+        self._start_trial()
+
+        proc = None
+        try:
+            proc = subprocess.Popen(bench_args, 
+                                    cwd=bench_cwd, env=self.env, 
+                                    stdout=PIPE, stderr=STDOUT,
+                                    start_new_session=True)
+
+            stdout, stderr = proc.communicate(timeout=timeout)
+
+            if processing_fn is not None:
+                return processing_fn(stdout)
+            else:
+                return None
+        except (TimeoutExpired, PermissionError) as e: 
+            if not no_warn:
+                warn('Process "{}" hangs!'.format(' '.join(bench_args)),
+                     UserWarning)
+                pprint(self.env)
+            self._kill_process(proc)
+            #proc.kill()
+        
+        return None 
+
+    def _run_trial_end(self, bench_args, bench_cwd, processing_fn, timeout=(2*60),
+            no_warn=False):
+
+        proc = None
+        try:
+            proc = subprocess.Popen(bench_args, 
+                                    cwd=bench_cwd, env=self.env, 
+                                    stdout=PIPE, stderr=STDOUT,
+                                    start_new_session=True)
+
+            stdout, stderr = proc.communicate(timeout=timeout)
+
+            if processing_fn is not None:
+                return processing_fn(stdout)
+            else:
+                return None
+        except (TimeoutExpired, PermissionError) as e: 
+            if not no_warn:
+                warn('Process "{}" hangs!'.format(' '.join(bench_args)),
+                     UserWarning)
+                pprint(self.env)
+            self._kill_process(proc)
+            #proc.kill()
         finally:
             self._finish_trial()
         

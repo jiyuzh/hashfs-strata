@@ -41,7 +41,8 @@ class FileBenchRunner(BenchRunner):
                 for field in fields:
                     if 'mb/s' in field:
                         return float(field.replace('mb/s', ''))
-       
+      
+        pprint(lines)
         raise Exception('Could not find throughput numbers!')
 
     def _parse_workloads(self, filebench_path):
@@ -174,7 +175,7 @@ class FileBenchRunner(BenchRunner):
 
                             for trialno in range(self.args.trials):
                                 filebench_args = shlex.split(
-                                    '{0}/run.sh numactl -N 1 -m 1 {0}/filebench -f {1}'.format(
+                                    'numactl -N 1 -m 1 sudo -E {0}/run.sh {0}/filebench -f {1}'.format(
                                         str(filebench_path), workload))
 
                                 mb_s = self._run_trial(filebench_args, filebench_path,
@@ -194,10 +195,12 @@ class FileBenchRunner(BenchRunner):
                                 if self.args.measure_cache_perf:
                                     self.env['MLFS_CACHE_PERF'] = '1'
                                     mb_s_cache = self._run_trial(filebench_args, filebench_path,
-                                                           self._parse_filebench_throughput)
+                                                           self._parse_filebench_throughput, timeout=(10*60))
 
                                     if mb_s_cache is None or not mb_s_cache:
-                                        raise Exception('Could not parse filebench results!')
+                                        warn('Could not parse filebench results!',
+                                                UserWarning)
+                                        continue
 
                                     cache_stat_obj = self._parse_trial_stat_files_cache(
                                             workload_name, layout, struct)
@@ -216,7 +219,7 @@ class FileBenchRunner(BenchRunner):
                     keys = ['layout', 'throughput', 'struct', 'bench', 'workload', 'cache']
                     stat_summary = []
                     for stat_obj in stat_objs:
-                        small_obj = { k: stat_obj[k] for k in keys }
+                        small_obj = { k: stat_obj[k] for k in keys if k in stat_obj}
                         stat_summary += [small_obj]
                     sname = 'filebench_summary_{}_{}.json'.format(workload_name, 
                                                                   timestamp_str)
