@@ -34,6 +34,58 @@ schemes:
     print_size: [3.5, 3.0]
     file_name: filebench_randread_breakdown.pdf
 
+  fragtest:
+    dimensions: [2, 2]
+    plots: [
+              {
+                pos: [0, 0],
+                size: [1, 3],
+                type: single_stat,
+                stat: total_time,
+                benchmarks: 'fragtest_64K',
+                options: {
+                  label: 'A) Time elapsed (seconds) to read 4GB (64kB IO size)',
+                  label_bars: False,
+                  exclude_tick_labels: False,
+                  legend: {
+                    prop: {size: 6,},
+                    loc: center left,
+                    ncol: 1,
+                  },
+                },
+              },
+              {
+                pos: [1, 0],
+                size: [1, 1],
+                type: indexing_breakdown,
+                benchmarks: 'fragtest_64K',
+                options: {
+                  label: 'B) IO overhead breakdown',
+                  label_bars: False,
+                  exclude_tick_labels: False,
+                  breakdown_legend: {
+                    prop: {size: 6,},
+                    loc: center right,
+                    ncol: 1,
+                  }
+                },
+              },
+              {
+                pos: [1, 1],
+                size: [1, 1],
+                type: single_stat,
+                stat: read_data_bytes_per_cycle,
+                benchmarks: 'fragtest_64K',
+                options: {
+                  label: 'C) NVM bytes read per CPU cycle',
+                  label_bars: False,
+                  exclude_tick_labels: True,
+                },
+              },
+           ]
+    print_size: [3.5, 3.0]
+    file_name: fragtest.pdf
+
   filebench_seq:
     dimensions: [2, 3]
     plots: [
@@ -262,3 +314,57 @@ schemes:
            ]
     print_size: [3.5, 2.0]
     file_name: mtcc.pdf
+
+  filesize_singlefile:
+    dimensions: [1, 4]
+    plots: [
+              {
+                pos: [0, 0],
+                size: [1, 2],
+                type: single_stat,
+                stat: throughput,
+                benchmarks: filemicro_seq_one_4k,
+                options: {
+                  label: "A) Sequential file read (IO size 4kB) throughput (mb/s)",
+                  label_bars: False,
+                  start: 3000,
+                  exclude_tick_labels: False,
+                  config_legend: True,
+                  breakdown_legend: True,
+                  add_numbers: False,
+                  legend: {
+                    prop: {size: 6,},
+                    loc: center left,
+                    ncol: 1,
+                  }
+                },
+              },
+              {
+                pos: [0, 2],
+                size: [1, 1],
+                type: single_stat,
+                stat: cache_accesses,
+                benchmarks: filemicro_seq_one_4k,
+                options: {
+                  label: "B) Relative total\ncache accesses",
+                  label_bars: False,
+                  exclude_tick_labels: False,
+                  add_numbers: False,
+                },
+              },
+              {
+                pos: [0, 3],
+                size: [1, 1],
+                type: single_stat,
+                stat: llc_accesses,
+                benchmarks: filemicro_seq_one_4k,
+                options: {
+                  label: "C) Relative\nLLC accesses",
+                  label_bars: False,
+                  exclude_tick_labels: True,
+                  add_numbers: False,
+                },
+              },
+           ]
+    print_size: [7.0, 2.0]
+    file_name: filesize_singlefile.pdf

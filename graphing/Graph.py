@@ -146,8 +146,8 @@ class Grapher:
 
         max_val = (all_means + all_error + 0.5).max().max()
         cutoff = self._kwargs_default(kwargs, 'cutoff', max_val)
-        if cutoff != max_val:
-            axis.set_xlim(0.0, cutoff)
+        start = self._kwargs_default(kwargs, 'start', 0.0)
+        axis.set_xlim(start, cutoff)
         axis.margins(0.0)
 
         ax = all_means.plot.barh(ax=axis,

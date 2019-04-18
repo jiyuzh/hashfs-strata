@@ -28,19 +28,25 @@ class IDXDataObject:
 
     def _parse_relevant_fields(self, data_obj):
         parsed = {}
+        parsed['read_data_bytes_per_cycle'] = data_obj['read_data']['bytes'] / max(data_obj['read_data']['tsc'], 1.0)
         if 'throughput' in data_obj:
             parsed['throughput'] = data_obj['throughput']
         if 'total_time' in data_obj:
             parsed['total_time'] = data_obj['total_time']
         if 'cache' in data_obj:
             parsed['cache_accesses'] = data_obj['cache']['l1_accesses']
+            #parsed['cache_misses'] = data_obj['cache']['l1_misses']
             parsed['llc_misses'] = data_obj['cache']['l3_misses'] / max(data_obj['cache']['l3_accesses'], 1.0)
             parsed['llc_accesses'] = data_obj['cache']['l3_accesses']
+            parsed['tlb_misses'] = data_obj['cache']['tlb_misses']
 
-            kern_cache = data_obj['cache']['kernfs']['cache']
-            parsed['kernfs_cache_accesses'] = kern_cache['l1_accesses']
-            parsed['kernfs_llc_misses'] = kern_cache['l3_misses'] / max(kern_cache['l3_accesses'], 1.0)
-            parsed['kernfs_llc_accesses'] = kern_cache['l3_accesses']
+            if 'cache' in data_obj['cache']['kernfs']:
+                kern_cache = data_obj['cache']['kernfs']['cache']
+                parsed['kernfs_cache_accesses'] = kern_cache['l1_accesses']
+                #parsed['kernfs_cache_misses'] = kern_cache['l1_misses']
+                parsed['kernfs_llc_misses'] = kern_cache['l3_misses'] / max(kern_cache['l3_accesses'], 1.0)
+                parsed['kernfs_llc_accesses'] = kern_cache['l3_accesses']
+                parsed['kernfs_tlb_misses'] = kern_cache['tlb_misses']
         if 'lsm' in data_obj:
             if data_obj['lsm']['nr'] > 0:
                 parsed['indexing'] = data_obj['lsm']['tsc']
@@ -61,7 +67,7 @@ class IDXDataObject:
     def _normalize_fields(self, dfs):
         fields = ['cache_accesses', 'llc_misses', 'llc_accesses',
                 'kernfs_cache_accesses', 'kernfs_llc_misses',
-                'kernfs_llc_accesses']
+                'kernfs_llc_accesses', 'tlb_misses']
         minimums = {}
         for config, config_data in dfs.items():
             for layout, layout_data in config_data.items():
@@ -106,8 +112,10 @@ class IDXDataObject:
                 for layout in sorted(config_data.keys()):
                     layout_data = config_data[layout]
                     series = [pd.Series(x) for x in layout_data]
-                    df = pd.concat(series)
-                    dfs[bench][config][layout] = df
+                    df = pd.DataFrame(series)
+                    s = df.mean()
+                    s['count'] = len(df)
+                    dfs[bench][config][layout] = s
 
             self._normalize_fields(dfs[bench])
 
@@ -169,16 +177,32 @@ class IDXDataObject:
 
     def filter_benchmarks(self, benchmark_filter, dfs):
         new_df_data = []
-        embed()
         for config, config_df in dfs.items():
-            for c in config_df.columns:
-                if c not in benchmark_filter:
-                    config_df.drop(c, axis=1, inplace=True)
+            if isinstance(config_df, pd.DataFrame):
+                for c in config_df.columns:
+                    if c not in benchmark_filter:
+                        config_df.drop(c, axis=1, inplace=True)
 
-            config_df.columns = [config]
-            new_df_data += [config_df]
+                config_df.columns = [config]
+                new_df_data += [config_df]
+            else:
+                for c in [c for c in config_df]:
+                    if c not in benchmark_filter:
+                        config_df.pop(c, None)
+                    else:
+                        df = config_df[c]
+                        df.index = [config]
+                        new_df_data += [df]
 
-        return pd.concat(new_df_data, axis=1)
+        new_df = None
+
+        if new_df_data:
+            new_df = new_df_data[0]
+        if len(new_df_data) > 1:
+            for df in new_df_data[1:]:
+                new_df = new_df.append(df)
+
+        return new_df.T
 
     def filter_configs(self, config_filter, dfs):
         assert config_filter is not None
@@ -257,6 +281,7 @@ class IDXDataObject:
 
     @staticmethod
     def make_bench_name_latex_compat(bench):
+        from itertools import chain
         engine = inflect.engine()
         pieces = bench.split('_')
         new_name = ''
@@ -270,7 +295,7 @@ class IDXDataObject:
             elif piece[:-1].isdigit():
                 # Common for things with size letter at end
                 number = engine.number_to_words(piece[:-1])
-                number_pieces = number.split(' ')
+                number_pieces = chain(*[s.split('-') for s in number.split()])
                 for np in number_pieces:
                     new_piece += np.capitalize()
                 new_piece += piece[-1].capitalize()
@@ -287,6 +312,9 @@ class IDXDataObject:
             if '_threads' not in bench:
                 dfs.pop(bench, None)
 
+        if not dfs:
+            return
+
         layout_data = {}
         for n_threads, idx_res in dfs.items():
             idx_data = {}
@@ -296,8 +324,6 @@ class IDXDataObject:
             layout_data[n_threads] = pd.Series(idx_data)
 
         dfs = pd.DataFrame(layout_data)
-
-        embed()
 
         baseline = 'extent_trees'
         # MTCC average improvement
@@ -376,8 +402,13 @@ class IDXDataObject:
                             '{:.0%}'.format(diff), explanation):
                         key = 'MaxThroughputImprovement'
                         try:
-                            df_perf = df[layout]['throughput']
-                            base_perf = baseline_df[layout]['throughput']
+                            df_perf, base_perf = None, None
+                            if 'throughput' in df[layout]:
+                                df_perf = df[layout]['throughput']
+                                base_perf = baseline_df[layout]['throughput']
+                            else:
+                                df_perf = 1.0 / df[layout]['total_time']
+                                base_perf = 1.0 / baseline_df[layout]['total_time']
                             agg[key] = (df_perf - base_perf) / base_perf
                             agg_output[key] = '{:.0%}'.format(agg[key])
                             agg_struct[key] = explanation
@@ -388,13 +419,30 @@ class IDXDataObject:
                             diff, '{:.0%}'.format(diff), explanation):
                         key = 'MaxThroughputImprovement'
                         try:
-                            df_perf = df[layout]['throughput']
-                            base_perf = baseline_df[layout]['throughput']
+                            df_perf, base_perf = None, None
+                            if 'throughput' in df[layout]:
+                                df_perf = df[layout]['throughput']
+                                base_perf = baseline_df[layout]['throughput']
+                            else:
+                                df_perf = 1.0 / df[layout]['total_time']
+                                base_perf = 1.0 / baseline_df[layout]['total_time']
                             agg_bench[bench][key] = (df_perf - base_perf) / base_perf
                             agg_bench_output[bench][key] = '{:.0%}'.format(agg_bench[bench][key])
                             agg_bench_struct[bench][key] = explanation
                         except:
                             pass
+
+                    key = 'MaxThroughputImprovement{}'.format(self.make_bench_name_latex_compat(idx))
+                    df_perf, base_perf = None, None
+                    if 'throughput' in df[layout]:
+                        df_perf = df[layout]['throughput']
+                        base_perf = baseline_df[layout]['throughput']
+                    else:
+                        df_perf = 1.0 / df[layout]['total_time']
+                        base_perf = 1.0 / baseline_df[layout]['total_time']
+                    agg_bench[bench][key] = (df_perf - base_perf) / base_perf
+                    agg_bench_output[bench][key] = '{:.0%}'.format(agg_bench[bench][key])
+                    agg_bench_struct[bench][key] = explanation
 
                 # AvgIndexingOverheadReduction (per-benchmark only!)
                 base = baseline_df.T['indexing'].mean()
@@ -403,18 +451,59 @@ class IDXDataObject:
                 diff = float(reduction / base)
                 explanation = '%s %s' % (idx, bench)
 
+                key = 'AvgThroughputImprovement{}'.format(self.make_bench_name_latex_compat(idx))
+                df_perf, base_perf = None, None
+                if 'throughput' in df.T:
+                    df_perf = df.T['throughput'].mean()
+                    base_perf = baseline_df.T['throughput'].mean()
+                else:
+                    df_perf = 1.0 / df.T['total_time'].mean()
+                    base_perf = 1.0 / baseline_df.T['total_time'].mean()
+                agg_bench[bench][key] = (df_perf - base_perf) / base_perf
+                agg_bench_output[bench][key] = '{:.0%}'.format(agg_bench[bench][key])
+                agg_bench_struct[bench][key] = explanation
+
+                key = 'AvgThroughputImprovement'
                 if update_max_bench(bench, 'AvgIndexingOverheadReduction',
                         diff, '{:.0%}'.format(diff), explanation):
-                    key = 'AvgThroughputImprovement'
                     try:
-                        df_perf = df.T['throughput'].mean()
-                        base_perf = baseline_df.T['throughput'].mean()
+                        df_perf, base_perf = None, None
+                        if 'throughput' in df.T:
+                            df_perf = df.T['throughput'].mean()
+                            base_perf = baseline_df.T['throughput'].mean()
+                        else:
+                            df_perf = 1.0 / df.T['total_time'].mean()
+                            base_perf = 1.0 / baseline_df.T['total_time'].mean()
                         agg_bench[bench][key] = (df_perf - base_perf) / base_perf
                         agg_bench_output[bench][key] = '{:.0%}'.format(agg_bench[bench][key])
                         agg_bench_struct[bench][key] = explanation
                     except:
                         pass
 
+            # Diff across layout scores
+            # AvgRangeFragmentation (per benchmark)
+            all_range_fr = {}
+            all_range_bt = {}
+            for idx, df in bench_data.items():
+                if 'total_time' in df.T.iloc[0]:
+                    all_range_fr[idx] = df.T.iloc[0]['total_time'] - df.T.iloc[-1]['total_time']
+                    all_range_fr[idx] /= df.T.iloc[-1]['total_time']
+                else:
+                    all_range_fr[idx] = df.T.iloc[-1]['throughput'] - df.T.iloc[0]['throughput']
+                    all_range_fr[idx] /= df.T.iloc[0]['throughput']
+                k = 'read_data_bytes_per_cycle'
+                all_range_bt[idx] = df.T.iloc[-1][k] - df.T.iloc[0][k]
+                all_range_bt[idx] /= df.T.iloc[-1][k]
+
+            fr_series = pd.Series(all_range_fr)
+            bt_series = pd.Series(all_range_bt)
+
+            agg_bench[bench]['AvgRangeFragmentation'] = fr_series.mean()
+            agg_bench_output[bench]['AvgRangeFragmentation'] = '{:.0%}'.format(fr_series.mean())
+            agg_bench_struct[bench]['AvgRangeFragmentation'] = ''
+            agg_bench[bench]['AvgRangeBytesPerTime'] = bt_series.mean()
+            agg_bench_output[bench]['AvgRangeBytesPerTime'] = '{:.0%}'.format(bt_series.mean())
+            agg_bench_struct[bench]['AvgRangeBytesPerTime'] = ''
 
         self._mtcc_average(agg_bench, agg_bench_output, agg_bench_struct)
 

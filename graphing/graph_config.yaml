@@ -6,10 +6,10 @@ display_options:
     level_hash_tables: Level Hash Tables
 
   config_colors:
-    Global Hash Table: '#a8ddb5'
-    Radix Trees: '#7bccc4'
-    Extent Trees: '#fed98e'
-    Level Hash Tables: '#ff0044'
+    Global Hash Table: '#8dd3c7'
+    Radix Trees: '#ffffb3'
+    Extent Trees: '#bebada'
+    Level Hash Tables: '#fb8072'
 
   config_order:
     - Global Hash Table
