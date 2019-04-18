@@ -28,7 +28,7 @@ pd.set_option('display.float_format', lambda x: '%.3f' % x)
 class Grapher:
 
     D       = 5
-    HATCH   = [D*'..', '', D*'\\\\', D*'//', D*'', D*'xx', D*'*', D*'+', D*'\\']
+    HATCH   = [D*'//', '', D*'\\\\', D*'..', D*'', D*'xx', D*'*', D*'+', D*'\\']
 
     def _hex_color_to_tuple(self, color_str):
         r = int(color_str[1:3], 16) / 256.0
@@ -76,6 +76,7 @@ class Grapher:
 
     @staticmethod
     def _clean_benchmark_names(benchmark_names):
+        return benchmark_names
         new_names = []
         for b in benchmark_names:
             try:
@@ -240,7 +241,7 @@ class Grapher:
         if self._kwargs_bool(kwargs, 'exclude_tick_labels'):
             plt.yticks(ticks=range(len(labels)), labels=['']*len(labels))
         else:
-            plt.yticks(ticks=range(len(labels)), labels=labels, rotation='45', ha='right')
+            plt.yticks(ticks=range(len(labels)), labels=labels, ha='right')
 
             minor_ticks = []
             if self._kwargs_has(kwargs, 'per_tick_label'):
@@ -305,7 +306,8 @@ class Grapher:
         reason_patches = []
         for config in dfs.columns.unique(0):
             bottom = None
-            df = dfs[config].T
+            df = dfs[config].T.sort_index(ascending=False)
+            print(df)
 
             config_color = np.array(self._get_config_color(config))
             reason_index = 0
@@ -316,7 +318,6 @@ class Grapher:
                 data = df[reason].values
 
                 hatch = hatches[reason_index % len(hatches)]
-
 
                 axis.barh(new_index,
                           data,
@@ -351,9 +352,8 @@ class Grapher:
                                     fontsize=6)
                     txt2.set_path_effects([PathEffects.withStroke(linewidth=1, foreground='black')])
 
-
                 if labels is None:
-                    labels = df[reason].index
+                    labels = sorted(df[reason].index, reverse=False)
 
             config_patches += [Patch(facecolor=config_color, edgecolor='black',
                                      label=config)]
@@ -369,17 +369,23 @@ class Grapher:
             config_index += 1
 
         plt.sca(axis)
-        plt.yticks(ticks=np.arange(num_bench), labels=['']*num_bench)
+        if self._kwargs_bool(kwargs, 'exclude_tick_labels'):
+            plt.yticks(ticks=np.arange(num_bench), labels=['']*num_bench)
+        else:
+            print(labels)
+            plt.yticks(ticks=np.arange(num_bench), labels=labels)
         plt.xscale(self._kwargs_default(kwargs, 'xscale', 'linear'))
         #axis.set_ylim(*ybounds)
 
         config_legend = None
         reason_legend = None
-        if self._kwargs_bool(kwargs, 'config_legend'):
-            config_legend = plt.legend(handles=config_patches, **kwargs['legend'])
-        if self._kwargs_bool(kwargs, 'breakdown_legend'):
-            reason_legend = plt.legend(handles=reason_patches, **kwargs['legend'])
-            if self._kwargs_bool(kwargs, 'config_legend'):
+        if self._kwargs_has(kwargs, 'config_legend'):
+            config_legend = plt.legend(handles=config_patches,
+                    **kwargs['config_legend'])
+        if self._kwargs_has(kwargs, 'breakdown_legend'):
+            reason_legend = plt.legend(handles=reason_patches,
+                    **kwargs['breakdown_legend'])
+            if self._kwargs_has(kwargs, 'config_legend'):
                 axis.add_artist(config_legend)
 
         if self._kwargs_default(kwargs, 'xscale', 'linear') != 'linear':
@@ -408,125 +414,3 @@ class Grapher:
 
         return pd.DataFrame(stat_data)
 
-    def output_text(self, dataframes):
-        cpi_mean  = self._get_stat_attribute(dataframes, 'cpi', 'mean')
-        cpi_ci    = self._get_stat_attribute(dataframes, 'cpi', 'ci')
-        cpi_count = self._get_stat_attribute(dataframes, 'cpi', 'count')
-        cpi_ci_p  = cpi_ci / cpi_mean
-
-        for bench, data in cpi_count.iteritems():
-            assert data.min() == data.max()
-
-        for bench, val in cpi_ci_p.max().iteritems():
-            if val > 0.05:
-                print('\033[91m{0} has CI% > 5%: {1:.1f}%, only {2:.0f} items!\033[0m'.format(
-                    bench, val * 100.0, cpi_count.min()[bench]))
-                print(cpi_ci_p[bench].to_string(float_format='{:,.1%}'.format))
-            else:
-                print('\033[92m{0} has CI% <= 5%: {1:.1f}%, with {2:.0f} items!\033[0m'.format(
-                    bench, val * 100.0, cpi_count.min()[bench]))
-
-        o3   = 'o3'
-        inor = 'inorder'
-
-        print('='*80)
-        for bench, data in cpi_mean.iteritems():
-            if o3 in data and data[o3] > data.min():
-                print('\033[91m{0} has OOO: {1:.3f} > the minimum only {2:.3f}!\033[0m'.format(
-                    bench, data[o3], data.min()))
-        print('='*80)
-        printme = False
-        for bench, data in cpi_count.iteritems():
-            for config, num in data.iteritems():
-                if num < 1.0:
-                    printme = True
-                    print('\033[91m{}: {} has no results!\033[0m'.format(
-                        bench, config))
-        print('='*80) if printme else None
-
-        print('Confidence interval range per benchmark:')
-        for bench, val in cpi_ci_p.max().iteritems():
-            print('Max confidence interval percent for {0}: {1:.1%}'.format(bench, val))
-        print('MAX CONFIDENCE INTERVAL PERCENT: {0:.1%}'.format(cpi_ci_p.max().max()))
-        print('MAX CONFIDENCE INTERVAL: +/- {0:.1f} CPI'.format(cpi_ci.max().max()))
-
-        p_percent = lambda l, x: print('--- {0}: {1:.1f}%'.format(l, x * 100.0))
-        p_times = lambda l, x: print('--- {0}: {1:.1f}X'.format(l, x))
-        configs = []
-        for bench, data in cpi_mean.iteritems():
-            for config, num in data.iteritems():
-                configs += [[config, self._get_config_name(config)]]
-            break
-        for c, name in configs:
-            print()
-            if o3 in cpi_mean.T:
-                print('CPI Percent Slowdown (Overhead) ({})'.format(name))
-                slowdown = ((cpi_mean.T[c] - cpi_mean.T[o3]) / cpi_mean.T[o3])
-                p_percent('Min', slowdown.min())
-                p_percent('Max', slowdown.max())
-                p_percent('Mean', slowdown.mean())
-
-            speedup = cpi_mean.T[inor] / (cpi_mean.T[inor] - cpi_mean.T[c])
-            print('CPI Percent Speedup ({})'.format(name))
-            p_percent('Min', speedup.min())
-            p_percent('Max', speedup.max())
-            p_percent('Mean', speedup.mean())
-
-            times = cpi_mean.T[inor] / cpi_mean.T[c]
-            print('CPI Times Faster ({})'.format(name))
-            p_times('Min', times.min())
-            p_times('Max', times.max())
-            p_times('Mean', times.mean())
-
-            if o3 in cpi_mean.T:
-                gap = ((cpi_mean.T[inor] - cpi_mean.T[c]) / (cpi_mean.T[inor] - cpi_mean.T[o3]))
-                print('CPI Percent Gap Closed ({})'.format(name))
-                p_percent('Min', gap.min())
-                p_percent('Max', gap.max())
-                p_percent('Mean', gap.mean())
-
-            print('Number of checkpoints ({})'.format(name))
-            print('--- Min: {0:.0f}'.format(cpi_count.T[c].min()))
-            print('--- Max: {0:.0f}'.format(cpi_count.T[c].max()))
-            print('--- Mean: {0:.0f}'.format(cpi_count.T[c].mean()))
-
-    def output_means(self, cpi_mean):
-        o3   = 'o3'
-        inor = 'inorder'
-        p_percent = lambda l, x: print('--- {0}: {1:.1f}%'.format(l, x * 100.0))
-        p_times = lambda l, x: print('--- {0}: {1:.1f}X'.format(l, x))
-        configs = []
-
-        for config, data in cpi_mean.iteritems():
-            for bench, num in data.iteritems():
-                print(config)
-                configs += [[config, self._get_config_name(config)]]
-
-        for c, name in configs:
-            print()
-            if o3 in cpi_mean:
-                print('CPI Percent Slowdown (Overhead) ({})'.format(name))
-                slowdown = ((cpi_mean[c] - cpi_mean[o3]) / cpi_mean[o3])
-                p_percent('Min', slowdown.min())
-                p_percent('Max', slowdown.max())
-                p_percent('Mean', slowdown.mean())
-
-            if inor in cpi_mean:
-                speedup = cpi_mean[inor] / (cpi_mean[inor] - cpi_mean[c])
-                print('CPI Percent Speedup ({})'.format(name))
-                p_percent('Min', speedup.min())
-                p_percent('Max', speedup.max())
-                p_percent('Mean', speedup.mean())
-
-                times = cpi_mean[inor] / cpi_mean[c]
-                print('CPI Times Faster ({})'.format(name))
-                p_times('Min', times.min())
-                p_times('Max', times.max())
-                p_times('Mean', times.mean())
-
-            if o3 in cpi_mean:
-                gap = ((cpi_mean[inor] - cpi_mean[c]) / (cpi_mean[inor] - cpi_mean[o3]))
-                print('CPI Percent Gap Closed ({})'.format(name))
-                p_percent('Min', gap.min())
-                p_percent('Max', gap.max())
-                p_percent('Mean', gap.mean())

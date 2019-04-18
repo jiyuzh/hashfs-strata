@@ -1,6 +1,7 @@
 from argparse import ArgumentParser
 from collections import defaultdict
 from IPython import embed
+import copy
 import itertools
 import json
 from enum import Enum
@@ -19,15 +20,15 @@ import re
 import yaml
 
 from Graph import Grapher
-from NDADataObject import NDADataObject
+from IDXDataObject import IDXDataObject
 
 import pandas as pd
 
-class NDAGrapher:
+class IDXGrapher:
 
     def __init__(self, args):
         self.args = args
-        self.data = NDADataObject(Path(args.input_file))
+        self.data = IDXDataObject(file_path=Path(args.input_file))
         self.output_dir = Path(args.output_dir)
         self.schema_file = Path(args.schema_file)
         assert self.schema_file.exists() and self.output_dir.exists()
@@ -47,10 +48,13 @@ class NDAGrapher:
 
         config_set = layout['config_set'] if 'config_set' in layout else 'default'
         dfs = self.data.filter_configs(self.config_sets[config_set], dfs)
-        if 'benchmarks' in layout:
-            dfs = self.data.filter_benchmarks(layout['benchmarks'], dfs)
         dfs = self.data.reorder_data_frames(dfs)
         dfs = self.data.filter_stats(layout['stat'], dfs)
+        if 'benchmarks' in layout:
+            dfs = self.data.filter_benchmarks(layout['benchmarks'], dfs)
+
+        print(layout['stat'])
+        print(dfs)
 
         means_df = None
         ci_df = None
@@ -61,8 +65,11 @@ class NDAGrapher:
             means_df = pd.DataFrame({'Average': dfs.T['mean']}).T
             ci_df = pd.DataFrame({'Average': dfs.T['ci']}).T
         else:
-            means_df = self.data.filter_stat_field('mean', dfs)
-            ci_df = self.data.filter_stat_field('ci', dfs)
+            means_df = dfs
+            means_df = means_df.iloc[::-1]
+            #ci_df = self.data.filter_stat_field('ci', dfs)
+            ci_df = copy.deepcopy(dfs)
+            ci_df[:] = 0
 
             if 'benchmarks' in layout and 'Average' in layout['benchmarks']:
                 # Also add an average bar:
@@ -78,28 +85,65 @@ class NDAGrapher:
                 ci_df = ci_df.append(pd.DataFrame({'Average': ci_zero}).T)
                 flush = True
 
-        if 'benchmarks' in layout:
-            means_df = means_df.reindex(layout['benchmarks'])
-            ci_df = ci_df.reindex(layout['benchmarks'])
+        #if 'benchmarks' in layout:
+        #    means_df = means_df.reindex(layout['benchmarks'])
+        #    ci_df = ci_df.reindex(layout['benchmarks'])
 
         return grapher.graph_single_stat(means_df, ci_df, gs,
                                          flush=flush, **options)
 
-    def _plot_cpi_breakdown(self, gs, layout):
+    def _plot_mtcc(self, gs, layout):
         grapher = Grapher(self.args)
 
         dfs = self.data.data_by_benchmark()
-        print(dfs)
+        options = layout['options']
+
         config_set = layout['config_set'] if 'config_set' in layout else 'default'
         dfs = self.data.filter_configs(self.config_sets[config_set], dfs)
-        dfs = self.data.calculate_cpi_breakdown(dfs)
+        dfs = self.data.reorder_data_frames(dfs)
+        dfs = self.data.filter_stats(layout['stat'], dfs)
+
+        layout_data = {}
+        for idx_struct, idx_res in dfs.items():
+            idx_data = {}
+            for n_threads, series in idx_res.items():
+                thread_num = n_threads.split('_')[0]
+                idx_data[thread_num] = series.T.loc[str(layout['layout_score'])][layout['stat']]
+
+            layout_data[idx_struct] = pd.Series(idx_data)
+
+        dfs = pd.DataFrame(layout_data)
+
+        print(layout['stat'])
+        print(dfs)
+
+        flush = True
+        means_df = dfs
+        means_df = means_df.iloc[::-1]
+        #ci_df = self.data.filter_stat_field('ci', dfs)
+        ci_df = copy.deepcopy(dfs)
+        ci_df[:] = 0
+
+        return grapher.graph_single_stat(means_df, ci_df, gs,
+                                         flush=flush, **options)
+
+    def _plot_indexing_breakdown(self, gs, layout):
+        grapher = Grapher(self.args)
+
+        dfs = self.data.data_by_benchmark()
+        config_set = layout['config_set'] if 'config_set' in layout else 'default'
+        dfs = self.data.filter_configs(self.config_sets[config_set], dfs)
+        dfs = self.data.filter_stats(['indexing', 'read_data'], dfs)
+        if 'benchmarks' in layout:
+            bench_dfs = dfs[layout['benchmarks']]
+            bench_dfs = { k: v.T for k, v in bench_dfs.items()}
+            dfs = pd.concat(bench_dfs).swaplevel(0, 1)
 
         options = layout['options']
         if 'average' in options and options['average']:
             dfs = dfs.mean(level=1)
             mi_tuples = [('Average', i) for i in dfs.index]
             dfs.index = pd.MultiIndex.from_tuples(mi_tuples)
-
 
         return grapher.graph_grouped_stacked_bars(dfs, gs, **options)
 
@@ -118,8 +162,11 @@ class NDAGrapher:
             if layout_config['type'] == 'single_stat':
                 a = self._plot_single_stat(axis, layout_config)
                 artists += [a]
-            elif layout_config['type'] == 'cpi_breakdown':
-                artists += self._plot_cpi_breakdown(axis, layout_config)
+            elif layout_config['type'] == 'mtcc':
+                a = self._plot_mtcc(axis, layout_config)
+                artists += [a]
+            elif layout_config['type'] == 'indexing_breakdown':
+                artists += self._plot_indexing_breakdown(axis, layout_config)
 
         plt.subplots_adjust(wspace=0.05, hspace=0.0)
 

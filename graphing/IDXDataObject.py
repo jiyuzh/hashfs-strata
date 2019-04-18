@@ -1,0 +1,449 @@
+from argparse import ArgumentParser
+from collections import defaultdict
+import copy
+from IPython import embed
+import itertools
+import json
+from enum import Enum
+from math import sqrt
+import pandas as pd
+import numpy as np
+from pathlib import Path
+from pprint import pprint
+from matplotlib.gridspec import GridSpec, GridSpecFromSubplotSpec
+import matplotlib.pyplot as plt
+import matplotlib.patheffects as PathEffects
+from matplotlib.patches import Patch
+from matplotlib.gridspec import GridSpec, GridSpecFromSubplotSpec
+import matplotlib.ticker as ticker
+import re
+import yaml
+import inflect
+
+from Graph import Grapher
+
+import pandas as pd
+
+class IDXDataObject:
+
+    def _parse_relevant_fields(self, data_obj):
+        parsed = {}
+        if 'throughput' in data_obj:
+            parsed['throughput'] = data_obj['throughput']
+        if 'total_time' in data_obj:
+            parsed['total_time'] = data_obj['total_time']
+        if 'cache' in data_obj:
+            parsed['cache_accesses'] = data_obj['cache']['l1_accesses']
+            parsed['llc_misses'] = data_obj['cache']['l3_misses'] / max(data_obj['cache']['l3_accesses'], 1.0)
+            parsed['llc_accesses'] = data_obj['cache']['l3_accesses']
+
+            kern_cache = data_obj['cache']['kernfs']['cache']
+            parsed['kernfs_cache_accesses'] = kern_cache['l1_accesses']
+            parsed['kernfs_llc_misses'] = kern_cache['l3_misses'] / max(kern_cache['l3_accesses'], 1.0)
+            parsed['kernfs_llc_accesses'] = kern_cache['l3_accesses']
+        if 'lsm' in data_obj:
+            if data_obj['lsm']['nr'] > 0:
+                parsed['indexing'] = data_obj['lsm']['tsc']
+                parsed['read_data'] = data_obj['l0']['tsc'] + data_obj['read_data']['tsc']
+            else:
+                parsed['indexing'] = data_obj['kernfs']['path_search']
+                parsed['read_data'] = data_obj['kernfs']['digest'] - parsed['indexing']
+
+            total = parsed['indexing'] + parsed['read_data']
+            scale = parsed['throughput'] if 'throughput' in parsed else parsed['total_time']
+            parsed['indexing'] /= total
+            #parsed['indexing'] *= scale
+            parsed['read_data'] /= total
+            #parsed['read_data'] *= scale
+
+        return parsed
+
+    def _normalize_fields(self, dfs):
+        fields = ['cache_accesses', 'llc_misses', 'llc_accesses',
+                'kernfs_cache_accesses', 'kernfs_llc_misses',
+                'kernfs_llc_accesses']
+        minimums = {}
+        for config, config_data in dfs.items():
+            for layout, layout_data in config_data.items():
+                for field in fields:
+                    if field not in layout_data:
+                        continue
+                    minimum = layout_data[field].min()
+                    if minimum == 0:
+                        continue
+                    if field not in minimums:
+                        minimums[field] = minimum
+                    else:
+                        cur = minimums[field]
+                        minimums[field] = min(minimum, cur)
+
+        for config, config_data in dfs.items():
+            for layout, layout_data in config_data.items():
+                for field, m in minimums.items():
+                    dfs[config][layout][field] /= m
+
+        pprint(minimums)
+
+        return dfs
+
+    def _parse_results(self, results_dir):
+        data = defaultdict(lambda: defaultdict(dict))
+        files = [f for f in results_dir.iterdir() if f.is_file() and 'summary' not in f.name]
+        for fp in files:
+            with fp.open() as f:
+                objs = json.load(f)
+                for obj in objs:
+                    bench = obj['workload']
+                    config = obj['struct']
+                    layout = obj['layout']
+                    if layout not in data[bench][config]:
+                        data[bench][config][layout] = []
+                    data[bench][config][layout] += [self._parse_relevant_fields(obj)]
+
+        dfs = defaultdict(lambda: defaultdict(dict))
+        for bench, bench_data in data.items():
+            for config, config_data in bench_data.items():
+                for layout in sorted(config_data.keys()):
+                    layout_data = config_data[layout]
+                    series = [pd.Series(x) for x in layout_data]
+                    df = pd.concat(series)
+                    dfs[bench][config][layout] = df
+
+            self._normalize_fields(dfs[bench])
+
+        self.dfs = dfs
+
+    def _load_results_file(self, file_path):
+        with file_path.open() as f:
+            results_data = json.load(f)
+
+            self.dfs = defaultdict(dict)
+            for benchmark, config_data in results_data.items():
+                for config_name, raw_df in config_data.items():
+                    df = None
+                    try:
+                        df = pd.DataFrame(raw_df)
+                    except:
+                        df = pd.Series(raw_df)
+                    self.dfs[benchmark][config_name.lower()] = df
+
+    def __init__(self, results_dir=None, file_path=None):
+        assert results_dir is not None or file_path is not None
+
+        if file_path is not None:
+            self._load_results_file(file_path)
+        elif results_dir is not None:
+            self._parse_results(Path(results_dir))
+
+    def save_to_file(self, file_path):
+        json_obj = defaultdict(lambda: defaultdict(dict))
+        for bench, bench_data in self.dfs.items():
+            for config, config_data in bench_data.items():
+                for layout, layout_data in config_data.items():
+                    json_obj[bench][config][layout] = layout_data.to_dict()
+
+        with file_path.open('w') as f:
+            json.dump(json_obj, f, indent=4)
+
+    def _reorder_data_frames(self):
+        new_dict = defaultdict(dict)
+        for x, x_data in self.dfs.items():
+            for y, y_df in x_data.items():
+                new_dict[y][x] = y_df
+
+        return new_dict
+
+    def reorder_data_frames(self, dfs):
+        new_dict = defaultdict(dict)
+        for x, x_data in dfs.items():
+            for y, y_df in x_data.items():
+                new_dict[y][x] = y_df
+
+        return new_dict
+
+    def data_by_benchmark(self):
+        return self.dfs
+
+    def data_by_config(self):
+        return self._reorder_data_frames()
+
+    def filter_benchmarks(self, benchmark_filter, dfs):
+        new_df_data = []
+        embed()
+        for config, config_df in dfs.items():
+            for c in config_df.columns:
+                if c not in benchmark_filter:
+                    config_df.drop(c, axis=1, inplace=True)
+
+            config_df.columns = [config]
+            new_df_data += [config_df]
+
+        return pd.concat(new_df_data, axis=1)
+
+    def filter_configs(self, config_filter, dfs):
+        assert config_filter is not None
+        new_dfs = copy.deepcopy(dfs)
+        for bench in [k for k in dfs]:
+            for config in [x for x in dfs[bench]]:
+                matches_any = False
+                for c in config_filter:
+                    if c == config:
+                        matches_any = True
+                        break
+                if not matches_any:
+                    new_dfs[bench].pop(config, None)
+
+        return new_dfs
+
+
+    def filter_stats(self, stats, dfs):
+        if isinstance(stats, str):
+            stats = [stats]
+
+        new_dfs = {}
+        for bench, bench_data in dfs.items():
+            new_dfs[bench] = {}
+            compress = False
+            for config, config_data in bench_data.items():
+                new_df = {}
+                for layout, layout_data in config_data.items():
+                    for stat in stats:
+                        if stat not in layout_data:
+                            continue
+                    filtered = [layout_data[s] for s in stats if s in layout_data]
+                    if not filtered:
+                        continue
+                    new_df[layout] = filtered
+
+                if len(new_df):
+                    try:
+                        new_dfs[bench][config] = pd.DataFrame(new_df)
+                        new_dfs[bench][config].index = stats
+                    except:
+                        compress = True
+                        new_dfs[bench][config] = pd.Series(new_df)
+
+            if compress:
+                new_dfs[bench] = pd.DataFrame(new_dfs[bench])
+
+        return new_dfs
+
+    def filter_stat_field(self, field, dfs):
+        new_dfs = {}
+        for x, x_df in dfs.items():
+            if isinstance(x_df, pd.Series):
+                return pd.DataFrame(dfs)
+            per_x = {}
+            for y, y_data in x_df.T.items():
+                if field not in y_data:
+                    raise Exception('Not available!')
+                per_x[y] = y_data[field]
+
+            new_df = pd.Series(per_x)
+            new_dfs[x] = new_df
+
+        return pd.DataFrame(new_dfs)
+
+    def average_stats(self, dfs):
+        averages = {}
+        for x, df in dfs.items():
+            averages[x] = df.mean()
+
+        return pd.DataFrame(averages)
+
+    # ------------------------
+    # Text functions
+    # ------------------------
+
+    @staticmethod
+    def make_bench_name_latex_compat(bench):
+        engine = inflect.engine()
+        pieces = bench.split('_')
+        new_name = ''
+        for piece in pieces:
+            new_piece = ''
+            if piece.isdigit():
+                number = engine.number_to_words(piece)
+                number_pieces = number.split(' ')
+                for np in number_pieces:
+                    new_piece += np.capitalize()
+            elif piece[:-1].isdigit():
+                # Common for things with size letter at end
+                number = engine.number_to_words(piece[:-1])
+                number_pieces = number.split(' ')
+                for np in number_pieces:
+                    new_piece += np.capitalize()
+                new_piece += piece[-1].capitalize()
+            else:
+                new_piece = piece.capitalize()
+
+            new_name += new_piece
+
+        return new_name
+
+    def _mtcc_average(self, agg, output, struct):
+        dfs = copy.deepcopy(self.dfs)
+        for bench in self.dfs:
+            if '_threads' not in bench:
+                dfs.pop(bench, None)
+
+        layout_data = {}
+        for n_threads, idx_res in dfs.items():
+            idx_data = {}
+            for idx_struct, series in idx_res.items():
+                idx_data[idx_struct] = series.T.loc['0.8']['total_time']
+
+            layout_data[n_threads] = pd.Series(idx_data)
+
+        dfs = pd.DataFrame(layout_data)
+
+        embed()
+
+        baseline = 'extent_trees'
+        # MTCC average improvement
+        base_res = dfs.T[baseline]
+        improvement = (dfs.sub(base_res).div(base_res) * -1).mean(axis=1)
+
+        agg['MTCCReadfile']['MaxTimeImprovement'] = improvement.max()
+        output['MTCCReadfile']['MaxTimeImprovement'] = '{:.0%}'.format(improvement.max())
+        struct['MTCCReadfile']['MaxTimeImprovement'] = improvement.idxmax()
+
+    def summary(self, output_file_path, is_final):
+        outfile = None
+        if output_file_path is not None:
+            outfile = Path(output_file_path)
+
+        baseline = 'extent_trees'
+
+        agg = {}
+        agg_output = {}
+        agg_struct = {}
+
+        agg_bench = defaultdict(dict)
+        agg_bench_output = defaultdict(dict)
+        agg_bench_struct = defaultdict(dict)
+
+        def update_max(key, val, val_str, reason):
+            if key not in agg or val > agg[key]:
+                agg[key] = val
+                agg_output[key] = val_str
+                agg_struct[key] = reason
+                return True
+            return False
+
+        def update_max_bench(bench, key, val, val_str, reason):
+            if key not in agg_bench[bench] or val > agg_bench[bench][key]:
+                agg_bench[bench][key] = val
+                agg_bench_output[bench][key] = val_str
+                agg_bench_struct[bench][key] = reason
+                return True
+            return False
+
+        for bench, bench_data in self.dfs.items():
+            baseline_df = bench_data[baseline]
+            # MaxFragmentationOverhead
+            frag_max, frag_min = None, None
+            if 'throughput' in baseline_df.T:
+                frag_min = baseline_df.T['throughput'].min()
+                frag_max = baseline_df.T['throughput'].max()
+            else:
+                frag_min = 1.0 / baseline_df.T['total_time'].max()
+                frag_max = 1.0 / baseline_df.T['total_time'].min()
+
+            frag_diff = (frag_max - frag_min) / frag_max
+            update_max('MaxFragmentationOverhead', frag_diff,
+                    '{:.0%}'.format(frag_diff), '%s %s' % (baseline, bench))
+            update_max_bench(bench, 'MaxFragmentationOverhead', frag_diff,
+                    '{:.0%}'.format(frag_diff), '%s %s' % (baseline, bench))
+
+            for idx, df in bench_data.items():
+                # MaxIndexingOverhead
+                indexing = df.T['indexing'].max()
+                update_max('MaxIndexingOverhead', indexing,
+                        '{:.0%}'.format(indexing), '%s %s' % (idx, bench))
+                update_max_bench(bench, 'MaxIndexingOverhead', indexing,
+                        '{:.0%}'.format(indexing), '%s %s' % (idx, bench))
+
+                # MaxIndexingOverheadReduction
+                for layout in df.columns:
+                    base = baseline_df[layout]['indexing']
+                    curr = df[layout]['indexing']
+                    reduction = (base - curr)
+                    diff = float(reduction / base)
+                    explanation = '%s %s @ %s' % (idx, bench, layout)
+
+                    if update_max('MaxIndexingOverheadReduction', diff,
+                            '{:.0%}'.format(diff), explanation):
+                        key = 'MaxThroughputImprovement'
+                        try:
+                            df_perf = df[layout]['throughput']
+                            base_perf = baseline_df[layout]['throughput']
+                            agg[key] = (df_perf - base_perf) / base_perf
+                            agg_output[key] = '{:.0%}'.format(agg[key])
+                            agg_struct[key] = explanation
+                        except:
+                            pass
+
+                    if update_max_bench(bench, 'MaxIndexingOverheadReduction',
+                            diff, '{:.0%}'.format(diff), explanation):
+                        key = 'MaxThroughputImprovement'
+                        try:
+                            df_perf = df[layout]['throughput']
+                            base_perf = baseline_df[layout]['throughput']
+                            agg_bench[bench][key] = (df_perf - base_perf) / base_perf
+                            agg_bench_output[bench][key] = '{:.0%}'.format(agg_bench[bench][key])
+                            agg_bench_struct[bench][key] = explanation
+                        except:
+                            pass
+
+                # AvgIndexingOverheadReduction (per-benchmark only!)
+                base = baseline_df.T['indexing'].mean()
+                curr = df.T['indexing'].mean()
+                reduction = (base - curr)
+                diff = float(reduction / base)
+                explanation = '%s %s' % (idx, bench)
+
+                if update_max_bench(bench, 'AvgIndexingOverheadReduction',
+                        diff, '{:.0%}'.format(diff), explanation):
+                    key = 'AvgThroughputImprovement'
+                    try:
+                        df_perf = df.T['throughput'].mean()
+                        base_perf = baseline_df.T['throughput'].mean()
+                        agg_bench[bench][key] = (df_perf - base_perf) / base_perf
+                        agg_bench_output[bench][key] = '{:.0%}'.format(agg_bench[bench][key])
+                        agg_bench_struct[bench][key] = explanation
+                    except:
+                        pass
+
+
+        self._mtcc_average(agg_bench, agg_bench_output, agg_bench_struct)
+
+        pprint(agg)
+        pprint(agg_struct)
+
+        pprint(agg_bench)
+        pprint(agg_bench_struct)
+
+        if outfile is not None:
+            with outfile.open('w') as f:
+                cmd_str = '\\newcommand{{\\{0}}}{{\\tentative{{{1}\\xspace}}}}'
+                bench_cmd_str = '\\newcommand{{\\{0}{1}}}{{\\tentative{{{2}\\xspace}}}}'
+                if is_final:
+                    cmd_str = '\\newcommand{{\\{0}}}{{{1}\\xspace}}'
+                    bench_cmd_str = '\\newcommand{{\\{0}{1}}}{{{2}\\xspace}}'
+
+                for cmd, data in agg_output.items():
+                    cmd_output = cmd_str.format(cmd, data)
+                    cmd_output = cmd_output.replace('%', '\\%')
+                    f.write(cmd_output)
+                    f.write('\n')
+
+                for bench, bench_data in agg_bench_output.items():
+                    bname = self.make_bench_name_latex_compat(bench)
+
+                    for cmd, data in bench_data.items():
+                        cmd_output = bench_cmd_str.format(cmd, bname, data)
+                        cmd_output = cmd_output.replace('%', '\\%')
+                        f.write(cmd_output)
+                        f.write('% {}\n'.format(agg_bench_struct[bench][cmd]))
+
