@@ -87,7 +87,7 @@ schemes:
     file_name: fragtest.pdf
 
   filebench_seq:
-    dimensions: [2, 3]
+    dimensions: [2, 6]
     plots: [
               {
                 pos: [0, 0],
@@ -96,55 +96,71 @@ schemes:
                 stat: throughput,
                 benchmarks: 'filemicro_seq_4k',
                 options: {
-                  label: "A) Sequential file read (IO size 4kB) throughput (mb/s)",
+                  label: "A) Overall throughput (mb/s)",
                   label_bars: False,
                   exclude_tick_labels: False,
-                  config_legend: True,
-                  breakdown_legend: True,
                   add_numbers: False,
                   legend: {
-                    prop: {size: 6,},
+                    prop: {size: 5,},
                     loc: center left,
                     ncol: 1,
                   }
                 },
               },
               {
+                pos: [0, 3],
+                size: [1, 3],
+                type: indexing_breakdown,
+                benchmarks: 'filemicro_seq_4k',
+                options: {
+                  label: "B) IO Path Breakdown",
+                  label_bars: False,
+                  exclude_tick_labels: True,
+                  add_numbers: False,
+                  breakdown_legend: {
+                    prop: {size: 5,},
+                    loc: center right,
+                    ncol: 1,
+                  }
+                },
+              },
+              {
                 pos: [1, 0],
-                size: [1, 1],
+                size: [1, 2],
                 type: single_stat,
                 stat: cache_accesses,
                 benchmarks: 'filemicro_seq_4k',
                 options: {
-                  label: "B) Relative total\ncache accesses",
+                  tick_format: "%.0g",
+                  label: "C) Total\ncache accesses",
                   label_bars: False,
                   exclude_tick_labels: False,
                   add_numbers: False,
                 },
               },
               {
-                pos: [1, 1],
-                size: [1, 1],
+                pos: [1, 2],
+                size: [1, 2],
                 type: single_stat,
                 stat: llc_accesses,
                 benchmarks: 'filemicro_seq_4k',
                 options: {
                   xscale: symlog,
-                  label: "C) Relative\nLLC accesses",
+                  label: "D) LLC accesses",
                   label_bars: False,
                   exclude_tick_labels: True,
                   add_numbers: False,
                 },
               },
               {
-                pos: [1, 2],
-                size: [1, 1],
+                pos: [1, 4],
+                size: [1, 2],
                 type: single_stat,
                 stat: llc_misses,
                 benchmarks: 'filemicro_seq_4k',
                 options: {
                   xscale: symlog,
-                  label: "D) Relative\nLLC hit/miss ratio",
+                  label: "E) LLC misses",
                   label_bars: False,
                   exclude_tick_labels: True,
                   add_numbers: False,
@@ -155,24 +171,41 @@ schemes:
     file_name: filebench_seq.pdf
 
   filebench_rand:
-    dimensions: [2, 3]
+    dimensions: [2, 4]
     plots: [
               {
                 pos: [0, 0],
-                size: [1, 3],
+                size: [1, 2],
                 type: single_stat,
                 stat: throughput,
                 benchmarks: 'filemicro_rand_4k',
                 options: {
-                  label: "A) Random file read (IO size 4kB) throughput (mb/s)",
+                  label: "A) Random file read\nthroughput (mb/s)",
                   label_bars: False,
                   exclude_tick_labels: False,
                   config_legend: True,
                   breakdown_legend: True,
                   add_numbers: False,
                   legend: {
-                    prop: {size: 6,},
+                    prop: {size: 5,},
                     loc: center left,
+                    ncol: 1,
+                  }
+                },
+              },
+              {
+                pos: [0, 2],
+                size: [1, 2],
+                type: indexing_breakdown,
+                benchmarks: 'filemicro_rand_4k',
+                options: {
+                  label: "B) IO Path Breakdown",
+                  label_bars: False,
+                  exclude_tick_labels: True,
+                  add_numbers: False,
+                  breakdown_legend: {
+                    prop: {size: 5,},
+                    loc: center right,
                     ncol: 1,
                   }
                 },
@@ -184,10 +217,11 @@ schemes:
                 stat: cache_accesses,
                 benchmarks: 'filemicro_rand_4k',
                 options: {
-                  label: "B) Relative total\ncache accesses",
+                  label: "C) Total\ncache accesses",
                   label_bars: False,
                   exclude_tick_labels: False,
                   add_numbers: False,
+                  tick_format: "%.0g",
                 },
               },
               {
@@ -198,7 +232,7 @@ schemes:
                 benchmarks: 'filemicro_rand_4k',
                 options: {
                   xscale: symlog,
-                  label: "C) Relative\nLLC accesses",
+                  label: "D) LLC Accesses",
                   label_bars: False,
                   exclude_tick_labels: True,
                   add_numbers: False,
@@ -212,7 +246,21 @@ schemes:
                 benchmarks: 'filemicro_rand_4k',
                 options: {
                   xscale: symlog,
-                  label: "D) Relative\nLLC hit/miss ratio",
+                  label: "E) LLC Misses",
+                  label_bars: False,
+                  exclude_tick_labels: True,
+                  add_numbers: False,
+                },
+              },
+              {
+                pos: [1, 3],
+                size: [1, 1],
+                type: single_stat,
+                stat: tlb_misses,
+                benchmarks: 'filemicro_rand_4k',
+                options: {
+                  xscale: symlog,
+                  label: "F) DTLB Misses",
                   label_bars: False,
                   exclude_tick_labels: True,
                   add_numbers: False,
@@ -232,7 +280,7 @@ schemes:
                 stat: throughput,
                 benchmarks: 'filemicro_seqwrite',
                 options: {
-                  label: "A) Sequential file append (IO size 4kB) throughput (mb/s)",
+                  label: "A) Overall throughput (mb/s)",
                   label_bars: False,
                   exclude_tick_labels: False,
                   config_legend: True,
@@ -252,7 +300,8 @@ schemes:
                 stat: kernfs_cache_accesses,
                 benchmarks: 'filemicro_seqwrite',
                 options: {
-                  label: "B) Relative total\ncache accesses",
+                  tick_format: "%.0g",
+                  label: "B) Total\ncache accesses",
                   label_bars: False,
                   exclude_tick_labels: False,
                   add_numbers: False,
@@ -266,7 +315,7 @@ schemes:
                 benchmarks: 'filemicro_seqwrite',
                 options: {
                   xscale: symlog,
-                  label: "C) Relative\nLLC accesses",
+                  label: "C) LLC accesses",
                   label_bars: False,
                   exclude_tick_labels: True,
                   add_numbers: False,
@@ -280,7 +329,7 @@ schemes:
                 benchmarks: 'filemicro_seqwrite',
                 options: {
                   xscale: symlog,
-                  label: "D) Relative\nLLC hit/miss ratio",
+                  label: "D) LLC misses",
                   label_bars: False,
                   exclude_tick_labels: True,
                   add_numbers: False,
@@ -316,55 +365,210 @@ schemes:
     file_name: mtcc.pdf
 
   filesize_singlefile:
-    dimensions: [1, 4]
+    dimensions: [2, 8]
     plots: [
               {
                 pos: [0, 0],
-                size: [1, 2],
+                size: [1, 4],
                 type: single_stat,
                 stat: throughput,
-                benchmarks: filemicro_seq_one_4k,
+                benchmarks: [filemicro_seq_one_4k, filemicro_seq_one_64k, filemicro_seq_one_1m],
+                layout_score: 1.0,
                 options: {
-                  label: "A) Sequential file read (IO size 4kB) throughput (mb/s)",
+                  label: "A) Throughput (mb/s), IO size 4kB",
                   label_bars: False,
-                  start: 3000,
                   exclude_tick_labels: False,
                   config_legend: True,
                   breakdown_legend: True,
                   add_numbers: False,
                   legend: {
-                    prop: {size: 6,},
+                    prop: {size: 4,},
                     loc: center left,
                     ncol: 1,
                   }
                 },
               },
               {
-                pos: [0, 2],
-                size: [1, 1],
+                pos: [0, 4],
+                size: [1, 4],
+                type: indexing_breakdown,
+                benchmarks: [filemicro_seq_one_4k, filemicro_seq_one_64k, filemicro_seq_one_1m],
+                layout_score: 1.0,
+                options: {
+                  label: "B) Indexing Breakdown",
+                  label_bars: False,
+                  exclude_tick_labels: True,
+                  add_numbers: False,
+                  breakdown_legend: {
+                    prop: {size: 5,},
+                    loc: center right,
+                    ncol: 1,
+                  }
+                },
+              },
+              {
+                pos: [1, 0],
+                size: [1, 2],
                 type: single_stat,
                 stat: cache_accesses,
-                benchmarks: filemicro_seq_one_4k,
+                benchmarks: [filemicro_seq_one_4k, filemicro_seq_one_64k, filemicro_seq_one_1m],
+                layout_score: 1.0,
                 options: {
-                  label: "B) Relative total\ncache accesses",
+                  label: "C) Total\ncache accesses",
                   label_bars: False,
                   exclude_tick_labels: False,
+                  add_numbers: False,
+                  tick_format: "%.1g",
+                },
+              },
+              {
+                pos: [1, 2],
+                size: [1, 2],
+                type: single_stat,
+                stat: llc_accesses,
+                benchmarks: [filemicro_seq_one_4k, filemicro_seq_one_64k, filemicro_seq_one_1m],
+                layout_score: 1.0,
+                options: {
+                  label: "D) LLC accesses",
+                  label_bars: False,
+                  exclude_tick_labels: True,
+                  add_numbers: False,
+                  xscale: symlog,
+                },
+              },
+              {
+                pos: [1, 4],
+                size: [1, 2],
+                type: single_stat,
+                stat: llc_misses,
+                benchmarks: [filemicro_seq_one_4k, filemicro_seq_one_64k, filemicro_seq_one_1m],
+                layout_score: 1.0,
+                options: {
+                  label: "E) LLC misses",
+                  label_bars: False,
+                  exclude_tick_labels: True,
                   add_numbers: False,
                 },
               },
               {
-                pos: [0, 3],
-                size: [1, 1],
+                pos: [1, 6],
+                size: [1, 2],
                 type: single_stat,
-                stat: llc_accesses,
-                benchmarks: filemicro_seq_one_4k,
+                stat: read_data_bytes_per_cycle,
+                benchmarks: [filemicro_seq_one_4k, filemicro_seq_one_64k, filemicro_seq_one_1m],
+                layout_score: 1.0,
                 options: {
-                  label: "C) Relative\nLLC accesses",
+                  label: "F) NVM bytes read\nper CPU cycle",
                   label_bars: False,
                   exclude_tick_labels: True,
                   add_numbers: False,
                 },
               },
            ]
-    print_size: [7.0, 2.0]
+    print_size: [3.5, 2.5]
     file_name: filesize_singlefile.pdf
+
+  filesize_manyfile:
+    dimensions: [2, 8]
+    plots: [
+              {
+                pos: [0, 0],
+                size: [1, 4],
+                type: single_stat,
+                stat: throughput,
+                benchmarks: [filemicro_seq_many_4k, filemicro_seq_many_64k, filemicro_seq_many_1m],
+                layout_score: 1.0,
+                options: {
+                  label: "A) Throughput (mb/s), IO size 4kB",
+                  label_bars: False,
+                  exclude_tick_labels: False,
+                  config_legend: True,
+                  breakdown_legend: True,
+                  add_numbers: False,
+                  legend: {
+                    prop: {size: 4,},
+                    loc: center left,
+                    ncol: 1,
+                  }
+                },
+              },
+              {
+                pos: [0, 4],
+                size: [1, 4],
+                type: indexing_breakdown,
+                benchmarks: [filemicro_seq_many_4k, filemicro_seq_many_64k, filemicro_seq_many_1m],
+                layout_score: 1.0,
+                options: {
+                  label: "B) Indexing Breakdown",
+                  label_bars: False,
+                  exclude_tick_labels: True,
+                  add_numbers: False,
+                  breakdown_legend: {
+                    prop: {size: 5,},
+                    loc: center right,
+                    ncol: 1,
+                  }
+                },
+              },
+              {
+                pos: [1, 0],
+                size: [1, 2],
+                type: single_stat,
+                stat: cache_accesses,
+                benchmarks: [filemicro_seq_many_4k, filemicro_seq_many_64k, filemicro_seq_many_1m],
+                layout_score: 1.0,
+                options: {
+                  label: "B) Total\ncache accesses",
+                  label_bars: False,
+                  exclude_tick_labels: False,
+                  add_numbers: False,
+                  tick_format: "%.1g",
+                },
+              },
+              {
+                pos: [1, 2],
+                size: [1, 2],
+                type: single_stat,
+                stat: llc_accesses,
+                benchmarks: [filemicro_seq_many_4k, filemicro_seq_many_64k, filemicro_seq_many_1m],
+                layout_score: 1.0,
+                options: {
+                  label: "C) LLC accesses",
+                  label_bars: False,
+                  exclude_tick_labels: True,
+                  add_numbers: False,
+                  xscale: symlog,
+                },
+              },
+              {
+                pos: [1, 4],
+                size: [1, 2],
+                type: single_stat,
+                stat: llc_misses,
+                benchmarks: [filemicro_seq_many_4k, filemicro_seq_many_64k, filemicro_seq_many_1m],
+                layout_score: 1.0,
+                options: {
+                  label: "D) LLC misses",
+                  label_bars: False,
+                  exclude_tick_labels: True,
+                  add_numbers: False,
+                },
+              },
+              {
+                pos: [1, 6],
+                size: [1, 2],
+                type: single_stat,
+                stat: read_data_bytes_per_cycle,
+                benchmarks: [filemicro_seq_many_4k, filemicro_seq_many_64k, filemicro_seq_many_1m],
+                layout_score: 1.0,
+                options: {
+                  label: "E) NVM bytes read\nper CPU cycle",
+                  label_bars: False,
+                  exclude_tick_labels: True,
+                  add_numbers: False,
+                },
+              },
+           ]
+    print_size: [3.5, 2.5]
+    file_name: filesize_manyfile.pdf
+

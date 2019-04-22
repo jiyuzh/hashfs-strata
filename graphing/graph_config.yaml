@@ -5,6 +5,23 @@ display_options:
     extent_trees: Extent Trees
     level_hash_tables: Level Hash Tables
 
+  benchmark_names:
+    filemicro_seq_one_4k: 4kB
+    filemicro_seq_one_64k: 64kB
+    filemicro_seq_one_1m: 1MB
+    filemicro_seq_many_4k: 4kB
+    filemicro_seq_many_64k: 64kB
+    filemicro_seq_many_1m: 1MB
+
+  breakdown_names:
+    indexing: Indexing
+    read_data: Read Data
+
+  benchmark_order:
+    - 1MB
+    - 64kB
+    - 4kB
+
   config_colors:
     Global Hash Table: '#8dd3c7'
     Radix Trees: '#ffffb3'

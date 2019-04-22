@@ -49,11 +49,15 @@ class IDXGrapher:
         config_set = layout['config_set'] if 'config_set' in layout else 'default'
         dfs = self.data.filter_configs(self.config_sets[config_set], dfs)
         dfs = self.data.reorder_data_frames(dfs)
-        dfs = self.data.filter_stats(layout['stat'], dfs)
+        if 'stat' in layout:
+            dfs = self.data.filter_stats(layout['stat'], dfs)
+        elif 'stats' in layout:
+            dfs = self.data.filter_stats(layout['stats'], dfs)
+        if 'layout_score' in layout:
+            dfs = self.data.filter_layout_score(layout['layout_score'], dfs)
         if 'benchmarks' in layout:
             dfs = self.data.filter_benchmarks(layout['benchmarks'], dfs)
 
-        print(layout['stat'])
         print(dfs)
 
         means_df = None
@@ -135,9 +139,29 @@ class IDXGrapher:
         dfs = self.data.filter_configs(self.config_sets[config_set], dfs)
         dfs = self.data.filter_stats(['indexing', 'read_data'], dfs)
         if 'benchmarks' in layout:
-            bench_dfs = dfs[layout['benchmarks']]
-            bench_dfs = { k: v.T for k, v in bench_dfs.items()}
-            dfs = pd.concat(bench_dfs).swaplevel(0, 1)
+            if isinstance(layout['benchmarks'], list):
+                assert 'layout_score' in layout
+                bench_dfs = { b: dfs[b] for b in layout['benchmarks'] }
+                compact = {}
+                for b, data_dict in bench_dfs.items():
+                    compact[b] = pd.concat(data_dict)[str(layout['layout_score'])].T.rename(b)
+                #bench_dfs = dfs[layout['benchmarks']]
+                #bench_dfs = {b: dfs[b] for b in layout['benchmarks']}
+                bench_dfs = { k: v.T for k, v in compact.items()}
+                dfs = pd.concat(bench_dfs).swaplevel(0, 1)
+
+                reorg = defaultdict(dict)
+                for idx, data in dfs.groupby(level=0):
+                    data.index = data.index.droplevel()
+                    df = data.unstack()
+                    reorg[idx] = df
+
+                dfs = pd.concat(reorg).swaplevel(0, 1)
+
+            else:
+                bench_dfs = dfs[layout['benchmarks']]
+                bench_dfs = { k: v.T for k, v in bench_dfs.items()}
+                dfs = pd.concat(bench_dfs).swaplevel(0, 1)
 
         options = layout['options']
         if 'average' in options and options['average']:

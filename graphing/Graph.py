@@ -14,6 +14,7 @@ import matplotlib.patheffects as PathEffects
 from matplotlib.font_manager import FontProperties
 from matplotlib.patches import Patch
 from matplotlib.gridspec import GridSpec, GridSpecFromSubplotSpec
+from matplotlib.ticker import FormatStrFormatter
 import matplotlib.ticker as ticker
 from pathlib import Path
 from pprint import pprint
@@ -59,6 +60,18 @@ class Grapher:
             return self.config['display_options']['config_names'][name]
         return config_name
 
+    def _get_benchmark_name(self, config_name):
+        name = config_name.lower()
+        if name in self.config['display_options']['benchmark_names']:
+            return self.config['display_options']['benchmark_names'][name]
+        return config_name
+
+    def _get_reason_name(self, rname):
+        name = rname.lower()
+        if name in self.config['display_options']['breakdown_names']:
+            return self.config['display_options']['breakdown_names'][name]
+        return rname
+
     def _get_config_color(self, config_name):
         name = self._get_config_name(config_name)
         color = '#000000'
@@ -74,16 +87,25 @@ class Grapher:
             order = order_list.index(name)
         return order
 
-    @staticmethod
-    def _clean_benchmark_names(benchmark_names):
-        return benchmark_names
+    def _get_index_order(self, config_name):
+        name = self._get_config_name(config_name)
+        order_list = self.config['display_options']['benchmark_order']
+        order = len(order_list)
+        if name in order_list:
+            order = order_list.index(name)
+        return order
+
+    def _clean_benchmark_names(self, benchmark_names):
+        bnames = self.config['display_options']['benchmark_names'] \
+                if 'benchmark_names' in self.config['display_options'] \
+                else []
         new_names = []
-        for b in benchmark_names:
-            try:
-                bench = b.split('.')[1].split('_')[0]
-                new_names += [bench]
-            except:
-                new_names += [b]
+        for name in benchmark_names:
+            name = name.lower()
+            if name in bnames:
+                new_names += [bnames[name]]
+            else:
+                new_names += [name]
         return new_names
 
     @staticmethod
@@ -104,11 +126,23 @@ class Grapher:
 
     def _reorder_configs(self, df):
         columns = df.columns.unique(0).tolist()
-        order_fn = lambda s: self._get_config_order(s)
-        sorted_columns = sorted(columns, key=order_fn)
-        return df[sorted_columns]
+        index = df.index.tolist()
+        df.index = self._clean_benchmark_names(index)
+        index = df.index.tolist()
+        order_col_fn = lambda s: self._get_config_order(s)
+        order_idx_fn = lambda s: self._get_index_order(s)
+        sorted_columns = sorted(columns, key=order_col_fn)
+        sorted_index   = sorted(index, key=order_idx_fn)
 
-        return all_means, all_error, all_perct, labels
+        new_df = df[sorted_columns].reindex(index=sorted_index)
+
+        if df.columns.nlevels > 1:
+            level_two = self._clean_benchmark_names(new_df.columns.unique(1).tolist())
+            new_df.columns = new_df.columns.set_levels(level_two, level=1)
+            sorted_level_two = sorted(level_two, key=order_idx_fn)
+            new_df = new_df.reindex(columns=sorted_level_two, level=1)
+
+        return new_df
 
     def _kwargs_bool(self, kwargs_dict, field):
         if field not in kwargs_dict or not kwargs_dict[field]:
@@ -127,7 +161,7 @@ class Grapher:
         all_means = self._rename_configs(self._reorder_configs(means_df))
         all_error = self._rename_configs(self._reorder_configs(ci_df))
         all_perct = None
-        labels = means_df.index
+        labels = all_means.index.tolist()
 
         if self._kwargs_bool(kwargs, 'error_bars'):
             threshold = 0.05
@@ -189,7 +223,7 @@ class Grapher:
             axis.set_ylim(min_y_pos, max_y_pos)
 
         artist = []
-        labels = self._clean_benchmark_names(labels)
+        #labels = self._clean_benchmark_names(labels)
 
         ax.invert_yaxis()
         major_tick = max(float(int(cutoff / 10.0)), 1.0)
@@ -234,9 +268,19 @@ class Grapher:
         plt.xscale(self._kwargs_default(kwargs, 'xscale', 'linear'))
 
         if 'xscale' in kwargs and 'symlog' in kwargs['xscale']:
-            locmin = ticker.LogLocator(base=10.0, subs=(0.1,0.2,0.4,0.6,0.8,1,2,4,6,8,10 ))
+            #locmin = ticker.LogLocator(base=10.0, subs=(0.1,0.2,0.4,0.6,0.8,1,2,4,6,8,10 ))
+            locmin = ticker.NullLocator()
             ax.xaxis.set_minor_locator(locmin)
             ax.xaxis.set_minor_formatter(ticker.NullFormatter())
+            #locmaj = ticker.LogLocator(base=100.0, subs=(1.0,), numdecs=0)
+            locmaj = ticker.FixedLocator(locs=[1, 100, 10000, 1000000, 100000000])
+            ax.xaxis.set_major_locator(locmaj)
+            #ax.xaxis.set_major_formatter(ticker.FuncFormatter(
+            #    lambda x, _: '%.0g' % (x) if x >= 0 else ''))
+            ax.xaxis.set_major_formatter(ticker.LogFormatterMathtext())
+
+        if self._kwargs_has(kwargs, 'tick_format'):
+            ax.xaxis.set_major_formatter(FormatStrFormatter(kwargs['tick_format']))
 
         if self._kwargs_bool(kwargs, 'exclude_tick_labels'):
             plt.yticks(ticks=range(len(labels)), labels=['']*len(labels))
@@ -278,9 +322,6 @@ class Grapher:
     def graph_grouped_stacked_bars(self, dataframes, axis, **kwargs):
         dataframes = self._rename_multi_index(dataframes)
 
-        df_list   = [ df for name, df in dataframes.items()   ]
-        df_labels = [ name for name, df in dataframes.items() ]
-
         num_bench = dataframes.index.levshape[0]
         # reversed for top to bottom
         index = np.arange(num_bench)[::-1]
@@ -294,7 +335,11 @@ class Grapher:
         dfs = self._reorder_configs(dfs)
 
         n = 0.0
-        num_slots = float(len(dfs.columns.unique(0)) + 1)
+        num_slots = 0
+        if isinstance(dfs, pd.DataFrame):
+            num_slots = float(len(dfs.columns.unique(0)) + 1)
+        else:
+            num_slots = len(dfs) + 1
         width = 1.0 / num_slots
         print(num_slots, width)
 
@@ -306,8 +351,8 @@ class Grapher:
         reason_patches = []
         for config in dfs.columns.unique(0):
             bottom = None
-            df = dfs[config].T.sort_index(ascending=False)
-            print(df)
+            #df = dfs[config].T.sort_index(ascending=False)
+            df = dfs[config].T
 
             config_color = np.array(self._get_config_color(config))
             reason_index = 0
@@ -353,13 +398,15 @@ class Grapher:
                     txt2.set_path_effects([PathEffects.withStroke(linewidth=1, foreground='black')])
 
                 if labels is None:
-                    labels = sorted(df[reason].index, reverse=False)
+                    #labels = sorted(df[reason].index, reverse=False)
+                    labels = df[reason].index.tolist()[::-1]
 
             config_patches += [Patch(facecolor=config_color, edgecolor='black',
                                      label=config)]
 
             if len(reason_patches) == 0:
                 for reason, hatch, i in zip(df.columns, hatches, itertools.count()):
+                    reason = self._get_reason_name(reason)
                     reason_patches += [Patch(facecolor='white',
                                              edgecolor='black',
                                              hatch=hatch,
