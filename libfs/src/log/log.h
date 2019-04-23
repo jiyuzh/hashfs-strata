@@ -83,20 +83,26 @@ static inline void set_digesting(void)
 		//if (!xchg_8(&g_fs_log->digesting, 1)) 
 		if (!cmpxchg(&g_fs_log->digesting, 0, 1)) 
 			return;
-
 		while (g_fs_log->digesting) 
 			cpu_relax();
+
 	}
 }
 
 static inline void clear_digesting(void)
 {
+	if (cmpxchg(&g_fs_log->digesting, 1, 0)) {
+		return;
+	}
+	else {
+		panic("clear digesting twice");
+	}
 	while (1) {
 		//if (!xchg_8(&g_fs_log->digesting, 1)) 
 		if (cmpxchg(&g_fs_log->digesting, 1, 0)) 
 			return;
 
-		while (g_fs_log->digesting) 
+		while (!(g_fs_log->digesting))
 			cpu_relax();
 	}
 }
