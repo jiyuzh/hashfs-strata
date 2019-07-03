@@ -10,14 +10,16 @@ EXE = iotest file_basic small_io falloc_test ftrunc_test lock_test lock_perf \
 CUR_DIR = $(shell pwd)
 GLIBC_DIR = $(CUR_DIR)/../../shim/glibc-build/
 LIBFS_DIR = $(CUR_DIR)/../build/
-NVML_DIR = $(LIBFS_DIR)/../lib/nvml/src/nondebug/
+#NVML_DIR = $(LIBFS_DIR)/../lib/nvml/src/nondebug/
+NVML_DIR = 
 CUCKOO_DIR = $(LIBFS_DIR)/../lib/cuckoofilter
 LIBFS=$(LIBFS_DIR)/libmlfs.a
 LIBSPDK_DIR =../src/storage/spdk/
 LIBSPDK=../src/storage/spdk/libspdk.so
 LIBSPDK_INC=../src/storage/spdk/
 
-INCLUDES= $(LIBFS_DIR)/../src -I$(CUR_DIR)/../lib/nvml/src/include
+#INCLUDES= $(LIBFS_DIR)/../src -I$(CUR_DIR)/../lib/nvml/src/include
+INCLUDES= $(LIBFS_DIR)/../src 
 DAX_OBJ = ../build/storage/storage_dax.o
 
 DPDK_VER := 16.07.2
@@ -42,7 +44,7 @@ LDFLAGS = -Wl,-rpath=$(abspath $(GLIBC_DIR)) \
 		  -Wl,-rpath=/lib/x86_64-linux-gnu/ \
 		  -Wl,-rpath=/lib64 \
 		  -Wl,-dynamic-linker=$(abspath $(GLIBC_DIR))/ld-linux-x86-64.so.2 \
-		  -lpthread -lrt -lm
+		  -lpthread -lrt -lm -lpmem -lpmemobj
 
 all: $(EXE)
 

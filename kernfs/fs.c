@@ -22,6 +22,7 @@
 #include "thpool.h"
 
 #include "inode_hash.h"
+#include "hashtable/ghash.h"
 
 #define _min(a, b) ({\
 		__typeof__(a) _a = a;\
@@ -656,7 +657,7 @@ int digest_file(uint8_t from_dev, uint8_t to_dev, uint32_t file_inum,
 		map.m_pblk = 0;
 		map.m_len = nr_blocks - nr_digested_blocks;
 		map.m_flags = 0;
-
+		printf("len1: %u\n", map.m_len);
 		// find block address of offset and update extent tree
 		if (to_dev == g_ssd_dev || to_dev == g_hdd_dev) {
 			//make kernelFS do log-structured update.
@@ -668,6 +669,8 @@ int digest_file(uint8_t from_dev, uint8_t to_dev, uint32_t file_inum,
 					MLFS_GET_BLOCKS_CREATE_DATA);
 		}
 
+		printf("len2: %u\n", map.m_len);
+		printf("hi: %u\n", sb[g_root_dev]->ondisk->datablock_start);
 		mlfs_assert(map.m_pblk != 0);
 
 		mlfs_assert(nr_block_get <= (nr_blocks - nr_digested_blocks));
@@ -2002,6 +2005,7 @@ static void wait_for_event(void)
 void shutdown_fs(void)
 {
 	printf("Finalize FS\n");
+	nvm_hash_table_close();
 	if (enable_perf_stats)
 		close(prof_fd);
 
@@ -2139,7 +2143,11 @@ void init_fs(void)
 #endif
 
     if (IDXAPI_IS_GLOBAL()) {
-        init_hash(sb[g_root_dev]);
+        // init_hash(sb[g_root_dev]);
+	struct super_block *sblk = sb[g_root_dev];
+	getchar();
+	nvm_hash_table_new(NULL, sblk->ondisk->ndatablocks);
+	getchar();
     }
 
 	inode_version_table =

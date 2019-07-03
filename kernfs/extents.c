@@ -11,7 +11,7 @@
 
 #include "cache_stats.h"
 #include "inode_hash.h"
-
+#include "hashtable/ghash.h"
 /*
  * used by extent splitting.
  */
@@ -2772,6 +2772,7 @@ static mlfs_lblk_t mlfs_ext_determine_hole(handle_t *handle, struct inode *inode
  * return < 0, error case.
  *
  */
+#if 0
 int mlfs_ext_get_blocks(handle_t *handle, struct inode *inode,
 			struct mlfs_map_blocks *map, int flags)
 {
@@ -3131,7 +3132,44 @@ out2:
 
 	return err ? err : allocated;
 }
+#else
 
+int mlfs_ext_get_blocks(handle_t *handle, struct inode *inode,
+			struct mlfs_map_blocks *map, int flags)
+{
+	//assume *handle = 1
+	int create = flags & MLFS_GET_BLOCKS_CREATE_DATA;
+	printf("INSIDE\n");
+	if(IDXAPI_IS_GLOBAL()) {
+		paddr_t key = (((paddr_t) (inode->inum)) << 32) + ((paddr_t) (map->m_lblk));
+		//paddr_t *index = (paddr_t*)malloc(sizeof(paddr_t));
+		paddr_t index;
+		if(create) {
+			int already_exists = nvm_hash_table_insert(key, &index);
+			if(already_exists) {
+				//block already existed, so this does nothing
+				printf("block already existed\n");
+			}
+		}
+		else {
+			int found = nvm_hash_table_lookup(key, &index);
+		       	if(!found) {
+				//did not find the requested block
+				printf("block not found\n");
+			}	
+		}
+		struct super_block *sblk = sb[g_root_dev];
+		map->m_pblk = index + sblk->ondisk->datablock_start;
+		printf("HEELOOO\n");
+		printf("map->m_pblk: %d\n", map->m_pblk);
+		map->m_len = 3;
+	}
+	//not sure what to return
+	return map->m_len;		
+}
+#endif
+
+#if 0
 int mlfs_ext_truncate(handle_t *handle, struct inode *inode,
 		mlfs_lblk_t start, mlfs_lblk_t end)
 {
@@ -3198,3 +3236,25 @@ int mlfs_ext_truncate(handle_t *handle, struct inode *inode,
 
 	return ret;
 }
+#else
+
+int mlfs_ext_truncate(handle_t *handle, struct inode *inode,
+		mlfs_lblk_t start, mlfs_lblk_t end)
+{		
+	int ret;
+	if(IDXAPI_IS_GLOBAL()) {
+		//remove
+		paddr_t key = (((paddr_t) (inode->inum)) << 32) + start;
+		paddr_t index;
+
+		int success = nvm_hash_table_remove(key, &index);
+		if(!success) {
+			printf("block not found\n");
+		}
+
+
+	}
+	//not sure what to return
+	return 0; //success or failure
+}
+#endif

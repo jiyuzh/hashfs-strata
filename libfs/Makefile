@@ -36,7 +36,8 @@ OBJ       := $(patsubst src/%.c,$(PREFIX)/%.o,$(SRC))
 ########
 #  Lib directories
 ########
-NVML_DIR := $(abspath $(CURDIR)/lib/nvml/src)
+#NVML_DIR := $(abspath $(CURDIR)/lib/nvml/src)
+NVML_DIR :=
 SPDK_DIR := $(abspath $(CURDIR)/lib/spdk)
 LIBSPDK_DIR := $(abspath $(CURDIR)/src/storage/spdk/)
 JEMALLOC_DIR := $(abspath $(CURDIR)/lib/jemalloc-4.5.0)
@@ -45,7 +46,7 @@ API_DIR := $(abspath ../../nvm-file-indexing/api)
 
 INCLUDES := $(addprefix -I,src/ $(LIBSPDK_DIR) $(NVML_DIR)/include $(C_LIBCUCKOO_DIR) $(API_DIR))
 
-LD_FLAGS = -lpthread -lm -L$(NVML_DIR)/nondebug/ -lpmem -lrt \
+LD_FLAGS = -lpthread -lm -L$(NVML_DIR)/nondebug/ -lpmem -lpmemobj -lrt \
 	-Wl,-rpath=$(abspath $(API_DIR)/build) -L$(abspath $(API_DIR)/build) -lNVMIndexingAPI
 
 #-Wl,-fuse-ld=gold

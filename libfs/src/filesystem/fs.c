@@ -19,6 +19,7 @@
 
 #include "filesystem/cache_stats.h"
 
+#include "hashtable/ghash.h"
 #include "inode_hash.h"
 
 #define _min(a, b) ({\
@@ -195,7 +196,7 @@ void shutdown_fs(void)
 {
   int ret;
   int _enable_perf_stats = enable_perf_stats;
-
+  nvm_hash_table_close();	
   if (!strata_initialized) {
     return;
   }
@@ -414,7 +415,9 @@ void init_fs(void)
     read_root_inode(g_root_dev);
 
     if (IDXAPI_IS_GLOBAL()) {
-        init_hash(sb[g_root_dev]);
+        //init_hash(sb[g_root_dev]);
+	struct super_block *sblk = sb[g_root_dev];
+	nvm_hash_table_new(NULL, sblk->ondisk->ndatablocks);	
     }
 
     mlfs_info("LibFS is initialized with id %d\n", g_log_dev);
