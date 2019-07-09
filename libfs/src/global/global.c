@@ -14,6 +14,9 @@ indexing_choice_t get_indexing_choice(void) {
     } else if (env != NULL && !strcmp(env, "GLOBAL_HASH_TABLE")) {
         printf("%s -> using API global hash table!\n", env);
         return GLOBAL_HASH_TABLE;
+    } else if (env != NULL && !strcmp(env, "HASHFS")) {
+        printf("%s -> using API hash fs!\n", env);
+        return HASHFS;
     } else if (env != NULL && !strcmp(env, "LEVEL_HASH_TABLES")) {
         printf("%s -> using API per-file level hashing!\n", env);
         return LEVEL_HASH_TABLES;

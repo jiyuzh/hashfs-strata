@@ -413,10 +413,12 @@ void init_fs(void)
 
     // read root inode in NVM
     read_root_inode(g_root_dev);
+    if(IDXAPI_IS_HASHFS()) {
+      struct super_block *sblk = sb[g_root_dev];
+	    pmem_nvm_hash_table_new(NULL, sblk->ondisk->ndatablocks);	
+    }
     if (IDXAPI_IS_GLOBAL()) {
-        //init_hash(sb[g_root_dev]);
-	struct super_block *sblk = sb[g_root_dev];
-	pmem_nvm_hash_table_new(NULL, sblk->ondisk->ndatablocks);	
+        init_hash(sb[g_root_dev]);
     }
 
     mlfs_info("LibFS is initialized with id %d\n", g_log_dev);

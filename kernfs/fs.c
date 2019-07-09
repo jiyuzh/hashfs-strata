@@ -2138,12 +2138,13 @@ void init_fs(void)
 	read_superblock(g_hdd_dev);
 	balloc_init(g_hdd_dev, sb[g_hdd_dev]);
 #endif
-
+	if(IDXAPI_IS_HASHFS()) {
+		struct super_block *sblk = sb[g_root_dev];
+		getchar();
+		pmem_nvm_hash_table_new(NULL, sblk->ondisk->ndatablocks);
+	}
     if (IDXAPI_IS_GLOBAL()) {
-        // init_hash(sb[g_root_dev]);
-	struct super_block *sblk = sb[g_root_dev];
-	getchar();
-	pmem_nvm_hash_table_new(NULL, sblk->ondisk->ndatablocks);
+        init_hash(sb[g_root_dev]);
     }
 
 	inode_version_table =

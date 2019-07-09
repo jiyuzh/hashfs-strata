@@ -2772,10 +2772,38 @@ static mlfs_lblk_t mlfs_ext_determine_hole(handle_t *handle, struct inode *inode
  * return < 0, error case.
  *
  */
-#if 0
+
 int mlfs_ext_get_blocks(handle_t *handle, struct inode *inode,
 			struct mlfs_map_blocks *map, int flags)
 {
+
+	if(IDXAPI_IS_HASHFS()) {
+		int create = flags & MLFS_GET_BLOCKS_CREATE_DATA;
+	
+		paddr_t key = (((paddr_t) (inode->inum)) << 32) + ((paddr_t) (map->m_lblk));
+		//paddr_t *index = (paddr_t*)malloc(sizeof(paddr_t));
+		paddr_t index;
+		if(create) {
+			int success = pmem_nvm_hash_table_insert(key, &index);
+			if(!success) {
+				//block already existed, so this does nothing
+				printf("block already existed\n");
+			}
+		}
+		else {
+			int found = pmem_nvm_hash_table_lookup(key, &index);
+				if(!found) {
+				//did not find the requested block
+				printf("block not found\n");
+			}	
+		}
+		struct super_block *sblk = sb[g_root_dev];
+		map->m_pblk = index + sblk->ondisk->datablock_start;
+		printf("map->m_pblk: %d\n", map->m_pblk);
+		map->m_len = 1;
+		return map->m_len;		
+	}
+
 	struct mlfs_ext_path *path = NULL;
 	struct mlfs_extent newex, *ex;
 	int goal, err = 0, depth;
@@ -3132,45 +3160,25 @@ out2:
 
 	return err ? err : allocated;
 }
-#else
 
-int mlfs_ext_get_blocks(handle_t *handle, struct inode *inode,
-			struct mlfs_map_blocks *map, int flags)
-{
-	//assume *handle = 1
-	int create = flags & MLFS_GET_BLOCKS_CREATE_DATA;
-	if(IDXAPI_IS_GLOBAL()) {
-		paddr_t key = (((paddr_t) (inode->inum)) << 32) + ((paddr_t) (map->m_lblk));
-		//paddr_t *index = (paddr_t*)malloc(sizeof(paddr_t));
-		paddr_t index;
-		if(create) {
-			int success = pmem_nvm_hash_table_insert(key, &index);
-			if(!success) {
-				//block already existed, so this does nothing
-				printf("block already existed\n");
-			}
-		}
-		else {
-			int found = pmem_nvm_hash_table_lookup(key, &index);
-		       	if(!found) {
-				//did not find the requested block
-				printf("block not found\n");
-			}	
-		}
-		struct super_block *sblk = sb[g_root_dev];
-		map->m_pblk = index + sblk->ondisk->datablock_start;
-		printf("map->m_pblk: %d\n", map->m_pblk);
-		map->m_len = 1;
-	}
-	//not sure what to return
-	return map->m_len;		
-}
-#endif
-
-#if 0
 int mlfs_ext_truncate(handle_t *handle, struct inode *inode,
 		mlfs_lblk_t start, mlfs_lblk_t end)
 {
+
+	if(IDXAPI_IS_HASHFS()) {
+		int ret;
+	
+		//remove
+		paddr_t key = (((paddr_t) (inode->inum)) << 32) + start;
+		paddr_t index;
+
+		int success = pmem_nvm_hash_table_remove(key, &index);
+		if(!success) {
+			printf("block not found\n");
+		}
+		//not sure what to return
+		return 0; //success or failure
+	}
 	int ret;
     static bool notify = false;
 
@@ -3234,25 +3242,5 @@ int mlfs_ext_truncate(handle_t *handle, struct inode *inode,
 
 	return ret;
 }
-#else
-
-int mlfs_ext_truncate(handle_t *handle, struct inode *inode,
-		mlfs_lblk_t start, mlfs_lblk_t end)
-{		
-	int ret;
-	if(IDXAPI_IS_GLOBAL()) {
-		//remove
-		paddr_t key = (((paddr_t) (inode->inum)) << 32) + start;
-		paddr_t index;
-
-		int success = pmem_nvm_hash_table_remove(key, &index);
-		if(!success) {
-			printf("block not found\n");
-		}
 
 
-	}
-	//not sure what to return
-	return 0; //success or failure
-}
-#endif
