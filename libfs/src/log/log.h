@@ -9,7 +9,7 @@
 #include "global/types.h"
 #include "global/util.h"
 #include "ds/list.h"
-#include "ds/stdatomic.h"
+#include <stdatomic.h>
 
 #include <pthread.h>
 

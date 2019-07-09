@@ -44,7 +44,7 @@ LDFLAGS = -Wl,-rpath=$(abspath $(GLIBC_DIR)) \
 		  -Wl,-rpath=/lib/x86_64-linux-gnu/ \
 		  -Wl,-rpath=/lib64 \
 		  -Wl,-dynamic-linker=$(abspath $(GLIBC_DIR))/ld-linux-x86-64.so.2 \
-		  -lpthread -lrt -lm -lpmem -lpmemobj
+		  -lpthread -lrt -lm -lpmem
 
 all: $(EXE)
 
@@ -120,6 +120,8 @@ age: age.c
 	$(CC) -g -o $@ $^ -I$(INCLUDES) -L$(LIBFS_DIR) -lmlfs $(LDFLAGS)
 
 MTCC: MTCC.c
+	$(CC) -g -o $@ $^  -I$(INCLUDES) -L$(LIBFS_DIR) -lmlfs -L$(LIBSPDK_DIR) -lspdk -DMLFS $(CFLAGS) $(LDFLAGS)
+MTCCcorrect: MTCCcorrect.c
 	$(CC) -g -o $@ $^  -I$(INCLUDES) -L$(LIBFS_DIR) -lmlfs -L$(LIBSPDK_DIR) -lspdk -DMLFS $(CFLAGS) $(LDFLAGS)
 readfile: readfile.c
 	$(CC) -g -o $@ $^  -I$(INCLUDES) -L$(LIBFS_DIR) -lmlfs -L$(LIBSPDK_DIR) -lspdk -DMLFS $(CFLAGS) $(LDFLAGS)

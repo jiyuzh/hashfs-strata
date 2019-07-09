@@ -46,7 +46,7 @@ API_DIR := $(abspath ../../nvm-file-indexing/api)
 
 INCLUDES := $(addprefix -I,src/ $(LIBSPDK_DIR) $(NVML_DIR)/include $(C_LIBCUCKOO_DIR) $(API_DIR))
 
-LD_FLAGS = -lpthread -lm -L$(NVML_DIR)/nondebug/ -lpmem -lpmemobj -lrt \
+LD_FLAGS = -lpthread -lm -L$(NVML_DIR)/nondebug/ -lpmem -lrt \
 	-Wl,-rpath=$(abspath $(API_DIR)/build) -L$(abspath $(API_DIR)/build) -lNVMIndexingAPI
 
 #-Wl,-fuse-ld=gold

@@ -6,7 +6,7 @@ for arg in $@; do
   if [ "$arg" == "debug" ]; then
     echo "debug"
     OPT_ARGS="-g -O0"
-    DEBUG_ARGS="${DEBUG_ARGS} -DMIRROR_SYSCALL"
+    DEBUG_ARGS="${DEBUG_ARGS}"
   fi
   if [ "$arg" == "verbose" ]; then
     echo "verbose"

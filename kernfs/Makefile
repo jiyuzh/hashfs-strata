@@ -40,7 +40,7 @@ API_DIR := $(abspath ../../nvm-file-indexing/api)
 
 INCLUDES  := $(addprefix -I, . $(LIBSPDK_DIR) $(NVML_DIR)/include $(CUCKOO_DIR) $(CUCKOO_FILTER_DIR)/src $(GLIB_DIR)/ $(GLIB_DIR)/glib $(C_LIBCUCKOO_DIR) $(API_DIR))
 
-LD_FLAGS = -lpthread -lm -L$(NVML_DIR)/nondebug/ -lpmem -lpmemobj -lrt -ljson-c\
+LD_FLAGS = -lpthread -lm -L$(NVML_DIR)/nondebug/ -lpmem -lrt -ljson-c\
 	-Wl,-rpath=$(abspath $(GLIB_DIR)/glib/.libs) -L$(abspath $(GLIB_DIR)/glib/.libs) \
 	-Wl,-rpath=$(abspath $(API_DIR)/build) -L$(abspath $(API_DIR)/build) -lNVMIndexingAPI
 
