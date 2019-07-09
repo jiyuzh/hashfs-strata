@@ -1,0 +1,8 @@
+source build.env
+libtoolize
+aclocal
+autoheader
+automake --add-missing
+autoconf
+./configure
+make
