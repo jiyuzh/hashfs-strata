@@ -393,6 +393,8 @@ int mlfs_ext_alloc_blocks(handle_t *handle, struct inode *inode,
 
 int mlfs_ext_get_blocks(handle_t *handle, struct inode *inode,
 			struct mlfs_map_blocks *map, int flags);
+int mlfs_fs_get_blocks(handle_t *handle, struct inode *inode, 
+			struct mlfs_map_blocks_arr *map_arr, int flags);
 
 struct mlfs_ext_path *mlfs_find_extent(handle_t *handle, struct inode *inode,
 		mlfs_lblk_t block, struct mlfs_ext_path **orig_path, int flags);

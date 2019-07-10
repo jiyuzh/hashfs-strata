@@ -1078,7 +1078,7 @@ pmem_nvm_hash_table_insert_internal (paddr_t    key,
   uint32_t hash_value = pmem_ht_vol->hash_func(key);
   uint32_t node_index = hash_value % mod;
   paddr_t cur = entries[node_index];
-  printf("key: %u, hash: %u", key, hash_value); 
+  // printf("key: %u, hash: %u", key, hash_value); 
 #if 0
   if (unlikely (!HASH_IS_REAL (hash_value))) {
     hash_value = 2;
@@ -1150,7 +1150,7 @@ pmem_nvm_hash_table_insert_internal (paddr_t    key,
   //if (hash_table->do_lock) pthread_rwlock_unlock(hash_table->locks + node_index);
   *index = node_index + pmem_ht->meta_size;
   //pthread_rwlock_unlock(hash_table->cache_lock);
-  printf(", index: %u\n", node_index);
+  // printf(", index: %u\n", node_index);
   return true;
 }
 
@@ -1178,7 +1178,7 @@ pmem_nvm_hash_table_insert (paddr_t     key,
                        //size_t      size
                        )
 {
-  printf("inside ht_insert\n");
+  // printf("inside ht_insert\n");
   return pmem_nvm_hash_table_insert_internal(key, index);//, index, size);
 }
 

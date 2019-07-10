@@ -2203,6 +2203,7 @@ void init_fs(void)
 #endif
 	if(IDXAPI_IS_HASHFS()) {
 		struct super_block *sblk = sb[g_root_dev];
+		printf("getchar\n");
 		getchar();
 		pmem_nvm_hash_table_new(NULL, sblk->ondisk->ndatablocks);
 	}

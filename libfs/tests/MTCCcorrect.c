@@ -67,7 +67,8 @@ uint32_t get_unit(char c) {
 int main(int argc, char **argv) {
     int c;
     srand(time(NULL));
-    getchar();
+    printf("getchar\n");
+	getchar();
     while ((c = getopt(argc, argv, OPTSTRING)) != -1) {
         switch (c) {
             case 'b': // block_size
