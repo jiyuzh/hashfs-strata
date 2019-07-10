@@ -4,5 +4,7 @@ aclocal
 autoheader
 automake --add-missing
 autoconf
-./configure
+mkdir install
+./configure --PREFIX=install
 make
+make install

@@ -1,0 +1,1269 @@
+7174  execve("./run.sh", ["./run.sh", "./filebench", "-f", "filemicro_rand_4k.f"], 0x7ffc8c6c3f30 /* 31 vars */) = 0
+7174  brk(NULL)                         = 0x5633af6ec000
+7174  access("/etc/ld.so.nohwcap", F_OK) = -1 ENOENT (No such file or directory)
+7174  access("/etc/ld.so.preload", R_OK) = -1 ENOENT (No such file or directory)
+7174  openat(AT_FDCWD, "/etc/ld.so.cache", O_RDONLY|O_CLOEXEC) = 3
+7174  fstat(3, {st_mode=S_IFREG|0644, st_size=40628, ...}) = 0
+7174  mmap(NULL, 40628, PROT_READ, MAP_PRIVATE, 3, 0) = 0x7f478baf2000
+7174  close(3)                          = 0
+7174  access("/etc/ld.so.nohwcap", F_OK) = -1 ENOENT (No such file or directory)
+7174  openat(AT_FDCWD, "/lib/x86_64-linux-gnu/libc.so.6", O_RDONLY|O_CLOEXEC) = 3
+7174  read(3, "\177ELF\2\1\1\3\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\260\34\2\0\0\0\0\0"..., 832) = 832
+7174  fstat(3, {st_mode=S_IFREG|0755, st_size=2030544, ...}) = 0
+7174  mmap(NULL, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f478baf0000
+7174  mmap(NULL, 4131552, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f478b4e4000
+7174  mprotect(0x7f478b6cb000, 2097152, PROT_NONE) = 0
+7174  mmap(0x7f478b8cb000, 24576, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x1e7000) = 0x7f478b8cb000
+7174  mmap(0x7f478b8d1000, 15072, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7f478b8d1000
+7174  close(3)                          = 0
+7174  arch_prctl(ARCH_SET_FS, 0x7f478baf1540) = 0
+7174  mprotect(0x7f478b8cb000, 16384, PROT_READ) = 0
+7174  mprotect(0x5633aef02000, 4096, PROT_READ) = 0
+7174  mprotect(0x7f478bafc000, 4096, PROT_READ) = 0
+7174  munmap(0x7f478baf2000, 40628)     = 0
+7174  brk(NULL)                         = 0x5633af6ec000
+7174  brk(0x5633af70d000)               = 0x5633af70d000
+7174  openat(AT_FDCWD, "/usr/lib/locale/locale-archive", O_RDONLY|O_CLOEXEC) = 3
+7174  fstat(3, {st_mode=S_IFREG|0644, st_size=3004464, ...}) = 0
+7174  mmap(NULL, 3004464, PROT_READ, MAP_PRIVATE, 3, 0) = 0x7f478b206000
+7174  close(3)                          = 0
+7174  execve("/bin/bash", ["/bin/bash", "./run.sh", "./filebench", "-f", "filemicro_rand_4k.f"], 0x7ffc3afebb50 /* 31 vars */) = 0
+7174  brk(NULL)                         = 0x55af54fb1000
+7174  access("/etc/ld.so.nohwcap", F_OK) = -1 ENOENT (No such file or directory)
+7174  access("/etc/ld.so.preload", R_OK) = -1 ENOENT (No such file or directory)
+7174  openat(AT_FDCWD, "/etc/ld.so.cache", O_RDONLY|O_CLOEXEC) = 3
+7174  fstat(3, {st_mode=S_IFREG|0644, st_size=40628, ...}) = 0
+7174  mmap(NULL, 40628, PROT_READ, MAP_PRIVATE, 3, 0) = 0x7f1b09adb000
+7174  close(3)                          = 0
+7174  access("/etc/ld.so.nohwcap", F_OK) = -1 ENOENT (No such file or directory)
+7174  openat(AT_FDCWD, "/lib/x86_64-linux-gnu/libtinfo.so.5", O_RDONLY|O_CLOEXEC) = 3
+7174  read(3, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\220\311\0\0\0\0\0\0"..., 832) = 832
+7174  fstat(3, {st_mode=S_IFREG|0644, st_size=170784, ...}) = 0
+7174  mmap(NULL, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f1b09ad9000
+7174  mmap(NULL, 2267936, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f1b09694000
+7174  mprotect(0x7f1b096b9000, 2097152, PROT_NONE) = 0
+7174  mmap(0x7f1b098b9000, 20480, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x25000) = 0x7f1b098b9000
+7174  close(3)                          = 0
+7174  access("/etc/ld.so.nohwcap", F_OK) = -1 ENOENT (No such file or directory)
+7174  openat(AT_FDCWD, "/lib/x86_64-linux-gnu/libdl.so.2", O_RDONLY|O_CLOEXEC) = 3
+7174  read(3, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0P\16\0\0\0\0\0\0"..., 832) = 832
+7174  fstat(3, {st_mode=S_IFREG|0644, st_size=14560, ...}) = 0
+7174  mmap(NULL, 2109712, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f1b09490000
+7174  mprotect(0x7f1b09493000, 2093056, PROT_NONE) = 0
+7174  mmap(0x7f1b09692000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x2000) = 0x7f1b09692000
+7174  close(3)                          = 0
+7174  access("/etc/ld.so.nohwcap", F_OK) = -1 ENOENT (No such file or directory)
+7174  openat(AT_FDCWD, "/lib/x86_64-linux-gnu/libc.so.6", O_RDONLY|O_CLOEXEC) = 3
+7174  read(3, "\177ELF\2\1\1\3\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\260\34\2\0\0\0\0\0"..., 832) = 832
+7174  fstat(3, {st_mode=S_IFREG|0755, st_size=2030544, ...}) = 0
+7174  mmap(NULL, 4131552, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f1b0909f000
+7174  mprotect(0x7f1b09286000, 2097152, PROT_NONE) = 0
+7174  mmap(0x7f1b09486000, 24576, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x1e7000) = 0x7f1b09486000
+7174  mmap(0x7f1b0948c000, 15072, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7f1b0948c000
+7174  close(3)                          = 0
+7174  mmap(NULL, 12288, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f1b09ad6000
+7174  arch_prctl(ARCH_SET_FS, 0x7f1b09ad6740) = 0
+7174  mprotect(0x7f1b09486000, 16384, PROT_READ) = 0
+7174  mprotect(0x7f1b09692000, 4096, PROT_READ) = 0
+7174  mprotect(0x7f1b098b9000, 16384, PROT_READ) = 0
+7174  mprotect(0x55af54679000, 16384, PROT_READ) = 0
+7174  mprotect(0x7f1b09ae5000, 4096, PROT_READ) = 0
+7174  munmap(0x7f1b09adb000, 40628)     = 0
+7174  openat(AT_FDCWD, "/dev/tty", O_RDWR|O_NONBLOCK) = 3
+7174  close(3)                          = 0
+7174  brk(NULL)                         = 0x55af54fb1000
+7174  brk(0x55af54fd2000)               = 0x55af54fd2000
+7174  openat(AT_FDCWD, "/usr/lib/locale/locale-archive", O_RDONLY|O_CLOEXEC) = 3
+7174  fstat(3, {st_mode=S_IFREG|0644, st_size=3004464, ...}) = 0
+7174  mmap(NULL, 3004464, PROT_READ, MAP_PRIVATE, 3, 0) = 0x7f1b08dc1000
+7174  close(3)                          = 0
+7174  getuid()                          = 0
+7174  getgid()                          = 0
+7174  geteuid()                         = 0
+7174  getegid()                         = 0
+7174  rt_sigprocmask(SIG_BLOCK, NULL, [], 8) = 0
+7174  ioctl(-1, TIOCGPGRP, 0x7ffce7764fe4) = -1 EBADF (Bad file descriptor)
+7174  sysinfo({uptime=1290, loads=[11296, 7552, 2368], totalram=6240157696, freeram=4845801472, sharedram=210485248, bufferram=84779008, totalswap=2147479552, freeswap=2147479552, procs=391, totalhigh=0, freehigh=0, mem_unit=1}) = 0
+7174  rt_sigaction(SIGCHLD, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER|SA_RESTART, sa_restorer=0x7f1b090ddf20}, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0
+7174  rt_sigaction(SIGCHLD, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER|SA_RESTART, sa_restorer=0x7f1b090ddf20}, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER|SA_RESTART, sa_restorer=0x7f1b090ddf20}, 8) = 0
+7174  rt_sigaction(SIGINT, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0
+7174  rt_sigaction(SIGINT, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, 8) = 0
+7174  rt_sigaction(SIGQUIT, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0
+7174  rt_sigaction(SIGQUIT, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, 8) = 0
+7174  rt_sigaction(SIGTSTP, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0
+7174  rt_sigaction(SIGTSTP, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, 8) = 0
+7174  rt_sigaction(SIGTTIN, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0
+7174  rt_sigaction(SIGTTIN, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, 8) = 0
+7174  rt_sigaction(SIGTTOU, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0
+7174  rt_sigaction(SIGTTOU, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, 8) = 0
+7174  rt_sigprocmask(SIG_BLOCK, NULL, [], 8) = 0
+7174  rt_sigaction(SIGQUIT, {sa_handler=SIG_IGN, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, 8) = 0
+7174  uname({sysname="Linux", nodename="uberic", ...}) = 0
+7174  stat("/home/ereshiple/strata/bench/filebench", {st_mode=S_IFDIR|0775, st_size=4096, ...}) = 0
+7174  stat(".", {st_mode=S_IFDIR|0775, st_size=4096, ...}) = 0
+7174  stat("/home", {st_mode=S_IFDIR|0755, st_size=4096, ...}) = 0
+7174  stat("/home/ereshiple", {st_mode=S_IFDIR|0755, st_size=4096, ...}) = 0
+7174  stat("/home/ereshiple/strata", {st_mode=S_IFDIR|0775, st_size=4096, ...}) = 0
+7174  stat("/home/ereshiple/strata/bench", {st_mode=S_IFDIR|0775, st_size=4096, ...}) = 0
+7174  stat("/home/ereshiple/strata/bench/filebench", {st_mode=S_IFDIR|0775, st_size=4096, ...}) = 0
+7174  stat("/home/ereshiple/strata", {st_mode=S_IFDIR|0775, st_size=4096, ...}) = 0
+7174  getpid()                          = 7174
+7174  openat(AT_FDCWD, "/usr/lib/x86_64-linux-gnu/gconv/gconv-modules.cache", O_RDONLY) = 3
+7174  fstat(3, {st_mode=S_IFREG|0644, st_size=26376, ...}) = 0
+7174  mmap(NULL, 26376, PROT_READ, MAP_SHARED, 3, 0) = 0x7f1b09ade000
+7174  close(3)                          = 0
+7174  getppid()                         = 7172
+7174  getpid()                          = 7174
+7174  getpgrp()                         = 7171
+7174  ioctl(2, TIOCGPGRP, [7171])       = 0
+7174  rt_sigaction(SIGCHLD, {sa_handler=0x55af543cd720, sa_mask=[], sa_flags=SA_RESTORER|SA_RESTART, sa_restorer=0x7f1b090ddf20}, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER|SA_RESTART, sa_restorer=0x7f1b090ddf20}, 8) = 0
+7174  prlimit64(0, RLIMIT_NPROC, NULL, {rlim_cur=23771, rlim_max=23771}) = 0
+7174  rt_sigprocmask(SIG_BLOCK, NULL, [], 8) = 0
+7174  openat(AT_FDCWD, "./run.sh", O_RDONLY) = 3
+7174  stat("./run.sh", {st_mode=S_IFREG|0775, st_size=881, ...}) = 0
+7174  ioctl(3, TCGETS, 0x7ffce7764f70)  = -1 ENOTTY (Inappropriate ioctl for device)
+7174  lseek(3, 0, SEEK_CUR)             = 0
+7174  read(3, "#! /usr/bin/env /bin/bash\n\nPATH="..., 80) = 80
+7174  lseek(3, 0, SEEK_SET)             = 0
+7174  prlimit64(0, RLIMIT_NOFILE, NULL, {rlim_cur=1024, rlim_max=1024*1024}) = 0
+7174  fcntl(255, F_GETFD)               = -1 EBADF (Bad file descriptor)
+7174  dup2(3, 255)                      = 255
+7174  close(3)                          = 0
+7174  fcntl(255, F_SETFD, FD_CLOEXEC)   = 0
+7174  fcntl(255, F_GETFL)               = 0x8000 (flags O_RDONLY|O_LARGEFILE)
+7174  fstat(255, {st_mode=S_IFREG|0775, st_size=881, ...}) = 0
+7174  lseek(255, 0, SEEK_CUR)           = 0
+7174  read(255, "#! /usr/bin/env /bin/bash\n\nPATH="..., 881) = 881
+7174  pipe([3, 4])                      = 0
+7174  rt_sigprocmask(SIG_BLOCK, [CHLD], [], 8) = 0
+7174  rt_sigprocmask(SIG_SETMASK, [], NULL, 8) = 0
+7174  rt_sigprocmask(SIG_BLOCK, [INT CHLD], [], 8) = 0
+7174  lseek(255, -772, SEEK_CUR)        = 109
+7174  clone(child_stack=NULL, flags=CLONE_CHILD_CLEARTID|CLONE_CHILD_SETTID|SIGCHLD, child_tidptr=0x7f1b09ad6a10) = 7175
+7174  rt_sigprocmask(SIG_SETMASK, [], NULL, 8) = 0
+7174  rt_sigaction(SIGCHLD, {sa_handler=0x55af543cd720, sa_mask=[], sa_flags=SA_RESTORER|SA_RESTART, sa_restorer=0x7f1b090ddf20}, {sa_handler=0x55af543cd720, sa_mask=[], sa_flags=SA_RESTORER|SA_RESTART, sa_restorer=0x7f1b090ddf20}, 8) = 0
+7174  close(4 <unfinished ...>
+7175  getpid( <unfinished ...>
+7174  <... close resumed> )             = 0
+7175  <... getpid resumed> )            = 7175
+7174  read(3,  <unfinished ...>
+7175  close(255)                        = 0
+7175  rt_sigprocmask(SIG_SETMASK, [], NULL, 8) = 0
+7175  rt_sigaction(SIGTSTP, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, 8) = 0
+7175  rt_sigaction(SIGTTIN, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, 8) = 0
+7175  rt_sigaction(SIGTTOU, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, 8) = 0
+7175  rt_sigaction(SIGINT, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, 8) = 0
+7175  rt_sigaction(SIGQUIT, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, {sa_handler=SIG_IGN, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, 8) = 0
+7175  rt_sigaction(SIGCHLD, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER|SA_RESTART, sa_restorer=0x7f1b090ddf20}, {sa_handler=0x55af543cd720, sa_mask=[], sa_flags=SA_RESTORER|SA_RESTART, sa_restorer=0x7f1b090ddf20}, 8) = 0
+7175  rt_sigaction(SIGCHLD, {sa_handler=0x55af543cd720, sa_mask=[], sa_flags=SA_RESTORER|SA_RESTART, sa_restorer=0x7f1b090ddf20}, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER|SA_RESTART, sa_restorer=0x7f1b090ddf20}, 8) = 0
+7175  rt_sigaction(SIGINT, {sa_handler=0x55af543e6c80, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, 8) = 0
+7175  dup2(4, 1)                        = 1
+7175  close(4)                          = 0
+7175  close(3)                          = 0
+7175  rt_sigprocmask(SIG_BLOCK, NULL, [], 8) = 0
+7175  stat(".", {st_mode=S_IFDIR|0775, st_size=4096, ...}) = 0
+7175  stat("/usr/local/sbin/realpath", 0x7ffce7764530) = -1 ENOENT (No such file or directory)
+7175  stat("/usr/local/bin/realpath", 0x7ffce7764530) = -1 ENOENT (No such file or directory)
+7175  stat("/usr/sbin/realpath", 0x7ffce7764530) = -1 ENOENT (No such file or directory)
+7175  stat("/usr/bin/realpath", {st_mode=S_IFREG|0755, st_size=47320, ...}) = 0
+7175  stat("/usr/bin/realpath", {st_mode=S_IFREG|0755, st_size=47320, ...}) = 0
+7175  geteuid()                         = 0
+7175  getegid()                         = 0
+7175  getuid()                          = 0
+7175  getgid()                          = 0
+7175  access("/usr/bin/realpath", X_OK) = 0
+7175  stat("/usr/bin/realpath", {st_mode=S_IFREG|0755, st_size=47320, ...}) = 0
+7175  geteuid()                         = 0
+7175  getegid()                         = 0
+7175  getuid()                          = 0
+7175  getgid()                          = 0
+7175  access("/usr/bin/realpath", R_OK) = 0
+7175  stat("/usr/bin/realpath", {st_mode=S_IFREG|0755, st_size=47320, ...}) = 0
+7175  stat("/usr/bin/realpath", {st_mode=S_IFREG|0755, st_size=47320, ...}) = 0
+7175  geteuid()                         = 0
+7175  getegid()                         = 0
+7175  getuid()                          = 0
+7175  getgid()                          = 0
+7175  access("/usr/bin/realpath", X_OK) = 0
+7175  stat("/usr/bin/realpath", {st_mode=S_IFREG|0755, st_size=47320, ...}) = 0
+7175  geteuid()                         = 0
+7175  getegid()                         = 0
+7175  getuid()                          = 0
+7175  getgid()                          = 0
+7175  access("/usr/bin/realpath", R_OK) = 0
+7175  rt_sigaction(SIGINT, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, {sa_handler=0x55af543e6c80, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, 8) = 0
+7175  rt_sigaction(SIGQUIT, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, 8) = 0
+7175  rt_sigaction(SIGCHLD, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER|SA_RESTART, sa_restorer=0x7f1b090ddf20}, {sa_handler=0x55af543cd720, sa_mask=[], sa_flags=SA_RESTORER|SA_RESTART, sa_restorer=0x7f1b090ddf20}, 8) = 0
+7175  execve("/usr/bin/realpath", ["realpath", "../../libfs/src/storage/spdk/"], 0x55af54fbc340 /* 31 vars */) = 0
+7175  brk(NULL)                         = 0x55df73047000
+7175  access("/etc/ld.so.nohwcap", F_OK) = -1 ENOENT (No such file or directory)
+7175  access("/etc/ld.so.preload", R_OK) = -1 ENOENT (No such file or directory)
+7175  openat(AT_FDCWD, "/etc/ld.so.cache", O_RDONLY|O_CLOEXEC) = 3
+7175  fstat(3, {st_mode=S_IFREG|0644, st_size=40628, ...}) = 0
+7175  mmap(NULL, 40628, PROT_READ, MAP_PRIVATE, 3, 0) = 0x7f00e923d000
+7175  close(3)                          = 0
+7175  access("/etc/ld.so.nohwcap", F_OK) = -1 ENOENT (No such file or directory)
+7175  openat(AT_FDCWD, "/lib/x86_64-linux-gnu/libc.so.6", O_RDONLY|O_CLOEXEC) = 3
+7175  read(3, "\177ELF\2\1\1\3\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\260\34\2\0\0\0\0\0"..., 832) = 832
+7175  fstat(3, {st_mode=S_IFREG|0755, st_size=2030544, ...}) = 0
+7175  mmap(NULL, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f00e923b000
+7175  mmap(NULL, 4131552, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f00e8c2f000
+7175  mprotect(0x7f00e8e16000, 2097152, PROT_NONE) = 0
+7175  mmap(0x7f00e9016000, 24576, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x1e7000) = 0x7f00e9016000
+7175  mmap(0x7f00e901c000, 15072, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7f00e901c000
+7175  close(3)                          = 0
+7175  arch_prctl(ARCH_SET_FS, 0x7f00e923c540) = 0
+7175  mprotect(0x7f00e9016000, 16384, PROT_READ) = 0
+7175  mprotect(0x55df71bcd000, 4096, PROT_READ) = 0
+7175  mprotect(0x7f00e9247000, 4096, PROT_READ) = 0
+7175  munmap(0x7f00e923d000, 40628)     = 0
+7175  brk(NULL)                         = 0x55df73047000
+7175  brk(0x55df73068000)               = 0x55df73068000
+7175  openat(AT_FDCWD, "/usr/lib/locale/locale-archive", O_RDONLY|O_CLOEXEC) = 3
+7175  fstat(3, {st_mode=S_IFREG|0644, st_size=3004464, ...}) = 0
+7175  mmap(NULL, 3004464, PROT_READ, MAP_PRIVATE, 3, 0) = 0x7f00e8951000
+7175  close(3)                          = 0
+7175  getcwd("/home/ereshiple/strata/bench/filebench", 4096) = 39
+7175  lstat("/home/ereshiple/strata/libfs", {st_mode=S_IFDIR|0775, st_size=4096, ...}) = 0
+7175  lstat("/home/ereshiple/strata/libfs/src", {st_mode=S_IFDIR|0775, st_size=4096, ...}) = 0
+7175  lstat("/home/ereshiple/strata/libfs/src/storage", {st_mode=S_IFDIR|0775, st_size=4096, ...}) = 0
+7175  lstat("/home/ereshiple/strata/libfs/src/storage/spdk", {st_mode=S_IFDIR|0775, st_size=4096, ...}) = 0
+7175  fstat(1, {st_mode=S_IFIFO|0600, st_size=0, ...}) = 0
+7175  write(1, "/home/ereshiple/strata/libfs/src"..., 46) = 46
+7175  close(1)                          = 0
+7175  close(2 <unfinished ...>
+7174  <... read resumed> "/home/ereshiple/strata/libfs/src"..., 128) = 46
+7175  <... close resumed> )             = 0
+7174  read(3,  <unfinished ...>
+7175  exit_group(0 <unfinished ...>
+7174  <... read resumed> "", 128)       = 0
+7175  <... exit_group resumed>)         = ?
+7174  close(3)                          = 0
+7174  rt_sigprocmask(SIG_BLOCK, [CHLD], [], 8) = 0
+7175  +++ exited with 0 +++
+7174  rt_sigaction(SIGINT, {sa_handler=0x55af543ca0f0, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, 8) = 0
+7174  wait4(-1, [{WIFEXITED(s) && WEXITSTATUS(s) == 0}], 0, NULL) = 7175
+7174  rt_sigaction(SIGINT, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, {sa_handler=0x55af543ca0f0, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, 8) = 0
+7174  rt_sigprocmask(SIG_SETMASK, [], NULL, 8) = 0
+7174  --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=7175, si_uid=0, si_status=0, si_utime=0, si_stime=0} ---
+7174  wait4(-1, 0x7ffce7763b10, WNOHANG, NULL) = -1 ECHILD (No child processes)
+7174  rt_sigreturn({mask=[]})           = 0
+7174  read(255, "GLIBC_DIR=`realpath ../../shim/g"..., 881) = 772
+7174  pipe([3, 4])                      = 0
+7174  rt_sigprocmask(SIG_BLOCK, [CHLD], [], 8) = 0
+7174  rt_sigprocmask(SIG_SETMASK, [], NULL, 8) = 0
+7174  rt_sigprocmask(SIG_BLOCK, [INT CHLD], [], 8) = 0
+7174  lseek(255, -724, SEEK_CUR)        = 157
+7174  clone(child_stack=NULL, flags=CLONE_CHILD_CLEARTID|CLONE_CHILD_SETTID|SIGCHLD, child_tidptr=0x7f1b09ad6a10) = 7176
+7174  rt_sigprocmask(SIG_SETMASK, [], NULL, 8) = 0
+7174  rt_sigaction(SIGCHLD, {sa_handler=0x55af543cd720, sa_mask=[], sa_flags=SA_RESTORER|SA_RESTART, sa_restorer=0x7f1b090ddf20}, {sa_handler=0x55af543cd720, sa_mask=[], sa_flags=SA_RESTORER|SA_RESTART, sa_restorer=0x7f1b090ddf20}, 8) = 0
+7174  close(4)                          = 0
+7176  getpid( <unfinished ...>
+7174  read(3,  <unfinished ...>
+7176  <... getpid resumed> )            = 7176
+7176  close(255)                        = 0
+7176  rt_sigprocmask(SIG_SETMASK, [], NULL, 8) = 0
+7176  rt_sigaction(SIGTSTP, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, 8) = 0
+7176  rt_sigaction(SIGTTIN, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, 8) = 0
+7176  rt_sigaction(SIGTTOU, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, 8) = 0
+7176  rt_sigaction(SIGINT, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, 8) = 0
+7176  rt_sigaction(SIGQUIT, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, {sa_handler=SIG_IGN, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, 8) = 0
+7176  rt_sigaction(SIGCHLD, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER|SA_RESTART, sa_restorer=0x7f1b090ddf20}, {sa_handler=0x55af543cd720, sa_mask=[], sa_flags=SA_RESTORER|SA_RESTART, sa_restorer=0x7f1b090ddf20}, 8) = 0
+7176  rt_sigaction(SIGCHLD, {sa_handler=0x55af543cd720, sa_mask=[], sa_flags=SA_RESTORER|SA_RESTART, sa_restorer=0x7f1b090ddf20}, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER|SA_RESTART, sa_restorer=0x7f1b090ddf20}, 8) = 0
+7176  rt_sigaction(SIGINT, {sa_handler=0x55af543e6c80, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, 8) = 0
+7176  dup2(4, 1)                        = 1
+7176  close(4)                          = 0
+7176  close(3)                          = 0
+7176  rt_sigprocmask(SIG_BLOCK, NULL, [], 8) = 0
+7176  stat(".", {st_mode=S_IFDIR|0775, st_size=4096, ...}) = 0
+7176  stat("/usr/local/sbin/realpath", 0x7ffce7764530) = -1 ENOENT (No such file or directory)
+7176  stat("/usr/local/bin/realpath", 0x7ffce7764530) = -1 ENOENT (No such file or directory)
+7176  stat("/usr/sbin/realpath", 0x7ffce7764530) = -1 ENOENT (No such file or directory)
+7176  stat("/usr/bin/realpath", {st_mode=S_IFREG|0755, st_size=47320, ...}) = 0
+7176  stat("/usr/bin/realpath", {st_mode=S_IFREG|0755, st_size=47320, ...}) = 0
+7176  geteuid()                         = 0
+7176  getegid()                         = 0
+7176  getuid()                          = 0
+7176  getgid()                          = 0
+7176  access("/usr/bin/realpath", X_OK) = 0
+7176  stat("/usr/bin/realpath", {st_mode=S_IFREG|0755, st_size=47320, ...}) = 0
+7176  geteuid()                         = 0
+7176  getegid()                         = 0
+7176  getuid()                          = 0
+7176  getgid()                          = 0
+7176  access("/usr/bin/realpath", R_OK) = 0
+7176  stat("/usr/bin/realpath", {st_mode=S_IFREG|0755, st_size=47320, ...}) = 0
+7176  stat("/usr/bin/realpath", {st_mode=S_IFREG|0755, st_size=47320, ...}) = 0
+7176  geteuid()                         = 0
+7176  getegid()                         = 0
+7176  getuid()                          = 0
+7176  getgid()                          = 0
+7176  access("/usr/bin/realpath", X_OK) = 0
+7176  stat("/usr/bin/realpath", {st_mode=S_IFREG|0755, st_size=47320, ...}) = 0
+7176  geteuid()                         = 0
+7176  getegid()                         = 0
+7176  getuid()                          = 0
+7176  getgid()                          = 0
+7176  access("/usr/bin/realpath", R_OK) = 0
+7176  rt_sigaction(SIGINT, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, {sa_handler=0x55af543e6c80, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, 8) = 0
+7176  rt_sigaction(SIGQUIT, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, 8) = 0
+7176  rt_sigaction(SIGCHLD, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER|SA_RESTART, sa_restorer=0x7f1b090ddf20}, {sa_handler=0x55af543cd720, sa_mask=[], sa_flags=SA_RESTORER|SA_RESTART, sa_restorer=0x7f1b090ddf20}, 8) = 0
+7176  execve("/usr/bin/realpath", ["realpath", "../../shim/glibc-build/lib"], 0x55af54fbc340 /* 31 vars */) = 0
+7176  brk(NULL)                         = 0x55ce8c30f000
+7176  access("/etc/ld.so.nohwcap", F_OK) = -1 ENOENT (No such file or directory)
+7176  access("/etc/ld.so.preload", R_OK) = -1 ENOENT (No such file or directory)
+7176  openat(AT_FDCWD, "/etc/ld.so.cache", O_RDONLY|O_CLOEXEC) = 3
+7176  fstat(3, {st_mode=S_IFREG|0644, st_size=40628, ...}) = 0
+7176  mmap(NULL, 40628, PROT_READ, MAP_PRIVATE, 3, 0) = 0x7f0851015000
+7176  close(3)                          = 0
+7176  access("/etc/ld.so.nohwcap", F_OK) = -1 ENOENT (No such file or directory)
+7176  openat(AT_FDCWD, "/lib/x86_64-linux-gnu/libc.so.6", O_RDONLY|O_CLOEXEC) = 3
+7176  read(3, "\177ELF\2\1\1\3\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\260\34\2\0\0\0\0\0"..., 832) = 832
+7176  fstat(3, {st_mode=S_IFREG|0755, st_size=2030544, ...}) = 0
+7176  mmap(NULL, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f0851013000
+7176  mmap(NULL, 4131552, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f0850a07000
+7176  mprotect(0x7f0850bee000, 2097152, PROT_NONE) = 0
+7176  mmap(0x7f0850dee000, 24576, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x1e7000) = 0x7f0850dee000
+7176  mmap(0x7f0850df4000, 15072, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7f0850df4000
+7176  close(3)                          = 0
+7176  arch_prctl(ARCH_SET_FS, 0x7f0851014540) = 0
+7176  mprotect(0x7f0850dee000, 16384, PROT_READ) = 0
+7176  mprotect(0x55ce8baa8000, 4096, PROT_READ) = 0
+7176  mprotect(0x7f085101f000, 4096, PROT_READ) = 0
+7176  munmap(0x7f0851015000, 40628)     = 0
+7176  brk(NULL)                         = 0x55ce8c30f000
+7176  brk(0x55ce8c330000)               = 0x55ce8c330000
+7176  openat(AT_FDCWD, "/usr/lib/locale/locale-archive", O_RDONLY|O_CLOEXEC) = 3
+7176  fstat(3, {st_mode=S_IFREG|0644, st_size=3004464, ...}) = 0
+7176  mmap(NULL, 3004464, PROT_READ, MAP_PRIVATE, 3, 0) = 0x7f0850729000
+7176  close(3)                          = 0
+7176  getcwd("/home/ereshiple/strata/bench/filebench", 4096) = 39
+7176  lstat("/home/ereshiple/strata/shim", {st_mode=S_IFDIR|0775, st_size=4096, ...}) = 0
+7176  lstat("/home/ereshiple/strata/shim/glibc-build", {st_mode=S_IFLNK|0777, st_size=19, ...}) = 0
+7176  readlink("/home/ereshiple/strata/shim/glibc-build", "glibc-build-opt/lib", 20) = 19
+7176  lstat("/home/ereshiple/strata/shim/glibc-build-opt", {st_mode=S_IFDIR|0755, st_size=4096, ...}) = 0
+7176  lstat("/home/ereshiple/strata/shim/glibc-build-opt/lib", {st_mode=S_IFDIR|0755, st_size=4096, ...}) = 0
+7176  lstat("/home/ereshiple/strata/shim/glibc-build-opt/lib/lib", 0x7ffd265aa3c0) = -1 ENOENT (No such file or directory)
+7176  fstat(1, {st_mode=S_IFIFO|0600, st_size=0, ...}) = 0
+7176  write(1, "/home/ereshiple/strata/shim/glib"..., 52) = 52
+7176  close(1)                          = 0
+7174  <... read resumed> "/home/ereshiple/strata/shim/glib"..., 128) = 52
+7176  close(2)                          = 0
+7174  read(3,  <unfinished ...>
+7176  exit_group(0 <unfinished ...>
+7174  <... read resumed> "", 128)       = 0
+7176  <... exit_group resumed>)         = ?
+7174  close(3)                          = 0
+7174  rt_sigprocmask(SIG_BLOCK, [CHLD], [], 8) = 0
+7176  +++ exited with 0 +++
+7174  rt_sigaction(SIGINT, {sa_handler=0x55af543ca0f0, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, 8) = 0
+7174  wait4(-1, [{WIFEXITED(s) && WEXITSTATUS(s) == 0}], 0, NULL) = 7176
+7174  rt_sigaction(SIGINT, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, {sa_handler=0x55af543ca0f0, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, 8) = 0
+7174  rt_sigprocmask(SIG_SETMASK, [], NULL, 8) = 0
+7174  --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=7176, si_uid=0, si_status=0, si_utime=0, si_stime=0} ---
+7174  wait4(-1, 0x7ffce7763b10, WNOHANG, NULL) = -1 ECHILD (No child processes)
+7174  rt_sigreturn({mask=[]})           = 0
+7174  read(255, "if [[ ! -d $GLIBC_DIR ]]; then\n\t"..., 881) = 724
+7174  stat("/home/ereshiple/strata/shim/glibc-build-opt/lib/lib", 0x7ffce7764ce0) = -1 ENOENT (No such file or directory)
+7174  pipe([3, 4])                      = 0
+7174  rt_sigprocmask(SIG_BLOCK, [CHLD], [], 8) = 0
+7174  rt_sigprocmask(SIG_SETMASK, [], NULL, 8) = 0
+7174  rt_sigprocmask(SIG_BLOCK, [INT CHLD], [], 8) = 0
+7174  lseek(255, -644, SEEK_CUR)        = 237
+7174  clone(child_stack=NULL, flags=CLONE_CHILD_CLEARTID|CLONE_CHILD_SETTID|SIGCHLD, child_tidptr=0x7f1b09ad6a10) = 7177
+7174  rt_sigprocmask(SIG_SETMASK, [], NULL, 8) = 0
+7174  rt_sigaction(SIGCHLD, {sa_handler=0x55af543cd720, sa_mask=[], sa_flags=SA_RESTORER|SA_RESTART, sa_restorer=0x7f1b090ddf20}, {sa_handler=0x55af543cd720, sa_mask=[], sa_flags=SA_RESTORER|SA_RESTART, sa_restorer=0x7f1b090ddf20}, 8) = 0
+7174  close(4)                          = 0
+7177  getpid( <unfinished ...>
+7174  read(3,  <unfinished ...>
+7177  <... getpid resumed> )            = 7177
+7177  close(255)                        = 0
+7177  rt_sigprocmask(SIG_SETMASK, [], NULL, 8) = 0
+7177  rt_sigaction(SIGTSTP, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, 8) = 0
+7177  rt_sigaction(SIGTTIN, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, 8) = 0
+7177  rt_sigaction(SIGTTOU, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, 8) = 0
+7177  rt_sigaction(SIGINT, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, 8) = 0
+7177  rt_sigaction(SIGQUIT, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, {sa_handler=SIG_IGN, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, 8) = 0
+7177  rt_sigaction(SIGCHLD, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER|SA_RESTART, sa_restorer=0x7f1b090ddf20}, {sa_handler=0x55af543cd720, sa_mask=[], sa_flags=SA_RESTORER|SA_RESTART, sa_restorer=0x7f1b090ddf20}, 8) = 0
+7177  rt_sigaction(SIGCHLD, {sa_handler=0x55af543cd720, sa_mask=[], sa_flags=SA_RESTORER|SA_RESTART, sa_restorer=0x7f1b090ddf20}, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER|SA_RESTART, sa_restorer=0x7f1b090ddf20}, 8) = 0
+7177  rt_sigaction(SIGINT, {sa_handler=0x55af543e6c80, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, 8) = 0
+7177  dup2(4, 1)                        = 1
+7177  close(4)                          = 0
+7177  close(3)                          = 0
+7177  rt_sigprocmask(SIG_BLOCK, NULL, [], 8) = 0
+7177  stat(".", {st_mode=S_IFDIR|0775, st_size=4096, ...}) = 0
+7177  stat("/usr/local/sbin/realpath", 0x7ffce7764430) = -1 ENOENT (No such file or directory)
+7177  stat("/usr/local/bin/realpath", 0x7ffce7764430) = -1 ENOENT (No such file or directory)
+7177  stat("/usr/sbin/realpath", 0x7ffce7764430) = -1 ENOENT (No such file or directory)
+7177  stat("/usr/bin/realpath", {st_mode=S_IFREG|0755, st_size=47320, ...}) = 0
+7177  stat("/usr/bin/realpath", {st_mode=S_IFREG|0755, st_size=47320, ...}) = 0
+7177  geteuid()                         = 0
+7177  getegid()                         = 0
+7177  getuid()                          = 0
+7177  getgid()                          = 0
+7177  access("/usr/bin/realpath", X_OK) = 0
+7177  stat("/usr/bin/realpath", {st_mode=S_IFREG|0755, st_size=47320, ...}) = 0
+7177  geteuid()                         = 0
+7177  getegid()                         = 0
+7177  getuid()                          = 0
+7177  getgid()                          = 0
+7177  access("/usr/bin/realpath", R_OK) = 0
+7177  stat("/usr/bin/realpath", {st_mode=S_IFREG|0755, st_size=47320, ...}) = 0
+7177  stat("/usr/bin/realpath", {st_mode=S_IFREG|0755, st_size=47320, ...}) = 0
+7177  geteuid()                         = 0
+7177  getegid()                         = 0
+7177  getuid()                          = 0
+7177  getgid()                          = 0
+7177  access("/usr/bin/realpath", X_OK) = 0
+7177  stat("/usr/bin/realpath", {st_mode=S_IFREG|0755, st_size=47320, ...}) = 0
+7177  geteuid()                         = 0
+7177  getegid()                         = 0
+7177  getuid()                          = 0
+7177  getgid()                          = 0
+7177  access("/usr/bin/realpath", R_OK) = 0
+7177  rt_sigaction(SIGINT, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, {sa_handler=0x55af543e6c80, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, 8) = 0
+7177  rt_sigaction(SIGQUIT, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, 8) = 0
+7177  rt_sigaction(SIGCHLD, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER|SA_RESTART, sa_restorer=0x7f1b090ddf20}, {sa_handler=0x55af543cd720, sa_mask=[], sa_flags=SA_RESTORER|SA_RESTART, sa_restorer=0x7f1b090ddf20}, 8) = 0
+7177  execve("/usr/bin/realpath", ["realpath", "../../shim/glibc-build"], 0x55af54fbc340 /* 31 vars */) = 0
+7177  brk(NULL)                         = 0x559540c50000
+7177  access("/etc/ld.so.nohwcap", F_OK) = -1 ENOENT (No such file or directory)
+7177  access("/etc/ld.so.preload", R_OK) = -1 ENOENT (No such file or directory)
+7177  openat(AT_FDCWD, "/etc/ld.so.cache", O_RDONLY|O_CLOEXEC) = 3
+7177  fstat(3, {st_mode=S_IFREG|0644, st_size=40628, ...}) = 0
+7177  mmap(NULL, 40628, PROT_READ, MAP_PRIVATE, 3, 0) = 0x7fb648ff5000
+7177  close(3)                          = 0
+7177  access("/etc/ld.so.nohwcap", F_OK) = -1 ENOENT (No such file or directory)
+7177  openat(AT_FDCWD, "/lib/x86_64-linux-gnu/libc.so.6", O_RDONLY|O_CLOEXEC) = 3
+7177  read(3, "\177ELF\2\1\1\3\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\260\34\2\0\0\0\0\0"..., 832) = 832
+7177  fstat(3, {st_mode=S_IFREG|0755, st_size=2030544, ...}) = 0
+7177  mmap(NULL, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7fb648ff3000
+7177  mmap(NULL, 4131552, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7fb6489e7000
+7177  mprotect(0x7fb648bce000, 2097152, PROT_NONE) = 0
+7177  mmap(0x7fb648dce000, 24576, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x1e7000) = 0x7fb648dce000
+7177  mmap(0x7fb648dd4000, 15072, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7fb648dd4000
+7177  close(3)                          = 0
+7177  arch_prctl(ARCH_SET_FS, 0x7fb648ff4540) = 0
+7177  mprotect(0x7fb648dce000, 16384, PROT_READ) = 0
+7177  mprotect(0x55953fba1000, 4096, PROT_READ) = 0
+7177  mprotect(0x7fb648fff000, 4096, PROT_READ) = 0
+7177  munmap(0x7fb648ff5000, 40628)     = 0
+7177  brk(NULL)                         = 0x559540c50000
+7177  brk(0x559540c71000)               = 0x559540c71000
+7177  openat(AT_FDCWD, "/usr/lib/locale/locale-archive", O_RDONLY|O_CLOEXEC) = 3
+7177  fstat(3, {st_mode=S_IFREG|0644, st_size=3004464, ...}) = 0
+7177  mmap(NULL, 3004464, PROT_READ, MAP_PRIVATE, 3, 0) = 0x7fb648709000
+7177  close(3)                          = 0
+7177  getcwd("/home/ereshiple/strata/bench/filebench", 4096) = 39
+7177  lstat("/home/ereshiple/strata/shim", {st_mode=S_IFDIR|0775, st_size=4096, ...}) = 0
+7177  lstat("/home/ereshiple/strata/shim/glibc-build", {st_mode=S_IFLNK|0777, st_size=19, ...}) = 0
+7177  readlink("/home/ereshiple/strata/shim/glibc-build", "glibc-build-opt/lib", 20) = 19
+7177  lstat("/home/ereshiple/strata/shim/glibc-build-opt", {st_mode=S_IFDIR|0755, st_size=4096, ...}) = 0
+7177  lstat("/home/ereshiple/strata/shim/glibc-build-opt/lib", {st_mode=S_IFDIR|0755, st_size=4096, ...}) = 0
+7177  fstat(1, {st_mode=S_IFIFO|0600, st_size=0, ...}) = 0
+7177  write(1, "/home/ereshiple/strata/shim/glib"..., 48) = 48
+7177  close(1)                          = 0
+7177  close(2 <unfinished ...>
+7174  <... read resumed> "/home/ereshiple/strata/shim/glib"..., 128) = 48
+7177  <... close resumed> )             = 0
+7174  read(3,  <unfinished ...>
+7177  exit_group(0 <unfinished ...>
+7174  <... read resumed> "", 128)       = 0
+7177  <... exit_group resumed>)         = ?
+7174  close(3)                          = 0
+7174  rt_sigprocmask(SIG_BLOCK, [CHLD], [], 8) = 0
+7177  +++ exited with 0 +++
+7174  rt_sigaction(SIGINT, {sa_handler=0x55af543ca0f0, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, 8) = 0
+7174  wait4(-1, [{WIFEXITED(s) && WEXITSTATUS(s) == 0}], 0, NULL) = 7177
+7174  rt_sigaction(SIGINT, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, {sa_handler=0x55af543ca0f0, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, 8) = 0
+7174  rt_sigprocmask(SIG_SETMASK, [], NULL, 8) = 0
+7174  --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_EXITED, si_pid=7177, si_uid=0, si_status=0, si_utime=0, si_stime=0} ---
+7174  wait4(-1, 0x7ffce7763a10, WNOHANG, NULL) = -1 ECHILD (No child processes)
+7174  rt_sigreturn({mask=[]})           = 0
+7174  read(255, "export LD_LIBRARY_PATH=$GLIBC_DI"..., 881) = 644
+7174  fstat(1, {st_mode=S_IFCHR|0620, st_rdev=makedev(136, 4), ...}) = 0
+7174  write(1, "/home/ereshiple/strata/shim/glib"..., 246) = 246
+7174  rt_sigprocmask(SIG_BLOCK, [INT CHLD], [], 8) = 0
+7174  rt_sigprocmask(SIG_BLOCK, [CHLD], [INT CHLD], 8) = 0
+7174  rt_sigprocmask(SIG_SETMASK, [INT CHLD], NULL, 8) = 0
+7174  lseek(255, -349, SEEK_CUR)        = 532
+7174  clone(child_stack=NULL, flags=CLONE_CHILD_CLEARTID|CLONE_CHILD_SETTID|SIGCHLD, child_tidptr=0x7f1b09ad6a10) = 7178
+7174  rt_sigprocmask(SIG_SETMASK, [],  <unfinished ...>
+7178  getpid( <unfinished ...>
+7174  <... rt_sigprocmask resumed> NULL, 8) = 0
+7178  <... getpid resumed> )            = 7178
+7178  close(255)                        = 0
+7174  rt_sigprocmask(SIG_BLOCK, [CHLD], [], 8) = 0
+7178  rt_sigprocmask(SIG_SETMASK, [],  <unfinished ...>
+7174  rt_sigprocmask(SIG_SETMASK, [], NULL, 8) = 0
+7178  <... rt_sigprocmask resumed> NULL, 8) = 0
+7174  rt_sigprocmask(SIG_BLOCK, [CHLD],  <unfinished ...>
+7178  rt_sigaction(SIGTSTP, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20},  <unfinished ...>
+7174  <... rt_sigprocmask resumed> [], 8) = 0
+7178  <... rt_sigaction resumed> {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, 8) = 0
+7174  rt_sigaction(SIGINT, {sa_handler=0x55af543ca0f0, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20},  <unfinished ...>
+7178  rt_sigaction(SIGTTIN, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20},  <unfinished ...>
+7174  <... rt_sigaction resumed> {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, 8) = 0
+7178  <... rt_sigaction resumed> {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, 8) = 0
+7174  wait4(-1,  <unfinished ...>
+7178  rt_sigaction(SIGTTOU, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, 8) = 0
+7178  rt_sigaction(SIGINT, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, 8) = 0
+7178  rt_sigaction(SIGQUIT, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, {sa_handler=SIG_IGN, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, 8) = 0
+7178  rt_sigaction(SIGCHLD, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER|SA_RESTART, sa_restorer=0x7f1b090ddf20}, {sa_handler=0x55af543cd720, sa_mask=[], sa_flags=SA_RESTORER|SA_RESTART, sa_restorer=0x7f1b090ddf20}, 8) = 0
+7178  execve("./filebench", ["./filebench", "-f", "filemicro_rand_4k.f"], 0x55af54fbf5e0 /* 35 vars */) = 0
+7178  brk(NULL)                         = 0x55a637b4c000
+7178  mmap(NULL, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f12b9872000
+7178  open("../..//shim/libshim/libshim.so", O_RDONLY|O_CLOEXEC) = 3
+7178  read(3, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\260L\0\0\0\0\0\0"..., 832) = 832
+7178  fstat(3, {st_mode=S_IFREG|0775, st_size=108872, ...}) = 0
+7178  getcwd("/home/ereshiple/strata/bench/filebench", 128) = 39
+7178  mmap(NULL, 2154888, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f12b9663000
+7178  mprotect(0x7f12b966f000, 2097152, PROT_NONE) = 0
+7178  mmap(0x7f12b986f000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0xc000) = 0x7f12b986f000
+7178  mmap(0x7f12b9871000, 392, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7f12b9871000
+7178  mprotect(0x7ffffe419000, 4096, PROT_READ|PROT_WRITE|PROT_EXEC|PROT_GROWSDOWN) = 0
+7178  close(3)                          = 0
+7178  access("/etc/ld.so.preload", R_OK) = -1 ENOENT (No such file or directory)
+7178  open("/home/ereshiple/strata/shim/glibc-build-opt/lib/tls/x86_64/libdl.so.2", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  stat("/home/ereshiple/strata/shim/glibc-build-opt/lib/tls/x86_64", 0x7ffffe418ee0) = -1 ENOENT (No such file or directory)
+7178  open("/home/ereshiple/strata/shim/glibc-build-opt/lib/tls/libdl.so.2", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  stat("/home/ereshiple/strata/shim/glibc-build-opt/lib/tls", 0x7ffffe418ee0) = -1 ENOENT (No such file or directory)
+7178  open("/home/ereshiple/strata/shim/glibc-build-opt/lib/x86_64/libdl.so.2", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  stat("/home/ereshiple/strata/shim/glibc-build-opt/lib/x86_64", 0x7ffffe418ee0) = -1 ENOENT (No such file or directory)
+7178  open("/home/ereshiple/strata/shim/glibc-build-opt/lib/libdl.so.2", O_RDONLY|O_CLOEXEC) = 3
+7178  read(3, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\0\21\0\0\0\0\0\0"..., 832) = 832
+7178  fstat(3, {st_mode=S_IFREG|0755, st_size=19272, ...}) = 0
+7178  mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f12b9896000
+7178  mmap(NULL, 16624, PROT_READ, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f12b965e000
+7178  mmap(0x7f12b965f000, 4096, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x1000) = 0x7f12b965f000
+7178  mmap(0x7f12b9660000, 4096, PROT_READ, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x2000) = 0x7f12b9660000
+7178  mmap(0x7f12b9661000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x2000) = 0x7f12b9661000
+7178  close(3)                          = 0
+7178  open("/home/ereshiple/strata/shim/glibc-build-opt/lib/libpthread.so.0", O_RDONLY|O_CLOEXEC) = 3
+7178  read(3, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\340k\0\0\0\0\0\0"..., 832) = 832
+7178  fstat(3, {st_mode=S_IFREG|0755, st_size=155640, ...}) = 0
+7178  mmap(NULL, 132240, PROT_READ, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f12b963d000
+7178  mmap(0x7f12b9643000, 57344, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x6000) = 0x7f12b9643000
+7178  mmap(0x7f12b9651000, 28672, PROT_READ, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x14000) = 0x7f12b9651000
+7178  mmap(0x7f12b9658000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x1a000) = 0x7f12b9658000
+7178  mmap(0x7f12b965a000, 13456, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7f12b965a000
+7178  close(3)                          = 0
+7178  open("/home/ereshiple/strata/shim/glibc-build-opt/lib/librt.so.1", O_RDONLY|O_CLOEXEC) = 3
+7178  read(3, "\177ELF\2\1\1\3\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\300#\0\0\0\0\0\0"..., 832) = 832
+7178  fstat(3, {st_mode=S_IFREG|0755, st_size=47952, ...}) = 0
+7178  mmap(NULL, 39928, PROT_READ, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f12b9633000
+7178  mmap(0x7f12b9635000, 16384, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x2000) = 0x7f12b9635000
+7178  mmap(0x7f12b9639000, 8192, PROT_READ, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x6000) = 0x7f12b9639000
+7178  mmap(0x7f12b963b000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x7000) = 0x7f12b963b000
+7178  close(3)                          = 0
+7178  open("/home/ereshiple/strata/shim/glibc-build-opt/lib/libm.so.6", O_RDONLY|O_CLOEXEC) = 3
+7178  read(3, "\177ELF\2\1\1\3\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\340a\0\0\0\0\0\0"..., 832) = 832
+7178  fstat(3, {st_mode=S_IFREG|0755, st_size=1144944, ...}) = 0
+7178  mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f12b9632000
+7178  mmap(NULL, 1065224, PROT_READ, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f12b952d000
+7178  mmap(0x7f12b9533000, 450560, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x6000) = 0x7f12b9533000
+7178  mmap(0x7f12b95a1000, 585728, PROT_READ, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x74000) = 0x7f12b95a1000
+7178  mmap(0x7f12b9630000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x103000) = 0x7f12b9630000
+7178  close(3)                          = 0
+7178  open("/home/ereshiple/strata/shim/glibc-build-opt/lib/libmlfs.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  open("../..//libfs/lib/nvml/src/nondebug/tls/x86_64/libmlfs.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  open("../..//libfs/lib/nvml/src/nondebug/tls/libmlfs.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  open("../..//libfs/lib/nvml/src/nondebug/x86_64/libmlfs.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  open("../..//libfs/lib/nvml/src/nondebug/libmlfs.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  open("../..//libfs/build/tls/x86_64/libmlfs.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  open("../..//libfs/build/tls/libmlfs.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  open("../..//libfs/build/x86_64/libmlfs.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  open("../..//libfs/build/libmlfs.so", O_RDONLY|O_CLOEXEC) = 3
+7178  read(3, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\360\235\0\0\0\0\0\0"..., 832) = 832
+7178  fstat(3, {st_mode=S_IFREG|0775, st_size=1429792, ...}) = 0
+7178  getcwd("/home/ereshiple/strata/bench/filebench", 128) = 39
+7178  mmap(NULL, 2445288, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f12b92d8000
+7178  mprotect(0x7f12b9313000, 2097152, PROT_NONE) = 0
+7178  mmap(0x7f12b9513000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x3b000) = 0x7f12b9513000
+7178  mmap(0x7f12b9515000, 98280, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7f12b9515000
+7178  close(3)                          = 0
+7178  open("/home/ereshiple/strata/shim/glibc-build-opt/lib/libc.so.6", O_RDONLY|O_CLOEXEC) = 3
+7178  read(3, "\177ELF\2\1\1\3\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0@\r\2\0\0\0\0\0"..., 832) = 832
+7178  fstat(3, {st_mode=S_IFREG|0755, st_size=2022952, ...}) = 0
+7178  mmap(NULL, 1751544, PROT_READ, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f12b912c000
+7178  mprotect(0x7f12b914c000, 1581056, PROT_NONE) = 0
+7178  mmap(0x7f12b914c000, 1232896, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x20000) = 0x7f12b914c000
+7178  mmap(0x7f12b9279000, 344064, PROT_READ, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x14d000) = 0x7f12b9279000
+7178  mmap(0x7f12b92ce000, 24576, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x1a1000) = 0x7f12b92ce000
+7178  mmap(0x7f12b92d4000, 14840, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7f12b92d4000
+7178  close(3)                          = 0
+7178  mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f12b912b000
+7178  open("/home/ereshiple/strata/shim/glibc-build-opt/lib/libpmem.so.1", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  open("../..//libfs/lib/nvml/src/nondebug/tls/x86_64/libpmem.so.1", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  open("../..//libfs/lib/nvml/src/nondebug/tls/libpmem.so.1", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  open("../..//libfs/lib/nvml/src/nondebug/x86_64/libpmem.so.1", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  open("../..//libfs/lib/nvml/src/nondebug/libpmem.so.1", O_RDONLY|O_CLOEXEC) = 3
+7178  read(3, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\0001\0\0\0\0\0\0"..., 832) = 832
+7178  fstat(3, {st_mode=S_IFREG|0775, st_size=241008, ...}) = 0
+7178  getcwd("/home/ereshiple/strata/bench/filebench", 128) = 39
+7178  mmap(NULL, 2295216, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f12b8efa000
+7178  mprotect(0x7f12b8f2a000, 2093056, PROT_NONE) = 0
+7178  mmap(0x7f12b9129000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x2f000) = 0x7f12b9129000
+7178  close(3)                          = 0
+7178  open("/home/ereshiple/strata/shim/glibc-build-opt/lib/libNVMIndexingAPI.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  open("../..//libfs/lib/nvml/src/nondebug/tls/x86_64/libNVMIndexingAPI.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  open("../..//libfs/lib/nvml/src/nondebug/tls/libNVMIndexingAPI.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  open("../..//libfs/lib/nvml/src/nondebug/x86_64/libNVMIndexingAPI.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  open("../..//libfs/lib/nvml/src/nondebug/libNVMIndexingAPI.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  open("../..//libfs/build/tls/x86_64/libNVMIndexingAPI.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  open("../..//libfs/build/tls/libNVMIndexingAPI.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  open("../..//libfs/build/x86_64/libNVMIndexingAPI.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  open("../..//libfs/build/libNVMIndexingAPI.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  open("/usr/local/lib/gcc/x86_64-unknown-linux-gnu/5.4.0/tls/x86_64/libNVMIndexingAPI.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  stat("/usr/local/lib/gcc/x86_64-unknown-linux-gnu/5.4.0/tls/x86_64", 0x7ffffe4188d0) = -1 ENOENT (No such file or directory)
+7178  open("/usr/local/lib/gcc/x86_64-unknown-linux-gnu/5.4.0/tls/libNVMIndexingAPI.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  stat("/usr/local/lib/gcc/x86_64-unknown-linux-gnu/5.4.0/tls", 0x7ffffe4188d0) = -1 ENOENT (No such file or directory)
+7178  open("/usr/local/lib/gcc/x86_64-unknown-linux-gnu/5.4.0/x86_64/libNVMIndexingAPI.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  stat("/usr/local/lib/gcc/x86_64-unknown-linux-gnu/5.4.0/x86_64", 0x7ffffe4188d0) = -1 ENOENT (No such file or directory)
+7178  open("/usr/local/lib/gcc/x86_64-unknown-linux-gnu/5.4.0/libNVMIndexingAPI.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  stat("/usr/local/lib/gcc/x86_64-unknown-linux-gnu/5.4.0", 0x7ffffe4188d0) = -1 ENOENT (No such file or directory)
+7178  open("/lib64/tls/x86_64/libNVMIndexingAPI.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  stat("/lib64/tls/x86_64", 0x7ffffe4188d0) = -1 ENOENT (No such file or directory)
+7178  open("/lib64/tls/libNVMIndexingAPI.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  stat("/lib64/tls", 0x7ffffe4188d0) = -1 ENOENT (No such file or directory)
+7178  open("/lib64/x86_64/libNVMIndexingAPI.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  stat("/lib64/x86_64", 0x7ffffe4188d0) = -1 ENOENT (No such file or directory)
+7178  open("/lib64/libNVMIndexingAPI.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  stat("/lib64", {st_mode=S_IFDIR|0755, st_size=4096, ...}) = 0
+7178  open("/usr/local/lib64/tls/x86_64/libNVMIndexingAPI.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  stat("/usr/local/lib64/tls/x86_64", 0x7ffffe4188d0) = -1 ENOENT (No such file or directory)
+7178  open("/usr/local/lib64/tls/libNVMIndexingAPI.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  stat("/usr/local/lib64/tls", 0x7ffffe4188d0) = -1 ENOENT (No such file or directory)
+7178  open("/usr/local/lib64/x86_64/libNVMIndexingAPI.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  stat("/usr/local/lib64/x86_64", 0x7ffffe4188d0) = -1 ENOENT (No such file or directory)
+7178  open("/usr/local/lib64/libNVMIndexingAPI.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  stat("/usr/local/lib64", 0x7ffffe4188d0) = -1 ENOENT (No such file or directory)
+7178  open("/home/ereshiple/strata/libfs/src/storage/spdk/tls/x86_64/libNVMIndexingAPI.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  stat("/home/ereshiple/strata/libfs/src/storage/spdk/tls/x86_64", 0x7ffffe4188d0) = -1 ENOENT (No such file or directory)
+7178  open("/home/ereshiple/strata/libfs/src/storage/spdk/tls/libNVMIndexingAPI.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  stat("/home/ereshiple/strata/libfs/src/storage/spdk/tls", 0x7ffffe4188d0) = -1 ENOENT (No such file or directory)
+7178  open("/home/ereshiple/strata/libfs/src/storage/spdk/x86_64/libNVMIndexingAPI.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  stat("/home/ereshiple/strata/libfs/src/storage/spdk/x86_64", 0x7ffffe4188d0) = -1 ENOENT (No such file or directory)
+7178  open("/home/ereshiple/strata/libfs/src/storage/spdk/libNVMIndexingAPI.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  stat("/home/ereshiple/strata/libfs/src/storage/spdk", {st_mode=S_IFDIR|0775, st_size=4096, ...}) = 0
+7178  open("/lib/x86_64-linux-gnu/tls/x86_64/libNVMIndexingAPI.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  stat("/lib/x86_64-linux-gnu/tls/x86_64", 0x7ffffe4188d0) = -1 ENOENT (No such file or directory)
+7178  open("/lib/x86_64-linux-gnu/tls/libNVMIndexingAPI.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  stat("/lib/x86_64-linux-gnu/tls", 0x7ffffe4188d0) = -1 ENOENT (No such file or directory)
+7178  open("/lib/x86_64-linux-gnu/x86_64/libNVMIndexingAPI.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  stat("/lib/x86_64-linux-gnu/x86_64", 0x7ffffe4188d0) = -1 ENOENT (No such file or directory)
+7178  open("/lib/x86_64-linux-gnu/libNVMIndexingAPI.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  stat("/lib/x86_64-linux-gnu", {st_mode=S_IFDIR|0755, st_size=12288, ...}) = 0
+7178  open("/home/ereshiple/nvm-file-indexing/api/build/tls/x86_64/libNVMIndexingAPI.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  stat("/home/ereshiple/nvm-file-indexing/api/build/tls/x86_64", 0x7ffffe4188d0) = -1 ENOENT (No such file or directory)
+7178  open("/home/ereshiple/nvm-file-indexing/api/build/tls/libNVMIndexingAPI.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  stat("/home/ereshiple/nvm-file-indexing/api/build/tls", 0x7ffffe4188d0) = -1 ENOENT (No such file or directory)
+7178  open("/home/ereshiple/nvm-file-indexing/api/build/x86_64/libNVMIndexingAPI.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  stat("/home/ereshiple/nvm-file-indexing/api/build/x86_64", 0x7ffffe4188d0) = -1 ENOENT (No such file or directory)
+7178  open("/home/ereshiple/nvm-file-indexing/api/build/libNVMIndexingAPI.so", O_RDONLY|O_CLOEXEC) = 3
+7178  read(3, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\320.\0\0\0\0\0\0"..., 832) = 832
+7178  fstat(3, {st_mode=S_IFREG|0775, st_size=145528, ...}) = 0
+7178  mmap(NULL, 2226016, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f12b8cda000
+7178  mprotect(0x7f12b8cf9000, 2093056, PROT_NONE) = 0
+7178  mmap(0x7f12b8ef8000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x1e000) = 0x7f12b8ef8000
+7178  close(3)                          = 0
+7178  open("/home/ereshiple/strata/shim/glibc-build-opt/lib/libspdk.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  open("../..//libfs/lib/nvml/src/nondebug/tls/x86_64/libspdk.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  open("../..//libfs/lib/nvml/src/nondebug/tls/libspdk.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  open("../..//libfs/lib/nvml/src/nondebug/x86_64/libspdk.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  open("../..//libfs/lib/nvml/src/nondebug/libspdk.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  open("../..//libfs/build/tls/x86_64/libspdk.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  open("../..//libfs/build/tls/libspdk.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  open("../..//libfs/build/x86_64/libspdk.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  open("../..//libfs/build/libspdk.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  open("/lib64/libspdk.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  open("/home/ereshiple/strata/libfs/src/storage/spdk/libspdk.so", O_RDONLY|O_CLOEXEC) = 3
+7178  read(3, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\0\f\1\0\0\0\0\0"..., 832) = 832
+7178  fstat(3, {st_mode=S_IFREG|0775, st_size=1008552, ...}) = 0
+7178  mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f12b8cd9000
+7178  mmap(NULL, 2667912, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f12b8a4d000
+7178  mprotect(0x7f12b8a98000, 2097152, PROT_NONE) = 0
+7178  mmap(0x7f12b8c98000, 16384, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x4b000) = 0x7f12b8c98000
+7178  mmap(0x7f12b8c9c000, 247176, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7f12b8c9c000
+7178  close(3)                          = 0
+7178  open("/home/ereshiple/strata/shim/glibc-build-opt/lib/libjemalloc.so.2", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  open("../..//libfs/lib/nvml/src/nondebug/tls/x86_64/libjemalloc.so.2", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  open("../..//libfs/lib/nvml/src/nondebug/tls/libjemalloc.so.2", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  open("../..//libfs/lib/nvml/src/nondebug/x86_64/libjemalloc.so.2", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  open("../..//libfs/lib/nvml/src/nondebug/libjemalloc.so.2", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  open("../..//libfs/build/tls/x86_64/libjemalloc.so.2", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  open("../..//libfs/build/tls/libjemalloc.so.2", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  open("../..//libfs/build/x86_64/libjemalloc.so.2", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  open("../..//libfs/build/libjemalloc.so.2", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  open("/lib64/libjemalloc.so.2", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  open("/home/ereshiple/strata/libfs/src/storage/spdk/libjemalloc.so.2", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  open("/lib/x86_64-linux-gnu/libjemalloc.so.2", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  open("/home/ereshiple/nvm-file-indexing/api/build/libjemalloc.so.2", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  open("/home/ereshiple/strata/libfs/lib/jemalloc-4.5.0/lib/tls/x86_64/libjemalloc.so.2", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  stat("/home/ereshiple/strata/libfs/lib/jemalloc-4.5.0/lib/tls/x86_64", 0x7ffffe418870) = -1 ENOENT (No such file or directory)
+7178  open("/home/ereshiple/strata/libfs/lib/jemalloc-4.5.0/lib/tls/libjemalloc.so.2", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  stat("/home/ereshiple/strata/libfs/lib/jemalloc-4.5.0/lib/tls", 0x7ffffe418870) = -1 ENOENT (No such file or directory)
+7178  open("/home/ereshiple/strata/libfs/lib/jemalloc-4.5.0/lib/x86_64/libjemalloc.so.2", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  stat("/home/ereshiple/strata/libfs/lib/jemalloc-4.5.0/lib/x86_64", 0x7ffffe418870) = -1 ENOENT (No such file or directory)
+7178  open("/home/ereshiple/strata/libfs/lib/jemalloc-4.5.0/lib/libjemalloc.so.2", O_RDONLY|O_CLOEXEC) = 3
+7178  read(3, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\3608\0\0\0\0\0\0"..., 832) = 832
+7178  fstat(3, {st_mode=S_IFREG|0775, st_size=2995536, ...}) = 0
+7178  mmap(NULL, 2491048, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f12b87ec000
+7178  mprotect(0x7f12b8849000, 2097152, PROT_NONE) = 0
+7178  mmap(0x7f12b8a49000, 12288, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x5d000) = 0x7f12b8a49000
+7178  mmap(0x7f12b8a4c000, 680, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7f12b8a4c000
+7178  close(3)                          = 0
+7178  open("/home/ereshiple/strata/shim/glibc-build-opt/lib/libjson-c.so.3", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  open("../..//libfs/lib/nvml/src/nondebug/tls/x86_64/libjson-c.so.3", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  open("../..//libfs/lib/nvml/src/nondebug/tls/libjson-c.so.3", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  open("../..//libfs/lib/nvml/src/nondebug/x86_64/libjson-c.so.3", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  open("../..//libfs/lib/nvml/src/nondebug/libjson-c.so.3", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  open("../..//libfs/build/tls/x86_64/libjson-c.so.3", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  open("../..//libfs/build/tls/libjson-c.so.3", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  open("../..//libfs/build/x86_64/libjson-c.so.3", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  open("../..//libfs/build/libjson-c.so.3", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  open("/lib64/libjson-c.so.3", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  open("/home/ereshiple/strata/libfs/src/storage/spdk/libjson-c.so.3", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+7178  open("/lib/x86_64-linux-gnu/libjson-c.so.3", O_RDONLY|O_CLOEXEC) = 3
+7178  read(3, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0P'\0\0\0\0\0\0"..., 832) = 832
+7178  fstat(3, {st_mode=S_IFREG|0644, st_size=43304, ...}) = 0
+7178  mmap(NULL, 2138456, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7f12b85e1000
+7178  mprotect(0x7f12b85eb000, 2093056, PROT_NONE) = 0
+7178  mmap(0x7f12b87ea000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x9000) = 0x7f12b87ea000
+7178  close(3)                          = 0
+7178  mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f12b85e0000
+7178  mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f12b85df000
+7178  mmap(NULL, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f12b85dd000
+7178  arch_prctl(ARCH_SET_FS, 0x7f12b85de200) = 0
+7178  mprotect(0x7f12b92ce000, 16384, PROT_READ) = 0
+7178  mprotect(0x7f12b87ea000, 4096, PROT_READ) = 0
+7178  mprotect(0x7f12b9658000, 4096, PROT_READ) = 0
+7178  mprotect(0x7f12b8a49000, 8192, PROT_READ) = 0
+7178  mprotect(0x7f12b9661000, 4096, PROT_READ) = 0
+7178  mprotect(0x7f12b963b000, 4096, PROT_READ) = 0
+7178  mprotect(0x7f12b8c98000, 8192, PROT_READ) = 0
+7178  mprotect(0x7f12b9630000, 4096, PROT_READ) = 0
+7178  mprotect(0x7f12b8ef8000, 4096, PROT_READ) = 0
+7178  mprotect(0x7f12b9129000, 4096, PROT_READ) = 0
+7178  mprotect(0x7f12b9513000, 4096, PROT_READ) = 0
+7178  mprotect(0x7f12b986f000, 4096, PROT_READ) = 0
+7178  mprotect(0x55a637737000, 4096, PROT_READ) = 0
+7178  mprotect(0x7f12b9897000, 4096, PROT_READ) = 0
+7178  set_tid_address(0x7f12b85de4d0)   = 7178
+7178  set_robust_list(0x7f12b85de4e0, 24) = 0
+7178  futex(0x7ffffe419750, FUTEX_WAKE_PRIVATE, 1) = 0
+7178  futex(0x7ffffe419750, FUTEX_WAIT_BITSET_PRIVATE|FUTEX_CLOCK_REALTIME, 1, NULL, 0xb85de200) = -1 EAGAIN (Resource temporarily unavailable)
+7178  rt_sigaction(SIGRTMIN, {sa_handler=0x7f12b96435d0, sa_mask=[], sa_flags=SA_RESTORER|SA_SIGINFO, sa_restorer=0x7f12b964db60}, NULL, 8) = 0
+7178  rt_sigaction(SIGRT_1, {sa_handler=0x7f12b9643660, sa_mask=[], sa_flags=SA_RESTORER|SA_RESTART|SA_SIGINFO, sa_restorer=0x7f12b964db60}, NULL, 8) = 0
+7178  rt_sigprocmask(SIG_UNBLOCK, [RTMIN RT_1], NULL, 8) = 0
+7178  getrlimit(RLIMIT_STACK, {rlim_cur=8192*1024, rlim_max=RLIM64_INFINITY}) = 0
+7178  readlink("/etc/malloc.conf", 0x7ffffe4186f0, 4096) = -1 ENOENT (No such file or directory)
+7178  open("/proc/sys/vm/overcommit_memory", O_RDONLY) = 3
+7178  read(3, "0", 1)                   = 1
+7178  close(3)                          = 0
+7178  brk(NULL)                         = 0x55a637b4c000
+7178  open("/sys/kernel/mm/transparent_hugepage/enabled", O_RDONLY) = 3
+7178  read(3, "always [madvise] never\n", 24) = 23
+7178  close(3)                          = 0
+7178  mmap(NULL, 2097152, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS|MAP_NORESERVE, -1, 0) = 0x7f12b83dd000
+7178  munmap(0x7f12b83dd000, 2097152)   = 0
+7178  mmap(NULL, 4190208, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS|MAP_NORESERVE, -1, 0) = 0x7f12b81de000
+7178  munmap(0x7f12b81de000, 139264)    = 0
+7178  munmap(0x7f12b8400000, 1953792)   = 0
+7178  sched_getaffinity(7178, 128, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39]) = 8
+7178  brk(0x55a637b6d000)               = 0x55a637b6d000
+7178  futex(0x7f12b912a510, FUTEX_WAKE_PRIVATE, 2147483647) = 0
+7178  stat("/sys/bus/nd/devices", {st_mode=S_IFDIR|0755, st_size=0, ...}) = 0
+7178  stat("/sys/bus/nd/devices", {st_mode=S_IFDIR|0755, st_size=0, ...}) = 0
+7178  open("/PWD", O_RDONLY)            = -1 ENOENT (No such file or directory)
+7178  openat(AT_FDCWD, "/sys/bus/nd/devices", O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY) = 3
+7178  fcntl(3, F_GETFD)                 = 0x1 (flags FD_CLOEXEC)
+7178  getdents(3, /* 17 entries */, 32768) = 528
+7178  lstat("/sys/bus/nd/devices/namespace0.0", {st_mode=S_IFLNK|0777, st_size=0, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/pfn1.0", {st_mode=S_IFLNK|0777, st_size=0, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/dax0.0", {st_mode=S_IFLNK|0777, st_size=0, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/dax1.1", {st_mode=S_IFLNK|0777, st_size=0, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/nmem0", {st_mode=S_IFLNK|0777, st_size=0, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/pfn0.0", {st_mode=S_IFLNK|0777, st_size=0, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/btt1.0", {st_mode=S_IFLNK|0777, st_size=0, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0", {st_mode=S_IFLNK|0777, st_size=0, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/dax0.1", {st_mode=S_IFLNK|0777, st_size=0, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/ndbus0", {st_mode=S_IFLNK|0777, st_size=0, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/namespace1.0", {st_mode=S_IFLNK|0777, st_size=0, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/btt0.0", {st_mode=S_IFLNK|0777, st_size=0, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/dax1.0", {st_mode=S_IFLNK|0777, st_size=0, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/nmem1", {st_mode=S_IFLNK|0777, st_size=0, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region1", {st_mode=S_IFLNK|0777, st_size=0, ...}) = 0
+7178  getdents(3, /* 0 entries */, 32768) = 0
+7178  close(3)                          = 0
+7178  stat("/sys/bus/nd/devices/region0", {st_mode=S_IFDIR|0755, st_size=0, ...}) = 0
+7178  open("/PWD", O_RDONLY)            = -1 ENOENT (No such file or directory)
+7178  openat(AT_FDCWD, "/sys/bus/nd/devices/region0", O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY) = 3
+7178  getdents(3, /* 31 entries */, 32768) = 992
+7178  lstat("/sys/bus/nd/devices/region0/namespace0.0", {st_mode=S_IFDIR|0755, st_size=0, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/uevent", {st_mode=S_IFREG|0644, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/namespace_seed", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/btt_seed", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/nstype", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/dax0.0", {st_mode=S_IFDIR|0755, st_size=0, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/init_namespaces", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/read_only", {st_mode=S_IFREG|0644, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/set_cookie", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/power", {st_mode=S_IFDIR|0755, st_size=0, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/pfn_seed", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/numa_node", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/resource", {st_mode=S_IFREG|0400, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/max_available_extent", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/dax_seed", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/pfn0.0", {st_mode=S_IFDIR|0755, st_size=0, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/driver", {st_mode=S_IFLNK|0777, st_size=0, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/badblocks", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/size", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/mappings", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/dax0.1", {st_mode=S_IFDIR|0755, st_size=0, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/subsystem", {st_mode=S_IFLNK|0777, st_size=0, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/nfit", {st_mode=S_IFDIR|0755, st_size=0, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/mapping0", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/btt0.0", {st_mode=S_IFDIR|0755, st_size=0, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/devtype", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/available_size", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/deep_flush", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/modalias", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  getdents(3, /* 0 entries */, 32768) = 0
+7178  close(3)                          = 0
+7178  openat(AT_FDCWD, "/sys/bus/nd/devices/region0/namespace0.0", O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY) = 3
+7178  getdents(3, /* 15 entries */, 32768) = 448
+7178  lstat("/sys/bus/nd/devices/region0/namespace0.0/uevent", {st_mode=S_IFREG|0644, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/namespace0.0/holder_class", {st_mode=S_IFREG|0644, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/namespace0.0/nstype", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/namespace0.0/mode", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/namespace0.0/power", {st_mode=S_IFDIR|0755, st_size=0, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/namespace0.0/numa_node", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/namespace0.0/resource", {st_mode=S_IFREG|0400, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/namespace0.0/force_raw", {st_mode=S_IFREG|0644, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/namespace0.0/size", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/namespace0.0/subsystem", {st_mode=S_IFLNK|0777, st_size=0, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/namespace0.0/holder", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/namespace0.0/devtype", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/namespace0.0/modalias", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  getdents(3, /* 0 entries */, 32768) = 0
+7178  close(3)                          = 0
+7178  openat(AT_FDCWD, "/sys/bus/nd/devices/region0/namespace0.0/power", O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY) = 3
+7178  getdents(3, /* 11 entries */, 32768) = 400
+7178  lstat("/sys/bus/nd/devices/region0/namespace0.0/power/runtime_active_time", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/namespace0.0/power/runtime_active_kids", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/namespace0.0/power/runtime_usage", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/namespace0.0/power/runtime_status", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/namespace0.0/power/autosuspend_delay_ms", {st_mode=S_IFREG|0644, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/namespace0.0/power/async", {st_mode=S_IFREG|0644, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/namespace0.0/power/runtime_suspended_time", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/namespace0.0/power/runtime_enabled", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/namespace0.0/power/control", {st_mode=S_IFREG|0644, st_size=4096, ...}) = 0
+7178  getdents(3, /* 0 entries */, 32768) = 0
+7178  close(3)                          = 0
+7178  openat(AT_FDCWD, "/sys/bus/nd/devices/region0/dax0.0", O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY) = 3
+7178  getdents(3, /* 18 entries */, 32768) = 536
+7178  lstat("/sys/bus/nd/devices/region0/dax0.0/uevent", {st_mode=S_IFREG|0644, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/dax0.0/mode", {st_mode=S_IFREG|0644, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/dax0.0/power", {st_mode=S_IFDIR|0755, st_size=0, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/dax0.0/numa_node", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/dax0.0/resource", {st_mode=S_IFREG|0400, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/dax0.0/dax", {st_mode=S_IFDIR|0755, st_size=0, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/dax0.0/supported_alignments", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/dax0.0/dax_region", {st_mode=S_IFDIR|0755, st_size=0, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/dax0.0/driver", {st_mode=S_IFLNK|0777, st_size=0, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/dax0.0/align", {st_mode=S_IFREG|0644, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/dax0.0/size", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/dax0.0/subsystem", {st_mode=S_IFLNK|0777, st_size=0, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/dax0.0/uuid", {st_mode=S_IFREG|0644, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/dax0.0/namespace", {st_mode=S_IFREG|0644, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/dax0.0/devtype", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/dax0.0/modalias", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  getdents(3, /* 0 entries */, 32768) = 0
+7178  close(3)                          = 0
+7178  openat(AT_FDCWD, "/sys/bus/nd/devices/region0/dax0.0/power", O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY) = 3
+7178  getdents(3, /* 11 entries */, 32768) = 400
+7178  lstat("/sys/bus/nd/devices/region0/dax0.0/power/runtime_active_time", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/dax0.0/power/runtime_active_kids", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/dax0.0/power/runtime_usage", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/dax0.0/power/runtime_status", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/dax0.0/power/autosuspend_delay_ms", {st_mode=S_IFREG|0644, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/dax0.0/power/async", {st_mode=S_IFREG|0644, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/dax0.0/power/runtime_suspended_time", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/dax0.0/power/runtime_enabled", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/dax0.0/power/control", {st_mode=S_IFREG|0644, st_size=4096, ...}) = 0
+7178  getdents(3, /* 0 entries */, 32768) = 0
+7178  close(3)                          = 0
+7178  openat(AT_FDCWD, "/sys/bus/nd/devices/region0/dax0.0/dax", O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY) = 3
+7178  getdents(3, /* 3 entries */, 32768) = 80
+7178  lstat("/sys/bus/nd/devices/region0/dax0.0/dax/dax0.0", {st_mode=S_IFDIR|0755, st_size=0, ...}) = 0
+7178  getdents(3, /* 0 entries */, 32768) = 0
+7178  close(3)                          = 0
+7178  openat(AT_FDCWD, "/sys/bus/nd/devices/region0/dax0.0/dax/dax0.0", O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY) = 3
+7178  getdents(3, /* 10 entries */, 32768) = 288
+7178  lstat("/sys/bus/nd/devices/region0/dax0.0/dax/dax0.0/uevent", {st_mode=S_IFREG|0644, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/dax0.0/dax/dax0.0/power", {st_mode=S_IFDIR|0755, st_size=0, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/dax0.0/dax/dax0.0/target_node", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/dax0.0/dax/dax0.0/dev", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/dax0.0/dax/dax0.0/device", {st_mode=S_IFLNK|0777, st_size=0, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/dax0.0/dax/dax0.0/size", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/dax0.0/dax/dax0.0/subsystem", {st_mode=S_IFLNK|0777, st_size=0, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/dax0.0/dax/dax0.0/modalias", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  getdents(3, /* 0 entries */, 32768) = 0
+7178  close(3)                          = 0
+7178  openat(AT_FDCWD, "/sys/bus/nd/devices/region0/dax0.0/dax/dax0.0/power", O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY) = 3
+7178  getdents(3, /* 11 entries */, 32768) = 400
+7178  lstat("/sys/bus/nd/devices/region0/dax0.0/dax/dax0.0/power/runtime_active_time", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/dax0.0/dax/dax0.0/power/runtime_active_kids", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/dax0.0/dax/dax0.0/power/runtime_usage", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/dax0.0/dax/dax0.0/power/runtime_status", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/dax0.0/dax/dax0.0/power/autosuspend_delay_ms", {st_mode=S_IFREG|0644, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/dax0.0/dax/dax0.0/power/async", {st_mode=S_IFREG|0644, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/dax0.0/dax/dax0.0/power/runtime_suspended_time", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/dax0.0/dax/dax0.0/power/runtime_enabled", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/dax0.0/dax/dax0.0/power/control", {st_mode=S_IFREG|0644, st_size=4096, ...}) = 0
+7178  getdents(3, /* 0 entries */, 32768) = 0
+7178  close(3)                          = 0
+7178  openat(AT_FDCWD, "/sys/bus/nd/devices/region0/dax0.0/dax_region", O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY) = 3
+7178  getdents(3, /* 5 entries */, 32768) = 128
+7178  lstat("/sys/bus/nd/devices/region0/dax0.0/dax_region/id", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/dax0.0/dax_region/align", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/dax0.0/dax_region/size", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  getdents(3, /* 0 entries */, 32768) = 0
+7178  close(3)                          = 0
+7178  openat(AT_FDCWD, "/sys/bus/nd/devices/region0/power", O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY) = 3
+7178  getdents(3, /* 11 entries */, 32768) = 400
+7178  lstat("/sys/bus/nd/devices/region0/power/runtime_active_time", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/power/runtime_active_kids", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/power/runtime_usage", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/power/runtime_status", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/power/autosuspend_delay_ms", {st_mode=S_IFREG|0644, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/power/async", {st_mode=S_IFREG|0644, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/power/runtime_suspended_time", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/power/runtime_enabled", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/power/control", {st_mode=S_IFREG|0644, st_size=4096, ...}) = 0
+7178  getdents(3, /* 0 entries */, 32768) = 0
+7178  close(3)                          = 0
+7178  openat(AT_FDCWD, "/sys/bus/nd/devices/region0/pfn0.0", O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY) = 3
+7178  getdents(3, /* 15 entries */, 32768) = 448
+7178  lstat("/sys/bus/nd/devices/region0/pfn0.0/uevent", {st_mode=S_IFREG|0644, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/pfn0.0/mode", {st_mode=S_IFREG|0644, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/pfn0.0/power", {st_mode=S_IFDIR|0755, st_size=0, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/pfn0.0/numa_node", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/pfn0.0/resource", {st_mode=S_IFREG|0400, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/pfn0.0/supported_alignments", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/pfn0.0/align", {st_mode=S_IFREG|0644, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/pfn0.0/size", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/pfn0.0/subsystem", {st_mode=S_IFLNK|0777, st_size=0, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/pfn0.0/uuid", {st_mode=S_IFREG|0644, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/pfn0.0/namespace", {st_mode=S_IFREG|0644, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/pfn0.0/devtype", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/pfn0.0/modalias", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  getdents(3, /* 0 entries */, 32768) = 0
+7178  close(3)                          = 0
+7178  openat(AT_FDCWD, "/sys/bus/nd/devices/region0/pfn0.0/power", O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY) = 3
+7178  getdents(3, /* 11 entries */, 32768) = 400
+7178  lstat("/sys/bus/nd/devices/region0/pfn0.0/power/runtime_active_time", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/pfn0.0/power/runtime_active_kids", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/pfn0.0/power/runtime_usage", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/pfn0.0/power/runtime_status", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/pfn0.0/power/autosuspend_delay_ms", {st_mode=S_IFREG|0644, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/pfn0.0/power/async", {st_mode=S_IFREG|0644, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/pfn0.0/power/runtime_suspended_time", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/pfn0.0/power/runtime_enabled", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/pfn0.0/power/control", {st_mode=S_IFREG|0644, st_size=4096, ...}) = 0
+7178  getdents(3, /* 0 entries */, 32768) = 0
+7178  close(3)                          = 0
+7178  openat(AT_FDCWD, "/sys/bus/nd/devices/region0/dax0.1", O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY) = 3
+7178  getdents(3, /* 15 entries */, 32768) = 448
+7178  lstat("/sys/bus/nd/devices/region0/dax0.1/uevent", {st_mode=S_IFREG|0644, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/dax0.1/mode", {st_mode=S_IFREG|0644, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/dax0.1/power", {st_mode=S_IFDIR|0755, st_size=0, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/dax0.1/numa_node", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/dax0.1/resource", {st_mode=S_IFREG|0400, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/dax0.1/supported_alignments", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/dax0.1/align", {st_mode=S_IFREG|0644, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/dax0.1/size", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/dax0.1/subsystem", {st_mode=S_IFLNK|0777, st_size=0, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/dax0.1/uuid", {st_mode=S_IFREG|0644, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/dax0.1/namespace", {st_mode=S_IFREG|0644, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/dax0.1/devtype", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/dax0.1/modalias", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  getdents(3, /* 0 entries */, 32768) = 0
+7178  close(3)                          = 0
+7178  openat(AT_FDCWD, "/sys/bus/nd/devices/region0/dax0.1/power", O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY) = 3
+7178  getdents(3, /* 11 entries */, 32768) = 400
+7178  lstat("/sys/bus/nd/devices/region0/dax0.1/power/runtime_active_time", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/dax0.1/power/runtime_active_kids", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/dax0.1/power/runtime_usage", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/dax0.1/power/runtime_status", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/dax0.1/power/autosuspend_delay_ms", {st_mode=S_IFREG|0644, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/dax0.1/power/async", {st_mode=S_IFREG|0644, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/dax0.1/power/runtime_suspended_time", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/dax0.1/power/runtime_enabled", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/dax0.1/power/control", {st_mode=S_IFREG|0644, st_size=4096, ...}) = 0
+7178  getdents(3, /* 0 entries */, 32768) = 0
+7178  close(3)                          = 0
+7178  openat(AT_FDCWD, "/sys/bus/nd/devices/region0/nfit", O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY) = 3
+7178  getdents(3, /* 3 entries */, 32768) = 80
+7178  lstat("/sys/bus/nd/devices/region0/nfit/range_index", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  getdents(3, /* 0 entries */, 32768) = 0
+7178  close(3)                          = 0
+7178  openat(AT_FDCWD, "/sys/bus/nd/devices/region0/btt0.0", O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY) = 3
+7178  getdents(3, /* 13 entries */, 32768) = 392
+7178  lstat("/sys/bus/nd/devices/region0/btt0.0/uevent", {st_mode=S_IFREG|0644, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/btt0.0/power", {st_mode=S_IFDIR|0755, st_size=0, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/btt0.0/numa_node", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/btt0.0/size", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/btt0.0/log_zero_flags", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/btt0.0/subsystem", {st_mode=S_IFLNK|0777, st_size=0, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/btt0.0/uuid", {st_mode=S_IFREG|0644, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/btt0.0/sector_size", {st_mode=S_IFREG|0644, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/btt0.0/namespace", {st_mode=S_IFREG|0644, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/btt0.0/devtype", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/btt0.0/modalias", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  getdents(3, /* 0 entries */, 32768) = 0
+7178  close(3)                          = 0
+7178  openat(AT_FDCWD, "/sys/bus/nd/devices/region0/btt0.0/power", O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY) = 3
+7178  getdents(3, /* 11 entries */, 32768) = 400
+7178  lstat("/sys/bus/nd/devices/region0/btt0.0/power/runtime_active_time", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/btt0.0/power/runtime_active_kids", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/btt0.0/power/runtime_usage", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/btt0.0/power/runtime_status", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/btt0.0/power/autosuspend_delay_ms", {st_mode=S_IFREG|0644, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/btt0.0/power/async", {st_mode=S_IFREG|0644, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/btt0.0/power/runtime_suspended_time", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/btt0.0/power/runtime_enabled", {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+7178  lstat("/sys/bus/nd/devices/region0/btt0.0/power/control", {st_mode=S_IFREG|0644, st_size=4096, ...}) = 0
+7178  getdents(3, /* 0 entries */, 32768) = 0
+7178  close(3)                          = 0
+7178  fstat(1, {st_mode=S_IFCHR|0620, st_rdev=makedev(136, 4), ...}) = 0
+7178  mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f12b85dc000
+7178  write(1, " -> using Strata default indexin"..., 35) = 35
+7178  write(1, "MLFS_IDX_CACHE not set -> disabl"..., 55) = 55
+7178  open("/dev/dax0.0", O_RDWR)       = 3
+7178  mmap(NULL, 2111832064, PROT_READ|PROT_WRITE, MAP_SHARED|MAP_POPULATE, 3, 0) = 0x7f123a200000
+7178  write(1, "dev-dax engine is initialized: d"..., 65) = 65
+7178  open("/dev/dax1.0", O_RDWR)       = 4
+7178  mmap(NULL, 10567548928, PROT_READ|PROT_WRITE, MAP_SHARED|MAP_POPULATE, 4, 0) = 0x7f0fc4200000
+7178  write(1, "dev-dax engine is initialized: d"..., 65) = 65
+7178  statfs("/dev/shm/", {f_type=TMPFS_MAGIC, f_bsize=4096, f_blocks=761738, f_bfree=710538, f_bavail=710538, f_files=761738, f_ffree=761736, f_fsid={val=[0, 0]}, f_namelen=255, f_frsize=4096, f_flags=ST_VALID|ST_NOSUID|ST_NODEV}) = 0
+7178  futex(0x7f12b963c314, FUTEX_WAKE_PRIVATE, 2147483647) = 0
+7178  open("/dev/shm/mlfs_shm", O_RDWR|O_NOFOLLOW|O_CLOEXEC) = 5
+7178  fcntl(5, F_GETFD)                 = 0x1 (flags FD_CLOEXEC)
+7178  mmap(NULL, 209719296, PROT_READ|PROT_WRITE, MAP_SHARED, 5, 0) = 0x7f0fb79ff000
+7178  pipe([6, 7])                      = 0
+7178  mmap(NULL, 8392704, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_PRIVATE|MAP_ANONYMOUS|MAP_STACK, -1, 0) = 0x7f0fb71fe000
+7178  mprotect(0x7f0fb71fe000, 4096, PROT_NONE) = 0
+7178  clone(child_stack=0x7f0fb79fd4f0, flags=CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVSEM|CLONE_SETTLS|CLONE_PARENT_SETTID|CLONE_CHILD_CLEARTID, parent_tidptr=0x7f0fb79fe9d0, tls=0x7f0fb79fe700, child_tidptr=0x7f0fb79fe9d0) = 7179
+7179  set_robust_list(0x7f0fb79fe9e0, 24) = 0
+7179  socket(AF_UNIX, SOCK_DGRAM, 0)    = 8
+7179  unlink("/tmp/mlfs_cli.7178")      = -1 ENOENT (No such file or directory)
+7179  bind(8, {sa_family=AF_UNIX, sun_path="/tmp/mlfs_cli.7178"}, 110) = 0
+7179  chmod("/tmp/mlfs_cli.7178", 0777) = 0
+7179  fcntl(8, F_GETFL)                 = 0x2 (flags O_RDWR)
+7179  fcntl(8, F_SETFL, O_RDWR|O_NONBLOCK) = 0
+7179  epoll_create(1)                   = 9
+7179  epoll_ctl(9, EPOLL_CTL_ADD, 8, {EPOLLIN|EPOLLHUP|EPOLLRDHUP, {u32=8, u64=8}}) = 0
+7179  epoll_create(1)                   = 10
+7179  epoll_ctl(10, EPOLL_CTL_ADD, 6, {EPOLLIN|EPOLLHUP|EPOLLRDHUP, {u32=6, u64=6}}) = 0
+7179  epoll_wait(10,  <unfinished ...>
+7178  gettid()                          = 7178
+7178  write(1, "[7178][init_fs():424] LibFS is i"..., 53) = 53
+7178  gettid()                          = 7178
+7178  write(1, "[7178][init_fs():438]  disable p"..., 39) = 39
+7178  write(1, "MLFS_CACHE_PERF not set -> disab"..., 57) = 57
+7178  write(1, "libshim init: \n", 15)  = 15
+7178  getcwd("/home/ereshiple/strata/bench/filebench", 1024) = 39
+7178  gettid()                          = 7178
+7178  write(2, "(7178)[shim_sys_fs_init:38] shim"..., 91) = 91
+7178  write(1, "getchar to continue\n", 20) = 20
+7178  fstat(0, {st_mode=S_IFCHR|0620, st_rdev=makedev(136, 4), ...}) = 0
+7178  mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f12b85db000
+7178  read(0, "\n", 1024)               = 1
+7178  rt_sigaction(SIGUSR1, {sa_handler=0x55a63751e4db, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f12b964db60}, NULL, 8) = 0
+7178  personality(0xffffffff)           = 0 (PER_LINUX)
+7178  personality(0xffffffff)           = 0 (PER_LINUX)
+7178  getrlimit(RLIMIT_NOFILE, {rlim_cur=1024, rlim_max=1024*1024}) = 0
+7178  setrlimit(RLIMIT_NOFILE, {rlim_cur=1024*1024, rlim_max=1024*1024}) = 0
+7178  setrlimit(RLIMIT_NOFILE, {rlim_cur=50000, rlim_max=50000}) = 0
+7178  open("/tmp/kernfs.pid", O_RDONLY) = 11
+7178  fstat(11, {st_mode=S_IFREG|0644, st_size=5, ...}) = 0
+7178  mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f12b85da000
+7178  read(11, "7161\n", 4096)          = 5
+7178  write(1, "kernfs id is 7161\n", 18) = 18
+7178  close(11)                         = 0
+7178  munmap(0x7f12b85da000, 4096)      = 0
+7178  write(1, "initialize mlfs\n", 16) = 16
+7178  write(1, "Filebench Version 1.5-alpha3\n", 29) = 29
+7178  open("/home/ereshiple/strata/bench/filebench/filemicro_rand_4k.f", O_RDONLY) = 11
+7178  open("/proc/sys/kernel/shmmax", O_RDWR) = 12
+7178  fstat(12, {st_mode=S_IFREG|0644, st_size=0, ...}) = 0
+7178  mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f12b85da000
+7178  write(12, "268435456\0", 10)      = -1 EINVAL (Invalid argument)
+7178  close(12)                         = 0
+7178  munmap(0x7f12b85da000, 4096)      = 0
+7178  open("/tmp/filebench-shm-QfP7Pv", O_RDWR|O_CREAT|O_EXCL, 0600) = 12
+7178  lseek(12, 180780928, SEEK_SET)    = 180780928
+7178  write(12, "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"..., 1048576) = 1048576
+7178  mmap(NULL, 180780928, PROT_READ|PROT_WRITE, MAP_SHARED, 12, 0) = 0x7f0fac596000
+7178  write(1, "0.000: Allocated 173MB of shared"..., 40) = 40
+7178  futex(0x7ffffe31961c, FUTEX_UNLOCK_PI) = -1 EPERM (Operation not permitted)
+7178  stat("/tmp/filebench-shm-QfP7Pv", {st_mode=S_IFREG|0600, st_size=181829504, ...}) = 0
+7178  semget(0x1012113, 0, 000)         = -1 ENOENT (No such file or directory)
+7178  mmap(NULL, 8392704, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_PRIVATE|MAP_ANONYMOUS|MAP_STACK, -1, 0) = 0x7f0fabd95000
+7178  mprotect(0x7f0fabd95000, 4096, PROT_NONE) = 0
+7178  clone(child_stack=0x7f0fac5944f0, flags=CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVSEM|CLONE_SETTLS|CLONE_PARENT_SETTID|CLONE_CHILD_CLEARTID, parent_tidptr=0x7f0fac5959d0, tls=0x7f0fac595700, child_tidptr=0x7f0fac5959d0) = 7180
+7180  set_robust_list(0x7f0fac5959e0, 24 <unfinished ...>
+7178  openat(AT_FDCWD, "/home/ereshiple/strata/bench/filebench/install/share/filebench/cvars", O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY <unfinished ...>
+7180  <... set_robust_list resumed> )   = 0
+7180  rt_sigprocmask(SIG_BLOCK, [CHLD],  <unfinished ...>
+7178  <... openat resumed> )            = 13
+7180  <... rt_sigprocmask resumed> [], 8) = 0
+7178  getdents(13 <unfinished ...>
+7180  rt_sigaction(SIGCHLD, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0
+7180  rt_sigprocmask(SIG_SETMASK, [],  <unfinished ...>
+7178  <... getdents resumed> , /* 42 entries */, 32768) = 1776
+7180  <... rt_sigprocmask resumed> NULL, 8) = 0
+7180  nanosleep({tv_sec=1, tv_nsec=0},  <unfinished ...>
+7178  futex(0x7f0fae9977d8, FUTEX_WAKE, 1) = 0
+7178  futex(0x7f0fae9977d8, FUTEX_WAKE, 1) = 0
+7178  futex(0x7f0fae9977d8, FUTEX_WAKE, 1) = 0
+7178  futex(0x7f0fae9977d8, FUTEX_WAKE, 1) = 0
+7178  futex(0x7f0fae9977d8, FUTEX_WAKE, 1) = 0
+7178  futex(0x7f0fae9977d8, FUTEX_WAKE, 1) = 0
+7178  futex(0x7f0fae9977d8, FUTEX_WAKE, 1) = 0
+7178  futex(0x7f0fae9977d8, FUTEX_WAKE, 1) = 0
+7178  getdents(13, /* 0 entries */, 32768) = 0
+7178  close(13)                         = 0
+7178  futex(0x7f12b96620a8, FUTEX_WAKE_PRIVATE, 2147483647) = 0
+7178  open("/home/ereshiple/strata/bench/filebench/install/share/filebench/cvars/libcvar-triangular.so", O_RDONLY|O_CLOEXEC) = 13
+7178  read(13, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\0\"\0\0\0\0\0\0"..., 832) = 832
+7178  fstat(13, {st_mode=S_IFREG|0755, st_size=56032, ...}) = 0
+7178  mmap(NULL, 2131144, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 13, 0) = 0x7f0fabb8c000
+7178  mprotect(0x7f0fabb93000, 2093056, PROT_NONE) = 0
+7178  mmap(0x7f0fabd92000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 13, 0x6000) = 0x7f0fabd92000
+7178  mmap(0x7f0fabd94000, 1224, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7f0fabd94000
+7178  close(13)                         = 0
+7178  mprotect(0x7f0fabd92000, 4096, PROT_READ) = 0
+7178  open("/home/ereshiple/strata/bench/filebench/install/share/filebench/cvars/libcvar-exponential.so", O_RDONLY|O_CLOEXEC) = 13
+7178  read(13, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\0\"\0\0\0\0\0\0"..., 832) = 832
+7178  fstat(13, {st_mode=S_IFREG|0755, st_size=55968, ...}) = 0
+7178  mmap(NULL, 2131144, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 13, 0) = 0x7f0fab983000
+7178  mprotect(0x7f0fab98a000, 2093056, PROT_NONE) = 0
+7178  mmap(0x7f0fabb89000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 13, 0x6000) = 0x7f0fabb89000
+7178  mmap(0x7f0fabb8b000, 1224, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7f0fabb8b000
+7178  close(13)                         = 0
+7178  mprotect(0x7f0fabb89000, 4096, PROT_READ) = 0
+7178  open("/home/ereshiple/strata/bench/filebench/install/share/filebench/cvars/libcvar-lognormal.so", O_RDONLY|O_CLOEXEC) = 13
+7178  read(13, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\0\"\0\0\0\0\0\0"..., 832) = 832
+7178  fstat(13, {st_mode=S_IFREG|0755, st_size=55992, ...}) = 0
+7178  mmap(NULL, 2131144, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 13, 0) = 0x7f0fab77a000
+7178  mprotect(0x7f0fab781000, 2093056, PROT_NONE) = 0
+7178  mmap(0x7f0fab980000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 13, 0x6000) = 0x7f0fab980000
+7178  mmap(0x7f0fab982000, 1224, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7f0fab982000
+7178  close(13)                         = 0
+7178  mprotect(0x7f0fab980000, 4096, PROT_READ) = 0
+7178  open("/home/ereshiple/strata/bench/filebench/install/share/filebench/cvars/libcvar-erlang.so", O_RDONLY|O_CLOEXEC) = 13
+7178  read(13, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0@\"\0\0\0\0\0\0"..., 832) = 832
+7178  fstat(13, {st_mode=S_IFREG|0755, st_size=56024, ...}) = 0
+7178  mmap(NULL, 2131144, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 13, 0) = 0x7f0fab571000
+7178  mprotect(0x7f0fab578000, 2093056, PROT_NONE) = 0
+7178  mmap(0x7f0fab777000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 13, 0x6000) = 0x7f0fab777000
+7178  mmap(0x7f0fab779000, 1224, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7f0fab779000
+7178  close(13)                         = 0
+7178  mprotect(0x7f0fab777000, 4096, PROT_READ) = 0
+7178  open("/home/ereshiple/strata/bench/filebench/install/share/filebench/cvars/libcvar-normal.so", O_RDONLY|O_CLOEXEC) = 13
+7178  read(13, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\0\"\0\0\0\0\0\0"..., 832) = 832
+7178  fstat(13, {st_mode=S_IFREG|0755, st_size=55968, ...}) = 0
+7178  mmap(NULL, 2131144, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 13, 0) = 0x7f0fab368000
+7178  mprotect(0x7f0fab36f000, 2093056, PROT_NONE) = 0
+7178  mmap(0x7f0fab56e000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 13, 0x6000) = 0x7f0fab56e000
+7178  mmap(0x7f0fab570000, 1224, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7f0fab570000
+7178  close(13)                         = 0
+7178  mprotect(0x7f0fab56e000, 4096, PROT_READ) = 0
+7178  open("/home/ereshiple/strata/bench/filebench/install/share/filebench/cvars/libcvar-weibull.so", O_RDONLY|O_CLOEXEC) = 13
+7178  read(13, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\0\"\0\0\0\0\0\0"..., 832) = 832
+7178  fstat(13, {st_mode=S_IFREG|0755, st_size=55984, ...}) = 0
+7178  mmap(NULL, 2131144, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 13, 0) = 0x7f0fab15f000
+7178  mprotect(0x7f0fab166000, 2093056, PROT_NONE) = 0
+7178  mmap(0x7f0fab365000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 13, 0x6000) = 0x7f0fab365000
+7178  mmap(0x7f0fab367000, 1224, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7f0fab367000
+7178  close(13)                         = 0
+7178  mprotect(0x7f0fab365000, 4096, PROT_READ) = 0
+7178  open("/home/ereshiple/strata/bench/filebench/install/share/filebench/cvars/libcvar-uniform.so", O_RDONLY|O_CLOEXEC) = 13
+7178  read(13, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\0\"\0\0\0\0\0\0"..., 832) = 832
+7178  fstat(13, {st_mode=S_IFREG|0755, st_size=55984, ...}) = 0
+7178  mmap(NULL, 2131144, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 13, 0) = 0x7f0faaf56000
+7178  mprotect(0x7f0faaf5d000, 2093056, PROT_NONE) = 0
+7178  mmap(0x7f0fab15c000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 13, 0x6000) = 0x7f0fab15c000
+7178  mmap(0x7f0fab15e000, 1224, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7f0fab15e000
+7178  close(13)                         = 0
+7178  mprotect(0x7f0fab15c000, 4096, PROT_READ) = 0
+7178  open("/home/ereshiple/strata/bench/filebench/install/share/filebench/cvars/libcvar-gamma.so", O_RDONLY|O_CLOEXEC) = 13
+7178  read(13, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\240\"\0\0\0\0\0\0"..., 832) = 832
+7178  fstat(13, {st_mode=S_IFREG|0755, st_size=56904, ...}) = 0
+7178  mmap(NULL, 2131176, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_DENYWRITE, 13, 0) = 0x7f0faad4d000
+7178  mprotect(0x7f0faad54000, 2093056, PROT_NONE) = 0
+7178  mmap(0x7f0faaf53000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 13, 0x6000) = 0x7f0faaf53000
+7178  mmap(0x7f0faaf55000, 1256, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7f0faaf55000
+7178  close(13)                         = 0
+7178  mprotect(0x7f0faaf53000, 4096, PROT_READ) = 0
+7178  rt_sigaction(SIGINT, {sa_handler=0x55a63751e2da, sa_mask=[INT], sa_flags=SA_RESTORER|SA_RESTART, sa_restorer=0x7f12b9160bf0}, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0
+7178  ioctl(11, TCGETS, 0x7ffffe418b90) = -1 ENOTTY (Inappropriate ioctl for device)
+7178  fstat(11, {st_mode=S_IFREG|0664, st_size=1368, ...}) = 0
+7178  mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f12b85da000
+7178  read(11, "#\n# CDDL HEADER START\n#\n# The co"..., 8192) = 1368
+7178  read(11, "", 4096)                = 0
+7178  write(1, "0.006: Random Read Version 3.0 p"..., 63) = 63
+7178  write(1, "0.006: Populating and pre-alloca"..., 46) = 46
+7178  write(1, "0.006: Removing largefile1 tree "..., 44) = 44
+7178  write(1, "0.007: Pre-allocating directorie"..., 53) = 53
+7178  --- SIGSEGV {si_signo=SIGSEGV, si_code=SI_KERNEL, si_addr=NULL} ---
+7180  <... nanosleep resumed> <unfinished ...>) = ?
+7179  <... epoll_wait resumed> <unfinished ...>) = ?
+7179  +++ killed by SIGSEGV (core dumped) +++
+7180  +++ killed by SIGSEGV (core dumped) +++
+7178  +++ killed by SIGSEGV (core dumped) +++
+7174  <... wait4 resumed> [{WIFSIGNALED(s) && WTERMSIG(s) == SIGSEGV && WCOREDUMP(s)}], 0, NULL) = 7178
+7174  rt_sigaction(SIGINT, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, {sa_handler=0x55af543ca0f0, sa_mask=[], sa_flags=SA_RESTORER, sa_restorer=0x7f1b090ddf20}, 8) = 0
+7174  openat(AT_FDCWD, "/usr/share/locale/locale.alias", O_RDONLY|O_CLOEXEC) = 3
+7174  fstat(3, {st_mode=S_IFREG|0644, st_size=2995, ...}) = 0
+7174  read(3, "# Locale name alias data base.\n#"..., 4096) = 2995
+7174  read(3, "", 4096)                 = 0
+7174  close(3)                          = 0
+7174  openat(AT_FDCWD, "/usr/share/locale/en_US.UTF-8/LC_MESSAGES/bash.mo", O_RDONLY) = -1 ENOENT (No such file or directory)
+7174  openat(AT_FDCWD, "/usr/share/locale/en_US.utf8/LC_MESSAGES/bash.mo", O_RDONLY) = -1 ENOENT (No such file or directory)
+7174  openat(AT_FDCWD, "/usr/share/locale/en_US/LC_MESSAGES/bash.mo", O_RDONLY) = -1 ENOENT (No such file or directory)
+7174  openat(AT_FDCWD, "/usr/share/locale/en.UTF-8/LC_MESSAGES/bash.mo", O_RDONLY) = -1 ENOENT (No such file or directory)
+7174  openat(AT_FDCWD, "/usr/share/locale/en.utf8/LC_MESSAGES/bash.mo", O_RDONLY) = -1 ENOENT (No such file or directory)
+7174  openat(AT_FDCWD, "/usr/share/locale/en/LC_MESSAGES/bash.mo", O_RDONLY) = -1 ENOENT (No such file or directory)
+7174  openat(AT_FDCWD, "/usr/share/locale-langpack/en_US.UTF-8/LC_MESSAGES/bash.mo", O_RDONLY) = -1 ENOENT (No such file or directory)
+7174  openat(AT_FDCWD, "/usr/share/locale-langpack/en_US.utf8/LC_MESSAGES/bash.mo", O_RDONLY) = -1 ENOENT (No such file or directory)
+7174  openat(AT_FDCWD, "/usr/share/locale-langpack/en_US/LC_MESSAGES/bash.mo", O_RDONLY) = -1 ENOENT (No such file or directory)
+7174  openat(AT_FDCWD, "/usr/share/locale-langpack/en.UTF-8/LC_MESSAGES/bash.mo", O_RDONLY) = -1 ENOENT (No such file or directory)
+7174  openat(AT_FDCWD, "/usr/share/locale-langpack/en.utf8/LC_MESSAGES/bash.mo", O_RDONLY) = -1 ENOENT (No such file or directory)
+7174  openat(AT_FDCWD, "/usr/share/locale-langpack/en/LC_MESSAGES/bash.mo", O_RDONLY) = -1 ENOENT (No such file or directory)
+7174  fstat(2, {st_mode=S_IFCHR|0620, st_rdev=makedev(136, 4), ...}) = 0
+7174  openat(AT_FDCWD, "/usr/share/locale/en_US.UTF-8/LC_MESSAGES/libc.mo", O_RDONLY) = -1 ENOENT (No such file or directory)
+7174  openat(AT_FDCWD, "/usr/share/locale/en_US.utf8/LC_MESSAGES/libc.mo", O_RDONLY) = -1 ENOENT (No such file or directory)
+7174  openat(AT_FDCWD, "/usr/share/locale/en_US/LC_MESSAGES/libc.mo", O_RDONLY) = -1 ENOENT (No such file or directory)
+7174  openat(AT_FDCWD, "/usr/share/locale/en.UTF-8/LC_MESSAGES/libc.mo", O_RDONLY) = -1 ENOENT (No such file or directory)
+7174  openat(AT_FDCWD, "/usr/share/locale/en.utf8/LC_MESSAGES/libc.mo", O_RDONLY) = -1 ENOENT (No such file or directory)
+7174  openat(AT_FDCWD, "/usr/share/locale/en/LC_MESSAGES/libc.mo", O_RDONLY) = -1 ENOENT (No such file or directory)
+7174  openat(AT_FDCWD, "/usr/share/locale-langpack/en_US.UTF-8/LC_MESSAGES/libc.mo", O_RDONLY) = -1 ENOENT (No such file or directory)
+7174  openat(AT_FDCWD, "/usr/share/locale-langpack/en_US.utf8/LC_MESSAGES/libc.mo", O_RDONLY) = -1 ENOENT (No such file or directory)
+7174  openat(AT_FDCWD, "/usr/share/locale-langpack/en_US/LC_MESSAGES/libc.mo", O_RDONLY) = -1 ENOENT (No such file or directory)
+7174  openat(AT_FDCWD, "/usr/share/locale-langpack/en.UTF-8/LC_MESSAGES/libc.mo", O_RDONLY) = -1 ENOENT (No such file or directory)
+7174  openat(AT_FDCWD, "/usr/share/locale-langpack/en.utf8/LC_MESSAGES/libc.mo", O_RDONLY) = -1 ENOENT (No such file or directory)
+7174  openat(AT_FDCWD, "/usr/share/locale-langpack/en/LC_MESSAGES/libc.mo", O_RDONLY) = -1 ENOENT (No such file or directory)
+7174  write(2, "./run.sh: line 12:  7178 Segment"..., 131) = 131
+7174  rt_sigprocmask(SIG_SETMASK, [], NULL, 8) = 0
+7174  --- SIGCHLD {si_signo=SIGCHLD, si_code=CLD_DUMPED, si_pid=7178, si_uid=0, si_status=SIGSEGV, si_utime=1, si_stime=20} ---
+7174  wait4(-1, 0x7ffce7764010, WNOHANG, NULL) = -1 ECHILD (No child processes)
+7174  rt_sigreturn({mask=[]})           = 0
+7174  read(255, "#LD_PRELOAD=$SRC_ROOT/shim/libsh"..., 881) = 349
+7174  read(255, "", 881)                = 0
+7174  rt_sigprocmask(SIG_BLOCK, [CHLD], [], 8) = 0
+7174  rt_sigprocmask(SIG_SETMASK, [], NULL, 8) = 0
+7174  exit_group(139)                   = ?
+7174  +++ exited with 139 +++

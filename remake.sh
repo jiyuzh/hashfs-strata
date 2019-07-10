@@ -1,6 +1,6 @@
 #! /bin/bash
 set -e
-export OPT_ARGS="-g -O3"
+export OPT_ARGS="-g -O2"
 export DEBUG_ARGS=""
 for arg in $@; do
   if [ "$arg" == "debug" ]; then
