@@ -188,9 +188,17 @@ struct mlfs_ext_path {
 #define MLFS_MAP_NEW        (1 << 0)
 #define MLFS_MAP_LOG_ALLOC  (1 << 1)
 #define MLFS_MAP_GC_ALLOC   (1 << 2)
+#define MAX_GET_BLOCKS_RETURN 8
 
 struct mlfs_map_blocks {
 	mlfs_fsblk_t m_pblk;
+	mlfs_lblk_t m_lblk;
+	uint32_t m_len;
+	uint32_t m_flags;
+};
+
+struct mlfs_map_blocks_arr {
+	mlfs_fsblk_t m_pblk[MAX_GET_BLOCKS_RETURN];
 	mlfs_lblk_t m_lblk;
 	uint32_t m_len;
 	uint32_t m_flags;

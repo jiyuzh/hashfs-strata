@@ -2759,6 +2759,39 @@ static mlfs_lblk_t mlfs_ext_determine_hole(handle_t *handle, struct inode *inode
 	return len;
 }
 
+int mlfs_fs_get_blocks(handle_t *handle, struct inode *inode, 
+			struct mlfs_map_blocks_arr *map_arr, int flags)
+{
+	int create = flags & MLFS_GET_BLOCKS_CREATE_DATA;
+	for(size_t i = 0; i < map_arr.m_len; ++i) {
+		paddr_t key = (((paddr_t) (inode->inum)) << 32) + ((paddr_t) (map->m_lblk + i));
+		//paddr_t *index = (paddr_t*)malloc(sizeof(paddr_t));
+		paddr_t index;
+	if(create) {
+		int success = pmem_nvm_hash_table_insert(key, &index);
+		if(!success) {
+			//block already existed, so this does nothing
+			printf("block already existed\n");
+			return i;
+		}
+	}
+	else {
+		int found = pmem_nvm_hash_table_lookup(key, &index);
+		if(!found) {
+			//did not find the requested block
+			printf("block not found\n");
+			return i;
+		}	
+	}
+	struct super_block *sblk = sb[g_root_dev];
+	map->m_pblk[i] = index + sblk->ondisk->datablock_start;
+	// printf("map->m_pblk: %d\n", map->m_pblk);
+	}
+	
+	return map->m_len;		
+	
+}
+
 /* Core interface API to get/allocate blocks of an inode
  *
  * return > 0, number of of blocks already mapped/allocated
