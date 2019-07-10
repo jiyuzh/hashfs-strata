@@ -784,8 +784,7 @@ int digest_file(uint8_t from_dev, uint8_t to_dev, uint32_t file_inum,
 
 		mlfs_debug("inum %d, offset %lu len %u (dev %d:%lu) -> (dev %d:%lu)\n",
 				file_inode->inum, cur_offset, bh_data->b_size,
-				from_dev, blknr, to_dev, map.m_pblk[0]);
-		}
+				from_dev, blknr, to_dev, IDXAPI_IS_HASHFS() ? map_arr.m_pblk[0] : map.m_pblk);
 		cur_offset += nr_block_get * g_block_size_bytes;
 		data += nr_block_get * g_block_size_bytes;
 	}
