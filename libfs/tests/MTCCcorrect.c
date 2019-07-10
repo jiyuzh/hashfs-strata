@@ -179,7 +179,9 @@ int main(int argc, char **argv) {
 static void *worker_thread(void *arg) {
     worker_result_t *r = (worker_result_t *)(arg);
     struct stat file_stat;
-    void *read_buf = malloc(block_size);
+	void *read_buf = malloc(block_size);
+    void *read_buf_c = malloc(block_size);
+	
     while (1) {
 	int random_num = rand()%file_num;
         int fd = fd_v[random_num];
@@ -195,9 +197,10 @@ static void *worker_thread(void *arg) {
                 ssize_t rs = pread(fd, read_buf, block_size, i);
                 assert(rs != -1 && "sequential read failed");
                 r->total_seq_read += rs;
-                ssize_t rs_c = pread(fd_c, read_buf, block_size, i);
+                ssize_t rs_c = pread(fd_c, read_buf_c, block_size, i);
                 assert(rs_c != -1 && "sequential read failed");
-		worker_results[1][r->i].total_seq_read += rs_c;
+				worker_results[1][r->i].total_seq_read += rs_c;
+				assert(memcmp(read_buf, read_buf_c, block_size) == 0 && "random read incorrect");
             }
         }
         else { // random read
@@ -206,9 +209,10 @@ static void *worker_thread(void *arg) {
                 ssize_t rs = pread(fd, read_buf, block_size, rand_offset);
                 assert(rs != -1 && "random read failed");
                 r->total_rand_read += rs;
-                ssize_t rs_c = pread(fd_c, read_buf, block_size, rand_offset);
+                ssize_t rs_c = pread(fd_c, read_buf_c, block_size, rand_offset);
                 assert(rs_c != -1 && "random read failed");
                 worker_results[1][r->i].total_rand_read += rs_c;
+				assert(memcmp(read_buf, read_buf_c, block_size) ==  0 && "random read incorrect");
             }
         }
         lseek(fd, 0, SEEK_END);
