@@ -1760,39 +1760,23 @@ do_global_search:
 
     // register IO memory to read cache for each 4 KB blocks.
     // When bh finishes IO, the IO data will be in the read cache.
-    if(IDXAPI_IS_HASHFS()) {
-      for (cur = _off, l = 0; l < bmap_req.blk_count_found;
+    
+    for (cur = _off, l = 0; l < bmap_req.blk_count_found;
         cur += g_block_size_bytes, l++) {
-        bh = bh_get_sync_IO(bmap_req.dev, bmap_req.block_no[l], BH_NO_DATA_ALLOC);
-        bh->b_data = mlfs_alloc(g_block_size_bytes);
-        bh->b_size = g_block_size_bytes;
-        bh->b_offset = 0;
+      bh = bh_get_sync_IO(bmap_req.dev, bmap_req.block_no + l, BH_NO_DATA_ALLOC);
+      bh->b_data = mlfs_alloc(g_block_size_bytes);
+      bh->b_size = g_block_size_bytes;
+      bh->b_offset = 0;
 
-        _fcache_block = add_to_read_cache(ip, cur, bh->b_data);
+      _fcache_block = add_to_read_cache(ip, cur, bh->b_data);
 
-        copy_list[l].dst_buffer = dst + pos;
-        copy_list[l].cached_data = _fcache_block->data;
-        copy_list[l].size = g_block_size_bytes;
-        list_add_tail(&bh->b_io_list, &io_list);
-      }
-
-    } else {
-      for (cur = _off, l = 0; l < bmap_req.blk_count_found;
-          cur += g_block_size_bytes, l++) {
-        bh = bh_get_sync_IO(bmap_req.dev, bmap_req.block_no + l, BH_NO_DATA_ALLOC);
-        bh->b_data = mlfs_alloc(g_block_size_bytes);
-        bh->b_size = g_block_size_bytes;
-        bh->b_offset = 0;
-
-        _fcache_block = add_to_read_cache(ip, cur, bh->b_data);
-
-        copy_list[l].dst_buffer = dst + pos;
-        copy_list[l].cached_data = _fcache_block->data;
-        copy_list[l].size = g_block_size_bytes;
-      }
-
-      list_add_tail(&bh->b_io_list, &io_list);
+      copy_list[l].dst_buffer = dst + pos;
+      copy_list[l].cached_data = _fcache_block->data;
+      copy_list[l].size = g_block_size_bytes;
     }
+
+    list_add_tail(&bh->b_io_list, &io_list);
+    
     
   }
 
@@ -1803,13 +1787,24 @@ do_global_search:
    * subsequent bmap call starts finding blocks in other lsm tree.
    */
   if (ret == -EAGAIN) {
-    bitmap_clear(io_bitmap, bitmap_pos, bmap_req.blk_count_found);
-    io_to_be_done += bmap_req.blk_count_found;
+    if(IDXAPI_IS_HASHFS()) {
+      bitmap_clear(io_bitmap, bitmap_pos, bmap_req_arr.blk_count_found);
+      io_to_be_done += bmap_req_arr.blk_count_found;
+    } else {
+      bitmap_clear(io_bitmap, bitmap_pos, bmap_req.blk_count_found);
+      io_to_be_done += bmap_req.blk_count_found;
+    }
+    
 
     goto do_global_search;
   } else {
-    bitmap_clear(io_bitmap, bitmap_pos, bmap_req.blk_count_found);
-    io_to_be_done += bmap_req.blk_count_found;
+    if(IDXAPI_IS_HASHFS()) {
+      bitmap_clear(io_bitmap, bitmap_pos, bmap_req_arr.blk_count_found);
+      io_to_be_done += bmap_req_arr.blk_count_found;
+    } else {
+      bitmap_clear(io_bitmap, bitmap_pos, bmap_req.blk_count_found);
+      io_to_be_done += bmap_req.blk_count_found;
+    }
 
     //mlfs_assert(bitmap_weight(io_bitmap, bitmap_size) == 0);
     if (bitmap_weight(io_bitmap, bitmap_size) != 0) {
