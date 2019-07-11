@@ -1005,7 +1005,7 @@ pmem_nvm_hash_table_insert_node(uint32_t node_index, uint32_t key_hash,
  */
 int pmem_nvm_hash_table_lookup(paddr_t key,
     paddr_t *val/*, paddr_t *size, bool force*/) {
-  printf("inside ht_lookup\n");
+  //printf("inside ht_lookup\n");
   uint32_t node_index;
   uint32_t hash_return;
   paddr_t ent;
