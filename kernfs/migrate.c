@@ -165,7 +165,7 @@ int do_migrate_blocks(uint8_t from_dev, uint8_t to_dev, uint32_t file_inum,
 		if(IDXAPI_IS_HASHFS()) {
 			map_arr.m_lblk = (cur_offset >> g_block_size_shift);
 			// map_arr.m_pblk = 0;
-			map_arr.m_len = nr_blocks - nr_digested_blocks;
+			map_arr.m_len = min(MAX_GET_BLOCKS_RETURN, nr_blocks - nr_digested_blocks);
 			map_arr.m_flags = 0;
 			nr_block_get = mlfs_fs_get_blocks(&handle, file_inode, &map_arr, 
 					MLFS_GET_BLOCKS_CREATE);
@@ -389,7 +389,7 @@ int migrate_blocks(uint8_t from_dev, uint8_t to_dev, isolated_list_t *migrate_li
 again:
 
 		if(IDXAPI_IS_HASHFS()) {
-			map_arr.m_len = nr_blocks - nr_done;
+			map_arr.m_len = min(MAX_GET_BLOCKS_RETURN, nr_blocks - nr_done);
 			map_arr.m_lblk = cur_lblk;
 			map_arr.m_flags = 0;
 			ret = mlfs_fs_get_blocks(&handle, file_inode, &map_arr, 0);
