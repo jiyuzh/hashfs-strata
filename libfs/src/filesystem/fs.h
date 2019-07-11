@@ -25,6 +25,9 @@ extern "C" {
 // [ inode block | free bitmap | data blocks | log blocks ] is a block group.
 // If data blocks is full, then file system will allocate a new block group.
 // Block group expension is not implemented yet.
+#ifndef MAX_GET_BLOCKS_RETURN
+#define MAX_GET_BLOCKS_RETURN 8
+#endif
 
 // directory entry cache
 struct dirent_data {
@@ -598,7 +601,7 @@ void iunlockput(struct inode*);
 void iupdate(struct inode*);
 int itrunc(struct inode *inode, offset_t length);
 int bmap(struct inode *ip, struct bmap_request *bmap_req);
-int bmap_hashfs(struct inode *ip, struct bmap_request *bmap_req_arr);
+int bmap_hashfs(struct inode *ip, struct bmap_request_arr *bmap_req_arr);
 
 int dir_check_entry_fast(struct inode *dir_inode);
 struct inode* dir_lookup(struct inode*, char*, offset_t *);

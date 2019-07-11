@@ -1039,8 +1039,8 @@ int bmap_hashfs(struct inode *ip, struct bmap_request_arr *bmap_req_arr)
     struct mlfs_map_blocks_arr map_arr;
 
     map_arr.m_lblk = (offset >> g_block_size_shift);
-    map_arr.m_len = bmap_req->blk_count;
-    map.m_flags = 0;
+    map_arr.m_len = bmap_req_arr->blk_count;
+    map_arr.m_flags = 0;
 
     // get block address from extent tree.
     mlfs_assert(ip->dev == g_root_dev);
@@ -1688,9 +1688,9 @@ do_global_search:
 
   bmap_req_arr.start_offset = _off;
   bmap_req_arr.blk_count =
-    min(GET_BLOCKS_MAX_RETURN, find_next_zero_bit(io_bitmap, bitmap_size, bitmap_pos) - bitmap_pos);
+    min(MAX_GET_BLOCKS_RETURN, find_next_zero_bit(io_bitmap, bitmap_size, bitmap_pos) - bitmap_pos);
   bmap_req_arr.dev = 0;
-  bmap_req_arr.block_no = 0;
+  // bmap_req_arr.block_no = 0;
   bmap_req_arr.blk_count_found = 0;
 
   if (enable_perf_stats) {

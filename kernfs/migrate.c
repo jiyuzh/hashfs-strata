@@ -182,7 +182,7 @@ int do_migrate_blocks(uint8_t from_dev, uint8_t to_dev, uint32_t file_inum,
 				bh_data = bh_get_sync_IO(to_dev, map_arr.m_pblk[j], BH_NO_DATA_ALLOC);
 
 				bh_data->b_data = data;
-				bh_data->b_blocknr = map.m_pblk[j];
+				bh_data->b_blocknr = map_arr.m_pblk[j];
 				bh_data->b_size = g_block_size_bytes;
 				bh_data->b_offset = 0;
 
