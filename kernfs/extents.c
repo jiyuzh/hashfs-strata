@@ -2762,6 +2762,7 @@ static mlfs_lblk_t mlfs_ext_determine_hole(handle_t *handle, struct inode *inode
 int mlfs_fs_get_blocks(handle_t *handle, struct inode *inode, 
 			struct mlfs_map_blocks_arr *map_arr, int flags)
 {
+    assert(map_arr->m_len <= 8 && "fs_get_blocks m_len > 8");
     
     printf("retrieving %u blocks\nmap_arr: ", map_arr->m_len);
 	int create = flags & MLFS_GET_BLOCKS_CREATE_DATA;
