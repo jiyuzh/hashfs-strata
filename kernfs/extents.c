@@ -2759,7 +2759,7 @@ static mlfs_lblk_t mlfs_ext_determine_hole(handle_t *handle, struct inode *inode
 	return len;
 }
 
-int mlfs_fs_get_blocks(handle_t *handle, struct inode *inode, 
+int mlfs_hashfs_get_blocks(handle_t *handle, struct inode *inode, 
 			struct mlfs_map_blocks_arr *map_arr, int flags)
 {
     assert(map_arr->m_len <= 8 && "fs_get_blocks m_len > 8");
@@ -2770,25 +2770,24 @@ int mlfs_fs_get_blocks(handle_t *handle, struct inode *inode,
 		paddr_t key = (((paddr_t) (inode->inum)) << 32) + ((paddr_t) (map_arr->m_lblk + i));
 		//paddr_t *index = (paddr_t*)malloc(sizeof(paddr_t));
 		paddr_t index;
-	if(create) {
-		int success = pmem_nvm_hash_table_insert(key, &index);
-		if(!success) {
-			//block already existed, so this does nothing
-			printf("block already existed\n");
-			return i;
+		if(create) {
+			int success = pmem_nvm_hash_table_insert(key, &index);
+			if(!success) {
+				//block already existed, so this does nothing
+				printf("block already existed\n");
+				return i;
+			}
+		} else {
+			int found = pmem_nvm_hash_table_lookup(key, &index);
+			if(!found) {
+				//did not find the requested block
+				printf("block not found\n");
+				return i;
+			}	
 		}
-	}
-	else {
-		int found = pmem_nvm_hash_table_lookup(key, &index);
-		if(!found) {
-			//did not find the requested block
-			printf("block not found\n");
-			return i;
-		}	
-	}
-	struct super_block *sblk = sb[g_root_dev];
-	map_arr->m_pblk[i] = index + sblk->ondisk->datablock_start;
-	printf("%d ", map_arr->m_pblk[i]);
+		struct super_block *sblk = sb[g_root_dev];
+		map_arr->m_pblk[i] = index + sblk->ondisk->datablock_start;
+		printf("%d ", map_arr->m_pblk[i]);
 	}
 	printf("\n");
 	return map_arr->m_len;		
@@ -3202,18 +3201,18 @@ int mlfs_ext_truncate(handle_t *handle, struct inode *inode,
 {
 
 	if(IDXAPI_IS_HASHFS()) {
-		int ret;
-	
-		//remove
-		paddr_t key = (((paddr_t) (inode->inum)) << 32) + start;
-		paddr_t index;
+		for(size_t i = start; i < end; ++i) {
+			//remove
+			paddr_t key = (((paddr_t) (inode->inum)) << 32) + (start + i);
+			paddr_t index;
 
-		int success = pmem_nvm_hash_table_remove(key, &index);
-		if(!success) {
-			printf("block not found\n");
+			int success = pmem_nvm_hash_table_remove(key, &index);
+			if(!success) {
+				printf("block not found\n");
+			}
+			//not sure what to return
+			return 0; //success or failure
 		}
-		//not sure what to return
-		return 0; //success or failure
 	}
 	int ret;
     static bool notify = false;

@@ -605,7 +605,7 @@ int digest_file(uint8_t from_dev, uint8_t to_dev, uint32_t file_inum,
 			map_arr.m_lblk = (cur_offset >> g_block_size_shift);
 			map_arr.m_len = 1;
 			map_arr.m_flags = 0;
-			ret = mlfs_fs_get_blocks(&handle, file_inode, &map_arr,
+			ret = mlfs_hashfs_get_blocks(&handle, file_inode, &map_arr,
 				MLFS_GET_BLOCKS_CREATE);
 
 			mlfs_assert(ret == 1);
@@ -676,10 +676,10 @@ int digest_file(uint8_t from_dev, uint8_t to_dev, uint32_t file_inum,
 			if (to_dev == g_ssd_dev || to_dev == g_hdd_dev) {
 				//make kernelFS do log-structured update.
 				//map.m_flags |= MLFS_MAP_LOG_ALLOC;
-				nr_block_get = mlfs_fs_get_blocks(&handle, file_inode, &map_arr,
+				nr_block_get = mlfs_hashfs_get_blocks(&handle, file_inode, &map_arr,
 						MLFS_GET_BLOCKS_CREATE_DATA);
 			} else {
-				nr_block_get = mlfs_fs_get_blocks(&handle, file_inode, &map_arr,
+				nr_block_get = mlfs_hashfs_get_blocks(&handle, file_inode, &map_arr,
 						MLFS_GET_BLOCKS_CREATE_DATA);
 			}
 		}	
@@ -709,12 +709,12 @@ int digest_file(uint8_t from_dev, uint8_t to_dev, uint32_t file_inum,
 
 		// update data block
 		if(IDXAPI_IS_HASHFS()) {
-			for(size_t j = 0; j < map_arr.m_len; ++ j) { // ??
+			for(size_t j = 0; j < map_arr.m_len; ++j) { // ??
 				bh_data = bh_get_sync_IO(to_dev, map_arr.m_pblk[j], BH_NO_DATA_ALLOC);
 			
-				bh_data->b_data = data;
+				bh_data->b_data = data + (j * g_block_size_bytes);
 				bh_data->b_size = g_block_size_bytes;
-				bh_data->b_offset = j * g_block_size_bytes;
+				bh_data->b_offset = 0;
 
 #ifdef MIGRATION
 		for (i = 0; i < nr_block_get; i++) {

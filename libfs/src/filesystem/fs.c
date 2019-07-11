@@ -1009,7 +1009,7 @@ int bmap_hashfs(struct inode *ip, struct bmap_request_arr *bmap_req_arr)
   int ret = 0;
   handle_t handle;
   offset_t offset = bmap_req_arr->start_offset;
-
+  printf("inside bmap_hashfs\n");
   if (ip->itype == T_DIR) {
     bmap_req_arr->block_no[0] = ip->l1.addrs[(offset >> g_block_size_shift)];
     bmap_req_arr->blk_count_found = 1;
@@ -1717,9 +1717,10 @@ do_global_search:
     if(IDXAPI_IS_HASHFS()) {
       for(size_t j = 0; j < bmap_req_arr.blk_count_found; ++j) {
         bh = bh_get_sync_IO(bmap_req_arr.dev, bmap_req_arr.block_no[j], BH_NO_DATA_ALLOC);
-        bh->b_offset = j * g_block_size_bytes;
-        bh->b_data = dst + pos;
+        bh->b_offset = 0;
+        bh->b_data = dst + pos + (j * g_block_size_bytes);
         bh->b_size = min(g_block_size_bytes, io_size);
+        list_add_tail(&bh->b_io_list, &io_list);
       }
     }
     else {
@@ -1727,11 +1728,12 @@ do_global_search:
       bh->b_offset = 0;
       bh->b_data = dst + pos;
       bh->b_size = min((bmap_req.blk_count_found << g_block_size_shift), io_size);
+      list_add_tail(&bh->b_io_list, &io_list);
     }
     
    
 
-    list_add_tail(&bh->b_io_list, &io_list);
+    
   }
   // SSD and HDD cache: do read caching.
   else {

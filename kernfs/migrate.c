@@ -167,7 +167,7 @@ int do_migrate_blocks(uint8_t from_dev, uint8_t to_dev, uint32_t file_inum,
 			// map_arr.m_pblk = 0;
 			map_arr.m_len = min(MAX_GET_BLOCKS_RETURN, nr_blocks - nr_digested_blocks);
 			map_arr.m_flags = 0;
-			nr_block_get = mlfs_fs_get_blocks(&handle, file_inode, &map_arr, 
+			nr_block_get = mlfs_hashfs_get_blocks(&handle, file_inode, &map_arr, 
 					MLFS_GET_BLOCKS_CREATE);
 			mlfs_assert(map_arr.m_pblk[0] != 0);
 			mlfs_assert(nr_block_get <= (nr_blocks - nr_digested_blocks));
@@ -181,10 +181,10 @@ int do_migrate_blocks(uint8_t from_dev, uint8_t to_dev, uint32_t file_inum,
 			for(size_t j = 0; j < map_arr.m_len; ++j) {
 				bh_data = bh_get_sync_IO(to_dev, map_arr.m_pblk[j], BH_NO_DATA_ALLOC);
 
-				bh_data->b_data = data;
+				bh_data->b_data = data + (g_block_size_bytes * j);
 				bh_data->b_blocknr = map_arr.m_pblk[j];
 				bh_data->b_size = g_block_size_bytes;
-				bh_data->b_offset = g_block_size_bytes * j;
+				bh_data->b_offset = 0;
 
 				ret = mlfs_write(bh_data);
 				mlfs_assert(!ret);
@@ -392,7 +392,7 @@ again:
 			map_arr.m_len = min(MAX_GET_BLOCKS_RETURN, nr_blocks - nr_done);
 			map_arr.m_lblk = cur_lblk;
 			map_arr.m_flags = 0;
-			ret = mlfs_fs_get_blocks(&handle, file_inode, &map_arr, 0);
+			ret = mlfs_hashfs_get_blocks(&handle, file_inode, &map_arr, 0);
 		}
 		else {
 			map.m_len = nr_blocks - nr_done;
