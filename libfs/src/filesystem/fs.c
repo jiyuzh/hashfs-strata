@@ -1760,21 +1760,40 @@ do_global_search:
 
     // register IO memory to read cache for each 4 KB blocks.
     // When bh finishes IO, the IO data will be in the read cache.
-    for (cur = _off, l = 0; l < bmap_req.blk_count_found;
+    if(IDXAPI_IS_HASHFS()) {
+      for (cur = _off, l = 0; l < bmap_req.blk_count_found;
         cur += g_block_size_bytes, l++) {
-      bh = bh_get_sync_IO(bmap_req.dev, bmap_req.block_no + l, BH_NO_DATA_ALLOC);
-      bh->b_data = mlfs_alloc(g_block_size_bytes);
-      bh->b_size = g_block_size_bytes;
-      bh->b_offset = 0;
+        bh = bh_get_sync_IO(bmap_req.dev, bmap_req.block_no[l], BH_NO_DATA_ALLOC);
+        bh->b_data = mlfs_alloc(g_block_size_bytes);
+        bh->b_size = g_block_size_bytes;
+        bh->b_offset = 0;
 
-      _fcache_block = add_to_read_cache(ip, cur, bh->b_data);
+        _fcache_block = add_to_read_cache(ip, cur, bh->b_data);
 
-      copy_list[l].dst_buffer = dst + pos;
-      copy_list[l].cached_data = _fcache_block->data;
-      copy_list[l].size = g_block_size_bytes;
+        copy_list[l].dst_buffer = dst + pos;
+        copy_list[l].cached_data = _fcache_block->data;
+        copy_list[l].size = g_block_size_bytes;
+        list_add_tail(&bh->b_io_list, &io_list);
+      }
+
+    } else {
+      for (cur = _off, l = 0; l < bmap_req.blk_count_found;
+          cur += g_block_size_bytes, l++) {
+        bh = bh_get_sync_IO(bmap_req.dev, bmap_req.block_no + l, BH_NO_DATA_ALLOC);
+        bh->b_data = mlfs_alloc(g_block_size_bytes);
+        bh->b_size = g_block_size_bytes;
+        bh->b_offset = 0;
+
+        _fcache_block = add_to_read_cache(ip, cur, bh->b_data);
+
+        copy_list[l].dst_buffer = dst + pos;
+        copy_list[l].cached_data = _fcache_block->data;
+        copy_list[l].size = g_block_size_bytes;
+      }
+
+      list_add_tail(&bh->b_io_list, &io_list);
     }
-
-    list_add_tail(&bh->b_io_list, &io_list);
+    
   }
 
   /* EAGAIN happens in two cases:
