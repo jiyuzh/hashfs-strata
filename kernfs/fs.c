@@ -714,7 +714,7 @@ int digest_file(uint8_t from_dev, uint8_t to_dev, uint32_t file_inum,
 			
 				bh_data->b_data = data;
 				bh_data->b_size = g_block_size_bytes;
-				bh_data->b_offset = 0;
+				bh_data->b_offset = j * g_block_size_bytes;
 
 #ifdef MIGRATION
 		for (i = 0; i < nr_block_get; i++) {
