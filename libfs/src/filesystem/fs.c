@@ -1047,7 +1047,7 @@ int bmap_hashfs(struct inode *ip, struct bmap_request_arr *bmap_req_arr)
 
     // L1 search
     handle.dev = g_root_dev;
-    ret = mlfs_ext_get_blocks(&handle, ip, &map_arr, 0);
+    ret = mlfs_hashfs_get_blocks(&handle, ip, &map_arr, 0);
 
     // all blocks are found in the L1 tree
     if (ret != 0) {
