@@ -1716,7 +1716,8 @@ do_global_search:
   mlfs_assert(ret != -EIO);
 
   // NVM case: no read caching.
-  if (bmap_req.dev == g_root_dev) {
+  int which_dev = IDXAPI_IS_HASHFS() ? bmap_req_arr.dev : bmap_req.dev;
+  if (which_dev == g_root_dev) {
     if(IDXAPI_IS_HASHFS()) {
       for(size_t j = 0; j < bmap_req_arr.blk_count_found; ++j) {
         bh = bh_get_sync_IO(bmap_req_arr.dev, bmap_req_arr.block_no[j], BH_NO_DATA_ALLOC);
@@ -1733,9 +1734,6 @@ do_global_search:
       bh->b_size = min((bmap_req.blk_count_found << g_block_size_shift), io_size);
       list_add_tail(&bh->b_io_list, &io_list);
     }
-    
-   
-
     
   }
   // SSD and HDD cache: do read caching.
