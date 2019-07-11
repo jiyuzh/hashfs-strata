@@ -102,11 +102,27 @@ uint8_t *get_dirent_block(struct inode *dir_inode, offset_t offset)
 			.start_offset = offset,
 			.blk_count = 1,
 		};
+		bmap_req_arr_t bmap_req_arr = {
+			.dev = dev,
+			.start_offset = offset,
+			.blk_count = 1,
+		};
 
 		// get block address
         if (enable_perf_stats)
             tsc_begin = asm_rdtscp();
-		ret = bmap(dir_inode, &bmap_req);
+		int blk_count_found = 0, block_num = 0;;
+		if(IDXAPI_IS_HASHFS()) {
+			ret = bmap_hashfs(dir_inode, &bmap_req_arr);
+			blk_count_found = bmap_req_arr.blk_count_found;
+			block_num = bmap_req_arr.block_no[0];
+		}
+		else {
+			ret = bmap(dir_inode, &bmap_req);
+			blk_count_found = bmap_req.blk_count_found;
+			block_num = bmap_req.block_no;
+		}
+		
         if (enable_perf_stats) {
             g_perf_stats.dir_search_ext_tsc += asm_rdtscp() - tsc_begin;
             g_perf_stats.dir_search_ext_nr++;
@@ -115,12 +131,12 @@ uint8_t *get_dirent_block(struct inode *dir_inode, offset_t offset)
 		mlfs_assert(ret == 0);
 
 		// requested directory block is not allocated in kernfs.
-		if (bmap_req.blk_count_found == 0) {
+		if (blk_count_found == 0) {
 			d_block = dcache_alloc_add(dev, dir_inode->inum, offset, NULL, 0, (struct fs_log*)g_fs_log);
 			mlfs_assert(d_block);
 		} else {
 			uint8_t *data = mlfs_alloc(g_block_size_bytes);
-			bh = bh_get_sync_IO(dir_inode->dev, bmap_req.block_no, BH_NO_DATA_ALLOC);
+			bh = bh_get_sync_IO(dir_inode->dev, block_num, BH_NO_DATA_ALLOC);
 
 			bh->b_size = g_block_size_bytes;
 			bh->b_data = data;
@@ -128,10 +144,11 @@ uint8_t *get_dirent_block(struct inode *dir_inode, offset_t offset)
 			bh_submit_read_sync_IO(bh);
 
 			mlfs_io_wait(dir_inode->dev, 1);
-
+	
 			d_block = dcache_alloc_add(dev, dir_inode->inum,
-					offset, data, bmap_req.block_no, (struct fs_log*)g_fs_log);
-
+				offset, data, block_num, (struct fs_log*)g_fs_log);
+			
+		
 			mlfs_assert(d_block);
 		}
 	}

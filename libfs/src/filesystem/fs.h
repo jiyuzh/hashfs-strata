@@ -88,10 +88,20 @@ struct dlookup_data {
 	struct inode *inode;
 };
 
+typedef struct bmap_request_arr {
+	// input
+	offset_t start_offset; //offset from file start in bytes
+	uint32_t blk_count; //num_blocks
+	// output
+	addr_t block_no[MAX_GET_BLOCKS_RETURN];
+	uint32_t blk_count_found;
+	uint8_t dev;
+} bmap_req_arr_t;
+
 typedef struct bmap_request {
 	// input
-	offset_t start_offset;
-	uint32_t blk_count;
+	offset_t start_offset; //offset from file start in bytes
+	uint32_t blk_count; //num_blocks
 	// output
 	addr_t block_no;
 	uint32_t blk_count_found;
@@ -588,6 +598,7 @@ void iunlockput(struct inode*);
 void iupdate(struct inode*);
 int itrunc(struct inode *inode, offset_t length);
 int bmap(struct inode *ip, struct bmap_request *bmap_req);
+int bmap_hashfs(struct inode *ip, struct bmap_request *bmap_req_arr);
 
 int dir_check_entry_fast(struct inode *dir_inode);
 struct inode* dir_lookup(struct inode*, char*, offset_t *);
