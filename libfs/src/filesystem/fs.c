@@ -1672,7 +1672,7 @@ ssize_t do_aligned_read(struct inode *ip, uint8_t *dst, offset_t off, size_t io_
     if (enable_perf_stats) {
       g_perf_stats.read_data_tsc += asm_rdtscp() - start_tsc;
     }
-	printf("c");
+	printf("all cache\n");
     return io_size;
   }
 
@@ -1807,7 +1807,7 @@ do_global_search:
       goto do_global_search;
     }
   }
-
+  printf("global search complete\n");
   mlfs_assert(io_to_be_done == (io_size >> g_block_size_shift));
 
 do_io_aligned:
