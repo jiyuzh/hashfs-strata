@@ -1716,8 +1716,7 @@ do_global_search:
   mlfs_assert(ret != -EIO);
 
   // NVM case: no read caching.
-  //int which_dev = IDXAPI_IS_HASHFS() ? bmap_req_arr.dev : bmap_req.dev;
-  int which_dev = bmap_req.dev;
+  int which_dev = IDXAPI_IS_HASHFS() ? bmap_req_arr.dev : bmap_req.dev;
   if (which_dev == g_root_dev) {
     if(IDXAPI_IS_HASHFS()) {
       for(size_t j = 0; j < bmap_req_arr.blk_count_found; ++j) {
@@ -1784,24 +1783,24 @@ do_global_search:
    * subsequent bmap call starts finding blocks in other lsm tree.
    */
   if (ret == -EAGAIN) {
-    // if(IDXAPI_IS_HASHFS()) {
-    //   bitmap_clear(io_bitmap, bitmap_pos, bmap_req_arr.blk_count_found);
-    //   io_to_be_done += bmap_req_arr.blk_count_found;
-    // } else {
+    if(IDXAPI_IS_HASHFS()) {
+      bitmap_clear(io_bitmap, bitmap_pos, bmap_req_arr.blk_count_found);
+      io_to_be_done += bmap_req_arr.blk_count_found;
+    } else {
       bitmap_clear(io_bitmap, bitmap_pos, bmap_req.blk_count_found);
       io_to_be_done += bmap_req.blk_count_found;
-    //}
+    }
     
 
     goto do_global_search;
   } else {
-    // if(IDXAPI_IS_HASHFS()) {
-    //   bitmap_clear(io_bitmap, bitmap_pos, bmap_req_arr.blk_count_found);
-    //   io_to_be_done += bmap_req_arr.blk_count_found;
-    // } else {
+    if(IDXAPI_IS_HASHFS()) {
+      bitmap_clear(io_bitmap, bitmap_pos, bmap_req_arr.blk_count_found);
+      io_to_be_done += bmap_req_arr.blk_count_found;
+    } else {
       bitmap_clear(io_bitmap, bitmap_pos, bmap_req.blk_count_found);
       io_to_be_done += bmap_req.blk_count_found;
-    // }
+    }
 
     //mlfs_assert(bitmap_weight(io_bitmap, bitmap_size) == 0);
     if (bitmap_weight(io_bitmap, bitmap_size) != 0) {
