@@ -140,16 +140,17 @@ int main(int argc, char **argv) {
             exit(-1);
         }
         snprintf(filename_v_c[i], MAX_FILE_NAME_LEN, "/tmp/MTCC-%d", i);
-        fd_v_c[i] = open(filename_v_c[i], O_RDWR | O_CREAT, 0666);
+        fd_v_c[i] = open(filename_v_c[i], O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd_v_c[i] == -1) {
             perror("open failed");
             exit(-1);
         }
         // init each file with read_unit data
         // init each file with read_unit data
-        for (size_t s = 0; s < read_unit; s += write_unit)
+        for (size_t s = 0; s < read_unit; s += write_unit) {
             assert(write(fd_v[i], write_buf, write_unit) != -1);
             assert(write(fd_v_c[i], write_buf, write_unit) != -1);
+		}
     }
     for (int i=0; i < n_threads; ++i) {
 	worker_results[0][i].i = i;
@@ -163,7 +164,9 @@ int main(int argc, char **argv) {
         fstat(fd_v[i], &file_stat);
         printf("%s size is %lu\n", filename_v[i], file_stat.st_size);
         close(fd_v[i]);
+		close(fd_v_c[i]);
     }
+	//remove("/tmp/MTCC-0");
     for (int i=0; i < n_threads; ++i) {
         printf("thread %d : read %lu (seq %lu rand %lu), write %lu\n", i,
                 worker_results[0][i].total_seq_read + worker_results[0][i].total_rand_read,
@@ -201,7 +204,7 @@ static void *worker_thread(void *arg) {
                 ssize_t rs_c = pread(fd_c, read_buf_c, block_size, i);
                 assert(rs_c != -1 && "sequential read failed");
 				worker_results[1][r->i].total_seq_read += rs_c;
-				assert(memcmp(read_buf, read_buf_c, block_size) == 0 && "random read incorrect");
+				assert(memcmp(read_buf, read_buf_c, block_size) == 0 && "sequential read incorrect");
             }
         }
         else { // random read
