@@ -1047,7 +1047,7 @@ int digest_unlink(uint8_t from_dev, uint8_t to_dev, uint32_t inum)
                 end--;
             }
 			//ret = mlfs_ext_truncate(&handle, inode, 0, end == 0 ? end : end - 1);
-			ret = mlfs_ext_truncate(&handle, inode, 0, end);
+	    		ret = mlfs_ext_truncate(&handle, inode, 0, end);
 			mlfs_assert(!ret);
 		}
 	} else if (inode->itype == T_DIR) {
@@ -2204,7 +2204,7 @@ void init_fs(void)
 	if(IDXAPI_IS_HASHFS()) {
 		struct super_block *sblk = sb[g_root_dev];
 		printf("getchar\n");
-		getchar();
+		//getchar();
 		pmem_nvm_hash_table_new(NULL, sblk->ondisk->ndatablocks);
 	}
     if (IDXAPI_IS_GLOBAL()) {

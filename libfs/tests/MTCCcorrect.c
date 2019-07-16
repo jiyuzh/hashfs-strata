@@ -183,18 +183,36 @@ int main(int argc, char **argv) {
 static void *worker_thread(void *arg) {
     worker_result_t *r = (worker_result_t *)(arg);
     struct stat file_stat;
-	void *read_buf = malloc(block_size);
+    struct stat file_stat_c;
+    void *read_buf = malloc(block_size);
     void *read_buf_c = malloc(block_size);
 	
     while (1) {
+	int stop = 0;
 	int random_num = rand()%file_num;
         int fd = fd_v[random_num];
         int fd_c = fd_v_c[random_num];
         assert(fstat(fd, &file_stat) == 0 && "fstat failed");
-        size_t size = file_stat.st_size;
+        assert(fstat(fd_c, &file_stat_c) == 0 && "fstat_c failed");
+	size_t size = file_stat.st_size;
+	size_t size_c = file_stat_c.st_size;
+	assert(size == size_c);
         size_t block_num = size/block_size;
-        if (size > max_file_size) // exceeds max file size
-            break;
+        if (size > max_file_size) { // exceeds max file size
+	    ++stop;
+	    printf("truncating\n");
+	    printf("size1: %ld, size2: %ld\n", size, size_c);
+	    size_t half = (block_num / 2) * block_size;
+	    printf("half: %ld\n", half);
+	    ftruncate(fd, half);
+	    ftruncate(fd_c, half);
+	    
+            assert(fstat(fd, &file_stat) == 0 && "fstat failed");
+            assert(fstat(fd_c, &file_stat_c) == 0 && "fstat_c failed");
+	    size = file_stat.st_size;
+	    size_c = file_stat_c.st_size;
+	    assert(size == size_c);
+	}
         if ((double)(rand())/RAND_MAX < seq_ratio) { // sequential read
             int start_offset = (rand()%(block_num - read_unit/block_size + 1)) * block_size;
             for (int i=start_offset; i < start_offset + read_unit; i += block_size) {
@@ -225,6 +243,9 @@ static void *worker_thread(void *arg) {
         lseek(fd_c, 0, SEEK_END);
         assert(write(fd_c, write_buf, write_unit) != -1);
         worker_results[1][r->i].total_write += write_unit;
+	if(stop == 2) {
+	    break;
+	}
     }
     return NULL;
 }

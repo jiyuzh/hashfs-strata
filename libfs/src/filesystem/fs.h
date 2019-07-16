@@ -376,8 +376,9 @@ static inline int fcache_del_all(struct inode *inode)
 			if (fc_block && fc_block->is_data_cached) {
 				list_del(&fc_block->l);
 				mlfs_free(fc_block->data);
+			} else if (fc_block) {
+				mlfs_free(fc_block);
 			}
-			mlfs_free(fc_block);
 		}
 	}
 

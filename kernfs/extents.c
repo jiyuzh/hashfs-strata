@@ -2764,7 +2764,7 @@ int mlfs_hashfs_get_blocks(handle_t *handle, struct inode *inode,
 {
     assert(map_arr->m_len <= 8 && "fs_get_blocks m_len > 8");
     
-    printf("retrieving %u blocks\nmap_arr: ", map_arr->m_len);
+    //printf("retrieving %u blocks\nmap_arr: ", map_arr->m_len);
 	int create = flags & MLFS_GET_BLOCKS_CREATE_DATA;
 	for(size_t i = 0; i < map_arr->m_len; ++i) {
 		paddr_t key = (((paddr_t) (inode->inum)) << 32) + ((paddr_t) (map_arr->m_lblk + i));
@@ -2787,9 +2787,9 @@ int mlfs_hashfs_get_blocks(handle_t *handle, struct inode *inode,
 		}
 		struct super_block *sblk = sb[g_root_dev];
 		map_arr->m_pblk[i] = index + sblk->ondisk->datablock_start;
-		printf("%d ", map_arr->m_pblk[i]);
+		//printf("%d ", map_arr->m_pblk[i]);
 	}
-	printf("\n");
+	//printf("\n");
 	return map_arr->m_len;		
 	
 }
@@ -3205,7 +3205,7 @@ int mlfs_ext_truncate(handle_t *handle, struct inode *inode,
 			//remove
 			paddr_t key = (((paddr_t) (inode->inum)) << 32) + (start + i);
 			paddr_t index;
-
+			printf("calling remove\n");
 			int success = pmem_nvm_hash_table_remove(key, &index);
 			if(!success) {
 				printf("block not found\n");

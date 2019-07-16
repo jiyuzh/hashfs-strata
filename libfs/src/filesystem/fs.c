@@ -1009,9 +1009,7 @@ int bmap_hashfs(struct inode *ip, struct bmap_request_arr *bmap_req_arr)
   int ret = 0;
   handle_t handle;
   offset_t offset = bmap_req_arr->start_offset;
-  printf("inside bmap_hashfs\n");
   if (ip->itype == T_DIR) {
-    printf("t_dir\n");
     bmap_req_arr->block_no[0] = ip->l1.addrs[(offset >> g_block_size_shift)];
     bmap_req_arr->blk_count_found = 1;
     bmap_req_arr->dev = ip->dev;
@@ -1048,7 +1046,6 @@ int bmap_hashfs(struct inode *ip, struct bmap_request_arr *bmap_req_arr)
 
     // L1 search
     handle.dev = g_root_dev;
-	printf("lblk: %u, len = %u\n", map_arr.m_lblk, map_arr.m_len);
     ret = mlfs_hashfs_get_blocks(&handle, ip, &map_arr, 0);
 
     // all blocks are found in the L1 tree
@@ -1211,7 +1208,7 @@ int itrunc(struct inode *ip, offset_t length)
         if (fc_block->is_data_cached)
           list_del(&fc_block->l);
         if (fcache_del(ip, key)) {
-            mlfs_free(fc_block);
+            //mlfs_free(fc_block);
         };
       }
     }
@@ -1672,7 +1669,6 @@ ssize_t do_aligned_read(struct inode *ip, uint8_t *dst, offset_t off, size_t io_
     if (enable_perf_stats) {
       g_perf_stats.read_data_tsc += asm_rdtscp() - start_tsc;
     }
-	printf("all cache\n");
     return io_size;
   }
 
@@ -1807,7 +1803,6 @@ do_global_search:
       goto do_global_search;
     }
   }
-  printf("global search complete\n");
   mlfs_assert(io_to_be_done == (io_size >> g_block_size_shift));
 
 do_io_aligned:
