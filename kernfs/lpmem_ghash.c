@@ -1099,8 +1099,8 @@ pmem_nvm_hash_table_insert_internal (paddr_t    key,
 
   while (!HASH_ENT_IS_EMPTY(cur)) {
     if (cur == key && HASH_ENT_IS_VALID(cur)) {
-      printf("already exists: %lx (trying to insert: %lx)\n",
-        cur, key);
+      printf("already exists: %lx (trying to insert: %lx at index %u)\n",
+        cur, key, node_index);
       return 0;
     } else if (HASH_ENT_IS_TOMBSTONE(cur) && !have_tombstone) {
       // keep lock until we decide we don't need it
@@ -1257,8 +1257,10 @@ pmem_nvm_hash_table_remove_internal (paddr_t         key,
   }
   
   if (HASH_ENT_IS_VALID(cur)) {
+      printf("old value: %u. ", entries[node_index]);
       pmem_nvm_hash_table_remove_node(node_index/*, old_pblk, old_idx, old_size*/);
       //if (hash_table->do_lock) pthread_rwlock_unlock(hash_table->locks + node_index);
+      printf("removed at %u. Proof: %u\n", node_index, entries[node_index]);
       *index = node_index + pmem_ht->meta_size;
       return 1;
   }

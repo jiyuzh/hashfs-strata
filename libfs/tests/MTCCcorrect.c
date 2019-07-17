@@ -186,9 +186,8 @@ static void *worker_thread(void *arg) {
     struct stat file_stat_c;
     void *read_buf = malloc(block_size);
     void *read_buf_c = malloc(block_size);
-	
+    int stop = 0;
     while (1) {
-	int stop = 0;
 	int random_num = rand()%file_num;
         int fd = fd_v[random_num];
         int fd_c = fd_v_c[random_num];
@@ -204,8 +203,8 @@ static void *worker_thread(void *arg) {
 	    printf("size1: %ld, size2: %ld\n", size/block_size, size_c/block_size);
 	    size_t half = (block_num / 2) * block_size;
 	    printf("half: %ld\n", half/block_size);
-	    ftruncate(fd, half);
-	    ftruncate(fd_c, half);
+	    assert(ftruncate(fd, half) == 0 && "truncate failed");
+	    assert(ftruncate(fd_c, half) == 0 && "truncate_c failed");
 	    
             assert(fstat(fd, &file_stat) == 0 && "fstat failed");
             assert(fstat(fd_c, &file_stat_c) == 0 && "fstat_c failed");
@@ -216,11 +215,13 @@ static void *worker_thread(void *arg) {
 	    printf("new size: %ld\n", block_num);
 	}
 	else {
-	    printf("size: %ld\n", block_num);
+	    // printf("size: %ld\n", block_num);
 	}
-        if ((double)(rand())/RAND_MAX < seq_ratio) { // sequential read
+	if(block_num == 0) {}
+	else if ((double)(rand())/RAND_MAX < seq_ratio) { // sequential read
+	    assert(block_num - read_unit/block_size + 1 >= 0);
             int start_offset = (rand()%(block_num - read_unit/block_size + 1)) * block_size;
-	    printf("testing block %u\n", start_offset/block_size);
+	    // printf("testing block %u\n", start_offset/block_size);
             for (int i=start_offset; i < start_offset + read_unit; i += block_size) {
                 ssize_t rs = pread(fd, read_buf, block_size, i);
                 assert(rs != -1 && "sequential read failed");

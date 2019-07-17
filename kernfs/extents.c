@@ -3204,7 +3204,7 @@ int mlfs_ext_truncate(handle_t *handle, struct inode *inode,
 	if(IDXAPI_IS_HASHFS()) {
 		size_t rc = 0;
 		printf("Start: %ld, End: %ld, count: \n", start, end, end - start);
-		for(size_t i = start; i < end; ++i) {
+		for(size_t i = start; i <= end; ++i) {
 			//remove
 			paddr_t key = (((paddr_t) (inode->inum)) << 32) + i;
 			paddr_t index;
