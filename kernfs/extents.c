@@ -2766,6 +2766,7 @@ int mlfs_hashfs_get_blocks(handle_t *handle, struct inode *inode,
     
     //printf("retrieving %u blocks\nmap_arr: ", map_arr->m_len);
 	int create = flags & MLFS_GET_BLOCKS_CREATE_DATA;
+	printf("%s. Start: %u, End: %u\n", create ? "Insert" : "Lookup", map_arr->m_lblk, map_arr->m_lblk + map_arr->m_len);
 	for(size_t i = 0; i < map_arr->m_len; ++i) {
 		paddr_t key = (((paddr_t) (inode->inum)) << 32) + ((paddr_t) (map_arr->m_lblk + i));
 		//paddr_t *index = (paddr_t*)malloc(sizeof(paddr_t));
@@ -2787,9 +2788,9 @@ int mlfs_hashfs_get_blocks(handle_t *handle, struct inode *inode,
 		}
 		struct super_block *sblk = sb[g_root_dev];
 		map_arr->m_pblk[i] = index + sblk->ondisk->datablock_start;
-		//printf("%d ", map_arr->m_pblk[i]);
+		printf("%d ", map_arr->m_pblk[i]);
 	}
-	//printf("\n");
+	printf("\n");
 	return map_arr->m_len;		
 	
 }
@@ -3201,18 +3202,23 @@ int mlfs_ext_truncate(handle_t *handle, struct inode *inode,
 {
 
 	if(IDXAPI_IS_HASHFS()) {
+		size_t rc = 0;
+		printf("Start: %ld, End: %ld, count: \n", start, end, end - start);
 		for(size_t i = start; i < end; ++i) {
 			//remove
-			paddr_t key = (((paddr_t) (inode->inum)) << 32) + (start + i);
+			paddr_t key = (((paddr_t) (inode->inum)) << 32) + i;
 			paddr_t index;
-			printf("calling remove\n");
 			int success = pmem_nvm_hash_table_remove(key, &index);
 			if(!success) {
-				printf("block not found\n");
+			//	printf("block not found\n");
+			}
+			else {
+				++rc;
 			}
 			//not sure what to return
-			return 0; //success or failure
 		}
+		printf("removed %ld blocks\n", rc);
+		return 0;
 	}
 	int ret;
     static bool notify = false;

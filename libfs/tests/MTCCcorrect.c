@@ -201,9 +201,9 @@ static void *worker_thread(void *arg) {
         if (size > max_file_size) { // exceeds max file size
 	    ++stop;
 	    printf("truncating\n");
-	    printf("size1: %ld, size2: %ld\n", size, size_c);
+	    printf("size1: %ld, size2: %ld\n", size/block_size, size_c/block_size);
 	    size_t half = (block_num / 2) * block_size;
-	    printf("half: %ld\n", half);
+	    printf("half: %ld\n", half/block_size);
 	    ftruncate(fd, half);
 	    ftruncate(fd_c, half);
 	    
@@ -211,18 +211,24 @@ static void *worker_thread(void *arg) {
             assert(fstat(fd_c, &file_stat_c) == 0 && "fstat_c failed");
 	    size = file_stat.st_size;
 	    size_c = file_stat_c.st_size;
+	    block_num = size/block_size;
 	    assert(size == size_c);
+	    printf("new size: %ld\n", block_num);
+	}
+	else {
+	    printf("size: %ld\n", block_num);
 	}
         if ((double)(rand())/RAND_MAX < seq_ratio) { // sequential read
             int start_offset = (rand()%(block_num - read_unit/block_size + 1)) * block_size;
+	    printf("testing block %u\n", start_offset/block_size);
             for (int i=start_offset; i < start_offset + read_unit; i += block_size) {
                 ssize_t rs = pread(fd, read_buf, block_size, i);
                 assert(rs != -1 && "sequential read failed");
                 r->total_seq_read += rs;
                 ssize_t rs_c = pread(fd_c, read_buf_c, block_size, i);
                 assert(rs_c != -1 && "sequential read failed");
-				worker_results[1][r->i].total_seq_read += rs_c;
-				assert(memcmp(read_buf, read_buf_c, block_size) == 0 && "sequential read incorrect");
+		worker_results[1][r->i].total_seq_read += rs_c;
+		assert(memcmp(read_buf, read_buf_c, block_size) == 0 && "sequential read incorrect");
             }
         }
         else { // random read
@@ -234,7 +240,7 @@ static void *worker_thread(void *arg) {
                 ssize_t rs_c = pread(fd_c, read_buf_c, block_size, rand_offset);
                 assert(rs_c != -1 && "random read failed");
                 worker_results[1][r->i].total_rand_read += rs_c;
-				assert(memcmp(read_buf, read_buf_c, block_size) ==  0 && "random read incorrect");
+		assert(memcmp(read_buf, read_buf_c, block_size) ==  0 && "random read incorrect");
             }
         }
         lseek(fd, 0, SEEK_END);

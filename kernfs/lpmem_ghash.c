@@ -232,7 +232,7 @@ pmem_nvm_hash_table_lookup_node (paddr_t        key,
 
   while (!HASH_ENT_IS_EMPTY(cur)) {
     if (cur == key && HASH_ENT_IS_VALID(cur)) {
-      
+      printf("cur: %u\n", cur); 
       *ent_return = cur;
 //       #if 1
 //       if (hash_table->do_lock) pthread_rwlock_unlock(hash_table->locks + node_index);
@@ -1022,7 +1022,7 @@ int pmem_nvm_hash_table_lookup(paddr_t key,
 
   //pthread_rwlock_rdlock(hash_table->locks + node_index);
   *val = node_index + pmem_ht->meta_size;
-  int success = !HASH_ENT_IS_TOMBSTONE(ent);
+  int success = HASH_ENT_IS_VALID(ent);
 
 // #ifdef SIMPLE_ENTRIES
 //   *size = 1;
@@ -1237,7 +1237,7 @@ pmem_nvm_hash_table_remove_internal (paddr_t         key,
 
   while (!HASH_ENT_IS_EMPTY(cur)) {
     if (cur == key && HASH_ENT_IS_VALID(cur)) {
-      break;
+	break;
     }
 #ifndef SEQ_STEP
     step++;
@@ -1292,7 +1292,7 @@ pmem_nvm_hash_table_remove (paddr_t         key,
                        //size_t         *ncontiguous
                        )
 {
-  printf("inside ht_remove\n");
+  // printf("inside ht_remove\n");
   return pmem_nvm_hash_table_remove_internal(key, removed
                                         //, nprevious, ncontiguous
                                         );
