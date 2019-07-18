@@ -106,6 +106,7 @@ int main(int argc, char **argv) {
     for (int i=0; i < write_unit/sizeof(uint64_t); ++i) {
         write_buf[i] = i;
     }
+    mkdir(PREFIX "/silly", 0777);
     snprintf(filename_v, MAX_FILE_NAME_LEN, PREFIX "/MTCC-0");
     fd_v = open(filename_v, O_RDWR | O_CREAT, 0666);
     if (fd_v == -1) {
@@ -137,8 +138,9 @@ static void *worker_thread(void *arg) {
     worker_result_t *r = (worker_result_t *)(arg);
     struct stat file_stat;
     void *read_buf = malloc(block_size);
+    printf("Writing %u blocks\n", max_file_size / block_size);
     for(size_t i = 0; i < max_file_size; i += write_unit) {
-        assert(fwrite(fd_v, write_buf, write_unit, i) != -1);
+        assert(pwrite(fd_v, write_buf, write_unit, i) != -1);
         r->total_write += write_unit;
     }
     return NULL;

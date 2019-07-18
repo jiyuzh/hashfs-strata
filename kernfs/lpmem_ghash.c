@@ -105,6 +105,12 @@ static const int prime_mod [] = {
   2147483647  /* For 1 << 31 */
 };
 
+void pEntries() {
+	for(size_t i = 0; i < 10; ++i) {
+		printf("%u: %u\n", i, pmem_ht_vol->entries[i]);
+	}
+}
+
 static void pmem_nvm_flush(void* start, void* len) {
     if(pmem_ht->is_pmem) {
       pmem_persist(start, len);
@@ -224,15 +230,12 @@ pmem_nvm_hash_table_lookup_node (paddr_t        key,
 
   //node_index = hash_value & hash_table->mask;
 
-  //cur = hash_table->cache[BLK_NUM(node_index)][BLK_IDX(node_index)];
-
-
-
+  //cur = hash_table->cache[BLK_NUM(node_index)][BLK_IDX(node_index)]; 
+	
   count++;
 
   while (!HASH_ENT_IS_EMPTY(cur)) {
     if (cur == key && HASH_ENT_IS_VALID(cur)) {
-      printf("cur: %u\n", cur); 
       *ent_return = cur;
 //       #if 1
 //       if (hash_table->do_lock) pthread_rwlock_unlock(hash_table->locks + node_index);
@@ -275,6 +278,7 @@ pmem_nvm_hash_table_lookup_node (paddr_t        key,
     
     count++;
   }
+
 
 end:
   if (have_tombstone) {
@@ -827,14 +831,19 @@ pmem_nvm_hash_table_new(hash_func_t       hash_func,
   struct disk_superblock *sblk = sb[g_root_dev]->ondisk;
   pmem_ht = dax_addr[g_root_dev] + (sblk->datablock_start * g_block_size_bytes);
   if(pmem_ht->valid == 1) {
+    
+	for(size_t i = 0; i < 10; ++i) {
+		printf("%u: %u\n", i, ((paddr_t*) (((void*)pmem_ht) + g_block_size_bytes))[i]);
+	}
     printf("ht exists\n");
     pmem_ht->valid = 0;
     pmem_nvm_flush(&(pmem_ht->valid), sizeof(int));
     pmem_ht_vol = (pmem_nvm_hash_vol_t *)malloc(sizeof(pmem_nvm_hash_vol_t));
     pmem_ht_vol->hash_func = hash_func ? hash_func : nvm_idx_direct_hash;
     pmem_ht_vol->entries = dax_addr[g_root_dev] + (pmem_ht->entries_blk * g_block_size_bytes);
+    pEntries();
     pmem_ht->valid = 1;
-    pmem_nvm_flush(pmem_ht, sizeof(pmem_nvm_hash_idx_t));
+    pmem_nvm_flush(&(pmem_ht->valid), sizeof(int));
     return;
   }
   printf("ht does not exist\n");
@@ -864,7 +873,7 @@ pmem_nvm_hash_table_new(hash_func_t       hash_func,
   pmem_nvm_flush(pmem_ht, ent_num_blocks_needed * g_block_size_bytes);
   pmem_ht->valid = 1;
   pmem_nvm_flush(&(pmem_ht->valid), sizeof(int));
-  printf("new done\n");
+  pEntries();
   // // initialize read-writer locks
   // ht->locks = MALLOC(idx_spec, max_entries * sizeof(pthread_rwlock_t));
   // assert(ht->locks);
@@ -1096,8 +1105,9 @@ pmem_nvm_hash_table_insert_internal (paddr_t    key,
   //   __builtin_prefetch((void*)( ((char*)cur) + 128 ), 1);
   //   __builtin_prefetch((void*)( ((char*)cur) + 192 ), 1);
   //   __builtin_prefetch((void*)( ((char*)cur) + 256 ), 1);
-
+  
   while (!HASH_ENT_IS_EMPTY(cur)) {
+	printf("key: %u, cur: %u\n", key, cur);
     if (cur == key && HASH_ENT_IS_VALID(cur)) {
       printf("already exists: %lx (trying to insert: %lx at index %u)\n",
         cur, key, node_index);
@@ -1150,7 +1160,7 @@ pmem_nvm_hash_table_insert_internal (paddr_t    key,
   //if (hash_table->do_lock) pthread_rwlock_unlock(hash_table->locks + node_index);
   *index = node_index + pmem_ht->meta_size;
   //pthread_rwlock_unlock(hash_table->cache_lock);
-  // printf(", index: %u\n", node_index);
+  pEntries();
   return true;
 }
 

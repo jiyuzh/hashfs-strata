@@ -2769,6 +2769,7 @@ int mlfs_hashfs_get_blocks(handle_t *handle, struct inode *inode,
 	printf("%s. Start: %u, End: %u\n", create ? "Insert" : "Lookup", map_arr->m_lblk, map_arr->m_lblk + map_arr->m_len);
 	for(size_t i = 0; i < map_arr->m_len; ++i) {
 		paddr_t key = (((paddr_t) (inode->inum)) << 32) + ((paddr_t) (map_arr->m_lblk + i));
+		printf("Key: %u", key);
 		//paddr_t *index = (paddr_t*)malloc(sizeof(paddr_t));
 		paddr_t index;
 		if(create) {
@@ -2788,7 +2789,7 @@ int mlfs_hashfs_get_blocks(handle_t *handle, struct inode *inode,
 		}
 		struct super_block *sblk = sb[g_root_dev];
 		map_arr->m_pblk[i] = index + sblk->ondisk->datablock_start;
-		printf("%d ", map_arr->m_pblk[i]);
+		printf(" pblk: %d\n", map_arr->m_pblk[i]);
 	}
 	printf("\n");
 	return map_arr->m_len;		
@@ -3203,7 +3204,7 @@ int mlfs_ext_truncate(handle_t *handle, struct inode *inode,
 
 	if(IDXAPI_IS_HASHFS()) {
 		size_t rc = 0;
-		printf("Start: %ld, End: %ld, count: \n", start, end, end - start);
+		printf("Start: %ld, End: %ld\n", start, end);
 		for(size_t i = start; i <= end; ++i) {
 			//remove
 			paddr_t key = (((paddr_t) (inode->inum)) << 32) + i;
