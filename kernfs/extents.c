@@ -235,9 +235,10 @@ mlfs_fsblk_t mlfs_new_meta_blocks(handle_t *handle,
 	mlfs_lblk_t nrblocks = (count) ? (*count) : 1;
 
 	flags |= MLFS_GET_BLOCKS_CREATE_META;
-	if(IDXAPI_IS_HASHFS()) {
+	// if(IDXAPI_IS_HASHFS()) {
+	if(0) {
 		struct mlfs_map_blocks_arr map_arr;
-		map_arr.m_lblk = ;
+		map_arr.m_lblk = 0;
 		map_arr.m_len = nrblocks;
 		*errp = (mlfs_hashfs_get_blocks(&handle, &inode, &map_arr, flags) == map_arr.m_len);
 		block = map_arr.m_pblk[0];
@@ -571,7 +572,8 @@ static mlfs_fsblk_t mlfs_ext_new_meta_block(handle_t *handle,
 	mlfs_lblk_t count = 1;
 
 	//goal = mlfs_ext_find_goal(inode, path, le32_to_cpu(ex->ee_block));
-	mlfs_debug("meta: start offset %lx, len %lu\n", ex->ee_block, ex->ee_len);
+	mlfs_debug("meta: start offset %lx, len %lu\n", ex->ee_block, ex->ee_len);	
+	printf("meta: start offset %lx, len %lu\n", ex->ee_block, ex->ee_len);
 	flags |= MLFS_GET_BLOCKS_CREATE_META;
 	newblock = mlfs_new_meta_blocks(handle, inode, goal, flags, &count, err);
 
@@ -1277,7 +1279,7 @@ static int mlfs_ext_grow_indepth(handle_t *handle,
 	if (ext_depth(handle, inode))
 		goal = mlfs_idx_pblock(EXT_FIRST_INDEX(ext_inode_hdr(handle, inode)));
 	goal = mlfs_inode_to_goal_block(inode);
-
+	printf("hello world\n");
 	newblock = mlfs_new_meta_blocks(handle, inode, goal, flags, &count, &err);
 	if (newblock == 0)
 		return err;
