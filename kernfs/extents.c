@@ -2766,13 +2766,14 @@ int mlfs_hashfs_get_blocks(handle_t *handle, struct inode *inode,
     
     //printf("retrieving %u blocks\nmap_arr: ", map_arr->m_len);
 	int create = flags & MLFS_GET_BLOCKS_CREATE_DATA;
+	int create2 = flags & MLFS_GET_BLOCKS_CREATE_META;
 	printf("%s. Start: %u, End: %u\n", create ? "Insert" : "Lookup", map_arr->m_lblk, map_arr->m_lblk + map_arr->m_len);
 	for(size_t i = 0; i < map_arr->m_len; ++i) {
 		paddr_t key = (((paddr_t) (inode->inum)) << 32) + ((paddr_t) (map_arr->m_lblk + i));
 		printf("Key: %u", key);
 		//paddr_t *index = (paddr_t*)malloc(sizeof(paddr_t));
 		paddr_t index;
-		if(create) {
+		if(create || create2) {
 			int success = pmem_nvm_hash_table_insert(key, &index);
 			if(!success) {
 				//block already existed, so this does nothing
