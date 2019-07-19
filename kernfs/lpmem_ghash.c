@@ -831,17 +831,12 @@ pmem_nvm_hash_table_new(struct disk_superblock *sblk,
   //*buf = dax_addr[g_root_dev] + (blk * g_block_size_bytes) + off; 
   pmem_ht = dax_addr[g_root_dev] + (sblk->datablock_start * g_block_size_bytes);
   if(pmem_ht->valid == 1) {
-    
-    for(size_t i = 0; i < 10; ++i) {
-      printf("%lu: %lu\n", i, ((paddr_t*) (((void*)pmem_ht) + g_block_size_bytes))[i]);
-    }
     printf("ht exists\n");
     pmem_ht->valid = 0;
     pmem_nvm_flush(&(pmem_ht->valid), sizeof(int));
     pmem_ht_vol = (pmem_nvm_hash_vol_t *)malloc(sizeof(pmem_nvm_hash_vol_t));
     pmem_ht_vol->hash_func = hash_func ? hash_func : nvm_idx_direct_hash;
     pmem_ht_vol->entries = dax_addr[g_root_dev] + (pmem_ht->entries_blk * g_block_size_bytes);
-    pEntries();
     pmem_ht->valid = 1;
     pmem_nvm_flush(&(pmem_ht->valid), sizeof(int));
     return;
@@ -879,7 +874,6 @@ pmem_nvm_hash_table_new(struct disk_superblock *sblk,
   pmem_nvm_flush(pmem_ht, ent_num_blocks_needed * g_block_size_bytes);
   pmem_ht->valid = 1;
   pmem_nvm_flush(&(pmem_ht->valid), sizeof(int));
-  pEntries();
   // // initialize read-writer locks
   // ht->locks = MALLOC(idx_spec, max_entries * sizeof(pthread_rwlock_t));
   // assert(ht->locks);
@@ -1113,7 +1107,6 @@ pmem_nvm_hash_table_insert_internal (paddr_t    key,
   //   __builtin_prefetch((void*)( ((char*)cur) + 256 ), 1);
   
   while (!HASH_ENT_IS_EMPTY(cur)) {
-	printf("key: %u, cur: %u\n", key, cur);
     if (cur == key && HASH_ENT_IS_VALID(cur)) {
       printf("already exists: %lx (trying to insert: %lx at index %u)\n",
         cur, key, node_index);
@@ -1166,7 +1159,6 @@ pmem_nvm_hash_table_insert_internal (paddr_t    key,
   //if (hash_table->do_lock) pthread_rwlock_unlock(hash_table->locks + node_index);
   *index = node_index + pmem_ht->meta_size;
   //pthread_rwlock_unlock(hash_table->cache_lock);
-  pEntries();
   return true;
 }
 
@@ -1273,10 +1265,8 @@ pmem_nvm_hash_table_remove_internal (paddr_t         key,
   }
   
   if (HASH_ENT_IS_VALID(cur)) {
-      printf("old value: %u. ", entries[node_index]);
       pmem_nvm_hash_table_remove_node(node_index/*, old_pblk, old_idx, old_size*/);
       //if (hash_table->do_lock) pthread_rwlock_unlock(hash_table->locks + node_index);
-      printf("removed at %u. Proof: %u\n", node_index, entries[node_index]);
       *index = node_index + pmem_ht->meta_size;
       return 1;
   }
