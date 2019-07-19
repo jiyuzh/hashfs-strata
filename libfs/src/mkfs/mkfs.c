@@ -247,7 +247,7 @@ int main(int argc, char *argv[])
             ondisk_sb.api_metadata_block,
 			ondisk_sb.datablock_start,
 			ondisk_sb.log_start,
-			ndatablocks,
+			ondisk_sb.ndatablocks,
 			nlog,
 			file_size_blks,
 			(file_size_blks * g_block_size_bytes) >> 20);
@@ -537,8 +537,9 @@ void iappend(uint8_t dev, uint32_t inum, void *xp, int n)
   					}
 					addr_t key = ((addr_t)inum) << 32;
 					addr_t hash = key;
-					addr_t modded = hash % ndb;
-					addr_t pblk = modded + ndb;
+					addr_t modded = hash % (ndb - ent_num_blocks_needed);
+					addr_t pblk = modded + ent_num_blocks_needed;
+					printf("%lu, %lu, %lu\n", freeblock, pblk, ndb);
 					din.l1_addrs[fbn] = xint(pblk);
 				}
 				else {
