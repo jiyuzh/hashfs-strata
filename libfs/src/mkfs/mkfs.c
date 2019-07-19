@@ -300,6 +300,10 @@ int main(int argc, char *argv[])
 	memmove(buf, &ondisk_sb, sizeof(ondisk_sb));
 	wsect(1, buf);
 
+	if(IDXAPI_IS_HASHFS()) {
+		pmem_nvm_hash_table_new(&ondisk_sb, NULL, ondisk_sb.ndatablocks);
+	}
+
 	// Create / directory
 	rootino = mkfs_ialloc(dev_id, T_DIR);
 	printf("== create / directory\n");
@@ -389,6 +393,10 @@ int main(int argc, char *argv[])
 	}
 	else if (storage_mode == HDD)
 		storage_hdd.commit(dev_id);
+
+	if(IDXAPI_IS_HASHFS()) {
+		pmem_nvm_hash_table_close();
+	}
 	exit(0);
 }
 
@@ -529,18 +537,19 @@ void iappend(uint8_t dev, uint32_t inum, void *xp, int n)
             if(xint(din.l1_addrs[fbn]) == 0) {
                 // sequential allocation for freeblock
 				if(IDXAPI_IS_HASHFS()) {
-					addr_t ndb = ondisk_sb.ndatablocks;
-					uint64_t ent_num_bytes = sizeof(paddr_t) * ndb;
-  					int ent_num_blocks_needed = 1 + ent_num_bytes / g_block_size_bytes;
-  					if(ent_num_bytes % g_block_size_bytes != 0) {
-    					++ent_num_blocks_needed;
-  					}
+					// addr_t ndb = ondisk_sb.ndatablocks;
+					// uint64_t ent_num_bytes = sizeof(paddr_t) * ndb;
+  					// int ent_num_blocks_needed = 1 + ent_num_bytes / g_block_size_bytes;
+  					// if(ent_num_bytes % g_block_size_bytes != 0) {
+    				// 	++ent_num_blocks_needed;
+  					// }
 					addr_t key = ((addr_t)inum) << 32;
-					addr_t hash = key;
-					addr_t modded = hash % (ndb - ent_num_blocks_needed);
-					addr_t pblk = modded + ent_num_blocks_needed;
-					printf("%lu, %lu, %lu\n", freeblock, pblk, ndb);
-					din.l1_addrs[fbn] = xint(pblk);
+					// addr_t hash = key;
+					// addr_t modded = hash % (ndb - ent_num_blocks_needed);
+					// addr_t pblk = modded + ent_num_blocks_needed;
+					addr_t index;
+					pmem_nvm_hash_table_insert(key, &index);
+					din.l1_addrs[fbn] = xint(index);
 				}
 				else {
             		din.l1_addrs[fbn] = xint(freeblock++);

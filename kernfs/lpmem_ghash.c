@@ -819,7 +819,8 @@ pmem_nvm_hash_table_maybe_resize (nvm_hash_idx_t *hash_table) {
  */
 
 void
-pmem_nvm_hash_table_new(hash_func_t       hash_func,
+pmem_nvm_hash_table_new(struct disk_superblock sblk,
+                   hash_func_t       hash_func,
                    size_t            max_entries
                    //size_t            block_size,
                    //size_t            range_size,
@@ -828,7 +829,6 @@ pmem_nvm_hash_table_new(hash_func_t       hash_func,
                    ) {
   printf("inside ht_new\n");
   //*buf = dax_addr[g_root_dev] + (blk * g_block_size_bytes) + off; 
-  struct disk_superblock *sblk = sb[g_root_dev]->ondisk;
   pmem_ht = dax_addr[g_root_dev] + (sblk->datablock_start * g_block_size_bytes);
   if(pmem_ht->valid == 1) {
     
@@ -871,11 +871,11 @@ pmem_nvm_hash_table_new(hash_func_t       hash_func,
   pmem_ht->is_pmem = pmem_is_pmem(pmem_ht, ent_num_blocks_needed * g_block_size_bytes);
   memset(pmem_ht_vol->entries, ~0, (ent_num_blocks_needed - 1) * g_block_size_bytes);
   //hardcoding / and /mlfs
-  for(paddr_t i = 1; i <= 2; ++i) {
-    paddr_t key = i << 32;
-    paddr_t index;
-    pmem_nvm_hash_table_insert(key, &index);
-  }
+  // for(paddr_t i = 1; i <= 2; ++i) {
+  //   paddr_t key = i << 32;
+  //   paddr_t index;
+  //   pmem_nvm_hash_table_insert(key, &index);
+  // }
   pmem_nvm_flush(pmem_ht, ent_num_blocks_needed * g_block_size_bytes);
   pmem_ht->valid = 1;
   pmem_nvm_flush(&(pmem_ht->valid), sizeof(int));

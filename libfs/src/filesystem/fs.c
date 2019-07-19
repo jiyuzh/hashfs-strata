@@ -415,7 +415,7 @@ void init_fs(void)
     read_root_inode(g_root_dev);
     if(IDXAPI_IS_HASHFS()) {
       struct super_block *sblk = sb[g_root_dev];
-	    pmem_nvm_hash_table_new(NULL, sblk->ondisk->ndatablocks);	
+	    pmem_nvm_hash_table_new(sblk->ondisk, NULL, sblk->ondisk->ndatablocks);	
     }
     if (IDXAPI_IS_GLOBAL()) {
         init_hash(sb[g_root_dev]);
