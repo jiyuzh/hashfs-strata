@@ -300,7 +300,7 @@ int main(int argc, char *argv[])
 	memmove(buf, &ondisk_sb, sizeof(ondisk_sb));
 	wsect(1, buf);
 
-	if(IDXAPI_IS_HASHFS()) {
+	if(IDXAPI_IS_HASHFS() && dev_id == g_root_dev) {
 		pmem_nvm_hash_table_new(&ondisk_sb, NULL, ondisk_sb.ndatablocks);
 	}
 
@@ -394,7 +394,7 @@ int main(int argc, char *argv[])
 	else if (storage_mode == HDD)
 		storage_hdd.commit(dev_id);
 
-	if(IDXAPI_IS_HASHFS()) {
+	if(IDXAPI_IS_HASHFS() && dev_id == g_root_dev) {
 		pmem_nvm_hash_table_close();
 	}
 	exit(0);
@@ -536,7 +536,7 @@ void iappend(uint8_t dev, uint32_t inum, void *xp, int n)
         if(fbn < NDIRECT) {
             if(xint(din.l1_addrs[fbn]) == 0) {
                 // sequential allocation for freeblock
-				if(IDXAPI_IS_HASHFS()) {
+				if(IDXAPI_IS_HASHFS() && dev_id == g_root_dev) {
 					// addr_t ndb = ondisk_sb.ndatablocks;
 					// uint64_t ent_num_bytes = sizeof(paddr_t) * ndb;
   					// int ent_num_blocks_needed = 1 + ent_num_bytes / g_block_size_bytes;
