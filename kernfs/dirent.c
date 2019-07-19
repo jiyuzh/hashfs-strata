@@ -37,8 +37,8 @@ uint8_t *get_dirent_block(struct inode *dir_inode, offset_t offset)
 			map_arr.m_lblk = offset;
 			map_arr.m_len = 1;
 			mlfs_hashfs_get_blocks(&handle, &dir_inode, &map_arr, MLFS_GET_BLOCKS_CREATE_META);
-			dir_inode->l1.addrs[offset >> g_block_size_shift] = map_arr[0];
-			mlfs_debug("Allocate a new directory block %lx\n", map_arr[0]);
+			dir_inode->l1.addrs[offset >> g_block_size_shift] = map_arr.m_pblk[0];
+			mlfs_debug("Allocate a new directory block %lx\n", map_arr.m_pblk[0]);
 		} else {
 			mlfs_ext_alloc_blocks(&handle, dir_inode, 0, 
 					MLFS_GET_BLOCKS_CREATE_META, &blk_no, &count);

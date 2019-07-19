@@ -107,7 +107,7 @@ static const int prime_mod [] = {
 
 void pEntries() {
 	for(size_t i = 0; i < 10; ++i) {
-		printf("%u: %u\n", i, pmem_ht_vol->entries[i]);
+		printf("%lu: %lu\n", i, pmem_ht_vol->entries[i]);
 	}
 }
 
