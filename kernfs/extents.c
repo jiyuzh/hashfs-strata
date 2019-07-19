@@ -2776,10 +2776,10 @@ int mlfs_hashfs_get_blocks(handle_t *handle, struct inode *inode,
     //printf("retrieving %u blocks\nmap_arr: ", map_arr->m_len);
 	int create = flags & MLFS_GET_BLOCKS_CREATE_DATA;
 	int create2 = flags & MLFS_GET_BLOCKS_CREATE_META;
-	printf("%s. Start: %u, End: %u\n", create ? "Insert" : "Lookup", map_arr->m_lblk, map_arr->m_lblk + map_arr->m_len);
+	//printf("%s. Start: %u, End: %u\n", create ? "Insert" : "Lookup", map_arr->m_lblk, map_arr->m_lblk + map_arr->m_len);
 	for(size_t i = 0; i < map_arr->m_len; ++i) {
 		paddr_t key = (((paddr_t) (inode->inum)) << 32) + ((paddr_t) (map_arr->m_lblk + i));
-		printf("Key: %u", key);
+		//printf("Key: %u", key);
 		//paddr_t *index = (paddr_t*)malloc(sizeof(paddr_t));
 		paddr_t index;
 		if(create || create2) {
@@ -2799,9 +2799,9 @@ int mlfs_hashfs_get_blocks(handle_t *handle, struct inode *inode,
 		}
 		struct super_block *sblk = sb[g_root_dev];
 		map_arr->m_pblk[i] = index + sblk->ondisk->datablock_start;
-		printf(" pblk: %d\n", map_arr->m_pblk[i]);
+		//printf(" pblk: %d\n", map_arr->m_pblk[i]);
 	}
-	printf("\n");
+	//printf("\n");
 	return map_arr->m_len;		
 	
 }
