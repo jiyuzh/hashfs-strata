@@ -832,9 +832,9 @@ pmem_nvm_hash_table_new(hash_func_t       hash_func,
   pmem_ht = dax_addr[g_root_dev] + (sblk->datablock_start * g_block_size_bytes);
   if(pmem_ht->valid == 1) {
     
-	for(size_t i = 0; i < 10; ++i) {
-		printf("%u: %u\n", i, ((paddr_t*) (((void*)pmem_ht) + g_block_size_bytes))[i]);
-	}
+    for(size_t i = 0; i < 10; ++i) {
+      printf("%lu: %lu\n", i, ((paddr_t*) (((void*)pmem_ht) + g_block_size_bytes))[i]);
+    }
     printf("ht exists\n");
     pmem_ht->valid = 0;
     pmem_nvm_flush(&(pmem_ht->valid), sizeof(int));
@@ -870,6 +870,12 @@ pmem_nvm_hash_table_new(hash_func_t       hash_func,
 
   pmem_ht->is_pmem = pmem_is_pmem(pmem_ht, ent_num_blocks_needed * g_block_size_bytes);
   memset(pmem_ht_vol->entries, ~0, (ent_num_blocks_needed - 1) * g_block_size_bytes);
+  //hardcoding / and /mlfs
+  for(paddr_t i = 1; i <= 2; ++i) {
+    paddr_t key = i << 32;
+    paddr_t index;
+    pmem_nvm_hash_table_insert(key, &index);
+  }
   pmem_nvm_flush(pmem_ht, ent_num_blocks_needed * g_block_size_bytes);
   pmem_ht->valid = 1;
   pmem_nvm_flush(&(pmem_ht->valid), sizeof(int));

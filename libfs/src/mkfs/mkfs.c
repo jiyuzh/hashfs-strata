@@ -38,6 +38,7 @@ struct disk_superblock ondisk_sb;
 char zeroes[g_block_size_bytes];
 addr_t freeinode = 1;
 addr_t freeblock;
+extern indexing_choice_t g_idx_choice;
 
 void balloc(int);
 void wsect(addr_t, uint8_t *buf);
@@ -139,6 +140,7 @@ struct storage_operations storage_hdd = {
 
 int main(int argc, char *argv[])
 {
+	g_idx_choice = get_indexing_choice();
 	int i, cc, fd;
 	uint32_t rootino, mlfs_dir_ino;
 	addr_t off;
