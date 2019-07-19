@@ -529,13 +529,17 @@ void iappend(uint8_t dev, uint32_t inum, void *xp, int n)
             if(xint(din.l1_addrs[fbn]) == 0) {
                 // sequential allocation for freeblock
 				if(IDXAPI_IS_HASHFS()) {
-					addr_t ndb = ondisk_sb->ndatablocks;
+					addr_t ndb = ondisk_sb.ndatablocks;
 					uint64_t ent_num_bytes = sizeof(paddr_t) * ndb;
   					int ent_num_blocks_needed = 1 + ent_num_bytes / g_block_size_bytes;
   					if(ent_num_bytes % g_block_size_bytes != 0) {
     					++ent_num_blocks_needed;
   					}
-					din.l1_addrs[fbn] = xint(((((paddr_t)inum) << 32) % ndb) + ent_num_blocks_needed);
+					addr_t key = ((addr_t)inum) << 32;
+					addr_t hash = key;
+					addr_t modded = hash % ndb;
+					addr_t pblk = modded + ndb;
+					din.l1_addrs[fbn] = xint(pblk);
 				}
 				else {
             		din.l1_addrs[fbn] = xint(freeblock++);
