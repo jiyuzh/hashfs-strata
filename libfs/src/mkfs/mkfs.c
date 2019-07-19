@@ -10,6 +10,7 @@
 #include "global/global.h"
 #include "storage/storage.h"
 #include "mlfs/kerncompat.h"
+#include "filesystem/lpmem_ghash.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -24,8 +25,8 @@ extern "C" {
 #define static_assert(a, b) do { switch (0) case 0: case (a): ; } while (0)
 #endif
 
-#define dbg_printf
-//#define dbg_printf printf
+//#define dbg_printf
+#define dbg_printf printf
 
 // In-kernel fs Disk layout:
 // [ sb block | inode blocks | free bitmap | data blocks ]
@@ -297,6 +298,10 @@ int main(int argc, char *argv[])
 	memmove(buf, &ondisk_sb, sizeof(ondisk_sb));
 	wsect(1, buf);
 
+	// initializing hash table(for HASHFS)
+	if(IDXAPI_IS_HASHFS()) {
+		pmem_nvm_hash_table_new(NULL, ondisk_sb->ndatablocks);
+	}
 	// Create / directory
 	rootino = mkfs_ialloc(dev_id, T_DIR);
 	printf("== create / directory\n");
@@ -386,7 +391,7 @@ int main(int argc, char *argv[])
 	}
 	else if (storage_mode == HDD)
 		storage_hdd.commit(dev_id);
-
+	pmem_nvm_hash_table_close();
 	exit(0);
 }
 
@@ -526,7 +531,14 @@ void iappend(uint8_t dev, uint32_t inum, void *xp, int n)
         if(fbn < NDIRECT) {
             if(xint(din.l1_addrs[fbn]) == 0) {
                 // sequential allocation for freeblock
-                din.l1_addrs[fbn] = xint(freeblock++);
+				if(IDXAPI_IS_HASHFS()) {
+					paddr_t key = (((paddr_t) (inum)) << 32);
+					paddr_t index;
+					din.l1_addrs[fbn] = xint(pmem_nvm_hash_table_insert(key, &index));
+				}
+				else {
+                	din.l1_addrs[fbn] = xint(freeblock++);
+				}
             }
             block_address = xint(din.l1_addrs[fbn]);
         }

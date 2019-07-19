@@ -237,7 +237,7 @@ mlfs_fsblk_t mlfs_new_meta_blocks(handle_t *handle,
 	flags |= MLFS_GET_BLOCKS_CREATE_META;
 	if(IDXAPI_IS_HASHFS()) {
 		struct mlfs_map_blocks_arr map_arr;
-		map_arr.m_lblk = ;
+		map_arr.m_lblk = 0; //eshiple
 		map_arr.m_len = nrblocks;
 		*errp = (mlfs_hashfs_get_blocks(&handle, &inode, &map_arr, flags) == map_arr.m_len);
 		block = map_arr.m_pblk[0];
