@@ -7,6 +7,7 @@
 #include <assert.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/time.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <string.h>
@@ -131,6 +132,9 @@ int main(int argc, char **argv) {
 }
 
 static void *worker_thread(void *arg) {
+    struct timeval pre_time, post_time;
+    gettimeofday(&pre_time, NULL);
+    
     worker_result_t *r = (worker_result_t *)(arg);
     struct stat file_stat;
     void *read_buf = malloc(block_size);
@@ -154,6 +158,11 @@ static void *worker_thread(void *arg) {
             r->total_rand_read += rs;
         }
     }
+
+    gettimeofday(&post_time, NULL);
+    time_t dif_sec = post_time.tv_sec - pre_time.tv_sec;
+    suseconds_t dif_micro = post_time.tv_usec - pre_time.tv_usec;
+    printf("Time elapsed: %lu seconds, %lu microseconds", dif_sec, dif_micro);
     
     return NULL;
 }
