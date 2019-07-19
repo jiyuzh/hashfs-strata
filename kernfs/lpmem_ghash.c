@@ -819,7 +819,7 @@ pmem_nvm_hash_table_maybe_resize (nvm_hash_idx_t *hash_table) {
  */
 
 void
-pmem_nvm_hash_table_new(struct disk_superblock sblk,
+pmem_nvm_hash_table_new(struct disk_superblock *sblk,
                    hash_func_t       hash_func,
                    size_t            max_entries
                    //size_t            block_size,

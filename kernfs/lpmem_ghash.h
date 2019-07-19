@@ -193,7 +193,7 @@ extern pmem_nvm_hash_idx_t *pmem_ht;
 
 
 void
-pmem_nvm_hash_table_new (struct superblock sblk,
+pmem_nvm_hash_table_new (struct disk_superblock *sblk,
                     hash_func_t       hash_func,
                     size_t            max_entries
                     //size_t            block_size,
