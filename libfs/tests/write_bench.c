@@ -61,7 +61,7 @@ uint32_t get_unit(char c) {
 int main(int argc, char **argv) {
     int c;
     srand(time(NULL));
-    getchar();
+    //getchar();
     while ((c = getopt(argc, argv, OPTSTRING)) != -1) {
         switch (c) {
             case 'b': // block_size
@@ -148,8 +148,9 @@ static void *worker_thread(void *arg) {
         r->total_write += write_unit;
     }
     gettimeofday(&post_time, NULL);
-    time_t dif_sec = post_time.tv_sec - pre_time.tv_sec;
-    suseconds_t dif_micro = post_time.tv_usec - pre_time.tv_usec;
-    printf("Time elapsed: %lu seconds, %lu microseconds", dif_sec, dif_micro);
+    float dif_sec = post_time.tv_sec - pre_time.tv_sec;
+    float dif_micro = post_time.tv_usec - pre_time.tv_usec;
+    dif_sec += dif_micro / 1000000;
+    printf("Time elapsed: %f seconds\n", dif_sec);
     return NULL;
 }

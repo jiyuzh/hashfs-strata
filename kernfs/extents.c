@@ -1279,7 +1279,7 @@ static int mlfs_ext_grow_indepth(handle_t *handle,
 	if (ext_depth(handle, inode))
 		goal = mlfs_idx_pblock(EXT_FIRST_INDEX(ext_inode_hdr(handle, inode)));
 	goal = mlfs_inode_to_goal_block(inode);
-	printf("hello world\n");
+	//printf("hello world\n");
 	newblock = mlfs_new_meta_blocks(handle, inode, goal, flags, &count, &err);
 	if (newblock == 0)
 		return err;
