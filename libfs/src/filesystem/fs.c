@@ -559,10 +559,10 @@ int sync_inode_ext_tree(uint8_t dev, struct inode *inode)
         int api_err = mlfs_hash_cache_invalidate();
         if (api_err) return api_err;
     } else {
-        if (IDXAPI_IS_PER_FILE()) {
-            FN(inode->ext_idx, im_clear_metadata_cache, inode->ext_idx);
+        if (IDXAPI_IS_PER_FILE() && inode->ext_idx) {
+            FN(inode->ext_idx, im_clear_metadata, inode->ext_idx);
             
-            if (g_idx_cached && inode->ext_idx) {
+            if (g_idx_cached) {
                 int api_err = FN(inode->ext_idx, im_invalidate, inode->ext_idx);
                 if (api_err) return api_err;
             }
