@@ -1281,6 +1281,11 @@ void handle_digest_response(char *ack_cmd)
 
 	//cleanup_lru_list(lru_updated);
 
+	if (g_idx_cached && IDXAPI_IS_GLOBAL()) {
+        int api_err = mlfs_hash_cache_invalidate();
+        if (api_err) return api_err;
+    }
+
 	// TODO: optimize this. Now sync all inodes in the inode_hash.
 	// As the optimization, Kernfs sends inodes lists (via shared memory),
 	// and Libfs syncs inodes based on the list.

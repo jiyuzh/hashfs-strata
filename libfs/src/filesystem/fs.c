@@ -555,20 +555,17 @@ int sync_inode_ext_tree(uint8_t dev, struct inode *inode)
     read_ondisk_inode(dev, inode->inum, &dinode);
 
     iwrlock(inode);
-    if (g_idx_cached && IDXAPI_IS_GLOBAL()) {
-        int api_err = mlfs_hash_cache_invalidate();
-        if (api_err) return api_err;
-    } else {
-        if (IDXAPI_IS_PER_FILE() && inode->ext_idx) {
-            FN(inode->ext_idx, im_clear_metadata, inode->ext_idx);
-            
-            if (g_idx_cached) {
-                int api_err = FN(inode->ext_idx, im_invalidate, inode->ext_idx);
-                if (api_err) return api_err;
-            }
-        } else {
-            memmove(inode->l1.addrs, dinode.l1_addrs, sizeof(addr_t) * (NDIRECT + 1));
+
+    if (IDXAPI_IS_PER_FILE()) {
+        FN(inode->ext_idx, im_clear_metadata_cache, inode->ext_idx);
+        
+        if (g_idx_cached && inode->ext_idx) {
+            int api_err = FN(inode->ext_idx, im_invalidate, inode->ext_idx);
+            if (api_err) return api_err;
         }
+    } else {
+        memmove(inode->l1.addrs, dinode.l1_addrs, sizeof(addr_t) * (NDIRECT + 1));
+    }
         
 #ifdef USE_SSD
         memmove(inode->l2.addrs, dinode.l2_addrs, sizeof(addr_t) * (NDIRECT + 1));
@@ -576,7 +573,6 @@ int sync_inode_ext_tree(uint8_t dev, struct inode *inode)
 #ifdef USE_HDD
         memmove(inode->l3.addrs, dinode.l3_addrs, sizeof(addr_t) * (NDIRECT + 1));
 #endif
-    }
 
     iunlock(inode);
 
