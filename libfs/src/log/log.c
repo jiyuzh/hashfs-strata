@@ -364,8 +364,9 @@ void start_log_tx(void)
 	loghdr_meta = get_loghdr_meta();
 	memset(loghdr_meta, 0, sizeof(struct logheader_meta));
 
-	if (!loghdr_meta)
+	if (!loghdr_meta) {
 		panic("cannot locate logheader_meta\n");
+    }
 
 	loghdr_meta->hdr_blkno = 0;
 	INIT_LIST_HEAD(&loghdr_meta->link);
@@ -1130,16 +1131,17 @@ void add_to_loghdr(uint8_t type, struct inode *inode, offset_t data,
 	loghdr->type[i] = type;
 	loghdr->inode_no[i] = inode->inum;
 
-	if (type == L_TYPE_FILE)
+	if (type == L_TYPE_FILE) {
 		// offset in file.
 		loghdr->data[i] = (offset_t)data;
-	else if (type == L_TYPE_DIR_ADD ||
+    } else if (type == L_TYPE_DIR_ADD ||
 			type == L_TYPE_DIR_RENAME ||
 			type == L_TYPE_DIR_DEL) {
 		// dirent inode number.
 		loghdr->data[i] = (uint32_t)data;
-	} else
+	} else {
 		loghdr->data[i] = 0;
+    }
 
 	loghdr->length[i] = length;
 	loghdr->n++;
