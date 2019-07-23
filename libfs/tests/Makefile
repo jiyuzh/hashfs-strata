@@ -1,6 +1,10 @@
 CC = gcc -std=c99
 #CC = c99
-EXE = iotest file_basic small_io falloc_test ftrunc_test lock_test lock_perf \
+#EXE = iotest file_basic small_io falloc_test ftrunc_test lock_test lock_perf \
+#	  simple_spdk_test dir_test many_files_test fork_io readdir_test \
+#	  append_test fwrite_fread partial_update_test \
+#	  deepqueue multithread age
+EXE = file_basic small_io falloc_test ftrunc_test lock_test lock_perf \
 	  simple_spdk_test dir_test many_files_test fork_io readdir_test \
 	  append_test fwrite_fread partial_update_test \
 	  deepqueue multithread age

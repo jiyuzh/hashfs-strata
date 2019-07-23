@@ -12,6 +12,7 @@
 
 #ifdef __cplusplus
 extern "C" {
+#define _Static_assert static_assert
 #endif
 
 #define RANGENODE_PER_PAGE  254

@@ -15,6 +15,8 @@
 #include "mlfs/mlfs_interface.h"
 #include "storage/storage.h"
 
+#include "filesystem/inode_hash.h"
+
 /**
  A system call should call start_log_tx()/commit_log_tx() to mark
  its start and end. Usually start_log_tx() just increments
@@ -281,6 +283,7 @@ retry:
 	return next_log_blk;
 }
 
+#if 0
 // allocate logheader meta and attach logheader.
 static inline struct logheader_meta *loghd_alloc(struct logheader *lh)
 {
@@ -298,6 +301,7 @@ static inline struct logheader_meta *loghd_alloc(struct logheader *lh)
 
 	return loghdr_meta;
 }
+#endif
 
 // Write in-memory log header to disk.
 // This is the true point at which the
@@ -1283,7 +1287,7 @@ void handle_digest_response(char *ack_cmd)
 
 	if (g_idx_cached && IDXAPI_IS_GLOBAL()) {
         int api_err = mlfs_hash_cache_invalidate();
-        if (api_err) return api_err;
+        if (api_err) panic("couldn't invalidate cache!\n");
     }
 
 	// TODO: optimize this. Now sync all inodes in the inode_hash.
