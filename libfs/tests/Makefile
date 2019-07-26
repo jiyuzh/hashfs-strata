@@ -1,4 +1,4 @@
-CC = gcc -std=c99
+CC = gcc5 -std=c99
 #CC = c99
 #EXE = iotest file_basic small_io falloc_test ftrunc_test lock_test lock_perf \
 #	  simple_spdk_test dir_test many_files_test fork_io readdir_test \

@@ -19,6 +19,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+#include <sys/mman.h>
 
 // libmlfs Disk layout:
 // [ boot block | sb block | inode blocks | free bitmap | data blocks | log blocks ]
@@ -102,14 +103,46 @@ typedef struct bmap_request {
 typedef struct mlfs_libfs_stats {
 	uint64_t digest_wait_tsc;
 	uint64_t digest_wait_nr;
+
 	uint64_t l0_search_tsc;
 	uint64_t l0_search_nr;
+        uint64_t fcache_lock_tsc;
+        uint64_t fcache_lock_nr;
+        uint64_t fcache_get_tsc;
+        uint64_t fcache_get_nr;
+        uint64_t fcache_val_tsc;
+        uint64_t fcache_val_nr;
+        uint64_t fcache_init_tsc;
+        uint64_t fcache_init_nr;
+        uint64_t fcache_all_tsc;
+        uint64_t fcache_all_nr;
+
 	uint64_t tree_search_tsc;
 	uint64_t tree_search_nr;
 	uint64_t log_write_tsc;
+	uint64_t log_write_nr;
+	uint64_t log_write_inode_tsc;
+	uint64_t log_write_inode_nr;
+	uint64_t log_write_data_tsc;
+	uint64_t log_write_data_nr;
+	uint64_t log_write_data_aligned_tsc;
+	uint64_t log_write_data_aligned_nr;
+	uint64_t log_aligned_wronly_tsc;
+	uint64_t log_aligned_wronly_nr;
+	uint64_t log_aligned_bh_tsc;
+	uint64_t log_aligned_bh_nr;
+	uint64_t log_hash_fc_add_tsc;
+	uint64_t log_hash_fc_add_nr;
+        uint64_t fc_add_zalloc_tsc;
+        uint64_t fc_add_zalloc_nr;
+	uint64_t log_write_data_unaligned_tsc;
+	uint64_t log_write_data_unaligned_nr;
+	uint64_t log_alloc_tsc;
+	uint64_t log_alloc_nr;
 	uint64_t loghdr_write_nr;
 	uint64_t loghdr_write_tsc;
-	uint64_t log_write_nr;
+    uint64_t log_hash_update_nr;
+    uint64_t log_hash_update_tsc;
 	uint64_t log_commit_tsc;
 	uint64_t log_commit_nr;
 	uint64_t read_data_tsc;
@@ -246,26 +279,109 @@ static inline int icache_del(struct inode *ip)
 }
 
 #ifdef KLIB_HASH
-static inline struct fcache_block *fcache_find(struct inode *inode, offset_t key)
+static struct fcache_block *fcache_find(struct inode *inode, offset_t key)
 {
+#define fcache_stats
 	khiter_t k;
 	struct fcache_block *fc_block = NULL;
+    uint64_t start_tsc, total_tsc;
+   
+#ifdef fcache_stats
+    if (enable_perf_stats)
+        total_tsc = asm_rdtscp();
+#endif
 
 	if (inode->fcache_hash == NULL) {
+#ifdef fcache_stats
+        if (enable_perf_stats)
+            start_tsc = asm_rdtscp();
+#endif
+
 		pthread_rwlock_wrlock(&inode->fcache_rwlock);
 		inode->fcache_hash = kh_init(fcache);
 		pthread_rwlock_unlock(&inode->fcache_rwlock);
+
+#ifdef fcache_stats
+        if (enable_perf_stats) {
+            g_perf_stats.fcache_init_tsc += (asm_rdtscp() - start_tsc);
+            g_perf_stats.fcache_init_nr++;
+        }
+#endif
 	}
-	pthread_rwlock_rdlock(&inode->fcache_rwlock);
+
+#ifdef fcache_stats
+    if (enable_perf_stats)
+        start_tsc = asm_rdtscp();
+#endif
+
+	//pthread_rwlock_rdlock(&inode->fcache_rwlock);
+    
+#ifdef fcache_stats
+    if (enable_perf_stats) {
+        g_perf_stats.fcache_lock_tsc += (asm_rdtscp() - start_tsc);
+    }
+
+    if (enable_perf_stats)
+        start_tsc = asm_rdtscp();
+#endif
+
 	k = kh_get(fcache, inode->fcache_hash, key);
+
+#ifdef fcache_stats
+    if (enable_perf_stats) {
+        g_perf_stats.fcache_get_tsc += (asm_rdtscp() - start_tsc);
+        g_perf_stats.fcache_get_nr++;
+    }
+#endif
+
 	if (k == kh_end(inode->fcache_hash)) {
-		pthread_rwlock_unlock(&inode->fcache_rwlock);
+#ifdef fcache_stats
+        if (enable_perf_stats)
+            start_tsc = asm_rdtscp();
+#endif
+	
+        //pthread_rwlock_unlock(&inode->fcache_rwlock);
+        
+#ifdef fcache_stats
+        if (enable_perf_stats) {
+            g_perf_stats.fcache_lock_tsc += (asm_rdtscp() - start_tsc);
+            g_perf_stats.fcache_lock_nr++;
+
+            g_perf_stats.fcache_all_tsc += (asm_rdtscp() - total_tsc);
+            g_perf_stats.fcache_all_nr++;
+        }
+#endif
 		return NULL;
 	}
 
-	fc_block = kh_value(inode->fcache_hash, k);
+#ifdef fcache_stats
+    if (enable_perf_stats)
+        start_tsc = asm_rdtscp();
+#endif
+	
+    fc_block = kh_value(inode->fcache_hash, k);
+    
+#ifdef fcache_stats
+    if (enable_perf_stats) {
+        g_perf_stats.fcache_val_tsc += (asm_rdtscp() - start_tsc);
+        g_perf_stats.fcache_val_nr++;
+    }
 
-	pthread_rwlock_unlock(&inode->fcache_rwlock);
+    if (enable_perf_stats)
+        start_tsc = asm_rdtscp();
+#endif
+	
+    pthread_rwlock_unlock(&inode->fcache_rwlock);
+    
+#ifdef fcache_stats
+    if (enable_perf_stats) {
+        g_perf_stats.fcache_lock_tsc += (asm_rdtscp() - start_tsc);
+        g_perf_stats.fcache_lock_nr++;
+
+        g_perf_stats.fcache_all_tsc += (asm_rdtscp() - total_tsc);
+        g_perf_stats.fcache_all_nr++;
+    }
+#endif
 
 	return fc_block;
 }
@@ -277,11 +393,35 @@ static inline struct fcache_block *fcache_alloc_add(struct inode *inode,
 	struct fcache_block *fc_block;
 	khiter_t k;
 	int ret;
+    uint64_t start_tsc;
 
+    if (enable_perf_stats)
+        start_tsc = asm_rdtscp();
+
+#define USE_FCACHE_POOL
+//#undef USE_FCACHE_POOL
+#ifdef USE_FCACHE_POOL
+    if (!inode->fcache_block_pool) {
+        inode->fcache_block_pool = (struct fcache_block*) mmap(NULL, 1024 * 1024 * 1024, 
+                PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, 0, 0);
+        if (inode->fcache_block_pool == (void*)-1) {
+            perror("pool");
+            panic("no mmap!");
+        }
+    }
+    fc_block = inode->fcache_block_pool + inode->pool_pointer;
+    inode->pool_pointer++;
+#else
 	fc_block = (struct fcache_block *)mlfs_zalloc(sizeof(*fc_block));
+#endif
 	if (!fc_block)
 		panic("Fail to allocate fcache block\n");
-
+    if (enable_perf_stats) {
+        g_perf_stats.fc_add_zalloc_tsc += (asm_rdtscp() - start_tsc);
+        g_perf_stats.fc_add_zalloc_nr++;
+    }
+    
+    //start_cache_stats();
 	fc_block->key = key;
 	fc_block->log_addr = log_addr;
 	fc_block->invalidate = 0;
@@ -290,8 +430,9 @@ static inline struct fcache_block *fcache_alloc_add(struct inode *inode,
     fc_block->start_offset = start_offset;
 	inode->n_fcache_entries++;
 	INIT_LIST_HEAD(&fc_block->l);
+    //end_cache_stats(&(g_perf_stats.cache_stats));
 
-	pthread_rwlock_wrlock(&inode->fcache_rwlock);
+	//pthread_rwlock_wrlock(&inode->fcache_rwlock);
 
 	if (inode->fcache_hash == NULL) {
 		inode->fcache_hash = kh_init(fcache);
@@ -310,7 +451,7 @@ static inline struct fcache_block *fcache_alloc_add(struct inode *inode,
 	kh_value(inode->fcache_hash, k) = fc_block;
 	//mlfs_info("add key %u @ inode %u\n", key, inode->inum);
 
-	pthread_rwlock_unlock(&inode->fcache_rwlock);
+	//pthread_rwlock_unlock(&inode->fcache_rwlock);
 
 	return fc_block;
 }
@@ -364,7 +505,9 @@ static inline int fcache_del_all(struct inode *inode)
 				list_del(&fc_block->l);
 				mlfs_free(fc_block->data);
 			}
+#ifndef USE_FCACHE_POOL
 			mlfs_free(fc_block);
+#endif
 		}
 	}
 
@@ -394,7 +537,6 @@ static inline struct fcache_block *fcache_alloc_add(struct inode *inode,
 		offset_t key, addr_t log_addr)
 {
 	struct fcache_block *fc_block;
-
 	fc_block = (struct fcache_block *)mlfs_zalloc(sizeof(*fc_block));
 	if (!fc_block)
 		panic("Fail to allocate fcache block\n");

@@ -891,6 +891,39 @@ struct mlfs_ext_path *mlfs_find_extent(handle_t *handle,
 		mlfs_lsm_debug("depth %d: num %d, max %d\n", ppos,
 				le16_to_cpu(eh->eh_entries), le16_to_cpu(eh->eh_max));
 
+#if defined(REUSE_PREVIOUS_PATH)
+        if (inode->previous_path) {
+            struct mlfs_ext_path *prev_path = inode->previous_path;
+            struct mlfs_ext_path *prevp = &(prev_path[ppos]);
+            struct mlfs_ext_path *prevp_next = &(prev_path[ppos + 1]);
+
+            if (prevp->p_hdr) {
+                extent_branch_t *l, *r;
+                l = prevp->p_idx;
+                r = EXT_LAST_INDEX(prevp->p_hdr) != l ? l + 1 : l;
+                
+                if (l && r && block >= mlfs_idx_lblock(l) && block < mlfs_idx_lblock(r)) {
+                    path[ppos].p_block = mlfs_idx_pblock(l);
+                    path[ppos].p_depth = i;
+                    path[ppos].p_idx = prevp->p_idx;
+                    path[ppos].p_ext = prevp->p_ext;
+                    i--; ppos++;
+
+                    if (unlikely(ppos > depth)) {
+                        ret = -EIO;
+                        goto err;
+                    }
+
+                    if (prevp_next->p_bh) get_bh(prevp_next->p_bh);
+                    path[ppos].p_bh = prevp_next->p_bh;
+                    path[ppos].p_hdr = prevp_next->p_bh ? ext_block_hdr(prevp_next->p_bh) : NULL;
+                    continue;
+                }
+            }
+
+        }
+#endif
+
 		/* set the nearest index node */
 		mlfs_ext_binsearch_idx(inode, path + ppos, block);
 
@@ -2904,7 +2937,8 @@ int mlfs_ext_get_blocks(handle_t *handle, struct inode *inode,
 
 #ifdef REUSE_PREVIOUS_PATH
 	if (create) {
-		mlfs_ext_drop_refs(inode->previous_path); mlfs_free(inode->previous_path); //TODO: for continue debug
+		mlfs_ext_drop_refs(inode->previous_path); 
+        mlfs_free(inode->previous_path); //TODO: for continue debug
 		inode->previous_path = NULL;
 		goto find_ext_path;
 	}
@@ -2938,9 +2972,11 @@ int mlfs_ext_get_blocks(handle_t *handle, struct inode *inode,
 		}
 	}
 
+#if 0
 	mlfs_ext_drop_refs(_path);
 	mlfs_free(_path);
 	inode->previous_path = NULL;
+#endif
 
 #endif
 find_ext_path:
@@ -2952,6 +2988,14 @@ find_ext_path:
 		path = NULL;
 		goto out2;
 	}
+
+#if defined(REUSE_PREVIOUS_PATH)
+    if (inode->previous_path) {
+        mlfs_ext_drop_refs(inode->previous_path);
+        mlfs_free(inode->previous_path);
+        inode->previous_path = NULL;
+    }
+#endif
 
 	depth = ext_depth(handle, inode);
 
@@ -3099,7 +3143,8 @@ out:
 #ifdef REUSE_PREVIOUS_PATH
 	if (inode->invalidate_path) {
 		inode->invalidate_path = 0;
-		mlfs_ext_drop_refs(inode->previous_path); mlfs_free(inode->previous_path); //TODO: for continue debug
+		mlfs_ext_drop_refs(inode->previous_path); 
+        mlfs_free(inode->previous_path); //TODO: for continue debug
 		inode->previous_path = NULL;
 	}
 	else {

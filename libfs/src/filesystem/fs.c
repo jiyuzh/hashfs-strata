@@ -108,10 +108,20 @@ void show_libfs_stats(const char *title)
       js_add_int64(wr, "nr" , g_perf_stats.log_write_nr);
       json_object_object_add(log, "write", wr);
     }
+    json_object *alloc = json_object_new_object(); {
+      js_add_int64(alloc, "tsc", g_perf_stats.log_alloc_tsc);
+      js_add_int64(alloc, "nr" , g_perf_stats.log_alloc_nr);
+      json_object_object_add(log, "alloc", alloc);
+    }
     json_object *hdrwr = json_object_new_object(); {
       js_add_int64(hdrwr, "tsc", g_perf_stats.loghdr_write_tsc);
       js_add_int64(hdrwr, "nr" , g_perf_stats.loghdr_write_nr);
       json_object_object_add(log, "hdr_write", hdrwr);
+    }
+    json_object *hashup = json_object_new_object(); {
+      js_add_int64(hashup, "tsc", g_perf_stats.log_hash_update_tsc);
+      js_add_int64(hashup, "nr",  g_perf_stats.log_hash_update_nr);
+      json_object_object_add(log, "hash_update", hashup);
     }
     json_object_object_add(root, "log", log);
   }
@@ -145,10 +155,25 @@ void show_libfs_stats(const char *title)
   printf("inode allocation (tsc/op) : %lu / %lu(%.2f)\n", tri_ratio(g_perf_stats.ialloc_tsc,g_perf_stats.ialloc_nr));
   printf("bcache search (tsc/op)    : %lu / %lu(%.2f)\n", tri_ratio(g_perf_stats.bcache_search_tsc,g_perf_stats.bcache_search_nr));
   printf("search l0 tree  (tsc/op)  : %lu / %lu(%.2f)\n", tri_ratio(g_perf_stats.l0_search_tsc,g_perf_stats.l0_search_nr));
+  printf("  fcache lock (tsc/op)    : %lu / %lu(%.2f)\n", tri_ratio(g_perf_stats.fcache_lock_tsc,g_perf_stats.fcache_lock_nr));
+  printf("  fcache init (tsc/op)    : %lu / %lu(%.2f)\n", tri_ratio(g_perf_stats.fcache_init_tsc,g_perf_stats.fcache_init_nr));
+  printf("  fcache get  (tsc/op)    : %lu / %lu(%.2f)\n", tri_ratio(g_perf_stats.fcache_get_tsc,g_perf_stats.fcache_get_nr));
+  printf("  fcache val  (tsc/op)    : %lu / %lu(%.2f)\n", tri_ratio(g_perf_stats.fcache_val_tsc,g_perf_stats.fcache_val_nr));
+  printf("  fcache ALL  (tsc/op)    : %lu / %lu(%.2f)\n", tri_ratio(g_perf_stats.fcache_all_tsc,g_perf_stats.fcache_all_nr));
   printf("search lsm tree (tsc/op)  : %lu / %lu(%.2f)\n", tri_ratio(g_perf_stats.tree_search_tsc,g_perf_stats.tree_search_nr));
   printf("  LLC miss latency : %lu \n", calculate_llc_latency(&(g_perf_stats.cache_stats)));
   printf("log commit (tsc/op)       : %lu / %lu(%.2f)\n", tri_ratio(g_perf_stats.log_commit_tsc,g_perf_stats.log_commit_nr));
   printf("  log writes (tsc/op)     : %lu / %lu(%.2f)\n", tri_ratio(g_perf_stats.log_write_tsc,g_perf_stats.log_write_nr));
+  printf("    log inode (tsc/op)    : %lu / %lu(%.2f)\n", tri_ratio(g_perf_stats.log_write_inode_tsc,g_perf_stats.log_write_inode_nr));
+  printf("    log data (tsc/op)     : %lu / %lu(%.2f)\n", tri_ratio(g_perf_stats.log_write_data_tsc,g_perf_stats.log_write_data_nr));
+  printf("      unaligned (tsc/op)  : %lu / %lu(%.2f)\n", tri_ratio(g_perf_stats.log_write_data_unaligned_tsc,g_perf_stats.log_write_data_unaligned_nr));
+  printf("      aligned (tsc/op)    : %lu / %lu(%.2f)\n", tri_ratio(g_perf_stats.log_write_data_aligned_tsc,g_perf_stats.log_write_data_aligned_nr));
+  printf("        get bh (tsc/op)   : %lu / %lu(%.2f)\n", tri_ratio(g_perf_stats.log_aligned_bh_tsc,g_perf_stats.log_aligned_bh_nr));
+  printf("        io time (tsc/op)  : %lu / %lu(%.2f)\n", tri_ratio(g_perf_stats.log_aligned_wronly_tsc,g_perf_stats.log_aligned_wronly_nr));
+  printf("        loghash (tsc/op)  : %lu / %lu(%.2f)\n", tri_ratio(g_perf_stats.log_hash_update_tsc,g_perf_stats.log_hash_update_nr));
+  printf("          fc add (tsc/op) : %lu / %lu(%.2f)\n", tri_ratio(g_perf_stats.log_hash_fc_add_tsc,g_perf_stats.log_hash_fc_add_nr));
+  printf("            zalloc (tsc/op) : %lu / %lu(%.2f)\n", tri_ratio(g_perf_stats.fc_add_zalloc_tsc,g_perf_stats.fc_add_zalloc_nr));
+  printf("  log alloc (tsc/op)      : %lu / %lu(%.2f)\n", tri_ratio(g_perf_stats.log_alloc_tsc,g_perf_stats.log_alloc_nr));
   printf("  loghdr writes (tsc/op)  : %lu / %lu(%.2f)\n", tri_ratio(g_perf_stats.loghdr_write_tsc,g_perf_stats.loghdr_write_nr));
   printf("read data blocks (tsc/op) : %lu / %lu(%.2f)\n", tri_ratio(g_perf_stats.read_data_tsc,g_perf_stats.read_data_bytes.cnt));
   print_stats_dist(&(g_perf_stats.read_data_bytes), "read data");

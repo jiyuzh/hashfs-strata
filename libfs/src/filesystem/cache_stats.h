@@ -27,6 +27,7 @@ extern "C" {
 typedef struct cache_stats {
     double l1_accesses;
     double l1_misses;
+    double li_misses;
     double l2_accesses;
     double l2_misses;
     double l3_accesses;
@@ -40,11 +41,13 @@ static perf_event_attr_t cache_access_attr;
 static perf_event_attr_t cache_misses_attr;
 static perf_event_attr_t l1_cache_access_attr;
 static perf_event_attr_t l1_cache_misses_attr;
+static perf_event_attr_t li_cache_misses_attr;
 
 extern int cache_access_fd;
 extern int cache_misses_fd;
 extern int l1_cache_access_fd;
 extern int l1_cache_misses_fd;
+extern int li_cache_misses_fd;
 
 extern bool enable_cache_stats;
 extern bool cache_stats_done_init;
@@ -62,6 +65,10 @@ extern bool cache_stats_done_init;
                 | (PERF_COUNT_HW_CACHE_RESULT_ACCESS << 16)
 
 #define L1_CM PERF_COUNT_HW_CACHE_L1D \
+                | (PERF_COUNT_HW_CACHE_OP_READ << 8) \
+                | (PERF_COUNT_HW_CACHE_RESULT_MISS << 16)
+
+#define LI_CM PERF_COUNT_HW_CACHE_L1I \
                 | (PERF_COUNT_HW_CACHE_OP_READ << 8) \
                 | (PERF_COUNT_HW_CACHE_RESULT_MISS << 16)
 
@@ -113,6 +120,7 @@ static void cache_stats_init() {
         perf_event_attr_init(&cache_misses_attr, LL_CM);
         perf_event_attr_init(&l1_cache_access_attr, L1_CA);
         perf_event_attr_init(&l1_cache_misses_attr, L1_CM);
+        perf_event_attr_init(&li_cache_misses_attr, LI_CM);
 
         cache_access_fd = perf_event_open(&cache_access_attr, 0, -1, -1, 0);
         if (cache_access_fd < 0) {
@@ -134,6 +142,12 @@ static void cache_stats_init() {
 
         l1_cache_misses_fd = perf_event_open(&l1_cache_misses_attr, 0, -1, -1, 0);
         if (l1_cache_misses_fd < 0) {
+            perror("Opening cache miss FD");
+            panic("Could not open perf event!");
+        }
+
+        li_cache_misses_fd = perf_event_open(&li_cache_misses_attr, 0, -1, -1, 0);
+        if (li_cache_misses_fd < 0) {
             perror("Opening cache miss FD");
             panic("Could not open perf event!");
         }
@@ -182,8 +196,8 @@ static void end_events(int count, ...){
 
 static void start_cache_stats(void) {
     if (!enable_cache_stats) return;
-    start_events(4, cache_access_fd, cache_misses_fd, l1_cache_access_fd,
-            l1_cache_misses_fd);
+    start_events(5, cache_access_fd, cache_misses_fd, l1_cache_access_fd,
+            l1_cache_misses_fd, li_cache_misses_fd);
 }
 
 
@@ -230,6 +244,9 @@ static void get_stat(int fd, uint64_t *count, uint64_t *time) {
 
 static void update_stats(cache_stats_t *cs) {
     uint64_t count, time;
+    get_stat(li_cache_misses_fd, &count, &time);
+    cs->li_misses += (double)count;
+
     get_stat(l1_cache_access_fd, &count, &time);
     cs->l1_accesses += (double)count;
     get_stat(l1_cache_misses_fd, &count, &time);
@@ -247,8 +264,8 @@ static void update_stats(cache_stats_t *cs) {
 
 static void end_cache_stats(cache_stats_t *cs) {
     if (!enable_cache_stats) return;
-    end_events(4, l1_cache_misses_fd, cache_access_fd, cache_misses_fd, 
-            l1_cache_access_fd);
+    end_events(5, l1_cache_misses_fd, cache_access_fd, cache_misses_fd, 
+            l1_cache_access_fd, li_cache_misses_fd);
 
     update_stats(cs);
 }
@@ -270,6 +287,8 @@ static uint64_t calculate_llc_latency(cache_stats_t *cs)
     double l3_hit_time = l3_hits * (l1_latency + l2_latency + l3_latency);
 
     double remaining_time = cs->perf_event_time - (l1_hit_time + l2_hit_time + l3_hit_time);
+
+    printf("l1i misses = %.2f\n", cs->li_misses);
 
     printf("l1 (%.2f %.2f %.2f)\nl2 (%.2f %.2f %.2f)\nl3 (%.2f %.2f %.2f)\n",
             cs->l1_accesses, l1_hits, cs->l1_misses,

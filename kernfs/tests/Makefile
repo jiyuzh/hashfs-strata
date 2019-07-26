@@ -1,4 +1,4 @@
-CC=gcc
+CC=gcc5
 CXX=g++ -std=c++11
 
 #CC = clang-3.8
@@ -74,13 +74,13 @@ time_stat.o: time_stat.c
 	$(CC) time_stat.c -c -o time_stat.o
 
 nvram_versus_dram: nvram_versus_dram.c time_stat.o
-	gcc $^ -o $@ -lm
+	$(CC) $^ -o $@ -lm
 
 test_gen.o: test_gen.cc
 	$(CXX) $^ $(DEBUG) -c -o $@ $(INCLUDES) -L../build -lkernfs -L$(LIBSPDK_DIR) -lspdk $(LD_FLAGS_CXX) -Wl,-rpath=$(abspath ../build) -Wl,-rpath=$(abspath $(LIBSPDK_DIR)) -Wl,-rpath=$(abspath $(NVML_DIR)/nondebug) $(MLFS_FLAGS)
 
 kernfs: kernfs.c
-	$(CC) $^ $(DEBUG) -o $@ $(INCLUDES) -L../build -lkernfs -L$(LIBSPDK_DIR) -lspdk $(LD_FLAGS)  -Wl,-rpath=$(abspath $(LIBSPDK_DIR)) -Wl,-rpath=$(abspath $(NVML_DIR)/nondebug)
+	$(CC) $^ $(DEBUG) -o $@ $(INCLUDES) -L../build -lkernfs -L$(LIBSPDK_DIR) -lspdk $(LD_FLAGS)  -Wl,-rpath=$(abspath $(LIBSPDK_DIR)) -Wl,-rpath=$(abspath $(NVML_DIR)/nondebug) -Wl,-rpath=$(abspath ../build)
 
 extent_test: extent_test.cc time_stat.o test_gen.o
 	$(CXX) $^ $(DEBUG) -o $@ $(INCLUDES) -L../hbuild -lkernfs -L$(LIBSPDK_DIR) -lspdk $(LD_FLAGS_CXX) -Wl,-rpath=$(abspath ../build) -Wl,-rpath=$(abspath $(LIBSPDK_DIR)) -Wl,-rpath=$(abspath $(NVML_DIR)/nondebug) $(MLFS_FLAGS)
