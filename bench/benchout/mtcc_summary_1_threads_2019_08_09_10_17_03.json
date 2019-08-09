@@ -1,0 +1,37 @@
+[
+    {
+        "layout": 1.0,
+        "total_time": 0.690701,
+        "struct": "none",
+        "bench": "MTCC (readfile)",
+        "workload": "1_threads"
+    },
+    {
+        "layout": 0.9,
+        "total_time": 0.773351,
+        "struct": "none",
+        "bench": "MTCC (readfile)",
+        "workload": "1_threads"
+    },
+    {
+        "layout": 0.8,
+        "total_time": 0.801448,
+        "struct": "none",
+        "bench": "MTCC (readfile)",
+        "workload": "1_threads"
+    },
+    {
+        "layout": 0.7,
+        "total_time": 0.811386,
+        "struct": "none",
+        "bench": "MTCC (readfile)",
+        "workload": "1_threads"
+    },
+    {
+        "layout": 0.6,
+        "total_time": 0.819078,
+        "struct": "none",
+        "bench": "MTCC (readfile)",
+        "workload": "1_threads"
+    }
+]

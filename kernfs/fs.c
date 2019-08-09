@@ -2204,7 +2204,7 @@ void init_fs(void)
 	if(IDXAPI_IS_HASHFS()) {
 		struct super_block *sblk = sb[g_root_dev];
 		printf("getchar\n");
-		getchar();
+		// getchar();
 		pmem_nvm_hash_table_new(sblk->ondisk, NULL, sblk->ondisk->ndatablocks);
 	}
     if (IDXAPI_IS_GLOBAL()) {

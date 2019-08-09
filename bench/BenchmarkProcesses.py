@@ -53,9 +53,10 @@ class KernFSThread:
         subprocess.run(mkdir_args, check=True, stdout=DEVNULL, stderr=DEVNULL)
         '''
 
-        mkfs_args = [ str(self.kernfs_path / 'mkfs.sh') ]
-        proc = subprocess.run(mkfs_args, cwd=self.kernfs_path, check=True,
-                              stdout=DEVNULL, stderr=DEVNULL)
+        mkfs_args = [ 'sudo', '-E', str(self.kernfs_path / 'mkfs.sh') ]
+        print("mkfs.sh env", self.env['MLFS_IDX_STRUCT'])
+        proc = subprocess.run(mkfs_args, cwd=self.kernfs_path, check=True, env=self.env)#,
+                              # stdout=DEVNULL, stderr=DEVNULL)
        
         kernfs_arg_str = '{0}/run.sh numactl -N 1 -m 1 {0}/kernfs'.format(
                                   str(self.kernfs_path))
@@ -125,7 +126,7 @@ class KernFSThread:
 
 class BenchRunner:
 
-    IDX_STRUCTS   = [ 'EXTENT_TREES', 'GLOBAL_HASH_TABLE',
+    IDX_STRUCTS   = [ 'HASHFS', 'EXTENT_TREES', 'GLOBAL_HASH_TABLE',
                       'LEVEL_HASH_TABLES', 'RADIX_TREES', 'NONE' ]
     IDX_DEFAULT   = [ 'EXTENT_TREES', 'GLOBAL_HASH_TABLE',
                       'LEVEL_HASH_TABLES', 'RADIX_TREES']

@@ -65,6 +65,7 @@ uint32_t get_unit(char c) {
     }
 }
 int main(int argc, char **argv) {
+    printf("hello world\n");
     int c;
     srand(time(NULL));
     printf("getchar\n");
@@ -202,6 +203,7 @@ static void *worker_thread(void *arg) {
 	    printf("truncating\n");
 	    printf("size1: %ld, size2: %ld\n", size/block_size, size_c/block_size);
 	    size_t half = (block_num / 2) * block_size;
+	    //size_t half = 0;
 	    printf("half: %ld\n", half/block_size);
 	    assert(ftruncate(fd, half) == 0 && "truncate failed");
 	    assert(ftruncate(fd_c, half) == 0 && "truncate_c failed");
