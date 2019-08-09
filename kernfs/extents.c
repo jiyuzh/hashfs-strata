@@ -2869,7 +2869,7 @@ int mlfs_ext_get_blocks(handle_t *handle, struct inode *inode,
             }
 
             if (tmp->idx_fns->im_set_stats) {
-                FN(tmp, im_set_stats, tmp, true);
+                FN(tmp, im_set_stats, tmp, false);
             }
 
             inode->ext_idx = tmp;
@@ -2896,6 +2896,8 @@ int mlfs_ext_get_blocks(handle_t *handle, struct inode *inode,
 #ifdef KERNFS
             if (enable_perf_stats) {
                 g_perf_stats.path_search_tsc += (asm_rdtscp() - tsc_start);
+                g_perf_stats.path_search_size += map->m_len;
+                g_perf_stats.path_search_nr++;
                 end_cache_stats(&(g_perf_stats.cache_stats));
             }
 #endif
@@ -2921,6 +2923,8 @@ int mlfs_ext_get_blocks(handle_t *handle, struct inode *inode,
 #ifdef KERNFS
         if (enable_perf_stats) {
             g_perf_stats.path_search_tsc += (asm_rdtscp() - tsc_start);
+            g_perf_stats.path_search_size += map->m_len;
+            g_perf_stats.path_search_nr++;
             end_cache_stats(&(g_perf_stats.cache_stats));
         }
 #else
@@ -3165,6 +3169,7 @@ out2:
 #ifdef KERNFS
 	if (enable_perf_stats) {
 		g_perf_stats.path_search_tsc += (asm_rdtscp() - tsc_start);
+        g_perf_stats.path_search_nr++;
         end_cache_stats(&(g_perf_stats.cache_stats));
     }
 #else
@@ -3181,11 +3186,13 @@ int mlfs_ext_truncate(handle_t *handle, struct inode *inode,
 		mlfs_lblk_t start, mlfs_lblk_t end)
 {
 	int ret;
+    uint64_t tsc_start;
     static bool notify = false;
 
 	mlfs_assert(handle != NULL);
 #if defined(STORAGE_PERF) && defined(KERNFS)
 	if (enable_perf_stats) {
+		tsc_start = asm_rdtscp();
         start_cache_stats();
     }
 #endif
@@ -3237,6 +3244,9 @@ int mlfs_ext_truncate(handle_t *handle, struct inode *inode,
 
 #if defined(STORAGE_PERF) && defined(KERNFS)
 	if (enable_perf_stats) {
+		g_perf_stats.path_search_tsc += (asm_rdtscp() - tsc_start);
+        g_perf_stats.path_search_size += ret;
+        g_perf_stats.path_search_nr++;
         end_cache_stats(&(g_perf_stats.cache_stats));
     }
 #endif

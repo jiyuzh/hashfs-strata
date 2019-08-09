@@ -187,6 +187,12 @@ void show_kernfs_stats(void)
         js_add_int64(storage, "wnr" , storage_wnr.total);
         json_object_object_add(root, "storage", storage);
     }
+    json_object *search = json_object_new_object(); {
+        js_add_int64(search, "total_time", g_perf_stats.path_search_tsc);
+        js_add_int64(search, "total_blocks", g_perf_stats.path_search_size);
+        js_add_int64(search, "nr_search", g_perf_stats.path_search_nr);
+        json_object_object_add(root, "search", search);
+    }
 	const char *js_str = json_object_get_string(root);
 	if (enable_perf_stats) {
 		write(prof_fd, js_str, strlen(js_str));
@@ -215,8 +221,12 @@ void show_kernfs_stats(void)
 	printf("n_digest_skipped: %lu (%.1f %%)\n",
 			g_perf_stats.n_digest_skipped,
 			((float)g_perf_stats.n_digest_skipped * 100.0) / (float)n_digest);
-	printf("path search     : %lu\n",
-			g_perf_stats.path_search_tsc);
+	printf("path search     : %lu / %lu (%.1f tsc/op)\n",
+			g_perf_stats.path_search_tsc, g_perf_stats.path_search_nr,
+            (float)g_perf_stats.path_search_tsc / (float)g_perf_stats.path_search_nr);
+	printf("-- blocks indexed: %lu blocks / %lu ops (%.1f tsc/blk)\n",
+			g_perf_stats.path_search_size, g_perf_stats.path_search_nr,
+            (float)g_perf_stats.path_search_tsc / (float)g_perf_stats.path_search_size);
     printf("  LLC miss latency : %lu \n", calculate_llc_latency(&(g_perf_stats.cache_stats)));
 	printf("total migrated  : %lu MB\n", g_perf_stats.total_migrated_mb);
 	printf("--------------------------------------\n");
