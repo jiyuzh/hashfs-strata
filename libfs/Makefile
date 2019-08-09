@@ -8,7 +8,7 @@
 #CC=clang-3.8
 #CC=gcc
 CXX=g++ --std=c++11
-CC=gcc --std=gnu99
+CC=gcc5 --std=gnu99
 
 ########
 #  List of all modules' directories
@@ -70,6 +70,10 @@ endif
 endif
 
 OPT_ARGS ?= -g -O3
+#######
+# Optimization definitions
+#######
+MLFS_FLAGS += -DREUSE_PREVIOUS_PATH  # optimization for extent trees
 
 ########
 # Testing definitions

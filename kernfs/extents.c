@@ -900,6 +900,39 @@ struct mlfs_ext_path *mlfs_find_extent(handle_t *handle,
 		mlfs_lsm_debug("depth %d: num %d, max %d\n", ppos,
 				le16_to_cpu(eh->eh_entries), le16_to_cpu(eh->eh_max));
 
+#if defined(REUSE_PREVIOUS_PATH)
+        if (inode->previous_path) {
+            struct mlfs_ext_path *prev_path = inode->previous_path;
+            struct mlfs_ext_path *prevp = &(prev_path[ppos]);
+            struct mlfs_ext_path *prevp_next = &(prev_path[ppos + 1]);
+
+            if (prevp->p_hdr) {
+                extent_branch_t *l, *r;
+                l = prevp->p_idx;
+                r = EXT_LAST_INDEX(prevp->p_hdr) != l ? l + 1 : l;
+                
+                if (l && r && block >= mlfs_idx_lblock(l) && block < mlfs_idx_lblock(r)) {
+                    path[ppos].p_block = mlfs_idx_pblock(l);
+                    path[ppos].p_depth = i;
+                    path[ppos].p_idx = prevp->p_idx;
+                    path[ppos].p_ext = prevp->p_ext;
+                    i--; ppos++;
+
+                    if (unlikely(ppos > depth)) {
+                        ret = -EIO;
+                        goto err;
+                    }
+
+                    if (prevp_next->p_bh) get_bh(prevp_next->p_bh);
+                    path[ppos].p_bh = prevp_next->p_bh;
+                    path[ppos].p_hdr = prevp_next->p_bh ? ext_block_hdr(prevp_next->p_bh) : NULL;
+                    continue;
+                }
+            }
+
+        }
+#endif
+
 		/* set the nearest index node */
 		mlfs_ext_binsearch_idx(inode, path + ppos, block);
 
@@ -2912,7 +2945,7 @@ int mlfs_ext_get_blocks(handle_t *handle, struct inode *inode,
             }
 
             if (tmp->idx_fns->im_set_stats) {
-                FN(tmp, im_set_stats, tmp, true);
+                FN(tmp, im_set_stats, tmp, false);
             }
 
             inode->ext_idx = tmp;
@@ -2939,6 +2972,8 @@ int mlfs_ext_get_blocks(handle_t *handle, struct inode *inode,
 #ifdef KERNFS
             if (enable_perf_stats) {
                 g_perf_stats.path_search_tsc += (asm_rdtscp() - tsc_start);
+                g_perf_stats.path_search_size += map->m_len;
+                g_perf_stats.path_search_nr++;
                 end_cache_stats(&(g_perf_stats.cache_stats));
             }
 #endif
@@ -2964,6 +2999,8 @@ int mlfs_ext_get_blocks(handle_t *handle, struct inode *inode,
 #ifdef KERNFS
         if (enable_perf_stats) {
             g_perf_stats.path_search_tsc += (asm_rdtscp() - tsc_start);
+            g_perf_stats.path_search_size += map->m_len;
+            g_perf_stats.path_search_nr++;
             end_cache_stats(&(g_perf_stats.cache_stats));
         }
 #else
@@ -2980,7 +3017,8 @@ int mlfs_ext_get_blocks(handle_t *handle, struct inode *inode,
 
 #ifdef REUSE_PREVIOUS_PATH
 	if (create) {
-		mlfs_ext_drop_refs(inode->previous_path); mlfs_free(inode->previous_path); //TODO: for continue debug
+		mlfs_ext_drop_refs(inode->previous_path); 
+        mlfs_free(inode->previous_path); //TODO: for continue debug
 		inode->previous_path = NULL;
 		goto find_ext_path;
 	}
@@ -3014,9 +3052,11 @@ int mlfs_ext_get_blocks(handle_t *handle, struct inode *inode,
 		}
 	}
 
+#if 0
 	mlfs_ext_drop_refs(_path);
 	mlfs_free(_path);
 	inode->previous_path = NULL;
+#endif
 
 #endif
 find_ext_path:
@@ -3028,6 +3068,14 @@ find_ext_path:
 		path = NULL;
 		goto out2;
 	}
+
+#if defined(REUSE_PREVIOUS_PATH)
+    if (inode->previous_path) {
+        mlfs_ext_drop_refs(inode->previous_path);
+        mlfs_free(inode->previous_path);
+        inode->previous_path = NULL;
+    }
+#endif
 
 	depth = ext_depth(handle, inode);
 
@@ -3175,7 +3223,8 @@ out:
 #ifdef REUSE_PREVIOUS_PATH
 	if (inode->invalidate_path) {
 		inode->invalidate_path = 0;
-		mlfs_ext_drop_refs(inode->previous_path); mlfs_free(inode->previous_path); //TODO: for continue debug
+		mlfs_ext_drop_refs(inode->previous_path); 
+        mlfs_free(inode->previous_path); //TODO: for continue debug
 		inode->previous_path = NULL;
 	}
 	else {
@@ -3196,6 +3245,7 @@ out2:
 #ifdef KERNFS
 	if (enable_perf_stats) {
 		g_perf_stats.path_search_tsc += (asm_rdtscp() - tsc_start);
+        g_perf_stats.path_search_nr++;
         end_cache_stats(&(g_perf_stats.cache_stats));
     }
 #else
@@ -3232,11 +3282,13 @@ int mlfs_ext_truncate(handle_t *handle, struct inode *inode,
 		return 0;
 	}
 	int ret;
+    uint64_t tsc_start;
     static bool notify = false;
 
 	mlfs_assert(handle != NULL);
 #if defined(STORAGE_PERF) && defined(KERNFS)
 	if (enable_perf_stats) {
+		tsc_start = asm_rdtscp();
         start_cache_stats();
     }
 #endif
@@ -3288,6 +3340,9 @@ int mlfs_ext_truncate(handle_t *handle, struct inode *inode,
 
 #if defined(STORAGE_PERF) && defined(KERNFS)
 	if (enable_perf_stats) {
+		g_perf_stats.path_search_tsc += (asm_rdtscp() - tsc_start);
+        g_perf_stats.path_search_size += ret;
+        g_perf_stats.path_search_nr++;
         end_cache_stats(&(g_perf_stats.cache_stats));
     }
 #endif

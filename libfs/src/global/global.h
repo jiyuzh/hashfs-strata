@@ -80,6 +80,7 @@ extern char pwd[MAX_PATH + 1];
 
 typedef enum indexing_api_choice {
     EXTENT_TREES,
+    GLOBAL_CUCKOO_HASH,
     GLOBAL_HASH_TABLE,
     HASHFS,
     LEVEL_HASH_TABLES,
@@ -93,8 +94,8 @@ extern bool g_idx_cached;
 #define IDXAPI_IS_PER_FILE() (g_idx_choice == EXTENT_TREES || g_idx_choice == LEVEL_HASH_TABLES \
         || g_idx_choice == RADIX_TREES)
 
-#define IDXAPI_IS_GLOBAL() (g_idx_choice == GLOBAL_HASH_TABLE)
 #define IDXAPI_IS_HASHFS() (g_idx_choice == HASHFS)
+#define IDXAPI_IS_GLOBAL() (g_idx_choice == GLOBAL_HASH_TABLE || g_idx_choice == GLOBAL_CUCKOO_HASH)
 
 indexing_choice_t get_indexing_choice(void);
 bool get_indexing_is_cached(void);

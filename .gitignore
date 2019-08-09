@@ -80,6 +80,7 @@ bench/filebench/filebench
 bench/filebench/install-sh
 bench/filebench/missing
 bench/filebench/ylwrap
+bench/filebench/install
 
 # Graphs.
 *.pdf

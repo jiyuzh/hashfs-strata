@@ -1,4 +1,4 @@
-CC = gcc
+CC = gcc5
 #CC = clang-3.8
 # The compiling order matters
 OBJS = syscalldb.o shim_init.o \

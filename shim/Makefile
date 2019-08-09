@@ -1,4 +1,4 @@
-SYS ?= $(shell gcc -dumpmachine)
+SYS ?= $(shell gcc5 -dumpmachine)
 export SYS
 
 export DEBUG

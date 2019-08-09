@@ -145,13 +145,15 @@ static struct buffer_head *buffer_alloc_fast(struct block_device *bdev,
 	bh->b_size = 0;
 	bh->b_offset = 0;
 
-    if (g_idx_choice == GLOBAL_HASH_TABLE) {
+#if 1
+    if (IDXAPI_IS_GLOBAL()) {
         bh->b_cacheline_size = 256; // units of 64 bytes
         bh->b_bitmap_size = (g_block_size_bytes / bh->b_cacheline_size);
         bh->b_dirty_bitmap = (uint64_t*)mlfs_alloc(bh->b_bitmap_size / sizeof(uint8_t));
         bh->b_use_bitmap = 0;
         bitmap_zero(bh->b_dirty_bitmap, bh->b_bitmap_size);
     }
+#endif
 
 	INIT_LIST_HEAD(&bh->b_io_list);
 
@@ -318,7 +320,7 @@ int mlfs_write(struct buffer_head *b)
 
 	mlfs_assert(b->b_size > 0);
 
-    if (g_idx_choice == GLOBAL_HASH_TABLE) {
+    if (IDXAPI_IS_GLOBAL()) {
         storage_engine = g_bdev[b->b_dev]->storage_engine;
         // (iangneal): Support bitmap for byte-addressable storage.
         if (b->b_offset || b->b_use_bitmap) {

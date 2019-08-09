@@ -12,6 +12,7 @@
 
 #ifdef __cplusplus
 extern "C" {
+#define _Static_assert static_assert
 #endif
 
 #define RANGENODE_PER_PAGE  254
@@ -282,10 +283,14 @@ struct inode {
 
 	// libfs only
 	pthread_rwlock_t fcache_rwlock;
+    // -- for UT hash
 	struct fcache_block *fcache;
 #ifdef KLIB_HASH
 	khash_t(fcache) *fcache_hash;
 #endif
+    struct fcache_block *fcache_block_pool;
+    size_t npool_blocks;
+    int pool_pointer;
 	uint32_t n_fcache_entries;
 	///////////////////////////////////////////////////////////////////
 

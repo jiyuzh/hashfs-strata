@@ -117,9 +117,11 @@ if not do_install:
     extra_defs = ''
     disabled_features = { 'nscd' }
     extra_flags = '--with-tls --enable-add-ons=nptl --without-selinux --disable-test {0}'.format(' '.join(['--disable-' + f for f in disabled_features]))
+    extra_flags = ''
 
     ##    configure
-    commandStr = r'CFLAGS="{2}" {3} {0}/configure --prefix={1} {4} | tee configure.out'.format(glibc, installDir, cflags, extra_defs, extra_flags)
+    commandStr = r'CC="gcc5" CFLAGS="{2}" {3} {0}/configure --prefix={1} {4} | tee configure.out'.format(glibc, installDir, cflags, extra_defs, extra_flags)
+    #commandStr = r'CFLAGS="{2}" {3} {0}/configure --prefix={1} {4} | tee configure.out'.format(glibc, installDir, cflags, extra_defs, extra_flags)
     print commandStr
     commandOutput = subprocess.call(commandStr, shell=True)
 
@@ -151,6 +153,8 @@ if not do_install:
         os.symlink(dir + '/' + bin, bin)
 
     print '\n\n\nNow type \'make\' in \'{0}\'\n\n'.format(buildDir)
+
+    out = subprocess.call(r'make -C {0} -j$(nproc)'.format(buildDir), shell=True)
 
 
 

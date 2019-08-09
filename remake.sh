@@ -1,8 +1,14 @@
 #! /bin/bash
 set -e
+#export OPT_ARGS="-g -O3"
 export OPT_ARGS="-g -O2"
 export DEBUG_ARGS=""
 for arg in $@; do
+  if [ "$arg" == "mirror" ]; then
+    echo "debug"
+    OPT_ARGS="-g -O0"
+    DEBUG_ARGS="${DEBUG_ARGS}"
+  fi
   if [ "$arg" == "debug" ]; then
     echo "debug"
     OPT_ARGS="-g -O0"
