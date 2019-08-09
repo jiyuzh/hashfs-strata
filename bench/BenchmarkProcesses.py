@@ -129,7 +129,7 @@ class BenchRunner:
     IDX_STRUCTS   = [ 'HASHFS', 'EXTENT_TREES', 'GLOBAL_HASH_TABLE',
                       'LEVEL_HASH_TABLES', 'RADIX_TREES', 'NONE' ]
     IDX_DEFAULT   = [ 'EXTENT_TREES', 'GLOBAL_HASH_TABLE',
-                      'LEVEL_HASH_TABLES', 'RADIX_TREES']
+                      'LEVEL_HASH_TABLES', 'RADIX_TREES', 'HASHFS', 'NONE']
     LAYOUT_SCORES = ['100', '90', '80', '70', '60']
 
     def __init__(self, args):
