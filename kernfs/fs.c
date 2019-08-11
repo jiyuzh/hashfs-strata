@@ -195,10 +195,16 @@ void show_kernfs_stats(void)
         js_add_int64(search, "nr_search", g_perf_stats.path_search_nr);
         json_object_object_add(root, "search", search);
     }
+
+    // Convert JSON to a string
 	const char *js_str = json_object_get_string(root);
+
+    // Write the JSON string to a file.
 	if (enable_perf_stats) {
 		write(prof_fd, js_str, strlen(js_str));
 	}
+
+    // TODO: not sure what this does.
 	json_object_put(root);
 
 	//float clock_speed_mhz = get_cpu_clock_speed();

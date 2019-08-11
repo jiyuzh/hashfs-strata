@@ -2896,7 +2896,7 @@ int mlfs_ext_get_blocks(handle_t *handle, struct inode *inode,
 #ifdef KERNFS
             if (enable_perf_stats) {
                 g_perf_stats.path_search_tsc += (asm_rdtscp() - tsc_start);
-                g_perf_stats.path_search_size += map->m_len;
+                g_perf_stats.path_search_size += nblk;
                 g_perf_stats.path_search_nr++;
                 end_cache_stats(&(g_perf_stats.cache_stats));
             }
@@ -2923,7 +2923,7 @@ int mlfs_ext_get_blocks(handle_t *handle, struct inode *inode,
 #ifdef KERNFS
         if (enable_perf_stats) {
             g_perf_stats.path_search_tsc += (asm_rdtscp() - tsc_start);
-            g_perf_stats.path_search_size += map->m_len;
+            g_perf_stats.path_search_size += hash_ret;
             g_perf_stats.path_search_nr++;
             end_cache_stats(&(g_perf_stats.cache_stats));
         }
