@@ -1,5 +1,6 @@
 #include "global/global.h"
 
+#include "file_indexing.h"
 char pwd[MAX_PATH + 1];
 
 indexing_choice_t g_idx_choice;
@@ -49,4 +50,38 @@ bool get_indexing_is_cached(void) {
     
     printf("%s -> disabling caches!\n", env);
     return false;
+}
+
+void print_global_idx_stats(bool enable_perf_stats) {
+    if (!enable_perf_stats) return;
+
+    idx_fns_t *fns;
+    switch(g_idx_choice) {
+        case EXTENT_TREES:
+            fns = &extent_tree_fns;
+            break;
+        case RADIX_TREES:
+            fns = &radixtree_fns;
+            break;
+        case LEVEL_HASH_TABLES:
+            fns = &levelhash_fns;
+            break;
+        case GLOBAL_HASH_TABLE:
+            fns = &hash_fns;
+            break;
+        case GLOBAL_CUCKOO_HASH:
+            fns = &cuckoohash_fns;
+            break;
+    }
+
+    if (fns->im_print_global_stats) {
+        fns->im_print_global_stats();
+    }
+
+
+    if (fns->im_clean_global_stats) {
+        fns->im_clean_global_stats();
+    } else {
+        fprintf(stderr, "(no clean method for global stats)\n");
+    }
 }

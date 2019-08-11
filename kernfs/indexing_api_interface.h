@@ -15,7 +15,6 @@ extern "C" {
 
 #include "file_indexing.h"
 
-
 ssize_t nvm_write(paddr_t blk, off_t off, size_t nbytes, const char* buf);
 
 ssize_t nvm_read(paddr_t blk, off_t off, size_t nbytes, char* buf);

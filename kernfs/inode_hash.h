@@ -73,7 +73,7 @@ extern mlfs_fsblk_t id_map_meta_loc;
 #define USE_API
 //#undef USE_API
 
-void init_hash(struct super_block *sb);
+void init_hash(struct super_block *sb, bool enable_perf_stats);
 
 #ifndef USE_API
 int insert_hash(GHashTable *hash, struct inode *inode, hash_key_t key,

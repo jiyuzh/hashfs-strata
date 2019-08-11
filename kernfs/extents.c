@@ -2869,7 +2869,7 @@ int mlfs_ext_get_blocks(handle_t *handle, struct inode *inode,
             }
 
             if (tmp->idx_fns->im_set_stats) {
-                FN(tmp, im_set_stats, tmp, false);
+                FN(tmp, im_set_stats, tmp, enable_perf_stats);
             }
 
             inode->ext_idx = tmp;

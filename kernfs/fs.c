@@ -174,8 +174,10 @@ void reset_kernfs_stats(void)
 	memset(&g_perf_stats, 0, sizeof(kernfs_stats_t));
     cache_stats_init();
 }
+
 void show_kernfs_stats(void)
 {
+    // Construct JSON object
 	json_object *root = json_object_new_object();
     js_add_int64(root, "digest", g_perf_stats.digest_time_tsc);
     js_add_int64(root, "path_search", g_perf_stats.path_search_tsc);
@@ -272,6 +274,8 @@ void show_kernfs_stats(void)
     printf("");
 	printf("--------------------------------------\n");
     show_storage_stats();
+	printf("--------------------------------------\n");
+    print_global_idx_stats(enable_perf_stats);
 }
 
 void show_storage_stats(void)
@@ -2148,10 +2152,6 @@ void init_fs(void)
 	balloc_init(g_hdd_dev, sb[g_hdd_dev]);
 #endif
 
-    if (IDXAPI_IS_GLOBAL()) {
-        init_hash(sb[g_root_dev]);
-    }
-
 	inode_version_table =
 		(uint16_t *)mlfs_zalloc(sizeof(uint16_t) * NINODES);
 
@@ -2162,6 +2162,10 @@ void init_fs(void)
 	} else {
 		enable_perf_stats = 0;
 	}
+
+    if (IDXAPI_IS_GLOBAL()) {
+        init_hash(sb[g_root_dev], enable_perf_stats);
+    }
 
 	// initialize profiling
 	char prof_fn[256];

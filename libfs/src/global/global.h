@@ -97,6 +97,7 @@ extern bool g_idx_cached;
 
 indexing_choice_t get_indexing_choice(void);
 bool get_indexing_is_cached(void);
+void print_global_idx_stats(bool enable_perf_stats);
 
 #ifdef __cplusplus
 }
