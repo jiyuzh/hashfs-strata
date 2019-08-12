@@ -19,10 +19,8 @@ static GHashTable *gsuper = NULL;
 static idx_struct_t hash_idx;
 
 static pthread_mutex_t alloc_tex = PTHREAD_MUTEX_INITIALIZER;
-/*
- *
- */
-void init_hash(struct super_block *sb) {
+
+void init_hash(struct super_block *sb, bool enable_perf_stats) {
 #ifndef USE_API
   if (ghash) return;
 
@@ -72,6 +70,8 @@ void init_hash(struct super_block *sb) {
 
   ret = FN(&hash_idx, im_set_caching, &hash_idx, g_idx_cached);
   if (ret) return;
+
+  FN(&hash_idx, im_set_stats, &hash_idx, enable_perf_stats);
 
   printf("Finished initializing NVM hashtable.\n");
 #endif

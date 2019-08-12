@@ -112,10 +112,6 @@ void ExtentTest::initialize(int num_files = 1)
 	balloc_init(g_hdd_dev, sb[g_hdd_dev]);
 #endif
 
-#ifdef HASHTABLE
-  init_hash(sb[g_root_dev]);
-#endif
-
 	memset(&g_perf_stats, 0, sizeof(kernfs_stats_t));
 
 	inode_version_table =
@@ -127,6 +123,10 @@ void ExtentTest::initialize(int num_files = 1)
 		enable_perf_stats = 1;
 	else
 		enable_perf_stats = 0;
+
+#ifdef HASHTABLE
+  init_hash(sb[g_root_dev], enable_perf_stats);
+#endif
 
 	mlfs_debug("%s\n", "LIBFS is initialized");
 

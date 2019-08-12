@@ -39,6 +39,6 @@ clean :
 
 %.o: %.c
 	$(CC) -o $@ $(OPT_ARGS) $(DEPFLAGS) $(CFLAGS) $(CPPFLAGS) $(SPDK_LIBS) $(SYS_LIBS)  \
-	-fPIC -I $(SPDK_ROOT_DIR)/include -c $< -DMLFS_INFO $(MLFS_FLAGS)
+	-fPIC -I $(SPDK_ROOT_DIR)/include -I $(API_DIR) -c $< -DMLFS_INFO $(MLFS_FLAGS)
 
 include $(SPDK_ROOT_DIR)/mk/spdk.deps.mk

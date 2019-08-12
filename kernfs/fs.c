@@ -175,8 +175,10 @@ void reset_kernfs_stats(void)
 	memset(&g_perf_stats, 0, sizeof(kernfs_stats_t));
     cache_stats_init();
 }
+
 void show_kernfs_stats(void)
 {
+    // Construct JSON object
 	json_object *root = json_object_new_object();
     js_add_int64(root, "digest", g_perf_stats.digest_time_tsc);
     js_add_int64(root, "path_search", g_perf_stats.path_search_tsc);
@@ -194,10 +196,16 @@ void show_kernfs_stats(void)
         js_add_int64(search, "nr_search", g_perf_stats.path_search_nr);
         json_object_object_add(root, "search", search);
     }
+
+    // Convert JSON to a string
 	const char *js_str = json_object_get_string(root);
+
+    // Write the JSON string to a file.
 	if (enable_perf_stats) {
 		write(prof_fd, js_str, strlen(js_str));
 	}
+
+    // TODO: not sure what this does.
 	json_object_put(root);
 
 	//float clock_speed_mhz = get_cpu_clock_speed();
@@ -273,6 +281,8 @@ void show_kernfs_stats(void)
     printf("");
 	printf("--------------------------------------\n");
     show_storage_stats();
+	printf("--------------------------------------\n");
+    print_global_idx_stats(enable_perf_stats);
 }
 
 void show_storage_stats(void)
@@ -325,7 +335,7 @@ loghdr_meta_t *read_log_header(uint8_t from_dev, addr_t hdr_addr)
 	_loghdr = (loghdr_t *)(g_bdev[from_dev]->map_base_addr +
 		(hdr_addr << g_block_size_shift));
 
-	loghdr_meta->loghdr = _loghdr;
+	loghdr_meta->loghdr_p = _loghdr;
 	loghdr_meta->hdr_blkno = hdr_addr;
 	loghdr_meta->is_hdr_allocated = 1;
 
@@ -1086,8 +1096,8 @@ static void digest_each_log_entries(uint8_t from_dev, loghdr_meta_t *loghdr_meta
 	uint16_t nr_entries;
 	uint64_t tsc_begin;
 
-	nr_entries = loghdr_meta->loghdr->n;
-	loghdr = loghdr_meta->loghdr;
+	nr_entries = loghdr_meta->loghdr_p->n;
+	loghdr = loghdr_meta->loghdr_p;
 
 	for (i = 0; i < nr_entries; i++) {
 		if (enable_perf_stats)
@@ -1187,8 +1197,8 @@ static void digest_replay_and_optimize(uint8_t from_dev,
 	loghdr_t *loghdr;
 	uint16_t nr_entries;
 
-	nr_entries = loghdr_meta->loghdr->n;
-	loghdr = loghdr_meta->loghdr;
+	nr_entries = loghdr_meta->loghdr_p->n;
+	loghdr = loghdr_meta->loghdr_p;
 
 	for (i = 0; i < nr_entries; i++) {
 		switch(loghdr->type[i]) {
@@ -1811,8 +1821,8 @@ static int digest_logs(uint8_t from_dev, int n_hdrs,
 	for (i = 0 ; i < n_hdrs; i++) {
 		loghdr_meta = read_log_header(from_dev, *loghdr_to_digest);
 
-		if (loghdr_meta->loghdr->inuse != LH_COMMIT_MAGIC) {
-			mlfs_assert(loghdr_meta->loghdr->inuse == 0);
+		if (loghdr_meta->loghdr_p->inuse != LH_COMMIT_MAGIC) {
+			mlfs_assert(loghdr_meta->loghdr_p->inuse == 0);
 			mlfs_free(loghdr_meta);
 			break;
 		}
@@ -1830,13 +1840,13 @@ static int digest_logs(uint8_t from_dev, int n_hdrs,
 		// rotated when next_loghdr_blkno jumps to beginning of the log.
 		// FIXME: instead of this condition, it would be better if
 		// *loghdr_to_digest > the lost block of application log.
-		if (*loghdr_to_digest > loghdr_meta->loghdr->next_loghdr_blkno) {
+		if (*loghdr_to_digest > loghdr_meta->loghdr_p->next_loghdr_blkno) {
 			mlfs_debug("loghdr_to_digest %lu, next header %lu\n",
-					*loghdr_to_digest, loghdr_meta->loghdr->next_loghdr_blkno);
+					*loghdr_to_digest, loghdr_meta->loghdr_p->next_loghdr_blkno);
 			*rotated = 1;
 		}
 
-		*loghdr_to_digest = loghdr_meta->loghdr->next_loghdr_blkno;
+		*loghdr_to_digest = loghdr_meta->loghdr_p->next_loghdr_blkno;
 
 		previous_loghdr_blk = loghdr_meta->hdr_blkno;
 
@@ -2217,9 +2227,6 @@ void init_fs(void)
 		// getchar();
 		pmem_nvm_hash_table_new(sblk->ondisk, NULL, sblk->ondisk->ndatablocks);
 	}
-    if (IDXAPI_IS_GLOBAL()) {
-        init_hash(sb[g_root_dev]);
-    }
 
 	inode_version_table =
 		(uint16_t *)mlfs_zalloc(sizeof(uint16_t) * NINODES);
@@ -2231,6 +2238,10 @@ void init_fs(void)
 	} else {
 		enable_perf_stats = 0;
 	}
+
+    if (IDXAPI_IS_GLOBAL()) {
+        init_hash(sb[g_root_dev], enable_perf_stats);
+    }
 
 	// initialize profiling
 	char prof_fn[256];

@@ -442,9 +442,6 @@ void init_fs(void)
       struct super_block *sblk = sb[g_root_dev];
 	    pmem_nvm_hash_table_new(sblk->ondisk, NULL, sblk->ondisk->ndatablocks);	
     }
-    if (IDXAPI_IS_GLOBAL()) {
-        init_hash(sb[g_root_dev]);
-    }
 
     mlfs_info("LibFS is initialized with id %d\n", g_log_dev);
 
@@ -461,6 +458,10 @@ void init_fs(void)
     } else {
       enable_perf_stats = 0;
       mlfs_info("%s", " disable profile\n");
+    }
+
+    if (IDXAPI_IS_GLOBAL()) {
+        init_hash(sb[g_root_dev], enable_perf_stats);
     }
 
     reset_libfs_stats();
