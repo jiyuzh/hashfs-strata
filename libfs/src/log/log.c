@@ -310,7 +310,7 @@ static inline struct logheader_meta *loghd_alloc(struct logheader *lh)
 static void persist_log_header(struct logheader_meta *loghdr_meta,
 		addr_t hdr_blkno)
 {
-	struct logheader *loghdr = loghdr_meta->loghdr;
+	struct logheader *loghdr = &(loghdr_meta->loghdr);
 	struct buffer_head *io_bh;
 	int i;
 	uint64_t start_tsc;
@@ -1215,13 +1215,13 @@ void add_to_loghdr(uint8_t type, struct inode *inode, offset_t data,
 	mlfs_assert(loghdr_meta);
 
 	if (!loghdr_meta->is_hdr_allocated) {
-		loghdr = (struct logheader *)mlfs_zalloc(sizeof(*loghdr));
+		//loghdr = (struct logheader *)mlfs_zalloc(sizeof(*loghdr));
 
-		loghdr_meta->loghdr = loghdr;
+		//loghdr_meta->loghdr = loghdr;
 		loghdr_meta->is_hdr_allocated = 1;
 	}
 
-	loghdr = loghdr_meta->loghdr;
+	loghdr = &(loghdr_meta->loghdr);
 
 	if (loghdr->n >= g_fs_log->size)
 		panic("too big a transaction for log");

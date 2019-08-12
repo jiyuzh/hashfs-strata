@@ -334,7 +334,7 @@ loghdr_meta_t *read_log_header(uint8_t from_dev, addr_t hdr_addr)
 	_loghdr = (loghdr_t *)(g_bdev[from_dev]->map_base_addr +
 		(hdr_addr << g_block_size_shift));
 
-	loghdr_meta->loghdr = _loghdr;
+	loghdr_meta->loghdr_p = _loghdr;
 	loghdr_meta->hdr_blkno = hdr_addr;
 	loghdr_meta->is_hdr_allocated = 1;
 
@@ -1033,8 +1033,8 @@ static void digest_each_log_entries(uint8_t from_dev, loghdr_meta_t *loghdr_meta
 	uint16_t nr_entries;
 	uint64_t tsc_begin;
 
-	nr_entries = loghdr_meta->loghdr->n;
-	loghdr = loghdr_meta->loghdr;
+	nr_entries = loghdr_meta->loghdr_p->n;
+	loghdr = loghdr_meta->loghdr_p;
 
 	for (i = 0; i < nr_entries; i++) {
 		if (enable_perf_stats)
@@ -1134,8 +1134,8 @@ static void digest_replay_and_optimize(uint8_t from_dev,
 	loghdr_t *loghdr;
 	uint16_t nr_entries;
 
-	nr_entries = loghdr_meta->loghdr->n;
-	loghdr = loghdr_meta->loghdr;
+	nr_entries = loghdr_meta->loghdr_p->n;
+	loghdr = loghdr_meta->loghdr_p;
 
 	for (i = 0; i < nr_entries; i++) {
 		switch(loghdr->type[i]) {
@@ -1758,8 +1758,8 @@ static int digest_logs(uint8_t from_dev, int n_hdrs,
 	for (i = 0 ; i < n_hdrs; i++) {
 		loghdr_meta = read_log_header(from_dev, *loghdr_to_digest);
 
-		if (loghdr_meta->loghdr->inuse != LH_COMMIT_MAGIC) {
-			mlfs_assert(loghdr_meta->loghdr->inuse == 0);
+		if (loghdr_meta->loghdr_p->inuse != LH_COMMIT_MAGIC) {
+			mlfs_assert(loghdr_meta->loghdr_p->inuse == 0);
 			mlfs_free(loghdr_meta);
 			break;
 		}
@@ -1777,13 +1777,13 @@ static int digest_logs(uint8_t from_dev, int n_hdrs,
 		// rotated when next_loghdr_blkno jumps to beginning of the log.
 		// FIXME: instead of this condition, it would be better if
 		// *loghdr_to_digest > the lost block of application log.
-		if (*loghdr_to_digest > loghdr_meta->loghdr->next_loghdr_blkno) {
+		if (*loghdr_to_digest > loghdr_meta->loghdr_p->next_loghdr_blkno) {
 			mlfs_debug("loghdr_to_digest %lu, next header %lu\n",
-					*loghdr_to_digest, loghdr_meta->loghdr->next_loghdr_blkno);
+					*loghdr_to_digest, loghdr_meta->loghdr_p->next_loghdr_blkno);
 			*rotated = 1;
 		}
 
-		*loghdr_to_digest = loghdr_meta->loghdr->next_loghdr_blkno;
+		*loghdr_to_digest = loghdr_meta->loghdr_p->next_loghdr_blkno;
 
 		previous_loghdr_blk = loghdr_meta->hdr_blkno;
 

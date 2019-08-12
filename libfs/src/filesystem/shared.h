@@ -132,9 +132,11 @@ typedef struct io_vec {
 typedef struct logheader_meta {
 	struct list_head link;
 	// addr_t blocks[g_max_blocks_per_operation];
-	struct logheader *loghdr;
+    // (iangneal): reduce calls to malloc.
+	struct logheader loghdr;
+	struct logheader *loghdr_p;
 	// flag whether io_buf is allocated or not
-	uint8_t is_hdr_allocated;
+	uint8_t is_hdr_allocated; // iangneal: just use this to see if we need to memset
 	// block number of on-disk logheader.
 	addr_t hdr_blkno;
 
