@@ -45,6 +45,7 @@ uint8_t g_hdd_dev = 0;
 uint8_t strata_initialized = 0;
 
 // statistics
+json_object *libfs_stats_json;
 uint8_t enable_perf_stats;
 libfs_stat_t g_perf_stats;
 
@@ -78,6 +79,9 @@ void reset_libfs_stats(void)
     reset_stats_dist(&(g_perf_stats.read_per_index));
     reset_stats_dist(&(g_perf_stats.read_data_bytes));
     cache_stats_init();
+
+    json_object* n_array = json_object_new_array();
+	  json_object_object_add(libfs_stats_json, "stats_arr", n_array);
 }
 void show_libfs_stats(const char *title)
 {
@@ -144,7 +148,10 @@ void show_libfs_stats(const char *title)
     js_add_int64(storage, "wnr" , storage_wnr.total);
     json_object_object_add(root, "storage", storage);
   }
-  const char *js_str = json_object_get_string(root);
+
+  json_object* stats_arr = json_object_object_get(libfs_stats_json, "stats_arr");
+	json_object_array_add(stats_arr, root);
+  const char *js_str = json_object_get_string(libfs_stats_json);
   if (enable_perf_stats) {
     write(prof_fd, js_str, strlen(js_str));
     write(prof_fd, "\n", 2);

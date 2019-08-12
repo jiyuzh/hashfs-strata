@@ -34,6 +34,8 @@
 
 extern int max_kernfs_io_queues;
 
+json_object *kernfs_stats_json;
+
 struct list_head *lru_heads;
 
 int shm_fd = 0;
@@ -174,6 +176,10 @@ void reset_kernfs_stats(void)
 #endif
 	memset(&g_perf_stats, 0, sizeof(kernfs_stats_t));
     cache_stats_init();
+	
+	json_object* n_array = json_object_new_array();
+	json_object_object_add(kernfs_stats_json, "stats_arr", n_array);
+	
 }
 
 void show_kernfs_stats(void)
@@ -196,9 +202,11 @@ void show_kernfs_stats(void)
         js_add_int64(search, "nr_search", g_perf_stats.path_search_nr);
         json_object_object_add(root, "search", search);
     }
+	json_object* stats_arr = json_object_object_get(kernfs_stats_json, "stats_arr");
+	json_object_array_add(stats_arr, root);
 
     // Convert JSON to a string
-	const char *js_str = json_object_get_string(root);
+	const char *js_str = json_object_get_string(kernfs_stats_json);
 
     // Write the JSON string to a file.
 	if (enable_perf_stats) {
