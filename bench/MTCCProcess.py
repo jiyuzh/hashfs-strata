@@ -53,9 +53,9 @@ class MTCCRunner(BenchRunner):
         for stat_file in stats_files:
             with stat_file.open() as f:
                 file_data = f.read()
-                data_objs = [ x.strip() for x in file_data.split(os.linesep) ]
-                for data in data_objs:
-                    data = data.strip('\x00')
+                whole_obj = json.load(data)['stats_arr']
+                # data_objs = [ x.strip() for x in file_data.split(os.linesep) ]
+                for obj in whole_obj:
                     if len(data) < 2:
                         continue
                     if 'lsm' not in obj or 'nr' not in obj['lsm'] or obj['lsm']['nr'] <= 0:
