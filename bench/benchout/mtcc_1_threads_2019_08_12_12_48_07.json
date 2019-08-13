@@ -1,0 +1,2192 @@
+[
+    {
+        "title": "shutdown fs",
+        "wait_digest": {
+            "tsc": 0,
+            "nr": 0
+        },
+        "l0": {
+            "tsc": 66561560,
+            "nr": 262145
+        },
+        "lsm": {
+            "tsc": 147682694,
+            "nr": 262145
+        },
+        "log": {
+            "commit": {
+                "tsc": 1906,
+                "nr": 1
+            },
+            "write": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "alloc": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "hdr_write": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "hash_update": {
+                "tsc": 0,
+                "nr": 0
+            }
+        },
+        "read_data": {
+            "tsc": 3600294348,
+            "nr": 262145,
+            "bytes": 1073745920
+        },
+        "path_storage": {
+            "tsc": 400,
+            "nr": 0
+        },
+        "storage": {
+            "rtsc": 3551713866,
+            "rnr": 1073754624,
+            "wtsc": 0,
+            "wnr": 0
+        },
+        "bench": "MTCC (readfile)",
+        "workload": "1_threads",
+        "layout": 1.0,
+        "total_time": 1.835901,
+        "struct": "extent_trees",
+        "kernfs": {
+            "digest": 6507063588,
+            "path_search": 1404946168,
+            "path_storage": 288,
+            "storage": {
+                "rtsc": 173179008,
+                "rnr": 67118080,
+                "wtsc": 3262440346,
+                "wnr": 1073861376
+            },
+            "search": {
+                "total_time": 1404946168,
+                "total_blocks": 262145,
+                "nr_search": 262145
+            }
+        }
+    },
+    {
+        "title": "shutdown fs",
+        "wait_digest": {
+            "tsc": 0,
+            "nr": 0
+        },
+        "l0": {
+            "tsc": 67742854,
+            "nr": 262145
+        },
+        "lsm": {
+            "tsc": 266129930,
+            "nr": 262145
+        },
+        "log": {
+            "commit": {
+                "tsc": 3942,
+                "nr": 1
+            },
+            "write": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "alloc": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "hdr_write": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "hash_update": {
+                "tsc": 0,
+                "nr": 0
+            }
+        },
+        "read_data": {
+            "tsc": 3544987816,
+            "nr": 262145,
+            "bytes": 1073745920
+        },
+        "path_storage": {
+            "tsc": 0,
+            "nr": 0
+        },
+        "storage": {
+            "rtsc": 3498378626,
+            "rnr": 1073754624,
+            "wtsc": 0,
+            "wnr": 0
+        },
+        "bench": "MTCC (readfile)",
+        "workload": "1_threads",
+        "layout": 1.0,
+        "total_time": 1.874996,
+        "struct": "global_hash_table",
+        "kernfs": {
+            "digest": 5954968878,
+            "path_search": 371007834,
+            "path_storage": 0,
+            "storage": {
+                "rtsc": 70592,
+                "rnr": 8960,
+                "wtsc": 3738593614,
+                "wnr": 1073852672
+            },
+            "search": {
+                "total_time": 371007834,
+                "total_blocks": 262145,
+                "nr_search": 262145
+            }
+        }
+    },
+    {
+        "title": "shutdown fs",
+        "wait_digest": {
+            "tsc": 0,
+            "nr": 0
+        },
+        "l0": {
+            "tsc": 66630568,
+            "nr": 262145
+        },
+        "lsm": {
+            "tsc": 536297684,
+            "nr": 262145
+        },
+        "log": {
+            "commit": {
+                "tsc": 1714,
+                "nr": 1
+            },
+            "write": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "alloc": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "hdr_write": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "hash_update": {
+                "tsc": 0,
+                "nr": 0
+            }
+        },
+        "read_data": {
+            "tsc": 3368102768,
+            "nr": 262145,
+            "bytes": 1073745920
+        },
+        "path_storage": {
+            "tsc": 486,
+            "nr": 0
+        },
+        "storage": {
+            "rtsc": 3322529966,
+            "rnr": 1073754624,
+            "wtsc": 0,
+            "wnr": 0
+        },
+        "bench": "MTCC (readfile)",
+        "workload": "1_threads",
+        "layout": 1.0,
+        "total_time": 1.907873,
+        "struct": "level_hash_tables",
+        "kernfs": {
+            "digest": 7252539736,
+            "path_search": 2131605084,
+            "path_storage": 52079434,
+            "storage": {
+                "rtsc": 641049828,
+                "rnr": 67118080,
+                "wtsc": 3483565338,
+                "wnr": 1090634432
+            },
+            "search": {
+                "total_time": 2131605084,
+                "total_blocks": 262145,
+                "nr_search": 262145
+            }
+        }
+    },
+    {
+        "title": "shutdown fs",
+        "wait_digest": {
+            "tsc": 0,
+            "nr": 0
+        },
+        "l0": {
+            "tsc": 66468872,
+            "nr": 262145
+        },
+        "lsm": {
+            "tsc": 281749342,
+            "nr": 262145
+        },
+        "log": {
+            "commit": {
+                "tsc": 1614,
+                "nr": 1
+            },
+            "write": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "alloc": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "hdr_write": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "hash_update": {
+                "tsc": 0,
+                "nr": 0
+            }
+        },
+        "read_data": {
+            "tsc": 3537778572,
+            "nr": 262145,
+            "bytes": 1073745920
+        },
+        "path_storage": {
+            "tsc": 6768,
+            "nr": 0
+        },
+        "storage": {
+            "rtsc": 3490453208,
+            "rnr": 1073754632,
+            "wtsc": 0,
+            "wnr": 0
+        },
+        "bench": "MTCC (readfile)",
+        "workload": "1_threads",
+        "layout": 1.0,
+        "total_time": 1.868089,
+        "struct": "radix_trees",
+        "kernfs": {
+            "digest": 6876925996,
+            "path_search": 1339194974,
+            "path_storage": 6464,
+            "storage": {
+                "rtsc": 752643372,
+                "rnr": 67118088,
+                "wtsc": 3706031516,
+                "wnr": 1075945480
+            },
+            "search": {
+                "total_time": 1339194974,
+                "total_blocks": 262145,
+                "nr_search": 262145
+            }
+        }
+    },
+    {
+        "title": "shutdown fs",
+        "wait_digest": {
+            "tsc": 0,
+            "nr": 0
+        },
+        "l0": {
+            "tsc": 65562968,
+            "nr": 262145
+        },
+        "lsm": {
+            "tsc": 177544922,
+            "nr": 262145
+        },
+        "log": {
+            "commit": {
+                "tsc": 1664,
+                "nr": 1
+            },
+            "write": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "alloc": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "hdr_write": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "hash_update": {
+                "tsc": 0,
+                "nr": 0
+            }
+        },
+        "read_data": {
+            "tsc": 3627712186,
+            "nr": 262145,
+            "bytes": 1073745920
+        },
+        "path_storage": {
+            "tsc": 0,
+            "nr": 0
+        },
+        "storage": {
+            "rtsc": 3581403048,
+            "rnr": 1073754624,
+            "wtsc": 0,
+            "wnr": 0
+        },
+        "bench": "MTCC (readfile)",
+        "workload": "1_threads",
+        "layout": 1.0,
+        "total_time": 1.859239,
+        "struct": "hashfs",
+        "kernfs": {
+            "digest": 6460918468,
+            "path_search": 0,
+            "path_storage": 0,
+            "storage": {
+                "rtsc": 78220,
+                "rnr": 8960,
+                "wtsc": 4081102580,
+                "wnr": 1073755136
+            },
+            "search": {
+                "total_time": 0,
+                "total_blocks": 0,
+                "nr_search": 0
+            }
+        }
+    },
+    {
+        "title": "shutdown fs",
+        "wait_digest": {
+            "tsc": 0,
+            "nr": 0
+        },
+        "l0": {
+            "tsc": 66823754,
+            "nr": 262145
+        },
+        "lsm": {
+            "tsc": 175364188,
+            "nr": 262145
+        },
+        "log": {
+            "commit": {
+                "tsc": 1544,
+                "nr": 1
+            },
+            "write": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "alloc": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "hdr_write": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "hash_update": {
+                "tsc": 0,
+                "nr": 0
+            }
+        },
+        "read_data": {
+            "tsc": 3542988946,
+            "nr": 262145,
+            "bytes": 1073745920
+        },
+        "path_storage": {
+            "tsc": 30119496,
+            "nr": 1
+        },
+        "storage": {
+            "rtsc": 3496171308,
+            "rnr": 1073758720,
+            "wtsc": 0,
+            "wnr": 0
+        },
+        "bench": "MTCC (readfile)",
+        "workload": "1_threads",
+        "layout": 1.0,
+        "total_time": 1.825356,
+        "struct": "none",
+        "kernfs": {
+            "digest": 7099224832,
+            "path_search": 1108122194,
+            "path_storage": 16573740,
+            "storage": {
+                "rtsc": 68196,
+                "rnr": 8960,
+                "wtsc": 4562495724,
+                "wnr": 1610727680
+            },
+            "search": {
+                "total_time": 1108122194,
+                "total_blocks": 0,
+                "nr_search": 262145
+            }
+        }
+    },
+    {
+        "title": "shutdown fs",
+        "wait_digest": {
+            "tsc": 0,
+            "nr": 0
+        },
+        "l0": {
+            "tsc": 66627632,
+            "nr": 262145
+        },
+        "lsm": {
+            "tsc": 345184654,
+            "nr": 262145
+        },
+        "log": {
+            "commit": {
+                "tsc": 1892,
+                "nr": 1
+            },
+            "write": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "alloc": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "hdr_write": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "hash_update": {
+                "tsc": 0,
+                "nr": 0
+            }
+        },
+        "read_data": {
+            "tsc": 3747244800,
+            "nr": 262145,
+            "bytes": 1073745920
+        },
+        "path_storage": {
+            "tsc": 424,
+            "nr": 0
+        },
+        "storage": {
+            "rtsc": 3696330320,
+            "rnr": 1073754624,
+            "wtsc": 0,
+            "wnr": 0
+        },
+        "bench": "MTCC (readfile)",
+        "workload": "1_threads",
+        "layout": 0.9,
+        "total_time": 1.992925,
+        "struct": "extent_trees",
+        "kernfs": {
+            "digest": 7172467888,
+            "path_search": 1639502440,
+            "path_storage": 226,
+            "storage": {
+                "rtsc": 69043206,
+                "rnr": 67118080,
+                "wtsc": 3588745646,
+                "wnr": 1073848320
+            },
+            "search": {
+                "total_time": 1639502440,
+                "total_blocks": 262145,
+                "nr_search": 262145
+            }
+        }
+    },
+    {
+        "title": "shutdown fs",
+        "wait_digest": {
+            "tsc": 0,
+            "nr": 0
+        },
+        "l0": {
+            "tsc": 66395232,
+            "nr": 262145
+        },
+        "lsm": {
+            "tsc": 268106816,
+            "nr": 262145
+        },
+        "log": {
+            "commit": {
+                "tsc": 3654,
+                "nr": 1
+            },
+            "write": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "alloc": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "hdr_write": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "hash_update": {
+                "tsc": 0,
+                "nr": 0
+            }
+        },
+        "read_data": {
+            "tsc": 3542391942,
+            "nr": 262145,
+            "bytes": 1073745920
+        },
+        "path_storage": {
+            "tsc": 0,
+            "nr": 0
+        },
+        "storage": {
+            "rtsc": 3494006570,
+            "rnr": 1073754624,
+            "wtsc": 0,
+            "wnr": 0
+        },
+        "bench": "MTCC (readfile)",
+        "workload": "1_threads",
+        "layout": 0.9,
+        "total_time": 1.876166,
+        "struct": "global_hash_table",
+        "kernfs": {
+            "digest": 6196927318,
+            "path_search": 399219056,
+            "path_storage": 0,
+            "storage": {
+                "rtsc": 81136,
+                "rnr": 8960,
+                "wtsc": 3875096322,
+                "wnr": 1073861120
+            },
+            "search": {
+                "total_time": 399219056,
+                "total_blocks": 262145,
+                "nr_search": 262145
+            }
+        }
+    },
+    {
+        "title": "shutdown fs",
+        "wait_digest": {
+            "tsc": 0,
+            "nr": 0
+        },
+        "l0": {
+            "tsc": 67516184,
+            "nr": 262145
+        },
+        "lsm": {
+            "tsc": 557952298,
+            "nr": 262145
+        },
+        "log": {
+            "commit": {
+                "tsc": 1586,
+                "nr": 1
+            },
+            "write": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "alloc": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "hdr_write": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "hash_update": {
+                "tsc": 0,
+                "nr": 0
+            }
+        },
+        "read_data": {
+            "tsc": 3490248918,
+            "nr": 262145,
+            "bytes": 1073745920
+        },
+        "path_storage": {
+            "tsc": 510,
+            "nr": 0
+        },
+        "storage": {
+            "rtsc": 3442539602,
+            "rnr": 1073754624,
+            "wtsc": 0,
+            "wnr": 0
+        },
+        "bench": "MTCC (readfile)",
+        "workload": "1_threads",
+        "layout": 0.9,
+        "total_time": 1.973379,
+        "struct": "level_hash_tables",
+        "kernfs": {
+            "digest": 7066685898,
+            "path_search": 2151761782,
+            "path_storage": 52827106,
+            "storage": {
+                "rtsc": 610948790,
+                "rnr": 67118080,
+                "wtsc": 3279129444,
+                "wnr": 1090629824
+            },
+            "search": {
+                "total_time": 2151761782,
+                "total_blocks": 262145,
+                "nr_search": 262145
+            }
+        }
+    },
+    {
+        "title": "shutdown fs",
+        "wait_digest": {
+            "tsc": 0,
+            "nr": 0
+        },
+        "l0": {
+            "tsc": 66727426,
+            "nr": 262145
+        },
+        "lsm": {
+            "tsc": 265192406,
+            "nr": 262145
+        },
+        "log": {
+            "commit": {
+                "tsc": 1924,
+                "nr": 1
+            },
+            "write": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "alloc": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "hdr_write": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "hash_update": {
+                "tsc": 0,
+                "nr": 0
+            }
+        },
+        "read_data": {
+            "tsc": 2636219734,
+            "nr": 262145,
+            "bytes": 1073745920
+        },
+        "path_storage": {
+            "tsc": 9110,
+            "nr": 0
+        },
+        "storage": {
+            "rtsc": 2588300122,
+            "rnr": 1073754632,
+            "wtsc": 0,
+            "wnr": 0
+        },
+        "bench": "MTCC (readfile)",
+        "workload": "1_threads",
+        "layout": 0.9,
+        "total_time": 1.450375,
+        "struct": "radix_trees",
+        "kernfs": {
+            "digest": 6991864104,
+            "path_search": 1338371656,
+            "path_storage": 6374,
+            "storage": {
+                "rtsc": 764687522,
+                "rnr": 67118088,
+                "wtsc": 3787887036,
+                "wnr": 1075945224
+            },
+            "search": {
+                "total_time": 1338371656,
+                "total_blocks": 262145,
+                "nr_search": 262145
+            }
+        }
+    },
+    {
+        "title": "shutdown fs",
+        "wait_digest": {
+            "tsc": 0,
+            "nr": 0
+        },
+        "l0": {
+            "tsc": 66511964,
+            "nr": 262145
+        },
+        "lsm": {
+            "tsc": 192136946,
+            "nr": 262145
+        },
+        "log": {
+            "commit": {
+                "tsc": 1546,
+                "nr": 1
+            },
+            "write": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "alloc": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "hdr_write": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "hash_update": {
+                "tsc": 0,
+                "nr": 0
+            }
+        },
+        "read_data": {
+            "tsc": 3611174394,
+            "nr": 262145,
+            "bytes": 1073745920
+        },
+        "path_storage": {
+            "tsc": 0,
+            "nr": 0
+        },
+        "storage": {
+            "rtsc": 3566383606,
+            "rnr": 1073754624,
+            "wtsc": 0,
+            "wnr": 0
+        },
+        "bench": "MTCC (readfile)",
+        "workload": "1_threads",
+        "layout": 0.9,
+        "total_time": 1.859373,
+        "struct": "hashfs",
+        "kernfs": {
+            "digest": 6269412938,
+            "path_search": 0,
+            "path_storage": 0,
+            "storage": {
+                "rtsc": 97930,
+                "rnr": 8960,
+                "wtsc": 3922679658,
+                "wnr": 1073754624
+            },
+            "search": {
+                "total_time": 0,
+                "total_blocks": 0,
+                "nr_search": 0
+            }
+        }
+    },
+    {
+        "title": "shutdown fs",
+        "wait_digest": {
+            "tsc": 0,
+            "nr": 0
+        },
+        "l0": {
+            "tsc": 67710420,
+            "nr": 262145
+        },
+        "lsm": {
+            "tsc": 433730616,
+            "nr": 262145
+        },
+        "log": {
+            "commit": {
+                "tsc": 2208,
+                "nr": 1
+            },
+            "write": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "alloc": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "hdr_write": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "hash_update": {
+                "tsc": 0,
+                "nr": 0
+            }
+        },
+        "read_data": {
+            "tsc": 3644266068,
+            "nr": 262145,
+            "bytes": 1073745920
+        },
+        "path_storage": {
+            "tsc": 119947118,
+            "nr": 2
+        },
+        "storage": {
+            "rtsc": 3599289230,
+            "rnr": 1074078208,
+            "wtsc": 0,
+            "wnr": 0
+        },
+        "bench": "MTCC (readfile)",
+        "workload": "1_threads",
+        "layout": 0.9,
+        "total_time": 1.990762,
+        "struct": "none",
+        "kernfs": {
+            "digest": 13497489470,
+            "path_search": 7588160264,
+            "path_storage": 97144998,
+            "storage": {
+                "rtsc": 76268,
+                "rnr": 8960,
+                "wtsc": 7677259498,
+                "wnr": 3358394880
+            },
+            "search": {
+                "total_time": 7588160264,
+                "total_blocks": 0,
+                "nr_search": 262145
+            }
+        }
+    },
+    {
+        "title": "shutdown fs",
+        "wait_digest": {
+            "tsc": 0,
+            "nr": 0
+        },
+        "l0": {
+            "tsc": 66453512,
+            "nr": 262145
+        },
+        "lsm": {
+            "tsc": 370443628,
+            "nr": 262145
+        },
+        "log": {
+            "commit": {
+                "tsc": 2096,
+                "nr": 1
+            },
+            "write": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "alloc": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "hdr_write": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "hash_update": {
+                "tsc": 0,
+                "nr": 0
+            }
+        },
+        "read_data": {
+            "tsc": 3452226172,
+            "nr": 262145,
+            "bytes": 1073745920
+        },
+        "path_storage": {
+            "tsc": 368,
+            "nr": 0
+        },
+        "storage": {
+            "rtsc": 3402442528,
+            "rnr": 1073754624,
+            "wtsc": 0,
+            "wnr": 0
+        },
+        "bench": "MTCC (readfile)",
+        "workload": "1_threads",
+        "layout": 0.8,
+        "total_time": 1.869957,
+        "struct": "extent_trees",
+        "kernfs": {
+            "digest": 7348661498,
+            "path_search": 1713874330,
+            "path_storage": 202,
+            "storage": {
+                "rtsc": 69515774,
+                "rnr": 67118080,
+                "wtsc": 3671143782,
+                "wnr": 1073847808
+            },
+            "search": {
+                "total_time": 1713874330,
+                "total_blocks": 262145,
+                "nr_search": 262145
+            }
+        }
+    },
+    {
+        "title": "shutdown fs",
+        "wait_digest": {
+            "tsc": 0,
+            "nr": 0
+        },
+        "l0": {
+            "tsc": 66214954,
+            "nr": 262145
+        },
+        "lsm": {
+            "tsc": 261948680,
+            "nr": 262145
+        },
+        "log": {
+            "commit": {
+                "tsc": 3462,
+                "nr": 1
+            },
+            "write": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "alloc": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "hdr_write": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "hash_update": {
+                "tsc": 0,
+                "nr": 0
+            }
+        },
+        "read_data": {
+            "tsc": 3562208616,
+            "nr": 262145,
+            "bytes": 1073745920
+        },
+        "path_storage": {
+            "tsc": 0,
+            "nr": 0
+        },
+        "storage": {
+            "rtsc": 3514068974,
+            "rnr": 1073754624,
+            "wtsc": 0,
+            "wnr": 0
+        },
+        "bench": "MTCC (readfile)",
+        "workload": "1_threads",
+        "layout": 0.8,
+        "total_time": 1.879915,
+        "struct": "global_hash_table",
+        "kernfs": {
+            "digest": 6187806740,
+            "path_search": 392861556,
+            "path_storage": 0,
+            "storage": {
+                "rtsc": 95990,
+                "rnr": 8960,
+                "wtsc": 3880506652,
+                "wnr": 1073865216
+            },
+            "search": {
+                "total_time": 392861556,
+                "total_blocks": 262145,
+                "nr_search": 262145
+            }
+        }
+    },
+    {
+        "title": "shutdown fs",
+        "wait_digest": {
+            "tsc": 0,
+            "nr": 0
+        },
+        "l0": {
+            "tsc": 66512300,
+            "nr": 262145
+        },
+        "lsm": {
+            "tsc": 535488854,
+            "nr": 262145
+        },
+        "log": {
+            "commit": {
+                "tsc": 1826,
+                "nr": 1
+            },
+            "write": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "alloc": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "hdr_write": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "hash_update": {
+                "tsc": 0,
+                "nr": 0
+            }
+        },
+        "read_data": {
+            "tsc": 3392673660,
+            "nr": 262145,
+            "bytes": 1073745920
+        },
+        "path_storage": {
+            "tsc": 474,
+            "nr": 0
+        },
+        "storage": {
+            "rtsc": 3345999832,
+            "rnr": 1073754624,
+            "wtsc": 0,
+            "wnr": 0
+        },
+        "bench": "MTCC (readfile)",
+        "workload": "1_threads",
+        "layout": 0.8,
+        "total_time": 1.917843,
+        "struct": "level_hash_tables",
+        "kernfs": {
+            "digest": 7784467892,
+            "path_search": 2204676518,
+            "path_storage": 52531066,
+            "storage": {
+                "rtsc": 654732874,
+                "rnr": 67118080,
+                "wtsc": 3843220164,
+                "wnr": 1090633920
+            },
+            "search": {
+                "total_time": 2204676518,
+                "total_blocks": 262145,
+                "nr_search": 262145
+            }
+        }
+    },
+    {
+        "title": "shutdown fs",
+        "wait_digest": {
+            "tsc": 0,
+            "nr": 0
+        },
+        "l0": {
+            "tsc": 66278412,
+            "nr": 262145
+        },
+        "lsm": {
+            "tsc": 261351028,
+            "nr": 262145
+        },
+        "log": {
+            "commit": {
+                "tsc": 1930,
+                "nr": 1
+            },
+            "write": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "alloc": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "hdr_write": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "hash_update": {
+                "tsc": 0,
+                "nr": 0
+            }
+        },
+        "read_data": {
+            "tsc": 3558632684,
+            "nr": 262145,
+            "bytes": 1073745920
+        },
+        "path_storage": {
+            "tsc": 8898,
+            "nr": 0
+        },
+        "storage": {
+            "rtsc": 3511387620,
+            "rnr": 1073754632,
+            "wtsc": 0,
+            "wnr": 0
+        },
+        "bench": "MTCC (readfile)",
+        "workload": "1_threads",
+        "layout": 0.8,
+        "total_time": 1.868257,
+        "struct": "radix_trees",
+        "kernfs": {
+            "digest": 7018874556,
+            "path_search": 1369538070,
+            "path_storage": 5654,
+            "storage": {
+                "rtsc": 774685152,
+                "rnr": 67118088,
+                "wtsc": 3771793794,
+                "wnr": 1075953672
+            },
+            "search": {
+                "total_time": 1369538070,
+                "total_blocks": 262145,
+                "nr_search": 262145
+            }
+        }
+    },
+    {
+        "title": "shutdown fs",
+        "wait_digest": {
+            "tsc": 0,
+            "nr": 0
+        },
+        "l0": {
+            "tsc": 65894458,
+            "nr": 262145
+        },
+        "lsm": {
+            "tsc": 183027168,
+            "nr": 262145
+        },
+        "log": {
+            "commit": {
+                "tsc": 2342,
+                "nr": 1
+            },
+            "write": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "alloc": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "hdr_write": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "hash_update": {
+                "tsc": 0,
+                "nr": 0
+            }
+        },
+        "read_data": {
+            "tsc": 3616622126,
+            "nr": 262145,
+            "bytes": 1073745920
+        },
+        "path_storage": {
+            "tsc": 0,
+            "nr": 0
+        },
+        "storage": {
+            "rtsc": 3569787600,
+            "rnr": 1073754624,
+            "wtsc": 0,
+            "wnr": 0
+        },
+        "bench": "MTCC (readfile)",
+        "workload": "1_threads",
+        "layout": 0.8,
+        "total_time": 1.857505,
+        "struct": "hashfs",
+        "kernfs": {
+            "digest": 6255618930,
+            "path_search": 0,
+            "path_storage": 0,
+            "storage": {
+                "rtsc": 73966,
+                "rnr": 8960,
+                "wtsc": 3894819896,
+                "wnr": 1073754112
+            },
+            "search": {
+                "total_time": 0,
+                "total_blocks": 0,
+                "nr_search": 0
+            }
+        }
+    },
+    {
+        "title": "shutdown fs",
+        "wait_digest": {
+            "tsc": 0,
+            "nr": 0
+        },
+        "l0": {
+            "tsc": 67164102,
+            "nr": 262145
+        },
+        "lsm": {
+            "tsc": 470643258,
+            "nr": 262145
+        },
+        "log": {
+            "commit": {
+                "tsc": 1516,
+                "nr": 1
+            },
+            "write": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "alloc": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "hdr_write": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "hash_update": {
+                "tsc": 0,
+                "nr": 0
+            }
+        },
+        "read_data": {
+            "tsc": 3573687864,
+            "nr": 262145,
+            "bytes": 1073745920
+        },
+        "path_storage": {
+            "tsc": 138961890,
+            "nr": 2
+        },
+        "storage": {
+            "rtsc": 3529677472,
+            "rnr": 1074393600,
+            "wtsc": 0,
+            "wnr": 0
+        },
+        "bench": "MTCC (readfile)",
+        "workload": "1_threads",
+        "layout": 0.8,
+        "total_time": 1.975092,
+        "struct": "none",
+        "kernfs": {
+            "digest": 13609413576,
+            "path_search": 8169363998,
+            "path_storage": 104246858,
+            "storage": {
+                "rtsc": 77702,
+                "rnr": 8960,
+                "wtsc": 7645387960,
+                "wnr": 3697858560
+            },
+            "search": {
+                "total_time": 8169363998,
+                "total_blocks": 0,
+                "nr_search": 262145
+            }
+        }
+    },
+    {
+        "title": "shutdown fs",
+        "wait_digest": {
+            "tsc": 0,
+            "nr": 0
+        },
+        "l0": {
+            "tsc": 66542344,
+            "nr": 262145
+        },
+        "lsm": {
+            "tsc": 397932706,
+            "nr": 262145
+        },
+        "log": {
+            "commit": {
+                "tsc": 1990,
+                "nr": 1
+            },
+            "write": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "alloc": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "hdr_write": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "hash_update": {
+                "tsc": 0,
+                "nr": 0
+            }
+        },
+        "read_data": {
+            "tsc": 2761140712,
+            "nr": 262145,
+            "bytes": 1073745920
+        },
+        "path_storage": {
+            "tsc": 402,
+            "nr": 0
+        },
+        "storage": {
+            "rtsc": 2711566386,
+            "rnr": 1073754624,
+            "wtsc": 0,
+            "wnr": 0
+        },
+        "bench": "MTCC (readfile)",
+        "workload": "1_threads",
+        "layout": 0.7,
+        "total_time": 1.567878,
+        "struct": "extent_trees",
+        "kernfs": {
+            "digest": 7331963288,
+            "path_search": 1740353112,
+            "path_storage": 450,
+            "storage": {
+                "rtsc": 69350416,
+                "rnr": 67118080,
+                "wtsc": 3633234042,
+                "wnr": 1073856256
+            },
+            "search": {
+                "total_time": 1740353112,
+                "total_blocks": 262145,
+                "nr_search": 262145
+            }
+        }
+    },
+    {
+        "title": "shutdown fs",
+        "wait_digest": {
+            "tsc": 0,
+            "nr": 0
+        },
+        "l0": {
+            "tsc": 66395636,
+            "nr": 262145
+        },
+        "lsm": {
+            "tsc": 258178552,
+            "nr": 262145
+        },
+        "log": {
+            "commit": {
+                "tsc": 4234,
+                "nr": 1
+            },
+            "write": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "alloc": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "hdr_write": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "hash_update": {
+                "tsc": 0,
+                "nr": 0
+            }
+        },
+        "read_data": {
+            "tsc": 3551285642,
+            "nr": 262145,
+            "bytes": 1073745920
+        },
+        "path_storage": {
+            "tsc": 0,
+            "nr": 0
+        },
+        "storage": {
+            "rtsc": 3504053034,
+            "rnr": 1073754624,
+            "wtsc": 0,
+            "wnr": 0
+        },
+        "bench": "MTCC (readfile)",
+        "workload": "1_threads",
+        "layout": 0.7,
+        "total_time": 1.874001,
+        "struct": "global_hash_table",
+        "kernfs": {
+            "digest": 6217404444,
+            "path_search": 399647390,
+            "path_storage": 0,
+            "storage": {
+                "rtsc": 65810,
+                "rnr": 8960,
+                "wtsc": 3894816442,
+                "wnr": 1073873664
+            },
+            "search": {
+                "total_time": 399647390,
+                "total_blocks": 262145,
+                "nr_search": 262145
+            }
+        }
+    },
+    {
+        "title": "shutdown fs",
+        "wait_digest": {
+            "tsc": 0,
+            "nr": 0
+        },
+        "l0": {
+            "tsc": 66540522,
+            "nr": 262145
+        },
+        "lsm": {
+            "tsc": 548870066,
+            "nr": 262145
+        },
+        "log": {
+            "commit": {
+                "tsc": 2198,
+                "nr": 1
+            },
+            "write": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "alloc": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "hdr_write": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "hash_update": {
+                "tsc": 0,
+                "nr": 0
+            }
+        },
+        "read_data": {
+            "tsc": 3405099816,
+            "nr": 262145,
+            "bytes": 1073745920
+        },
+        "path_storage": {
+            "tsc": 536,
+            "nr": 0
+        },
+        "storage": {
+            "rtsc": 3358535730,
+            "rnr": 1073754624,
+            "wtsc": 0,
+            "wnr": 0
+        },
+        "bench": "MTCC (readfile)",
+        "workload": "1_threads",
+        "layout": 0.7,
+        "total_time": 1.929733,
+        "struct": "level_hash_tables",
+        "kernfs": {
+            "digest": 7854780192,
+            "path_search": 2271422580,
+            "path_storage": 52230890,
+            "storage": {
+                "rtsc": 648109596,
+                "rnr": 67118080,
+                "wtsc": 3844630618,
+                "wnr": 1090638016
+            },
+            "search": {
+                "total_time": 2271422580,
+                "total_blocks": 262145,
+                "nr_search": 262145
+            }
+        }
+    },
+    {
+        "title": "shutdown fs",
+        "wait_digest": {
+            "tsc": 0,
+            "nr": 0
+        },
+        "l0": {
+            "tsc": 66509116,
+            "nr": 262145
+        },
+        "lsm": {
+            "tsc": 269352890,
+            "nr": 262145
+        },
+        "log": {
+            "commit": {
+                "tsc": 2678,
+                "nr": 1
+            },
+            "write": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "alloc": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "hdr_write": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "hash_update": {
+                "tsc": 0,
+                "nr": 0
+            }
+        },
+        "read_data": {
+            "tsc": 3632850820,
+            "nr": 262145,
+            "bytes": 1073745920
+        },
+        "path_storage": {
+            "tsc": 8668,
+            "nr": 0
+        },
+        "storage": {
+            "rtsc": 3584675604,
+            "rnr": 1073754632,
+            "wtsc": 0,
+            "wnr": 0
+        },
+        "bench": "MTCC (readfile)",
+        "workload": "1_threads",
+        "layout": 0.7,
+        "total_time": 1.905615,
+        "struct": "radix_trees",
+        "kernfs": {
+            "digest": 7017438060,
+            "path_search": 1341701706,
+            "path_storage": 5224,
+            "storage": {
+                "rtsc": 759292978,
+                "rnr": 67118088,
+                "wtsc": 3804891744,
+                "wnr": 1075957768
+            },
+            "search": {
+                "total_time": 1341701706,
+                "total_blocks": 262145,
+                "nr_search": 262145
+            }
+        }
+    },
+    {
+        "title": "shutdown fs",
+        "wait_digest": {
+            "tsc": 0,
+            "nr": 0
+        },
+        "l0": {
+            "tsc": 66201306,
+            "nr": 262145
+        },
+        "lsm": {
+            "tsc": 179314750,
+            "nr": 262145
+        },
+        "log": {
+            "commit": {
+                "tsc": 1784,
+                "nr": 1
+            },
+            "write": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "alloc": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "hdr_write": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "hash_update": {
+                "tsc": 0,
+                "nr": 0
+            }
+        },
+        "read_data": {
+            "tsc": 3612828536,
+            "nr": 262145,
+            "bytes": 1073745920
+        },
+        "path_storage": {
+            "tsc": 0,
+            "nr": 0
+        },
+        "storage": {
+            "rtsc": 3566011026,
+            "rnr": 1073754624,
+            "wtsc": 0,
+            "wnr": 0
+        },
+        "bench": "MTCC (readfile)",
+        "workload": "1_threads",
+        "layout": 0.7,
+        "total_time": 1.854381,
+        "struct": "hashfs",
+        "kernfs": {
+            "digest": 6285956276,
+            "path_search": 0,
+            "path_storage": 0,
+            "storage": {
+                "rtsc": 61882,
+                "rnr": 8960,
+                "wtsc": 3897962852,
+                "wnr": 1073754368
+            },
+            "search": {
+                "total_time": 0,
+                "total_blocks": 0,
+                "nr_search": 0
+            }
+        }
+    },
+    {
+        "title": "shutdown fs",
+        "wait_digest": {
+            "tsc": 0,
+            "nr": 0
+        },
+        "l0": {
+            "tsc": 67488094,
+            "nr": 262145
+        },
+        "lsm": {
+            "tsc": 507189940,
+            "nr": 262145
+        },
+        "log": {
+            "commit": {
+                "tsc": 2052,
+                "nr": 1
+            },
+            "write": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "alloc": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "hdr_write": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "hash_update": {
+                "tsc": 0,
+                "nr": 0
+            }
+        },
+        "read_data": {
+            "tsc": 3282865238,
+            "nr": 262145,
+            "bytes": 1073745920
+        },
+        "path_storage": {
+            "tsc": 162377850,
+            "nr": 2
+        },
+        "storage": {
+            "rtsc": 3241322650,
+            "rnr": 1074713088,
+            "wtsc": 0,
+            "wnr": 0
+        },
+        "bench": "MTCC (readfile)",
+        "workload": "1_threads",
+        "layout": 0.7,
+        "total_time": 1.864136,
+        "struct": "none",
+        "kernfs": {
+            "digest": 16160447886,
+            "path_search": 10074284834,
+            "path_storage": 115388538,
+            "storage": {
+                "rtsc": 65568,
+                "rnr": 8960,
+                "wtsc": 9278224854,
+                "wnr": 4089706752
+            },
+            "search": {
+                "total_time": 10074284834,
+                "total_blocks": 0,
+                "nr_search": 262145
+            }
+        }
+    },
+    {
+        "title": "shutdown fs",
+        "wait_digest": {
+            "tsc": 0,
+            "nr": 0
+        },
+        "l0": {
+            "tsc": 66024758,
+            "nr": 262145
+        },
+        "lsm": {
+            "tsc": 402253642,
+            "nr": 262145
+        },
+        "log": {
+            "commit": {
+                "tsc": 2554,
+                "nr": 1
+            },
+            "write": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "alloc": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "hdr_write": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "hash_update": {
+                "tsc": 0,
+                "nr": 0
+            }
+        },
+        "read_data": {
+            "tsc": 3435248158,
+            "nr": 262145,
+            "bytes": 1073745920
+        },
+        "path_storage": {
+            "tsc": 242,
+            "nr": 0
+        },
+        "storage": {
+            "rtsc": 3385841456,
+            "rnr": 1073754624,
+            "wtsc": 0,
+            "wnr": 0
+        },
+        "bench": "MTCC (readfile)",
+        "workload": "1_threads",
+        "layout": 0.6,
+        "total_time": 1.875103,
+        "struct": "extent_trees",
+        "kernfs": {
+            "digest": 7438701772,
+            "path_search": 1784218778,
+            "path_storage": 218,
+            "storage": {
+                "rtsc": 70290928,
+                "rnr": 67118080,
+                "wtsc": 3682600192,
+                "wnr": 1073860096
+            },
+            "search": {
+                "total_time": 1784218778,
+                "total_blocks": 262145,
+                "nr_search": 262145
+            }
+        }
+    },
+    {
+        "title": "shutdown fs",
+        "wait_digest": {
+            "tsc": 0,
+            "nr": 0
+        },
+        "l0": {
+            "tsc": 66593744,
+            "nr": 262145
+        },
+        "lsm": {
+            "tsc": 255823166,
+            "nr": 262145
+        },
+        "log": {
+            "commit": {
+                "tsc": 4588,
+                "nr": 1
+            },
+            "write": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "alloc": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "hdr_write": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "hash_update": {
+                "tsc": 0,
+                "nr": 0
+            }
+        },
+        "read_data": {
+            "tsc": 3561411936,
+            "nr": 262145,
+            "bytes": 1073745920
+        },
+        "path_storage": {
+            "tsc": 0,
+            "nr": 0
+        },
+        "storage": {
+            "rtsc": 3513140224,
+            "rnr": 1073754624,
+            "wtsc": 0,
+            "wnr": 0
+        },
+        "bench": "MTCC (readfile)",
+        "workload": "1_threads",
+        "layout": 0.6,
+        "total_time": 1.877354,
+        "struct": "global_hash_table",
+        "kernfs": {
+            "digest": 6211719430,
+            "path_search": 404255546,
+            "path_storage": 0,
+            "storage": {
+                "rtsc": 68370,
+                "rnr": 8960,
+                "wtsc": 3886479550,
+                "wnr": 1073877504
+            },
+            "search": {
+                "total_time": 404255546,
+                "total_blocks": 262145,
+                "nr_search": 262145
+            }
+        }
+    },
+    {
+        "title": "shutdown fs",
+        "wait_digest": {
+            "tsc": 0,
+            "nr": 0
+        },
+        "l0": {
+            "tsc": 66429108,
+            "nr": 262145
+        },
+        "lsm": {
+            "tsc": 557623370,
+            "nr": 262145
+        },
+        "log": {
+            "commit": {
+                "tsc": 1864,
+                "nr": 1
+            },
+            "write": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "alloc": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "hdr_write": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "hash_update": {
+                "tsc": 0,
+                "nr": 0
+            }
+        },
+        "read_data": {
+            "tsc": 3424130238,
+            "nr": 262145,
+            "bytes": 1073745920
+        },
+        "path_storage": {
+            "tsc": 508,
+            "nr": 0
+        },
+        "storage": {
+            "rtsc": 3376133514,
+            "rnr": 1073754624,
+            "wtsc": 0,
+            "wnr": 0
+        },
+        "bench": "MTCC (readfile)",
+        "workload": "1_threads",
+        "layout": 0.6,
+        "total_time": 1.943479,
+        "struct": "level_hash_tables",
+        "kernfs": {
+            "digest": 7569863198,
+            "path_search": 2253546306,
+            "path_storage": 52849464,
+            "storage": {
+                "rtsc": 638985760,
+                "rnr": 67118080,
+                "wtsc": 3571226008,
+                "wnr": 1090672320
+            },
+            "search": {
+                "total_time": 2253546306,
+                "total_blocks": 262145,
+                "nr_search": 262145
+            }
+        }
+    },
+    {
+        "title": "shutdown fs",
+        "wait_digest": {
+            "tsc": 0,
+            "nr": 0
+        },
+        "l0": {
+            "tsc": 66528256,
+            "nr": 262145
+        },
+        "lsm": {
+            "tsc": 276462566,
+            "nr": 262145
+        },
+        "log": {
+            "commit": {
+                "tsc": 1816,
+                "nr": 1
+            },
+            "write": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "alloc": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "hdr_write": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "hash_update": {
+                "tsc": 0,
+                "nr": 0
+            }
+        },
+        "read_data": {
+            "tsc": 3558903432,
+            "nr": 262145,
+            "bytes": 1073745920
+        },
+        "path_storage": {
+            "tsc": 8624,
+            "nr": 0
+        },
+        "storage": {
+            "rtsc": 3510394044,
+            "rnr": 1073754632,
+            "wtsc": 0,
+            "wnr": 0
+        },
+        "bench": "MTCC (readfile)",
+        "workload": "1_threads",
+        "layout": 0.6,
+        "total_time": 1.875292,
+        "struct": "radix_trees",
+        "kernfs": {
+            "digest": 7045280678,
+            "path_search": 1376010538,
+            "path_storage": 6898,
+            "storage": {
+                "rtsc": 778123162,
+                "rnr": 67118088,
+                "wtsc": 3792215470,
+                "wnr": 1075961608
+            },
+            "search": {
+                "total_time": 1376010538,
+                "total_blocks": 262145,
+                "nr_search": 262145
+            }
+        }
+    },
+    {
+        "title": "shutdown fs",
+        "wait_digest": {
+            "tsc": 0,
+            "nr": 0
+        },
+        "l0": {
+            "tsc": 66838130,
+            "nr": 262145
+        },
+        "lsm": {
+            "tsc": 193676148,
+            "nr": 262145
+        },
+        "log": {
+            "commit": {
+                "tsc": 2048,
+                "nr": 1
+            },
+            "write": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "alloc": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "hdr_write": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "hash_update": {
+                "tsc": 0,
+                "nr": 0
+            }
+        },
+        "read_data": {
+            "tsc": 3625252196,
+            "nr": 262145,
+            "bytes": 1073745920
+        },
+        "path_storage": {
+            "tsc": 0,
+            "nr": 0
+        },
+        "storage": {
+            "rtsc": 3577899558,
+            "rnr": 1073754624,
+            "wtsc": 0,
+            "wnr": 0
+        },
+        "bench": "MTCC (readfile)",
+        "workload": "1_threads",
+        "layout": 0.6,
+        "total_time": 1.868759,
+        "struct": "hashfs",
+        "kernfs": {
+            "digest": 6426210556,
+            "path_search": 0,
+            "path_storage": 0,
+            "storage": {
+                "rtsc": 76994,
+                "rnr": 8960,
+                "wtsc": 4061989784,
+                "wnr": 1073754368
+            },
+            "search": {
+                "total_time": 0,
+                "total_blocks": 0,
+                "nr_search": 0
+            }
+        }
+    },
+    {
+        "title": "shutdown fs",
+        "wait_digest": {
+            "tsc": 0,
+            "nr": 0
+        },
+        "l0": {
+            "tsc": 67907930,
+            "nr": 262145
+        },
+        "lsm": {
+            "tsc": 524710252,
+            "nr": 262145
+        },
+        "log": {
+            "commit": {
+                "tsc": 1758,
+                "nr": 1
+            },
+            "write": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "alloc": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "hdr_write": {
+                "tsc": 0,
+                "nr": 0
+            },
+            "hash_update": {
+                "tsc": 0,
+                "nr": 0
+            }
+        },
+        "read_data": {
+            "tsc": 3270425094,
+            "nr": 262145,
+            "bytes": 1073745920
+        },
+        "path_storage": {
+            "tsc": 173368462,
+            "nr": 2
+        },
+        "storage": {
+            "rtsc": 3228613664,
+            "rnr": 1075024384,
+            "wtsc": 0,
+            "wnr": 0
+        },
+        "bench": "MTCC (readfile)",
+        "workload": "1_threads",
+        "layout": 0.6,
+        "total_time": 1.863138,
+        "struct": "none",
+        "kernfs": {
+            "digest": 14180245210,
+            "path_search": 8297975926,
+            "path_storage": 119875808,
+            "storage": {
+                "rtsc": 82110,
+                "rnr": 8960,
+                "wtsc": 7963113372,
+                "wnr": 4612434176
+            },
+            "search": {
+                "total_time": 8297975926,
+                "total_blocks": 0,
+                "nr_search": 262145
+            }
+        }
+    }
+]

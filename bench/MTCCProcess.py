@@ -58,7 +58,8 @@ class MTCCRunner(BenchRunner):
                     data = data.strip('\x00')
                     if len(data) < 2:
                         continue
-                    obj = json.loads(data)
+                    whole_obj = json.loads(data)
+                    obj = whole_obj['stats_arr'][0]
                     if 'lsm' not in obj or 'nr' not in obj['lsm'] or obj['lsm']['nr'] <= 0:
                         continue
                     obj['bench'] = 'MTCC (readfile)'
@@ -69,6 +70,7 @@ class MTCCRunner(BenchRunner):
                     stat_objs += [obj]
 
         if len(stat_objs) != 1:
+            print("hi ", len(stat_objs))
             pprint(stat_objs)
             print(workload_name, layout, struct, time_elapsed)
             raise Exception('No valid statistics from trial run!')

@@ -1,0 +1,212 @@
+[
+    {
+        "layout": 1.0,
+        "total_time": 1.835901,
+        "struct": "extent_trees",
+        "bench": "MTCC (readfile)",
+        "workload": "1_threads"
+    },
+    {
+        "layout": 1.0,
+        "total_time": 1.874996,
+        "struct": "global_hash_table",
+        "bench": "MTCC (readfile)",
+        "workload": "1_threads"
+    },
+    {
+        "layout": 1.0,
+        "total_time": 1.907873,
+        "struct": "level_hash_tables",
+        "bench": "MTCC (readfile)",
+        "workload": "1_threads"
+    },
+    {
+        "layout": 1.0,
+        "total_time": 1.868089,
+        "struct": "radix_trees",
+        "bench": "MTCC (readfile)",
+        "workload": "1_threads"
+    },
+    {
+        "layout": 1.0,
+        "total_time": 1.859239,
+        "struct": "hashfs",
+        "bench": "MTCC (readfile)",
+        "workload": "1_threads"
+    },
+    {
+        "layout": 1.0,
+        "total_time": 1.825356,
+        "struct": "none",
+        "bench": "MTCC (readfile)",
+        "workload": "1_threads"
+    },
+    {
+        "layout": 0.9,
+        "total_time": 1.992925,
+        "struct": "extent_trees",
+        "bench": "MTCC (readfile)",
+        "workload": "1_threads"
+    },
+    {
+        "layout": 0.9,
+        "total_time": 1.876166,
+        "struct": "global_hash_table",
+        "bench": "MTCC (readfile)",
+        "workload": "1_threads"
+    },
+    {
+        "layout": 0.9,
+        "total_time": 1.973379,
+        "struct": "level_hash_tables",
+        "bench": "MTCC (readfile)",
+        "workload": "1_threads"
+    },
+    {
+        "layout": 0.9,
+        "total_time": 1.450375,
+        "struct": "radix_trees",
+        "bench": "MTCC (readfile)",
+        "workload": "1_threads"
+    },
+    {
+        "layout": 0.9,
+        "total_time": 1.859373,
+        "struct": "hashfs",
+        "bench": "MTCC (readfile)",
+        "workload": "1_threads"
+    },
+    {
+        "layout": 0.9,
+        "total_time": 1.990762,
+        "struct": "none",
+        "bench": "MTCC (readfile)",
+        "workload": "1_threads"
+    },
+    {
+        "layout": 0.8,
+        "total_time": 1.869957,
+        "struct": "extent_trees",
+        "bench": "MTCC (readfile)",
+        "workload": "1_threads"
+    },
+    {
+        "layout": 0.8,
+        "total_time": 1.879915,
+        "struct": "global_hash_table",
+        "bench": "MTCC (readfile)",
+        "workload": "1_threads"
+    },
+    {
+        "layout": 0.8,
+        "total_time": 1.917843,
+        "struct": "level_hash_tables",
+        "bench": "MTCC (readfile)",
+        "workload": "1_threads"
+    },
+    {
+        "layout": 0.8,
+        "total_time": 1.868257,
+        "struct": "radix_trees",
+        "bench": "MTCC (readfile)",
+        "workload": "1_threads"
+    },
+    {
+        "layout": 0.8,
+        "total_time": 1.857505,
+        "struct": "hashfs",
+        "bench": "MTCC (readfile)",
+        "workload": "1_threads"
+    },
+    {
+        "layout": 0.8,
+        "total_time": 1.975092,
+        "struct": "none",
+        "bench": "MTCC (readfile)",
+        "workload": "1_threads"
+    },
+    {
+        "layout": 0.7,
+        "total_time": 1.567878,
+        "struct": "extent_trees",
+        "bench": "MTCC (readfile)",
+        "workload": "1_threads"
+    },
+    {
+        "layout": 0.7,
+        "total_time": 1.874001,
+        "struct": "global_hash_table",
+        "bench": "MTCC (readfile)",
+        "workload": "1_threads"
+    },
+    {
+        "layout": 0.7,
+        "total_time": 1.929733,
+        "struct": "level_hash_tables",
+        "bench": "MTCC (readfile)",
+        "workload": "1_threads"
+    },
+    {
+        "layout": 0.7,
+        "total_time": 1.905615,
+        "struct": "radix_trees",
+        "bench": "MTCC (readfile)",
+        "workload": "1_threads"
+    },
+    {
+        "layout": 0.7,
+        "total_time": 1.854381,
+        "struct": "hashfs",
+        "bench": "MTCC (readfile)",
+        "workload": "1_threads"
+    },
+    {
+        "layout": 0.7,
+        "total_time": 1.864136,
+        "struct": "none",
+        "bench": "MTCC (readfile)",
+        "workload": "1_threads"
+    },
+    {
+        "layout": 0.6,
+        "total_time": 1.875103,
+        "struct": "extent_trees",
+        "bench": "MTCC (readfile)",
+        "workload": "1_threads"
+    },
+    {
+        "layout": 0.6,
+        "total_time": 1.877354,
+        "struct": "global_hash_table",
+        "bench": "MTCC (readfile)",
+        "workload": "1_threads"
+    },
+    {
+        "layout": 0.6,
+        "total_time": 1.943479,
+        "struct": "level_hash_tables",
+        "bench": "MTCC (readfile)",
+        "workload": "1_threads"
+    },
+    {
+        "layout": 0.6,
+        "total_time": 1.875292,
+        "struct": "radix_trees",
+        "bench": "MTCC (readfile)",
+        "workload": "1_threads"
+    },
+    {
+        "layout": 0.6,
+        "total_time": 1.868759,
+        "struct": "hashfs",
+        "bench": "MTCC (readfile)",
+        "workload": "1_threads"
+    },
+    {
+        "layout": 0.6,
+        "total_time": 1.863138,
+        "struct": "none",
+        "bench": "MTCC (readfile)",
+        "workload": "1_threads"
+    }
+]
