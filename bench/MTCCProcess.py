@@ -53,7 +53,8 @@ class MTCCRunner(BenchRunner):
         for stat_file in stats_files:
             with stat_file.open() as f:
                 file_data = f.read()
-                whole_obj = json.load(data)['stats_arr']
+                stats_arr = []
+                stats_arr = json.load(data)
                 # data_objs = [ x.strip() for x in file_data.split(os.linesep) ]
                 for obj in whole_obj:
                     if len(data) < 2:

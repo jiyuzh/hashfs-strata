@@ -84,13 +84,15 @@ class KernFSThread:
         for stat_file in stats_files:
             with stat_file.open() as f:
                 file_data = f.read()
-                data_objs = [ x.strip() for x in file_data.split(os.linesep) ]
-                for data in data_objs:
-                    data = data.strip('\x00')
-                    if len(data) < 2:
-                        continue
+                stats_arr = []
+                stats_arr = json.load(data)
+                # data_objs = [ x.strip() for x in file_data.split(os.linesep) ]
+                for data in stats_arr:
+                    # data = data.strip('\x00')
+                    # if len(data) < 2:
+                    #     continue
                     try:
-                        stat_objs += [json.loads(data)]
+                        stat_objs += [data]
                     except:
                         continue
 
