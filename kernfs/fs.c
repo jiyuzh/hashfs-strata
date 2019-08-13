@@ -209,6 +209,7 @@ void show_kernfs_stats(void)
     // Write the JSON string to a file.
 	if (enable_perf_stats) {
 		ftruncate(prof_fd, 0);
+		lseek(prof_fd, 0, SEEK_SET);
 		write(prof_fd, js_str, strlen(js_str));
 	}
 

@@ -54,11 +54,11 @@ class MTCCRunner(BenchRunner):
             with stat_file.open() as f:
                 file_data = f.read()
                 stats_arr = []
-                stats_arr = json.load(data)
+                stats_arr = json.loads(file_data)
                 # data_objs = [ x.strip() for x in file_data.split(os.linesep) ]
-                for obj in whole_obj:
-                    if len(data) < 2:
-                        continue
+                for obj in stats_arr:
+                    # if len(data) < 2:
+                    #     continue
                     if 'lsm' not in obj or 'nr' not in obj['lsm'] or obj['lsm']['nr'] <= 0:
                         continue
                     obj['bench'] = 'MTCC (readfile)'

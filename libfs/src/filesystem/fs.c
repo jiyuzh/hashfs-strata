@@ -151,8 +151,9 @@ void show_libfs_stats(const char *title)
   const char *js_str = json_object_get_string(libfs_stats_json);
   if (enable_perf_stats) {
     ftruncate(prof_fd, 0);
+    lseek(prof_fd, 0, SEEK_SET);
     write(prof_fd, js_str, strlen(js_str));
-    write(prof_fd, "\n", 2);
+    //write(prof_fd, "\n", 2);
   }
   json_object_put(root);
   printf("\n");

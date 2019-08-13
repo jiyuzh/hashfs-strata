@@ -85,7 +85,7 @@ class KernFSThread:
             with stat_file.open() as f:
                 file_data = f.read()
                 stats_arr = []
-                stats_arr = json.load(data)
+                stats_arr = json.loads(file_data)
                 # data_objs = [ x.strip() for x in file_data.split(os.linesep) ]
                 for data in stats_arr:
                     # data = data.strip('\x00')

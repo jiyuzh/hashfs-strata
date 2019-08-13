@@ -1,210 +1,210 @@
 [
     {
         "layout": 1.0,
-        "total_time": 1.835901,
+        "total_time": 1.80388,
         "struct": "extent_trees",
         "bench": "MTCC (readfile)",
         "workload": "1_threads"
     },
     {
         "layout": 1.0,
-        "total_time": 1.874996,
+        "total_time": 1.879222,
         "struct": "global_hash_table",
         "bench": "MTCC (readfile)",
         "workload": "1_threads"
     },
     {
         "layout": 1.0,
-        "total_time": 1.907873,
+        "total_time": 1.949428,
         "struct": "level_hash_tables",
         "bench": "MTCC (readfile)",
         "workload": "1_threads"
     },
     {
         "layout": 1.0,
-        "total_time": 1.868089,
+        "total_time": 1.883092,
         "struct": "radix_trees",
         "bench": "MTCC (readfile)",
         "workload": "1_threads"
     },
     {
         "layout": 1.0,
-        "total_time": 1.859239,
+        "total_time": 1.860206,
         "struct": "hashfs",
         "bench": "MTCC (readfile)",
         "workload": "1_threads"
     },
     {
         "layout": 1.0,
-        "total_time": 1.825356,
+        "total_time": 1.858788,
         "struct": "none",
         "bench": "MTCC (readfile)",
         "workload": "1_threads"
     },
     {
         "layout": 0.9,
-        "total_time": 1.992925,
+        "total_time": 1.911376,
         "struct": "extent_trees",
         "bench": "MTCC (readfile)",
         "workload": "1_threads"
     },
     {
         "layout": 0.9,
-        "total_time": 1.876166,
+        "total_time": 1.886447,
         "struct": "global_hash_table",
         "bench": "MTCC (readfile)",
         "workload": "1_threads"
     },
     {
         "layout": 0.9,
-        "total_time": 1.973379,
+        "total_time": 1.991426,
         "struct": "level_hash_tables",
         "bench": "MTCC (readfile)",
         "workload": "1_threads"
     },
     {
         "layout": 0.9,
-        "total_time": 1.450375,
+        "total_time": 1.907165,
         "struct": "radix_trees",
         "bench": "MTCC (readfile)",
         "workload": "1_threads"
     },
     {
         "layout": 0.9,
-        "total_time": 1.859373,
+        "total_time": 1.849999,
         "struct": "hashfs",
         "bench": "MTCC (readfile)",
         "workload": "1_threads"
     },
     {
         "layout": 0.9,
-        "total_time": 1.990762,
+        "total_time": 1.851479,
         "struct": "none",
         "bench": "MTCC (readfile)",
         "workload": "1_threads"
     },
     {
         "layout": 0.8,
-        "total_time": 1.869957,
+        "total_time": 1.995626,
         "struct": "extent_trees",
         "bench": "MTCC (readfile)",
         "workload": "1_threads"
     },
     {
         "layout": 0.8,
-        "total_time": 1.879915,
+        "total_time": 1.92324,
         "struct": "global_hash_table",
         "bench": "MTCC (readfile)",
         "workload": "1_threads"
     },
     {
         "layout": 0.8,
-        "total_time": 1.917843,
+        "total_time": 1.975933,
         "struct": "level_hash_tables",
         "bench": "MTCC (readfile)",
         "workload": "1_threads"
     },
     {
         "layout": 0.8,
-        "total_time": 1.868257,
+        "total_time": 1.900569,
         "struct": "radix_trees",
         "bench": "MTCC (readfile)",
         "workload": "1_threads"
     },
     {
         "layout": 0.8,
-        "total_time": 1.857505,
+        "total_time": 1.856154,
         "struct": "hashfs",
         "bench": "MTCC (readfile)",
         "workload": "1_threads"
     },
     {
         "layout": 0.8,
-        "total_time": 1.975092,
+        "total_time": 1.857495,
         "struct": "none",
         "bench": "MTCC (readfile)",
         "workload": "1_threads"
     },
     {
         "layout": 0.7,
-        "total_time": 1.567878,
+        "total_time": 1.852319,
         "struct": "extent_trees",
         "bench": "MTCC (readfile)",
         "workload": "1_threads"
     },
     {
         "layout": 0.7,
-        "total_time": 1.874001,
+        "total_time": 1.876126,
         "struct": "global_hash_table",
         "bench": "MTCC (readfile)",
         "workload": "1_threads"
     },
     {
         "layout": 0.7,
-        "total_time": 1.929733,
+        "total_time": 1.997159,
         "struct": "level_hash_tables",
         "bench": "MTCC (readfile)",
         "workload": "1_threads"
     },
     {
         "layout": 0.7,
-        "total_time": 1.905615,
+        "total_time": 1.868618,
         "struct": "radix_trees",
         "bench": "MTCC (readfile)",
         "workload": "1_threads"
     },
     {
         "layout": 0.7,
-        "total_time": 1.854381,
+        "total_time": 1.862915,
         "struct": "hashfs",
         "bench": "MTCC (readfile)",
         "workload": "1_threads"
     },
     {
         "layout": 0.7,
-        "total_time": 1.864136,
+        "total_time": 1.993423,
         "struct": "none",
         "bench": "MTCC (readfile)",
         "workload": "1_threads"
     },
     {
         "layout": 0.6,
-        "total_time": 1.875103,
+        "total_time": 1.960093,
         "struct": "extent_trees",
         "bench": "MTCC (readfile)",
         "workload": "1_threads"
     },
     {
         "layout": 0.6,
-        "total_time": 1.877354,
+        "total_time": 1.874363,
         "struct": "global_hash_table",
         "bench": "MTCC (readfile)",
         "workload": "1_threads"
     },
     {
         "layout": 0.6,
-        "total_time": 1.943479,
+        "total_time": 1.918378,
         "struct": "level_hash_tables",
         "bench": "MTCC (readfile)",
         "workload": "1_threads"
     },
     {
         "layout": 0.6,
-        "total_time": 1.875292,
+        "total_time": 1.913829,
         "struct": "radix_trees",
         "bench": "MTCC (readfile)",
         "workload": "1_threads"
     },
     {
         "layout": 0.6,
-        "total_time": 1.868759,
+        "total_time": 1.856945,
         "struct": "hashfs",
         "bench": "MTCC (readfile)",
         "workload": "1_threads"
     },
     {
         "layout": 0.6,
-        "total_time": 1.863138,
+        "total_time": 1.961037,
         "struct": "none",
         "bench": "MTCC (readfile)",
         "workload": "1_threads"
