@@ -832,13 +832,13 @@ pmem_nvm_hash_table_new(struct disk_superblock *sblk,
   pmem_ht = dax_addr[g_root_dev] + (sblk->datablock_start * g_block_size_bytes);
   if(pmem_ht->valid == 1) {
     printf("ht exists\n");
-    pmem_ht->valid = 0;
-    pmem_nvm_flush(&(pmem_ht->valid), sizeof(int));
+    // pmem_ht->valid = 0;
+    // pmem_nvm_flush(&(pmem_ht->valid), sizeof(int));
     pmem_ht_vol = (pmem_nvm_hash_vol_t *)malloc(sizeof(pmem_nvm_hash_vol_t));
     pmem_ht_vol->hash_func = hash_func ? hash_func : nvm_idx_direct_hash;
     pmem_ht_vol->entries = dax_addr[g_root_dev] + (pmem_ht->entries_blk * g_block_size_bytes);
-    pmem_ht->valid = 1;
-    pmem_nvm_flush(&(pmem_ht->valid), sizeof(int));
+    // pmem_ht->valid = 1;
+    // pmem_nvm_flush(&(pmem_ht->valid), sizeof(int));
     return;
   }
   printf("ht does not exist\n");
