@@ -79,7 +79,7 @@ void reset_libfs_stats(void)
     reset_stats_dist(&(g_perf_stats.read_per_index));
     reset_stats_dist(&(g_perf_stats.read_data_bytes));
     cache_stats_init();
-
+    libfs_stats_json = json_object_new_object();
     json_object* n_array = json_object_new_array();
 	  json_object_object_add(libfs_stats_json, "stats_arr", n_array);
 }
@@ -153,6 +153,7 @@ void show_libfs_stats(const char *title)
 	json_object_array_add(stats_arr, root);
   const char *js_str = json_object_get_string(libfs_stats_json);
   if (enable_perf_stats) {
+    ftruncate(prof_fd, 0);
     write(prof_fd, js_str, strlen(js_str));
     write(prof_fd, "\n", 2);
   }

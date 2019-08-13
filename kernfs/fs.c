@@ -176,7 +176,7 @@ void reset_kernfs_stats(void)
 #endif
 	memset(&g_perf_stats, 0, sizeof(kernfs_stats_t));
     cache_stats_init();
-	
+	kernfs_stats_json = json_object_new_object();	
 	json_object* n_array = json_object_new_array();
 	json_object_object_add(kernfs_stats_json, "stats_arr", n_array);
 	
@@ -207,9 +207,11 @@ void show_kernfs_stats(void)
 
     // Convert JSON to a string
 	const char *js_str = json_object_get_string(kernfs_stats_json);
-
+	//const char *js_str = json_object_get_string(root);
+	printf("%s\n", js_str);
     // Write the JSON string to a file.
 	if (enable_perf_stats) {
+		ftruncate(prof_fd, 0);
 		write(prof_fd, js_str, strlen(js_str));
 	}
 
@@ -2094,8 +2096,10 @@ void shutdown_fs(void)
 {
 	printf("Finalize FS\n");
 	pmem_nvm_hash_table_close();
-	if (enable_perf_stats)
+	if (enable_perf_stats) {
+		show_kernfs_stats();
 		close(prof_fd);
+	}
 
 	unlink(SRV_SOCK_PATH);
 	device_shutdown();
