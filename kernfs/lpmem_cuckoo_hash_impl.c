@@ -95,7 +95,7 @@ pmem_cuckoo_hash_init()
     pmem_cuckoo_vol = (pmem_nvm_cuckoo_vol_t *)malloc(sizeof(pmem_nvm_cuckoo_vol_t));
     pmem_cuckoo_vol->entries = dax_addr[g_root_dev] + (pmem_cuckoo->meta.entries_blk * g_block_size_bytes);
 
-    pmem_cuckoo->is_pmem = pmem_is_pmem(pmem_cuckoo, ent_num_blocks_needed * g_block_size_bytes);
+    pmem_cuckoo->meta.is_pmem = pmem_is_pmem(pmem_cuckoo, ent_num_blocks_needed * g_block_size_bytes);
     memset(pmem_cuckoo_vol->entries, ~0, (ent_num_blocks_needed - 1) * g_block_size_bytes);
 
     pmem_nvm_cuckoo_flush(pmem_cuckoo, ent_num_blocks_needed * g_block_size_bytes);
