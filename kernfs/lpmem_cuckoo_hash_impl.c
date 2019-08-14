@@ -97,7 +97,7 @@ pmem_cuckoo_hash_init()
     pmem_cuckoo_vol->entries = dax_addr[g_root_dev] + (pmem_cuckoo->meta.entries_blk * g_block_size_bytes);
 
     pmem_cuckoo->is_pmem = pmem_is_pmem(pmem_cuckoo, ent_num_blocks_needed * g_block_size_bytes);
-    memset(pmem_ht_vol->entries, ~0, (ent_num_blocks_needed - 1) * g_block_size_bytes);
+    memset(pmem_cuckoo_vol->entries, ~0, (ent_num_blocks_needed - 1) * g_block_size_bytes);
 
     pmem_nvm_cuckoo_flush(pmem_cuckoo, ent_num_blocks_needed * g_block_size_bytes);
     pmem_cuckoo->meta.magic = CUCKOO_MAGIC;
@@ -130,7 +130,7 @@ bin_at(const struct cuckoo_hash *hash, uint32_t index)
 #endif
 
 void elem_at(uint32_t index, pmem_cuckoo_elem_t *ret) {
-    return pmem_cuckoo_vol->entries[index];
+    ret = pmem_cuckoo_vol->entries[index];
 }
 
 static inline
@@ -147,7 +147,7 @@ pmem_lookup(paddr_t key, uint32_t h1, uint32_t h2)
         return (h1 % mod) + pmem_cuckoo->meta.meta_size;
     }
 
-    elem_at(h2 % mod, &elem)
+    elem_at(h2 % mod, &elem);
     if (elem.key == key)
     {
         return (h2 % mod) + pmem_cuckoo->meta.meta_size;
@@ -199,7 +199,7 @@ pmem_cuckoo_hash_remove(paddr_t key, uint32_t *index)
 
     //set tombstone
     //FIX THIS
-    CUCKOO_SET_TOMBSTONE(pmem_cuckoo_vol->entries[index].key);
+    CUCKOO_SET_TOMBSTONE(pmem_cuckoo_vol->entries[*index].key);
     pmem_nvm_cuckoo_flush(&(pmem_cuckoo_vol->entries[index].key), sizeof(paddr_t));
 
     //make persistent
@@ -284,7 +284,7 @@ pmem_insert(pmem_cuckoo_elem_t *item, int first, int which_hash, paddr_t *paddr)
         if(which_hash != 2) { //curr = 1 or either
             elem_at(h1m, &elem);
             
-            if (!CUCKOO_IS_VALID(elem->key)) {
+            if (!CUCKOO_IS_VALID(elem.key)) {
                 int success = pmem_cuckoo_insert_node(item, h1m);
                 // *elem = *item;
                 // nvm_persist_struct(*elem);
@@ -296,7 +296,7 @@ pmem_insert(pmem_cuckoo_elem_t *item, int first, int which_hash, paddr_t *paddr)
         }
         if(which_hash != 1) { //which_hash = 2 or either
             elem_at(h2m, &elem);
-            if(!CUCKOO_IS_VALID(elem->key)) {
+            if(!CUCKOO_IS_VALID(elem.key)) {
                 int success = pmem_cuckoo_insert_node(item, h2m);
 
                 if(success) return 1;
@@ -332,7 +332,7 @@ pmem_insert(pmem_cuckoo_elem_t *item, int first, int which_hash, paddr_t *paddr)
     }
 
     if(first) {
-        pmem_insert(item, 0, which_hash == 1 ? 2 : 1);
+        pmem_insert(item, 0, which_hash == 1 ? 2 : 1, paddr);
         return false;
     }
     else {
@@ -352,7 +352,7 @@ cuckoo_hash_insert(paddr_t key, paddr_t *paddr)
         return 0;
     }
 
-    struct cuckoo_hash_elem new_elem = {
+    pmem_cuckoo_elem_t new_elem = {
       .key = key,
       .hash1 = h1,
       .hash2 = h2
