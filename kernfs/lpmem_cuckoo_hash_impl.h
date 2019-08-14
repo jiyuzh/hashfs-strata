@@ -69,10 +69,10 @@ typedef struct pmem_cuckoo_meta {
     uint32_t magic;
     paddr_t entries_blk; // elem_start_blk;
     size_t max_size;
-} pmem_nvm_cuckoo_metadata_t;
+} pmem_cuckoo_metadata_t;
 
 typedef struct pmem_cuckoo_hash {
-    nvm_cuckoo_metadata_t meta;
+    pmem_cuckoo_metadata_t meta;
     // cuckoo_elem_t *table;
     bool do_stats;
 } pmem_nvm_cuckoo_idx_t;

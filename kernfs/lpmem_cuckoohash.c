@@ -2,7 +2,7 @@
 #include "lpmem_cuckoohash.h"
 
 int pmem_cuckoohash_initialize() {
-    ret = cuckoo_hash_init();
+    int ret = pmem_cuckoo_hash_init();
     if_then_panic(ret, "could not allocate hash table");
 
     return 0;
@@ -16,7 +16,7 @@ ssize_t pmem_cuckoohash_create(inum_t inum, paddr_t lblk, paddr_t *paddr) {
   
     hash_key_t k = MAKEKEY(inum, lblk);
     // Index: how many more logical blocks are contiguous before this one?
-    int err = cuckoo_hash_insert(ht, k, paddr);
+    int err = pmem_cuckoo_hash_insert(k, paddr);
 
     if (!err) {
         *paddr = 0;
@@ -38,7 +38,7 @@ ssize_t pmem_cuckoohash_create(inum_t inum, paddr_t lblk, paddr_t *paddr) {
 ssize_t pmem_cuckoohash_lookup(inum_t inum, paddr_t lblk, paddr_t* paddr) {
 
     hash_key_t k = MAKEKEY(inum, lblk);
-    int err = cuckoo_hash_lookup(ht, k, paddr);
+    int err = pmem_cuckoo_hash_lookup(k, paddr);
     if (err) return err;
 
     if (*paddr != 0) return 1;
@@ -50,24 +50,15 @@ ssize_t pmem_cuckoohash_lookup(inum_t inum, paddr_t lblk, paddr_t* paddr) {
  * Returns FALSE if the requested logical block was not present in any of the
  * two hash tables.
  */
-ssize_t pmem_cuckoohash_remove(inum_t inum, paddr_t lblk, size_t size) {
+ssize_t pmem_cuckoohash_remove(inum_t inum, paddr_t lblk) {
     if (size == 0) return -EINVAL;
 
     ssize_t ret = 0;
-    laddr_t range_start;
-    for (laddr_t i = laddr; i < laddr + size; ++i) {
-        hash_key_t k = MAKEKEY(inum, i);
-        paddr_t removed;
-        uint32_t index;
-        int err = cuckoo_hash_remove(k, &index);
-        if (err) return err;
-        if_then_panic(!range, "size was 0 on delete!");
-        ++ret;
-    }
-
-    if (ret <= 0) return -ENOENT;
-
-    if (ret != size) printf("Only freed %lu of %lu blocks!\n", ret, size);
+    hash_key_t k = MAKEKEY(inum, lblk);
+    paddr_t removed;
+    uint32_t index;
+    int err = pmem_cuckoo_hash_remove(k, &index);
+    if (err) return err;
 
     return ret;
 }
