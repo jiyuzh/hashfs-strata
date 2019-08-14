@@ -94,8 +94,7 @@ extern pmem_nvm_cuckoo_stats_t cstats;
   Return 0 on success, -errno if initialization failed.
 */
 int
-cuckoo_hash_init(nvm_cuckoo_idx_t **ht, paddr_t meta_block, size_t max_entries, 
-                 const idx_spec_t *idx_spec);
+pmem_cuckoo_hash_init(size_t max_entries);
 
 
 /*
@@ -104,7 +103,7 @@ cuckoo_hash_init(nvm_cuckoo_idx_t **ht, paddr_t meta_block, size_t max_entries,
   Destroy the hash, i.e., free memory.
 */
 void
-cuckoo_hash_destroy(const struct cuckoo_hash *hash);
+pmem_cuckoo_hash_destroy();
 
 
 /*
@@ -114,7 +113,7 @@ cuckoo_hash_destroy(const struct cuckoo_hash *hash);
 */
 static inline
 size_t
-cuckoo_hash_count(struct cuckoo_hash *hash)
+pmem_cuckoo_hash_count()
 {
   return 0;
 }
@@ -133,8 +132,7 @@ cuckoo_hash_count(struct cuckoo_hash *hash)
   dynamically.
 */
 int
-cuckoo_hash_insert(struct cuckoo_hash *hash, paddr_t key, paddr_t value,
-                   uint32_t index, uint32_t range);
+pmem_cuckoo_hash_insert(paddr_t key);
 
 
 /*
@@ -146,8 +144,7 @@ cuckoo_hash_insert(struct cuckoo_hash *hash, paddr_t key, paddr_t value,
   doesn't exist in the hash.
 */
 int
-cuckoo_hash_lookup(const struct cuckoo_hash *hash,
-                   paddr_t key, paddr_t *value, uint32_t *size);
+pmem_cuckoo_hash_lookup(paddr_t key, paddr_t *value);
 
 /*
   cuckoo_hash_lookup(hash, key, key_len):
@@ -158,7 +155,7 @@ cuckoo_hash_lookup(const struct cuckoo_hash *hash,
   doesn't exist in the hash.
 */
 int
-cuckoo_hash_update(const struct cuckoo_hash *hash, paddr_t key, uint32_t size);
+pmem_cuckoo_hash_update(paddr_t key, uint32_t size);
 
 /*
   cuckoo_hash_remove(hash, hash_item):
@@ -184,8 +181,7 @@ cuckoo_hash_update(const struct cuckoo_hash *hash, paddr_t key, uint32_t size);
   (that (void *) cast above is to cast away the const qualifier).
 */
 int
-cuckoo_hash_remove(struct cuckoo_hash *hash, paddr_t key, paddr_t *value,
-                   uint32_t *index, uint32_t *range);
+pmem_cuckoo_hash_remove(paddr_t key, uint32_t *index);
 
 #ifdef __cplusplus
 }      /* extern "C" */

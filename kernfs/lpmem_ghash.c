@@ -1012,7 +1012,7 @@ pmem_nvm_hash_table_insert_node(uint32_t node_index, uint32_t key_hash,
  *
  * Returns: (nullable): the associated value, or %NULL if the key is not found
  */
-int pmem_nvm_hash_table_lookup(paddr_t key,
+int pmem_nvm_hash_table_lookup(inum_t inum, paddr_t lblk,
     paddr_t *val/*, paddr_t *size, bool force*/) {
   //printf("inside ht_lookup\n");
   uint32_t node_index;
@@ -1026,6 +1026,7 @@ int pmem_nvm_hash_table_lookup(paddr_t key,
       node_index = nvm_hash_table_lookup_node(hash_table, key, &ent, &hash_return, force);
   }
 #else
+  paddr_t key = MAKEKEY(inum, lblk)
   node_index = pmem_nvm_hash_table_lookup_node(key, &ent, &hash_return/*,force*/);
 #endif
 
@@ -1180,13 +1181,15 @@ pmem_nvm_hash_table_insert_internal (paddr_t    key,
  * Returns: %TRUE if the key did not exist yet
  */
 int
-pmem_nvm_hash_table_insert (paddr_t     key,
+pmem_nvm_hash_table_insert (inum_t     inum,
+                       paddr_t lblk,
                        paddr_t     *index//,
                        //size_t      index,
                        //size_t      size
                        )
 {
   // printf("inside ht_insert\n");
+  paddr_t key = MAKEKEY(inum, lblk);
   return pmem_nvm_hash_table_insert_internal(key, index);//, index, size);
 }
 
@@ -1294,13 +1297,15 @@ pmem_nvm_hash_table_remove_internal (paddr_t         key,
  * Returns: %TRUE if the key was found and removed from the #nvm_hash_idx_t
  */
 int
-pmem_nvm_hash_table_remove (paddr_t         key,
+pmem_nvm_hash_table_remove (inum_t         inum,
+                       paddr_t             lblk,
                        paddr_t        *removed//,
                        //size_t         *nprevious,
                        //size_t         *ncontiguous
                        )
 {
   // printf("inside ht_remove\n");
+  paddr_t key = MAKEKEY(inum, lblk);
   return pmem_nvm_hash_table_remove_internal(key, removed
                                         //, nprevious, ncontiguous
                                         );

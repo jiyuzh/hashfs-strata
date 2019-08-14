@@ -19,12 +19,19 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <immintrin.h>
 
 #include "lpmem_cuckoo_hash_impl.h"
 
 pmem_nvm_cuckoo_stats_t cstats = {0,}; 
 pmem_nvm_cuckoo_idx_t *pmem_cuckoo = NULL;
 pmem_nvm_cuckoo_vol_t *pmem_cuckoo_vol = NULL;
+
+#define CUCKOO_SET_EMPTY(x) (x = (paddr_t) ~0)
+#define CUCKOO_IS_EMPTY(x) (x == (paddr_t) ~0)
+#define CUCKOO_SET_TOMBSTONE(x) (x = ((paddr_t) ~0) - 1)
+#define CUCKOO_IS_TOMBSTONE(x) (x == ((paddr_t) ~0) - 1)
+#define CUCKOO_IS_VALID(x) (!CUCKOO_IS_EMPTY(x) && !CUCKOO_IS_TOMBSTONE(x))
 
 static inline
 void
@@ -58,8 +65,7 @@ static void pmem_nvm_cuckoo_flush(void* start, void* len) {
 }
 
 int
-pmem_cuckoo_hash_init(nvm_cuckoo_idx_t **ht, paddr_t meta_block, 
-                 size_t max_entries, const idx_spec_t *idx_spec)
+pmem_cuckoo_hash_init()
 {
     printf("inside cuckoo_new\n");
     struct disk_superblock *sblk = sb[g_root_dev]->ondisk;
@@ -89,6 +95,9 @@ pmem_cuckoo_hash_init(nvm_cuckoo_idx_t **ht, paddr_t meta_block,
 
     pmem_cuckoo_vol = (pmem_nvm_cuckoo_vol_t *)malloc(sizeof(pmem_nvm_cuckoo_vol_t));
     pmem_cuckoo_vol->entries = dax_addr[g_root_dev] + (pmem_cuckoo->meta.entries_blk * g_block_size_bytes);
+
+    pmem_cuckoo->is_pmem = pmem_is_pmem(pmem_cuckoo, ent_num_blocks_needed * g_block_size_bytes);
+    memset(pmem_ht_vol->entries, ~0, (ent_num_blocks_needed - 1) * g_block_size_bytes);
 
     pmem_nvm_cuckoo_flush(pmem_cuckoo, ent_num_blocks_needed * g_block_size_bytes);
     pmem_cuckoo->meta.magic = CUCKOO_MAGIC;
@@ -160,156 +169,205 @@ pmem_cuckoo_hash_lookup(paddr_t key, paddr_t *value)
 
     return 0;
 }
-//8/13/2019
+
 int
-cuckoo_hash_update(const struct cuckoo_hash *hash, paddr_t key, uint32_t size)
+pmem_cuckoo_hash_update(paddr_t key, uint32_t size)
+{
+    //deprecated, no ranges in this scheme
+    // uint32_t h1, h2;
+    // pmem_compute_hash(key, &h1, &h2);
+
+    // cuckoo_elem_t *elem = lookup(hash, key, h1, h2);
+    // if (!elem) return -ENOENT;
+
+    // elem->hash_item.range = size;
+    // nvm_persist_struct(elem->hash_item.range);
+    // if (hash->do_stats) {
+    //     INCR_NR_CACHELINE(&cstats, ncachelines_written, sizeof(elem->hash_item.range));
+    // }
+    // return 0;
+}
+
+int
+pmem_cuckoo_hash_remove(paddr_t key, uint32_t *index)
+{
+    uint32_t h1, h2;
+    compute_hash(key, &h1, &h2);
+
+    *index = pmem_lookup(key, h1, h2);
+    if (!(*index)) return -ENOENT;
+
+    //set tombstone
+    //FIX THIS
+    CUCKOO_SET_TOMBSTONE(pmem_cuckoo_vol->entries[index].key);
+    pmem_nvm_cuckoo_flush(&(pmem_cuckoo_vol->entries[index].key), sizeof(paddr_t));
+
+    //make persistent
+
+    return 0;
+}
+
+// static
+// bool
+// undo_insert(pmem_cuckoo_elem_t *item, int which_hash,
+//             size_t max_depth)
+// {
+//     uint32_t mod = (uint32_t) cuckoo->meta.max_size;
+
+//     for (size_t depth = 0; depth < max_depth; ++depth) {
+//         uint32_t h2m = item->hash2 % mod;
+//         struct cuckoo_hash_elem *elem = bin_at(hash, h2m);
+
+//         struct cuckoo_hash_elem victim = *elem;
+
+//         elem->hash_item = item->hash_item;
+//         elem->hash1     = item->hash2;
+//         elem->hash2     = item->hash1;
+
+//         nvm_persist_struct(*elem);
+//         if (hash->do_stats) {
+//             INCR_NR_CACHELINE(&cstats, ncachelines_written, sizeof(*elem));
+//         }
+
+//         uint32_t h1m = victim.hash1 % mod;
+//         if (h1m != h2m) {
+//             assert(depth >= max_depth);
+
+//             return true;
+//         }
+
+//         *item = victim;
+//         nvm_persist_struct(*item);
+//         if (hash->do_stats) {
+//             INCR_NR_CACHELINE(&cstats, ncachelines_written, sizeof(*item));
+//         }
+//     }
+
+//     return false;
+// }
+
+
+
+static int
+pmem_cuckoo_insert_node(pmem_cuckoo_elem_t *item, uint32_t index) {
+    int nretries = 0;
+    while(1) {
+        uint32_t status = _xbegin();
+        if(status == _XBEGIN_STARTED) {
+            pmem_cuckoo_vol->entries[index] = *item;
+            _xend();
+            pmem_nvm_cuckoo_flush(pmem_cuckoo_vol->entries + index, sizeof(pmem_cuckoo_elem_t));
+            return 1;
+        } 
+        if(++nretries > 10000) {
+            panic("could not initiate transaction in cuckoo insert!\n");
+        }
+    }
+}
+
+static inline
+bool
+pmem_insert(pmem_cuckoo_elem_t *item, int first, int which_hash, paddr_t *paddr)
+{
+    size_t max_depth = (size_t) pmem_cuckoo->meta.max_size;
+
+    uint32_t mod = (uint32_t) pmem_cuckoo->meta.max_size;
+
+    if(first) {
+        which_hash = 0; //0 == either
+    }
+
+    for (size_t depth = 0; depth < max_depth; ++depth) {
+        pmem_cuckoo_elem_t elem;
+        uint32_t h1m = item->hash1 % mod;
+        uint32_t h2m = item->hash2 % mod;
+        if(which_hash != 2) { //curr = 1 or either
+            elem_at(h1m, &elem);
+            
+            if (!CUCKOO_IS_VALID(elem->key)) {
+                int success = pmem_cuckoo_insert_node(item, h1m);
+                // *elem = *item;
+                // nvm_persist_struct(*elem);
+                // if (hash->do_stats) {
+                //     INCR_NR_CACHELINE(&cstats, ncachelines_written, sizeof(*elem));
+                // }
+                if(success) return 1;
+            }
+        }
+        if(which_hash != 1) { //which_hash = 2 or either
+            elem_at(h2m, &elem);
+            if(!CUCKOO_IS_VALID(elem->key)) {
+                int success = pmem_cuckoo_insert_node(item, h2m);
+
+                if(success) return 1;
+            }
+        }
+        pmem_cuckoo_elem_t victim = elem;
+        uint32_t index = which_hash == 1 ? h1m : h2m;
+        pmem_cuckoo_insert_node(item, index);
+        if(unlikely(depth == 0)) {
+            *paddr = index;
+        }
+        if(victim.hash1 % mod == index) {
+            which_hash = 2;
+        }
+        else {
+            which_hash = 1;
+        }
+        *item = victim;
+
+        // *elem = *item;
+        // nvm_persist_struct(*elem);
+        // if (hash->do_stats) {
+        //     INCR_NR_CACHELINE(&cstats, ncachelines_written, sizeof(*elem));
+        // }
+
+        // item->hash_item = victim.hash_item;
+        // item->hash1     = victim.hash2;
+        // item->hash2     = victim.hash1;
+        // nvm_persist_struct(*item);
+        // if (hash->do_stats) {
+        //     INCR_NR_CACHELINE(&cstats, ncachelines_written, sizeof(*item));
+        // }
+    }
+
+    if(first) {
+        pmem_insert(item, 0, which_hash == 1 ? 2 : 1);
+        return false;
+    }
+    else {
+        return false;
+    }
+}
+
+
+int
+cuckoo_hash_insert(paddr_t key, paddr_t *paddr)
 {
     uint32_t h1, h2;
     pmem_compute_hash(key, &h1, &h2);
 
-    cuckoo_elem_t *elem = lookup(hash, key, h1, h2);
-    if (!elem) return -ENOENT;
-
-    elem->hash_item.range = size;
-    nvm_persist_struct(elem->hash_item.range);
-    if (hash->do_stats) {
-        INCR_NR_CACHELINE(&cstats, ncachelines_written, sizeof(elem->hash_item.range));
-    }
-    return 0;
-}
-
-int
-cuckoo_hash_remove(struct cuckoo_hash *hash, paddr_t key, paddr_t *value,
-                   uint32_t *index, uint32_t *range)
-{
-    uint32_t h1, h2;
-    compute_hash(key, &h1, &h2);
-
-    cuckoo_elem_t *elem = lookup(hash, key, h1, h2);
-    if (!elem) return -ENOENT;
-
-    *value = elem->hash_item.value;
-    *index = elem->hash_item.index;
-    *range = elem->hash_item.range;
-
-    // TODO: make pmem persistent
-    memset((void*)elem, 0, sizeof(*elem));
-    nvm_persist_struct(*elem);
-
-    return 0;
-}
-
-static
-bool
-undo_insert(struct cuckoo_hash *hash, struct cuckoo_hash_elem *item,
-            size_t max_depth)
-{
-    uint32_t mod = (uint32_t) hash->meta.max_size;
-
-    for (size_t depth = 0; depth < max_depth; ++depth) {
-        uint32_t h2m = item->hash2 % mod;
-        struct cuckoo_hash_elem *elem = bin_at(hash, h2m);
-
-        struct cuckoo_hash_elem victim = *elem;
-
-        elem->hash_item = item->hash_item;
-        elem->hash1     = item->hash2;
-        elem->hash2     = item->hash1;
-
-        nvm_persist_struct(*elem);
-        if (hash->do_stats) {
-            INCR_NR_CACHELINE(&cstats, ncachelines_written, sizeof(*elem));
-        }
-
-        uint32_t h1m = victim.hash1 % mod;
-        if (h1m != h2m) {
-            assert(depth >= max_depth);
-
-            return true;
-        }
-
-        *item = victim;
-        nvm_persist_struct(*item);
-        if (hash->do_stats) {
-            INCR_NR_CACHELINE(&cstats, ncachelines_written, sizeof(*item));
-        }
-    }
-
-    return false;
-}
-
-
-static inline
-bool
-insert(struct cuckoo_hash *hash, struct cuckoo_hash_elem *item)
-{
-    size_t max_depth = (size_t) hash->meta.max_size;
-
-    uint32_t mod = (uint32_t) hash->meta.max_size;
-
-    for (size_t depth = 0; depth < max_depth; ++depth) {
-        uint32_t h1m = item->hash1 % mod;
-        cuckoo_elem_t *elem = bin_at(hash, h1m);
-
-        if (elem->hash1 == elem->hash2 || (elem->hash1 % mod) != h1m) {
-            *elem = *item;
-            nvm_persist_struct(*elem);
-            if (hash->do_stats) {
-                INCR_NR_CACHELINE(&cstats, ncachelines_written, sizeof(*elem));
-            }
-
-            return true;
-        }
-
-        cuckoo_elem_t victim = *elem;
-
-        *elem = *item;
-        nvm_persist_struct(*elem);
-        if (hash->do_stats) {
-            INCR_NR_CACHELINE(&cstats, ncachelines_written, sizeof(*elem));
-        }
-
-        item->hash_item = victim.hash_item;
-        item->hash1     = victim.hash2;
-        item->hash2     = victim.hash1;
-        nvm_persist_struct(*item);
-        if (hash->do_stats) {
-            INCR_NR_CACHELINE(&cstats, ncachelines_written, sizeof(*item));
-        }
-    }
-
-    return undo_insert(hash, item, max_depth);
-}
-
-
-int
-cuckoo_hash_insert(struct cuckoo_hash *hash, paddr_t key, paddr_t value, 
-                   uint32_t index, uint32_t range)
-{
-    uint32_t h1, h2;
-    compute_hash(key, &h1, &h2);
-
-    struct cuckoo_hash_elem *elem = lookup(hash, key, h1, h2);
-    if (elem) {
+    int found = pmem_lookup(key, h1, h2);
+    if (found) {
         return 0;
     }
 
     struct cuckoo_hash_elem new_elem = {
-      .hash_item = { .key = key, .value = value, .index = index, .range = range },
+      .key = key,
       .hash1 = h1,
       .hash2 = h2
     };
 
-    if (insert(hash, &new_elem)) {
+    if (pmem_insert(&new_elem, 1, 0, paddr)) {
         return -1;
     }
 
-    assert(new_elem.hash_item.key == key);
-    assert(new_elem.hash_item.value == value);
-    assert(new_elem.hash_item.index == index);
-    assert(new_elem.hash_item.range == range);
-    assert(new_elem.hash1 == h1);
-    assert(new_elem.hash2 == h2);
+    // assert(new_elem.hash_item.key == key);
+    // assert(new_elem.hash_item.value == value);
+    // assert(new_elem.hash_item.index == index);
+    // assert(new_elem.hash_item.range == range);
+    // assert(new_elem.hash1 == h1);
+    // assert(new_elem.hash2 == h2);
 
     return -1;
 }

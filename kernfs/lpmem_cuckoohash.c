@@ -1,37 +1,9 @@
 #include <stdbool.h>
 #include "lpmem_cuckoohash.h"
 
-int cuckoohash_initialize(const idx_spec_t *idx_spec,
-                         idx_struct_t *idx_struct,
-                         paddr_t *location) {
-
-    if_then_panic(!idx_spec, "idx_spec cannot be null!");
-    if_then_panic(!idx_struct, "idx_struct cannot be null!");
-    if_then_panic(!location, "location ptr cannot be null!");
-
-    nvm_cuckoo_idx_t *ht = (nvm_cuckoo_idx_t*)idx_struct->idx_metadata;
-
-    if (ht) return -EEXIST;
-
-    idx_struct->idx_mem_man   = idx_spec->idx_mem_man;
-    idx_struct->idx_callbacks = idx_spec->idx_callbacks;
-    idx_struct->idx_fns       = &cuckoohash_fns;
-
-    device_info_t devinfo;
-    int ret = CB(idx_struct, cb_get_dev_info, &devinfo);
-
-    // Allocate space on device.
-
-    if (!*location) {
-        ssize_t nalloc = CB(idx_struct, cb_alloc_metadata, 1, location);
-
-        if_then_panic(nalloc < 1, "no room for metadata!");
-    }
-
-    ret = cuckoo_hash_init(&ht, *location, devinfo.di_size_blocks, idx_spec);
+int pmem_cuckoohash_initialize() {
+    ret = cuckoo_hash_init();
     if_then_panic(ret, "could not allocate hash table");
-
-    idx_struct->idx_metadata = (void*)ht;
 
     return 0;
 }
@@ -39,55 +11,37 @@ int cuckoohash_initialize(const idx_spec_t *idx_spec,
 // if not exists, then the value was not already in the table, therefore
 // success.
 // returns 1 on success, 0 if key already existed
-ssize_t cuckoohash_create(idx_struct_t *idx_struct, inum_t inum,
-                         laddr_t laddr, size_t size, paddr_t *paddr) {
-    CUCKOOHASH(idx_struct, ht);
+ssize_t pmem_cuckoohash_create(inum_t inum, paddr_t lblk, paddr_t *paddr) {
+    
+  
+    hash_key_t k = MAKEKEY(inum, lblk);
+    // Index: how many more logical blocks are contiguous before this one?
+    int err = cuckoo_hash_insert(ht, k, paddr);
 
-    ssize_t nalloc = CB(idx_struct, cb_alloc_data, size, paddr);
-
-    if (nalloc < 0) {
-        return -EINVAL;
-    } else if (nalloc == 0) {
-        return -ENOMEM;
+    if (!err) {
+        *paddr = 0;
+        return -EEXIST;
     }
+    
 
-    for (size_t blkno = 0; blkno < nalloc; ++blkno) {
-        hash_key_t k = MAKEKEY(inum, laddr + blkno);
-        // Range: how many more logical blocks are contiguous after this one?
-        uint32_t range = (uint32_t)(nalloc - blkno);
-        // Index: how many more logical blocks are contiguous before this one?
-        uint32_t index = (uint32_t)blkno;
-        int err = cuckoo_hash_insert(ht, k, (*paddr) + blkno, index, range);
+    // if (ht->do_stats) {
+    //     INCR_STAT(&cstats, nwrites);
+    //     ADD_STAT(&cstats, nblocks_inserted, nalloc);
+    // }
 
-        if (!err) {
-            ssize_t dealloc = CB(idx_struct, cb_dealloc_data, nalloc, *paddr);
-            if_then_panic(nalloc != dealloc, "could not free data blocks!\n");
-            *paddr = 0;
-            return -EEXIST;
-        }
-    }
-
-    if (ht->do_stats) {
-        INCR_STAT(&cstats, nwrites);
-        ADD_STAT(&cstats, nblocks_inserted, nalloc);
-    }
-
-    return nalloc;
+    return 1;
 }
 
 /*
  * Returns 0 if found, or -errno otherwise.
  */
-ssize_t cuckoohash_lookup(idx_struct_t *idx_struct, inum_t inum,
-                         laddr_t laddr, size_t max, paddr_t* paddr) {
-    CUCKOOHASH(idx_struct, ht);
+ssize_t pmem_cuckoohash_lookup(inum_t inum, paddr_t lblk, paddr_t* paddr) {
 
-    hash_key_t k = MAKEKEY(inum, laddr);
-    uint32_t size;
-    int err = cuckoo_hash_lookup(ht, k, paddr, &size);
+    hash_key_t k = MAKEKEY(inum, lblk);
+    int err = cuckoo_hash_lookup(ht, k, paddr);
     if (err) return err;
 
-    if (*paddr != 0) return (ssize_t)size;
+    if (*paddr != 0) return 1;
 
     return -ENOENT;
 }
@@ -96,51 +50,19 @@ ssize_t cuckoohash_lookup(idx_struct_t *idx_struct, inum_t inum,
  * Returns FALSE if the requested logical block was not present in any of the
  * two hash tables.
  */
-ssize_t cuckoohash_remove(idx_struct_t *idx_struct, inum_t inum, laddr_t laddr,
-                         size_t size) {
-    CUCKOOHASH(idx_struct, ht);
-
+ssize_t pmem_cuckoohash_remove(inum_t inum, paddr_t lblk, size_t size) {
     if (size == 0) return -EINVAL;
 
     ssize_t ret = 0;
-    uint32_t smallest_idx = UINT32_MAX;
-    laddr_t smallest_lblk;
-    size_t new_size;
     laddr_t range_start;
-    for (laddr_t lblk = laddr; lblk < laddr + size; ++lblk) {
-        hash_key_t k = MAKEKEY(inum, lblk);
+    for (laddr_t i = laddr; i < laddr + size; ++i) {
+        hash_key_t k = MAKEKEY(inum, i);
         paddr_t removed;
-        uint32_t index, range;
-        int err = cuckoo_hash_remove(ht, k, &removed, &index, &range);
+        uint32_t index;
+        int err = cuckoo_hash_remove(k, &index);
         if (err) return err;
         if_then_panic(!range, "size was 0 on delete!");
-
-        if (lblk == laddr) {
-            // total size of the contiguous region
-            new_size = (index + range) - size;
-            range_start = laddr - index;
-        }
-
-        // Maintain the smallest index. After this loop, go back and amend
-        // previous entries to reduce range size.
-        if (index < smallest_idx) {
-            smallest_idx = index;
-            smallest_lblk = lblk;
-        }
-
-        ssize_t ndeleted = CB(idx_struct, cb_dealloc_data, 1, removed);
-        if_then_panic(ndeleted < 0, "error in dealloc!");
         ++ret;
-    }
-
-    if (new_size > 0) {
-        for (laddr_t lblk = range_start; lblk < smallest_lblk; ++lblk) {
-            hash_key_t k = MAKEKEY(inum, lblk);
-            size_t new_range = new_size - lblk;
-            if_then_panic(new_range == 0, "Cannot insert with size 0!");
-            int uerr = cuckoo_hash_update(ht, k, new_range);
-            if_then_panic(uerr, "could not update range size!\n");
-        }
     }
 
     if (ret <= 0) return -ENOENT;
@@ -150,7 +72,7 @@ ssize_t cuckoohash_remove(idx_struct_t *idx_struct, inum_t inum, laddr_t laddr,
     return ret;
 }
 
-int cuckoohash_set_caching(idx_struct_t *idx_struct, bool enable) {
+/*int cuckoohash_set_caching(idx_struct_t *idx_struct, bool enable) {
     return 0;
 }
 
@@ -205,4 +127,4 @@ idx_fns_t cuckoohash_fns = {
     .im_print_stats        = cuckoohash_print_stats,
     .im_print_global_stats = cuckoohash_print_global_stats,
     .im_clean_global_stats = cuckoohash_clean_global_stats
-};
+};*/

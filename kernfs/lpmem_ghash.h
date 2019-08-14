@@ -94,6 +94,7 @@ extern "C" {
 #define RANGE_MASK (~RANGE_BITS)
 #define RANGE_KEY(i, l) ( (((uint64_t)(i)) << 32) | ((l) & RANGE_MASK))
 
+#define MAKEKEY(inum, lblk) (((uint64_t)inum << 32) | lblk)
 #define HASH_IS_REAL(h_) ((h_) >= 2)
 
 //#define BLK_IDX(ht, x) (x % (ht->blksz / sizeof(hash_ent_t)))
@@ -206,25 +207,28 @@ void
 pmem_nvm_hash_table_close ();
 //void nvm_hash_table_destroy(nvm_hash_idx_t     *hash_table);
 
-int pmem_nvm_hash_table_insert(paddr_t         key,
+int pmem_nvm_hash_table_insert(inum_t         inum,
+                          paddr_t             lblk,
                           paddr_t         *index//,
                           //size_t          index,
                           //size_t          range
                           );
 
 // Used for truncate
-int pmem_nvm_hash_table_update(paddr_t         key,
+int pmem_nvm_hash_table_update(inum_t         inum,
+                          paddr_t              lblk,
                           size_t          new_range);
 
-int pmem_nvm_hash_table_remove(paddr_t         key,
+int pmem_nvm_hash_table_remove(inum_t         inum,
+                          paddr_t             lblk,
                           paddr_t        *value/*,
                           size_t         *nprevious,
                           size_t         *nblocks*/);
 
-int pmem_nvm_hash_table_lookup(paddr_t key,
+int pmem_nvm_hash_table_lookup(inum_t inum, paddr_t lblk,
     paddr_t *val/*, paddr_t *size, bool force*/);
 
-int pmem_nvm_hash_table_contains(paddr_t key);
+int pmem_nvm_hash_table_contains(inum_t inum, paddr_t lblk);
 
 unsigned pmem_nvm_hash_table_size();
 

@@ -12,6 +12,7 @@
 #include "cache_stats.h"
 #include "inode_hash.h"
 #include "lpmem_ghash.h"
+#include "lpmem_cuckoohash.h"
 /*
  * used by extent splitting.
  */
@@ -2805,32 +2806,41 @@ int mlfs_hashfs_get_blocks(handle_t *handle, struct inode *inode,
 			struct mlfs_map_blocks_arr *map_arr, int flags)
 {
     assert(map_arr->m_len <= 8 && "fs_get_blocks m_len > 8");
-    
+    struct super_block *sblk = sb[g_root_dev];
     //printf("retrieving %u blocks\nmap_arr: ", map_arr->m_len);
 	int create = flags & MLFS_GET_BLOCKS_CREATE_DATA;
 	int create2 = flags & MLFS_GET_BLOCKS_CREATE_META;
 	//printf("%s. Start: %u, End: %u\n", create ? "Insert" : "Lookup", map_arr->m_lblk, map_arr->m_lblk + map_arr->m_len);
 	for(size_t i = 0; i < map_arr->m_len; ++i) {
-		paddr_t key = (((paddr_t) (inode->inum)) << 32) + ((paddr_t) (map_arr->m_lblk + i));
-		//printf("Key: %u", key);
 		//paddr_t *index = (paddr_t*)malloc(sizeof(paddr_t));
 		paddr_t index;
 		if(create || create2) {
-			int success = pmem_nvm_hash_table_insert(key, &index);
+			int success = 0;
+			if(IDXAPI_IS_CUCKOOFS()) {
+				success = pmem_cuckoo_hash_insert(inode->inum, map_arr->m_lblk + i, &index);
+			}
+			else {
+				success = pmem_nvm_hash_table_insert(inode->inum, map_arr->m_lblk + i, &index);
+			}
 			if(!success) {
 				//block already existed, so this does nothing
 				printf("block already existed\n");
 				return i;
 			}
 		} else {
-			int found = pmem_nvm_hash_table_lookup(key, &index);
+			int found = 0;
+			if(IDXAPI_IS_CUCKOOFS()) {
+				found = pmem_cuckoo_hash_lookup(inode->inum, map_arr->m_lblk + i, &index);
+			}
+			else {
+				found = pmem_nvm_hash_table_lookup(inode->inum, map_arr->m_lblk + i, &index);
+			}
 			if(!found) {
 				//did not find the requested block
 				printf("block not found\n");
 				return i;
 			}	
 		}
-		struct super_block *sblk = sb[g_root_dev];
 		map_arr->m_pblk[i] = index + sblk->ondisk->datablock_start;
 		//printf(" pblk: %d\n", map_arr->m_pblk[i]);
 	}
@@ -2859,19 +2869,17 @@ int mlfs_ext_get_blocks(handle_t *handle, struct inode *inode,
 
 	if(IDXAPI_IS_HASHFS()) {
 		int create = flags & MLFS_GET_BLOCKS_CREATE_DATA;
-	
-		paddr_t key = (((paddr_t) (inode->inum)) << 32) + ((paddr_t) (map->m_lblk));
 		//paddr_t *index = (paddr_t*)malloc(sizeof(paddr_t));
 		paddr_t index;
 		if(create) {
-			int success = pmem_nvm_hash_table_insert(key, &index);
+			int success = pmem_nvm_hash_table_insert(inode->inum, map->m_lblk, &index);
 			if(!success) {
 				//block already existed, so this does nothing
 				printf("block already existed\n");
 			}
 		}
 		else {
-			int found = pmem_nvm_hash_table_lookup(key, &index);
+			int found = pmem_nvm_hash_table_lookup(inode->inum, map->m_lblk, &index);
 				if(!found) {
 				//did not find the requested block
 				printf("block not found\n");
@@ -3267,9 +3275,8 @@ int mlfs_ext_truncate(handle_t *handle, struct inode *inode,
 		printf("Start: %ld, End: %ld\n", start, end);
 		for(size_t i = start; i <= end; ++i) {
 			//remove
-			paddr_t key = (((paddr_t) (inode->inum)) << 32) + i;
 			paddr_t index;
-			int success = pmem_nvm_hash_table_remove(key, &index);
+			int success = pmem_nvm_hash_table_remove(inode->inum, i, &index);
 			if(!success) {
 			//	printf("block not found\n");
 			}
