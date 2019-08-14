@@ -94,7 +94,7 @@ extern pmem_nvm_cuckoo_stats_t cstats;
   Return 0 on success, -errno if initialization failed.
 */
 int
-pmem_cuckoo_hash_init(size_t max_entries);
+pmem_cuckoo_hash_init();
 
 
 /*
@@ -132,7 +132,7 @@ pmem_cuckoo_hash_count()
   dynamically.
 */
 int
-pmem_cuckoo_hash_insert(paddr_t key);
+pmem_cuckoo_hash_insert(paddr_t key, paddr_t *paddr);
 
 
 /*

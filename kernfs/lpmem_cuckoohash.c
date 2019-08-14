@@ -51,7 +51,6 @@ ssize_t pmem_cuckoohash_lookup(inum_t inum, paddr_t lblk, paddr_t* paddr) {
  * two hash tables.
  */
 ssize_t pmem_cuckoohash_remove(inum_t inum, paddr_t lblk) {
-    if (size == 0) return -EINVAL;
 
     ssize_t ret = 0;
     hash_key_t k = MAKEKEY(inum, lblk);
