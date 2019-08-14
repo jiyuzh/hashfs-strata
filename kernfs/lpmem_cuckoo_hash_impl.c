@@ -19,7 +19,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
-#include <immintrin.h>
 
 #include "lpmem_cuckoo_hash_impl.h"
 
@@ -130,7 +129,7 @@ bin_at(const struct cuckoo_hash *hash, uint32_t index)
 #endif
 
 void elem_at(uint32_t index, pmem_cuckoo_elem_t *ret) {
-    ret = pmem_cuckoo_vol->entries[index];
+    *ret = pmem_cuckoo_vol->entries[index];
 }
 
 static inline
@@ -200,7 +199,7 @@ pmem_cuckoo_hash_remove(paddr_t key, uint32_t *index)
     //set tombstone
     //FIX THIS
     CUCKOO_SET_TOMBSTONE(pmem_cuckoo_vol->entries[*index].key);
-    pmem_nvm_cuckoo_flush(&(pmem_cuckoo_vol->entries[index].key), sizeof(paddr_t));
+    pmem_nvm_cuckoo_flush(&(pmem_cuckoo_vol->entries[*index].key), sizeof(paddr_t));
 
     //make persistent
 

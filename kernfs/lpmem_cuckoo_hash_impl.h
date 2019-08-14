@@ -23,6 +23,7 @@
 
 #include <libpmem.h>
 #include <stdatomic.h>
+#include <immintrin.h>
 #include "fs.h"
 #include "storage/storage.h"
 #include "global/global.h"
@@ -43,6 +44,8 @@ extern "C" {
 //     uint32_t index;
 //     uint32_t range;
 // } pmem_cuckoo_item_t;
+
+extern uint8_t *dax_addr[];
 
 typedef struct pmem_cuckoo_hash_elem {
     paddr_t key;
