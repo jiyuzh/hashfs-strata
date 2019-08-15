@@ -3282,7 +3282,6 @@ int mlfs_ext_truncate(handle_t *handle, struct inode *inode,
 			}
 			else {
 				success = pmem_nvm_hash_table_remove(inode->inum, i, &index);
-
 			}
 			if(!success) {
 			//	printf("block not found\n");

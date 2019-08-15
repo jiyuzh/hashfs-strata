@@ -28,9 +28,6 @@ pmem_nvm_cuckoo_vol_t *pmem_cuckoo_vol = NULL;
 
 #define CUCKOO_SET_EMPTY(x) (x = (paddr_t) ~0)
 #define CUCKOO_IS_EMPTY(x) (x == (paddr_t) ~0)
-#define CUCKOO_SET_TOMBSTONE(x) (x = ((paddr_t) ~0) - 1)
-#define CUCKOO_IS_TOMBSTONE(x) (x == ((paddr_t) ~0) - 1)
-#define CUCKOO_IS_VALID(x) (!CUCKOO_IS_EMPTY(x) && !CUCKOO_IS_TOMBSTONE(x))
 
 static inline
 void
@@ -190,14 +187,14 @@ int
 pmem_cuckoo_hash_remove(paddr_t key, uint32_t *index)
 {
     uint32_t h1, h2;
-    compute_hash(key, &h1, &h2);
+    pmem_compute_hash(key, &h1, &h2);
 
     *index = pmem_lookup(key, h1, h2);
     if (!(*index)) return -ENOENT;
 
     //set tombstone
     //FIX THIS
-    CUCKOO_SET_TOMBSTONE(pmem_cuckoo_vol->entries[*index].key);
+    CUCKOO_SET_EMPTY(pmem_cuckoo_vol->entries[*index].key);
     pmem_nvm_cuckoo_flush(&(pmem_cuckoo_vol->entries[*index].key), sizeof(paddr_t));
 
     //make persistent
@@ -282,21 +279,26 @@ pmem_insert(pmem_cuckoo_elem_t *item, int first, int which_hash, paddr_t *paddr)
         if(which_hash != 2) { //curr = 1 or either
             elem_at(h1m, &elem);
             
-            if (!CUCKOO_IS_VALID(elem.key)) {
+            if (CUCKOO_IS_EMPTY(elem.key)) {
                 int success = pmem_cuckoo_insert_node(item, h1m);
                 // *elem = *item;
                 // nvm_persist_struct(*elem);
                 // if (hash->do_stats) {
                 //     INCR_NR_CACHELINE(&cstats, ncachelines_written, sizeof(*elem));
                 // }
+                if(unlikely(depth == 0)) {
+                    *paddr = index + pmem_cuckoo->meta.meta_size;
+                }
                 if(success) return 1;
             }
         }
         if(which_hash != 1) { //which_hash = 2 or either
             elem_at(h2m, &elem);
-            if(!CUCKOO_IS_VALID(elem.key)) {
+            if(CUCKOO_IS_EMPTY(elem.key)) {
                 int success = pmem_cuckoo_insert_node(item, h2m);
-
+                if(unlikely(depth == 0)) {
+                    *paddr = index + pmem_cuckoo->meta.meta_size;
+                }
                 if(success) return 1;
             }
         }
@@ -304,7 +306,7 @@ pmem_insert(pmem_cuckoo_elem_t *item, int first, int which_hash, paddr_t *paddr)
         uint32_t index = which_hash == 1 ? h1m : h2m;
         pmem_cuckoo_insert_node(item, index);
         if(unlikely(depth == 0)) {
-            *paddr = index;
+            *paddr = index + pmem_cuckoo->meta.meta_size;
         }
         if(victim.hash1 % mod == index) {
             which_hash = 2;
