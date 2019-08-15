@@ -205,8 +205,8 @@ static void *worker_thread(void *arg) {
 	    //size_t half = (block_num / 2) * block_size;
 	    size_t half = 0;
 	    printf("half: %ld\n", half/block_size);
-	    assert(ftruncate(fd, half) == 0 && "truncate failed");
-	    assert(ftruncate(fd_c, half) == 0 && "truncate_c failed");
+	    //assert(ftruncate(fd, half) == 0 && "truncate failed");
+	    //assert(ftruncate(fd_c, half) == 0 && "truncate_c failed");
 	    
             assert(fstat(fd, &file_stat) == 0 && "fstat failed");
             assert(fstat(fd_c, &file_stat_c) == 0 && "fstat_c failed");

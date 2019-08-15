@@ -2242,7 +2242,7 @@ void init_fs(void)
 	if(IDXAPI_IS_HASHFS()) {
 		struct super_block *sblk = sb[g_root_dev];
 		printf("getchar\n");
-		// getchar();
+		getchar();
 		if(IDXAPI_IS_CUCKOOFS()) {
 			pmem_cuckoohash_initialize(sblk->ondisk);
 		}
