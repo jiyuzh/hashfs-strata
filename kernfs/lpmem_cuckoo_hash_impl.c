@@ -64,10 +64,9 @@ static void pmem_nvm_cuckoo_flush(void* start, void* len) {
 }
 
 int
-pmem_cuckoo_hash_init()
+pmem_cuckoo_hash_init(struct disk_superblock *sblk)
 {
     printf("inside cuckoo_new\n");
-    struct disk_superblock *sblk = sb[g_root_dev]->ondisk;
     pmem_cuckoo = dax_addr[g_root_dev] + (sblk->datablock_start * g_block_size_bytes);
 
     // Read metadata to see if it exists or not.
@@ -112,7 +111,7 @@ pmem_cuckoo_hash_destroy()
 }
 
 void
-pmem_cuckoo_close()
+pmem_cuckoo_hash_close()
 {
     free(pmem_cuckoo_vol);
 }

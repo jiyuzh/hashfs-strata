@@ -1,13 +1,16 @@
 #include <stdbool.h>
 #include "lpmem_cuckoohash.h"
 
-int pmem_cuckoohash_initialize() {
-    int ret = pmem_cuckoo_hash_init();
+int pmem_cuckoohash_initialize(struct disk_superblock *sblk) {
+    int ret = pmem_cuckoo_hash_init(sblk);
     if_then_panic(ret, "could not allocate hash table");
 
     return 0;
 }
 
+void pmem_cuckoohash_close() {
+    pmem_cuckoo_hash_close();
+}
 // if not exists, then the value was not already in the table, therefore
 // success.
 // returns 1 on success, 0 if key already existed

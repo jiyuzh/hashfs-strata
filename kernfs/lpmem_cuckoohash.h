@@ -24,13 +24,15 @@ typedef paddr_t hash_key_t;
 
 
 
-int pmem_cuckoohash_initialize();
+int pmem_cuckoohash_initialize(struct disk_superblock *sblk);
 
 ssize_t pmem_cuckoohash_create(inum_t inum, paddr_t lblk, paddr_t *new_paddr);
 
 ssize_t pmem_cuckoohash_lookup(inum_t inum, paddr_t lblk, paddr_t* paddr);
 
 ssize_t pmem_cuckoohash_remove(inum_t inum, paddr_t lblk);
+
+void pmem_cuckoohash_close();
 
 // int cuckoohash_set_caching(idx_struct_t *idx_struct, bool enable);
 // int cuckoohash_set_locking(idx_struct_t *idx_struct, bool enable);

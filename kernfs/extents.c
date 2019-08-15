@@ -2817,7 +2817,7 @@ int mlfs_hashfs_get_blocks(handle_t *handle, struct inode *inode,
 		if(create || create2) {
 			int success = 0;
 			if(IDXAPI_IS_CUCKOOFS()) {
-				success = pmem_cuckoo_hash_insert(inode->inum, map_arr->m_lblk + i, &index);
+				success = pmem_cuckoohash_create(inode->inum, map_arr->m_lblk + i, &index);
 			}
 			else {
 				success = pmem_nvm_hash_table_insert(inode->inum, map_arr->m_lblk + i, &index);
@@ -2830,7 +2830,7 @@ int mlfs_hashfs_get_blocks(handle_t *handle, struct inode *inode,
 		} else {
 			int found = 0;
 			if(IDXAPI_IS_CUCKOOFS()) {
-				found = pmem_cuckoo_hash_lookup(inode->inum, map_arr->m_lblk + i, &index);
+				found = pmem_cuckoohash_lookup(inode->inum, map_arr->m_lblk + i, &index);
 			}
 			else {
 				found = pmem_nvm_hash_table_lookup(inode->inum, map_arr->m_lblk + i, &index);
@@ -3276,7 +3276,14 @@ int mlfs_ext_truncate(handle_t *handle, struct inode *inode,
 		for(size_t i = start; i <= end; ++i) {
 			//remove
 			paddr_t index;
-			int success = pmem_nvm_hash_table_remove(inode->inum, i, &index);
+			int success;
+			if(IDXAPI_IS_CUCKOOFS()) {
+				success = pmem_cuckoohash_remove(inode->inum, i, &index);
+			}
+			else {
+				success = pmem_nvm_hash_table_remove(inode->inum, i, &index);
+
+			}
 			if(!success) {
 			//	printf("block not found\n");
 			}

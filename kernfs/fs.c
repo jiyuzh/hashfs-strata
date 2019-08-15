@@ -23,6 +23,7 @@
 
 #include "inode_hash.h"
 #include "lpmem_ghash.h"
+#include "lpmem_cuckoohash.h"
 
 #define _min(a, b) ({\
 		__typeof__(a) _a = a;\
@@ -680,7 +681,7 @@ int digest_file(uint8_t from_dev, uint8_t to_dev, uint32_t file_inum,
 
 		mlfs_debug("inum %d, offset %lu len %u (dev %d:%lu) -> (dev %d:%lu)\n",
 				file_inode->inum, cur_offset, _len,
-				from_dev, blknr, to_dev, IDX_API_IS_HASHFS() ? map_arr.m_plbk[0] : map.m_pblk);
+				from_dev, blknr, to_dev, IDXAPI_IS_HASHFS() ? map_arr.m_plbk[0] : map.m_pblk);
 
 		nr_digested_blocks++;
 		cur_offset += _len;
@@ -2093,7 +2094,14 @@ static void wait_for_event(void)
 void shutdown_fs(void)
 {
 	printf("Finalize FS\n");
-	pmem_nvm_hash_table_close();
+	if(IDXAPI_IS_HASHFS()) {
+		if(IDXAPI_IS_CUCKOOFS()) {
+			pmem_cuckoohash_close();
+		}
+		else {
+			pmem_nvm_hash_table_close();
+		}
+	}
 	if (enable_perf_stats) {
 		show_kernfs_stats();
 		close(prof_fd);
@@ -2235,7 +2243,13 @@ void init_fs(void)
 		struct super_block *sblk = sb[g_root_dev];
 		printf("getchar\n");
 		// getchar();
-		pmem_nvm_hash_table_new(sblk->ondisk, NULL, sblk->ondisk->ndatablocks);
+		if(IDXAPI_IS_CUCKOOFS()) {
+			pmem_cuckoohash_initialize(sblk->ondisk);
+		}
+		else {
+			pmem_nvm_hash_table_new(sblk->ondisk, NULL);
+		}
+		
 	}
 
 	inode_version_table =

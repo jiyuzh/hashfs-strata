@@ -11,6 +11,7 @@
 #include "storage/storage.h"
 #include "mlfs/kerncompat.h"
 #include "filesystem/lpmem_ghash.h"
+#include "filesystem/lpmem_cuckoohash.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -301,7 +302,12 @@ int main(int argc, char *argv[])
 	wsect(1, buf);
 
 	if(IDXAPI_IS_HASHFS() && dev_id == g_root_dev) {
-		pmem_nvm_hash_table_new(&ondisk_sb, NULL, ondisk_sb.ndatablocks);
+		if(IDXAPI_IS_CUCKOOFS()) {
+			pmem_cuckoohash_initialize(&ondisk_sb);
+		}
+		else {
+			pmem_nvm_hash_table_new(&ondisk_sb, NULL);
+		}
 	}
 
 	// Create / directory
@@ -395,7 +401,12 @@ int main(int argc, char *argv[])
 		storage_hdd.commit(dev_id);
 
 	if(IDXAPI_IS_HASHFS() && dev_id == g_root_dev) {
-		pmem_nvm_hash_table_close();
+		if(IDXAPI_IS_CUCKOOFS()) {
+			pmem_cuckoohash_close();
+		}
+		else {
+			pmem_nvm_hash_table_close();
+		}	
 	}
 	exit(0);
 }
@@ -543,12 +554,16 @@ void iappend(uint8_t dev, uint32_t inum, void *xp, int n)
   					// if(ent_num_bytes % g_block_size_bytes != 0) {
     				// 	++ent_num_blocks_needed;
   					// }
-					addr_t key = ((addr_t)inum) << 32;
 					// addr_t hash = key;
 					// addr_t modded = hash % (ndb - ent_num_blocks_needed);
 					// addr_t pblk = modded + ent_num_blocks_needed;
 					addr_t index;
-					pmem_nvm_hash_table_insert(key, &index);
+					if(IDXAPI_IS_CUCKOOFS()) {
+						pmem_cuckoohash_create(inum, 0, &index);
+					}
+					else {
+						pmem_nvm_hash_table_insert(inum, 0, &index);
+					}
 					din.l1_addrs[fbn] = xint(index);
 				}
 				else {

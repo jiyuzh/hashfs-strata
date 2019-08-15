@@ -97,7 +97,7 @@ extern pmem_nvm_cuckoo_stats_t cstats;
   Return 0 on success, -errno if initialization failed.
 */
 int
-pmem_cuckoo_hash_init();
+pmem_cuckoo_hash_init(struct disk_superblock *sblk);
 
 
 /*
@@ -107,6 +107,9 @@ pmem_cuckoo_hash_init();
 */
 void
 pmem_cuckoo_hash_destroy();
+
+void
+pmem_cuckoo_hash_close();
 
 
 /*
