@@ -190,7 +190,7 @@ int
 pmem_cuckoo_hash_remove(paddr_t key, uint32_t *index)
 {
     uint32_t h1, h2;
-    compute_hash(key, &h1, &h2);
+    pmem_compute_hash(key, &h1, &h2);
 
     *index = pmem_lookup(key, h1, h2);
     if (!(*index)) return -ENOENT;
@@ -340,7 +340,7 @@ pmem_insert(pmem_cuckoo_elem_t *item, int first, int which_hash, paddr_t *paddr)
 
 
 int
-cuckoo_hash_insert(paddr_t key, paddr_t *paddr)
+pmem_cuckoo_hash_insert(paddr_t key, paddr_t *paddr)
 {
     uint32_t h1, h2;
     pmem_compute_hash(key, &h1, &h2);

@@ -3270,6 +3270,7 @@ int mlfs_ext_truncate(handle_t *handle, struct inode *inode,
 		mlfs_lblk_t start, mlfs_lblk_t end)
 {
 
+	printf("HELLO WORLD\n");
 	if(IDXAPI_IS_HASHFS()) {
 		size_t rc = 0;
 		printf("Start: %ld, End: %ld\n", start, end);
