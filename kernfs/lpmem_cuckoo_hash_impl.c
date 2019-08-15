@@ -251,13 +251,13 @@ static int
 pmem_cuckoo_insert_node(pmem_cuckoo_elem_t *item, uint32_t index) {
     int nretries = 0;
     while(1) {
-        uint32_t status = _xbegin();
-        if(status == _XBEGIN_STARTED) {
+        // uint32_t status = _xbegin();
+        // if(status == _XBEGIN_STARTED) {
             pmem_cuckoo_vol->entries[index] = *item;
-            _xend();
+           //  _xend();
             pmem_nvm_cuckoo_flush(pmem_cuckoo_vol->entries + index, sizeof(pmem_cuckoo_elem_t));
             return 1;
-        } 
+        // } 
         if(++nretries > 10000) {
             panic("could not initiate transaction in cuckoo insert!\n");
         }

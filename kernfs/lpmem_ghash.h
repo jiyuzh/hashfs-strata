@@ -215,8 +215,7 @@ int pmem_nvm_hash_table_insert(inum_t         inum,
                           );
 
 // Used for truncate
-int pmem_nvm_hash_table_update(inum_t         inum,
-                          paddr_t              lblk,
+int pmem_nvm_hash_table_update(paddr_t         key,
                           size_t          new_range);
 
 int pmem_nvm_hash_table_remove(inum_t         inum,

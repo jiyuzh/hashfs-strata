@@ -49,6 +49,7 @@ class FileBenchRunner(BenchRunner):
         workloads = []
         for pattern in self.args.workloads:
             pattern_path = str(filebench_path / pattern)
+            print(pattern_path)
             matches = glob.glob(pattern_path, recursive=True)
             if len(matches) == 0:
                 warn('Pattern "{}" resulted in no workload file matches'.format(

@@ -1026,7 +1026,7 @@ int pmem_nvm_hash_table_lookup(inum_t inum, paddr_t lblk,
       node_index = nvm_hash_table_lookup_node(hash_table, key, &ent, &hash_return, force);
   }
 #else
-  paddr_t key = MAKEKEY(inum, lblk)
+  paddr_t key = MAKEKEY(inum, lblk);
   node_index = pmem_nvm_hash_table_lookup_node(key, &ent, &hash_return/*,force*/);
 #endif
 
