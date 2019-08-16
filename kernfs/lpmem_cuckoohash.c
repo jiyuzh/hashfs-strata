@@ -23,7 +23,7 @@ ssize_t pmem_cuckoohash_create(inum_t inum, paddr_t lblk, paddr_t *paddr) {
 	printf("%ul\n", *paddr);
     if (!err) {
         *paddr = 0;
-        return -EEXIST;
+        return 0;
     }
     
 
@@ -46,7 +46,7 @@ ssize_t pmem_cuckoohash_lookup(inum_t inum, paddr_t lblk, paddr_t* paddr) {
 
     if (*paddr != 0) return 1;
 
-    return -ENOENT;
+    return 0;
 }
 
 /*

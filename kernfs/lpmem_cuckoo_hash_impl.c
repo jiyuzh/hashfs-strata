@@ -349,7 +349,7 @@ pmem_cuckoo_hash_insert(paddr_t key, paddr_t *paddr)
 
     int found = pmem_lookup(key, h1, h2);
     if (found) {
-        return found;
+        return 0;
     }
 
     pmem_cuckoo_elem_t new_elem = {
