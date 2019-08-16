@@ -58,6 +58,8 @@ uint32_t get_unit(char c) {
     }
 }
 int main(int argc, char **argv) {
+    printf("getchar\n");
+    getchar();
     int c;
     srand(time(NULL));
     while ((c = getopt(argc, argv, OPTSTRING)) != -1) {
@@ -119,6 +121,7 @@ int main(int argc, char **argv) {
         fd_v[i] = open(filename_v[i], O_RDWR);
         if (fd_v[i] == -1) {
             perror("open failed");
+	    printf("filename: %s\n", filename_v[i]);
             exit(-1);
         }
     }

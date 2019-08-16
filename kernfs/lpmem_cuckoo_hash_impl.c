@@ -287,7 +287,7 @@ pmem_insert(pmem_cuckoo_elem_t *item, int first, int which_hash, paddr_t *paddr)
                 //     INCR_NR_CACHELINE(&cstats, ncachelines_written, sizeof(*elem));
                 // }
                 if(unlikely(depth == 0)) {
-                    *paddr = index + pmem_cuckoo->meta.meta_size;
+                    *paddr = h1m + pmem_cuckoo->meta.meta_size;
                 }
                 if(success) return 1;
             }
@@ -297,7 +297,7 @@ pmem_insert(pmem_cuckoo_elem_t *item, int first, int which_hash, paddr_t *paddr)
             if(CUCKOO_IS_EMPTY(elem.key)) {
                 int success = pmem_cuckoo_insert_node(item, h2m);
                 if(unlikely(depth == 0)) {
-                    *paddr = index + pmem_cuckoo->meta.meta_size;
+                    *paddr = h2m + pmem_cuckoo->meta.meta_size;
                 }
                 if(success) return 1;
             }
@@ -349,7 +349,7 @@ pmem_cuckoo_hash_insert(paddr_t key, paddr_t *paddr)
 
     int found = pmem_lookup(key, h1, h2);
     if (found) {
-        return 0;
+        return found;
     }
 
     pmem_cuckoo_elem_t new_elem = {

@@ -143,7 +143,7 @@ int main(int argc, char **argv) {
         snprintf(filename_v_c[i], MAX_FILE_NAME_LEN, "/tmp/MTCC-%d", i);
         fd_v_c[i] = open(filename_v_c[i], O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd_v_c[i] == -1) {
-            perror("open failed");
+            perror("open failed (correct)");
             exit(-1);
         }
         // init each file with read_unit data
@@ -205,8 +205,8 @@ static void *worker_thread(void *arg) {
 	    //size_t half = (block_num / 2) * block_size;
 	    size_t half = 0;
 	    printf("half: %ld\n", half/block_size);
-	    //assert(ftruncate(fd, half) == 0 && "truncate failed");
-	    //assert(ftruncate(fd_c, half) == 0 && "truncate_c failed");
+	    assert(ftruncate(fd, half) == 0 && "truncate failed");
+	    assert(ftruncate(fd_c, half) == 0 && "truncate_c failed");
 	    
             assert(fstat(fd, &file_stat) == 0 && "fstat failed");
             assert(fstat(fd_c, &file_stat_c) == 0 && "fstat_c failed");

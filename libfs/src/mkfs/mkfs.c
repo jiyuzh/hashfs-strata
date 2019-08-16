@@ -559,6 +559,7 @@ void iappend(uint8_t dev, uint32_t inum, void *xp, int n)
 					// addr_t pblk = modded + ent_num_blocks_needed;
 					addr_t index;
 					if(IDXAPI_IS_CUCKOOFS()) {
+						//getchar();
 						pmem_cuckoohash_create(inum, 0, &index);
 					}
 					else {

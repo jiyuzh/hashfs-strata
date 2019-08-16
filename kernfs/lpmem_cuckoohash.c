@@ -16,11 +16,11 @@ void pmem_cuckoohash_close() {
 // returns 1 on success, 0 if key already existed
 ssize_t pmem_cuckoohash_create(inum_t inum, paddr_t lblk, paddr_t *paddr) {
     
-  
+    printf("creating inum: %u, lblk %u at block ", inum, lblk); 
     hash_key_t k = MAKEKEY(inum, lblk);
     // Index: how many more logical blocks are contiguous before this one?
     int err = pmem_cuckoo_hash_insert(k, paddr);
-
+	printf("%ul\n", *paddr);
     if (!err) {
         *paddr = 0;
         return -EEXIST;

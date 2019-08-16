@@ -128,10 +128,10 @@ class KernFSThread:
 
 class BenchRunner:
 
-    IDX_STRUCTS   = [ 'HASHFS', 'EXTENT_TREES', 'GLOBAL_HASH_TABLE',
+    IDX_STRUCTS   = [ 'CUCKOOFS', 'HASHFS', 'EXTENT_TREES', 'GLOBAL_HASH_TABLE',
                       'LEVEL_HASH_TABLES', 'RADIX_TREES', 'NONE' ]
     IDX_DEFAULT   = [ 'EXTENT_TREES', 'GLOBAL_HASH_TABLE',
-                      'LEVEL_HASH_TABLES', 'RADIX_TREES', 'HASHFS', 'NONE']
+                      'LEVEL_HASH_TABLES', 'RADIX_TREES', 'HASHFS', 'CUCKOOFS', 'NONE']
     LAYOUT_SCORES = ['100', '90', '80', '70', '60']
 
     def __init__(self, args):
