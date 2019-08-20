@@ -2813,10 +2813,10 @@ int mlfs_hashfs_get_blocks(handle_t *handle, struct inode *inode,
 	//printf("%s. Start: %u, End: %u\n", create ? "Insert" : "Lookup", map_arr->m_lblk, map_arr->m_lblk + map_arr->m_len);
 	int success = 0;
 	if(create || create2) {
-		success = pmem_nvm_hash_table_insert_simd64(inode->inum, map_arr->m_lblk, map_arr->m_pblk);
+		success = pmem_nvm_hash_table_insert_simd64(inode->inum, map_arr->m_lblk, map_arr->m_len, map_arr->m_pblk);
 	}
 	else {
-		success = pmem_nvm_hash_table_lookup_simd64(inode->inum, map_arr->m_lblk, map_arr->m_pblk);
+		success = pmem_nvm_hash_table_lookup_simd64(inode->inum, map_arr->m_lblk, map_arr->m_len, map_arr->m_pblk);
 	}
 	return map_arr->m_len;
 	
