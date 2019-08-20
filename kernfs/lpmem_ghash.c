@@ -302,30 +302,29 @@ end:
   return node_index;
 }
 
-__m256i pmem_mod_simd32(__m256i *vals) {
+void pmem_mod_simd32(__m256i *vals, __m256i *ret) {
   __mmask8 oneMask = _cvtu32_mask8(~0);
-  __m256i mod = _mm256_maskz_set1_epi32 (__mmask8 oneMask, pmem_ht->mod); // set mod vector
-  __m256i quotient = _mm256_div_epi32 (vals, mod); //divide hash_values by mod (SVML)
-  __m256i mult_result = _mm512_mul_epu32 (quotient, mod); // multiply quotient by mod
-  return _mm256_mask_sub_epi32 (mult_result, oneMask, hash_values, mult_result); //subtract mult result from hash_values
+  __m256i mod_vec = _mm256_maskz_set1_epi32 (oneMask, pmem_ht->mod); // set mod vector
+  __m256i quotient = _mm256_div_epi32 (*vals, mod_vec); //divide hash_values by mod (SVML)
+  __m256i mult_result = _mm256_mask_mul_epu32 (quotient, oneMask, quotient, mod_vec); // multiply quotient by mod
+  *ret = _mm256_mask_sub_epi32 (mult_result, oneMask, *vals, mult_result); //subtract mult result from hash_values
   
 }
 
-void directHash_simd64(__m512 *keys, __m256i *node_indices) {
+void directHash_simd64(__m512i *keys, __m256i *node_indices) {
   __mmask8 oneMask = _cvtu32_mask8(~0); // ones
-  __256i hash_values = _mm512_cvtepi64_epi32(*keys); // direct hash with truncation to 32-bit
-  *node_indices = pmem_mod_simd32(&hash_values);
+  __m256i hash_values = _mm512_cvtepi64_epi32(*keys); // direct hash with truncation to 32-bit
+  pmem_mod_simd32(&hash_values, node_indices);
 }
 
-__m512i pmem_make_key_simd64(__m512i *inums, __m512i *lblks) {
+void pmem_make_key_simd64(__m512i *inums, __m512i *lblks, __m512i *keys) {
   __mmask8 zeroMask = _cvtu32_mask8(0); //zeros
-  __m512i keys = _mm512_mask_set1_epi64(*inums, zeroMask, 0); // keys = inums
-  keys = _mm512_rol_epi64(keys, 32); // rotate left 32 bits
-  keys = _mm512_and_epi64(keys, *lblks); // & with lblks
-  return keys;
+  *keys = _mm512_mask_set1_epi64(*inums, zeroMask, 0); // keys = inums
+  *keys = _mm512_rol_epi64(*keys, 32); // rotate left 32 bits
+  *keys = _mm512_and_epi64(*keys, *lblks); // & with lblks
 }
 
-void pmem_nvm_hash_table_lookup_node_simd64(__mm512i *keys, __mm256i *node_indices, __mmask8 *failure, __mmask8 searching) {
+void pmem_nvm_hash_table_lookup_node_simd64(__m512i *keys, __m256i *node_indices, __mmask8 *failure, __mmask8 searching) {
 
 #ifdef SEQ_STEP
   uint32_t step = 1;
@@ -339,7 +338,7 @@ void pmem_nvm_hash_table_lookup_node_simd64(__mm512i *keys, __mm256i *node_indic
   __m256i first_tombstone = _mm256_maskz_set1_epi32(oneMask, 0);
   __mmask8 found_tombstone = _cvtu32_mask8(0); // zeroes
   directHash_simd64(keys, node_indices);
-  __m512i cur = _mm512_mask_i32gather_epi64 (mod, oneMask, node_indices, (void const*)(pmem_ht_vol->entries), sizeof(paddr_t)*8);
+  __m512i cur = _mm512_mask_i32gather_epi64 (empty_val, oneMask, *node_indices, (void const*)(pmem_ht_vol->entries), sizeof(paddr_t)*8);
   
   // if it's zero, we're done
   failure = _cvtu32_mask8(0);
@@ -364,8 +363,8 @@ void pmem_nvm_hash_table_lookup_node_simd64(__mm512i *keys, __mm256i *node_indic
 #endif
     __m256i step_vec = _mm256_maskz_set1_epi32(oneMask, step);
     *node_indices = _mm256_mask_add_epi32(*node_indices, searching, *node_indices, step_vec);
-    *node_indices = pmem_mod_simd32(node_indices);
-    cur = _mm512_mask_i32gather_epi64 (cur, searching, node_indices, (void const*)(pmem_ht_vol->entries), sizeof(paddr_t)*8);
+    pmem_mod_simd32(node_indices, node_indices);
+    cur = _mm512_mask_i32gather_epi64 (cur, searching, *node_indices, (void const*)(pmem_ht_vol->entries), sizeof(paddr_t)*8);
 
   }
   
@@ -1116,13 +1115,14 @@ return success;
 }
 
 static inline int 
-pmem_nvm_hash_table_lookup_internal_simd64(__m512i *inums, __m512i *lblks, __mm256i *val, __mmask8 to_find) {
+pmem_nvm_hash_table_lookup_internal_simd64(__m512i *inums, __m512i *lblks, __m256i *val, __mmask8 to_find) {
     //create keys vector
   __mmask8 zeroMask = _cvtu32_mask8(0); //zeros
   __mmask8 failure = _cvtu32_mask8(0);
-  val = _mm256_maskz_set1_epi32 (zeroMask, 0);
-  __m512i keys = pmem_make_key_simd64(inums, lblks);
-  pmem_nvm_hash_table_lookup_node_simd64(&keys, &val, &failure, to_find);
+  *val = _mm256_maskz_set1_epi32 (zeroMask, 0);
+  __m512i keys;
+  pmem_make_key_simd64(inums, lblks, &keys);
+  pmem_nvm_hash_table_lookup_node_simd64(&keys, val, &failure, to_find);
   return _cvtmask8_u32(failure) == 0;
 }
 
@@ -1317,9 +1317,9 @@ void pmem_find_next_invalid_entry_simd64(__m256i *node_indices, uint32_t duplica
   __mmask8 searching = _cvtu32_mask8(duplicates);
   __m256i step_vec = _mm256_maskz_set1_epi32(oneMask, step);
   *node_indices = _mm256_mask_add_epi32(*node_indices, searching, *node_indices, step_vec);
-  *node_indices = pmem_mod_simd32(node_indices);
+  pmem_mod_simd32(node_indices, node_indices);
 
-  __m512i cur = _mm512_mask_i32gather_epi64 (mod, oneMask, node_indices, (void const*)(pmem_ht_vol->entries), sizeof(paddr_t)*8);
+  __m512i cur = _mm512_mask_i32gather_epi64 (empty_val, oneMask, *node_indices, (void const*)(pmem_ht_vol->entries), sizeof(paddr_t)*8);
   
   
 
@@ -1335,18 +1335,19 @@ void pmem_find_next_invalid_entry_simd64(__m256i *node_indices, uint32_t duplica
 #endif
     
     *node_indices = _mm256_mask_add_epi32(*node_indices, searching, *node_indices, step_vec);
-    *node_indices = pmem_mod_simd32(node_indices);
+    pmem_mod_simd32(node_indices, node_indices);
     cur = _mm512_mask_i32gather_epi64 (cur, searching, *node_indices, (void const*)(pmem_ht_vol->entries), sizeof(paddr_t)*8);
 
   }
 }
 
-static inline int pmem_nvm_hash_table_insert_internal_simd64(__m512i *inums, __m512i *lblks, __mm256i *indices, __mmask8 to_find) {
+static inline int pmem_nvm_hash_table_insert_internal_simd64(__m512i *inums, __m512i *lblks, __m256i *indices, __mmask8 to_find) {
     //create keys vector
   __mmask8 zeroMask = _cvtu32_mask8(0); //zeros
   __mmask8 oneMask = _cvtu32_mask8(~0);
   __mmask8 notFound = _cvtu32_mask8(0);
-  __m512i keys = pmem_make_key_simd64(inums, lblks);
+  __m512i keys;
+  pmem_make_key_simd64(inums, lblks, &keys);
   pmem_nvm_hash_table_lookup_node_simd64(&keys, &indices, &notFound, to_find);
   if(_cvtmask8_u32(notFound) != 255) {
     panic("tried to insert duplicate!");
@@ -1354,8 +1355,10 @@ static inline int pmem_nvm_hash_table_insert_internal_simd64(__m512i *inums, __m
   u256i_32 node_indices;
   node_indices.vec = _mm256_mask_mov_epi32(*indices, oneMask, *indices); //if(mask) node_indices else original
   uint32_t pOfTwo[8] = {1, 2, 4, 8, 16, 32, 64, 128};
+  
+  uint32_t duplicates_mask = 0;
   do {
-    uint32_t duplicates_mask = 0;
+    duplicates_mask = 0;
     for(uint32_t i = 0; i < 8; ++i) {
       for(uint32_t j = i; j < 8; ++j) {
         if(i != j && node_indices.arr[i] == node_indices.arr[j]) {
@@ -1370,7 +1373,7 @@ static inline int pmem_nvm_hash_table_insert_internal_simd64(__m512i *inums, __m
     //_cvtmask8_u32(searching) != 0
   } while(duplicates_mask != 0);
 
-  _mm512_mask_i32scatter_epi64(pmem_ht_vol->entries, oneMask, node_indices, keys, sizeof(paddr_t) * 8);
+  _mm512_mask_i32scatter_epi64(pmem_ht_vol->entries, oneMask, node_indices.vec, keys, sizeof(paddr_t) * 8);
 
   return true;
 
@@ -1494,7 +1497,8 @@ int pmem_nvm_hash_table_remove_internal_simd64(__m512i *inums, __m512i *lblks, _
   __mmask8 zeroMask = _cvtu32_mask8(0); //zeros
   __mmask8 failure = _cvtu32_mask8(0);
   __m256i node_indices = _mm256_maskz_set1_epi32 (zeroMask, 0);
-  __m512i keys = pmem_make_key_simd64(inums, lblks);
+  __m512i keys;
+  pmem_make_key_simd64(inums, lblks, &keys);
   pmem_nvm_hash_table_lookup_node_simd64(&keys, &node_indices, &failure, to_remove);
 
   __mmask8 to_tombstone = _knot_mask8(failure);
