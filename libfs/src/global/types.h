@@ -24,8 +24,8 @@ typedef UT_hash_handle	mlfs_hash_t;
 typedef uint32_t mlfs_lblk_t;
 typedef uint64_t mlfs_fsblk_t;
 
-typedef union {__m512i vec; paddr_t arr[8];} u512i_64;
-typedef union {__m256i vec; uin32_t arr[8];} u256i_32;
+typedef union {__m512i vec; uint64_t arr[8];} u512i_64;
+typedef union {__m256i vec; uint32_t arr[8];} u256i_32;
 
 #define LINUX_DT_UNKNOWN  0
 #define LINUX_DT_FIFO     1
