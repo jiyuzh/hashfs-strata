@@ -1336,12 +1336,12 @@ void pmem_find_next_invalid_entry_simd64(__m256i *node_indices, uint32_t duplica
     
     *node_indices = _mm256_mask_add_epi32(*node_indices, searching, *node_indices, step_vec);
     *node_indices = pmem_mod_simd32(node_indices);
-    cur = _mm512_mask_i32gather_epi64 (cur, searching, node_indices, (void const*)(pmem_ht_vol->entries), sizeof(paddr_t)*8);
+    cur = _mm512_mask_i32gather_epi64 (cur, searching, *node_indices, (void const*)(pmem_ht_vol->entries), sizeof(paddr_t)*8);
 
   }
 }
 
-static inline int pmem_nvm_hash_table_insert_internal_simd64(__m512i *inums, __m512i *lblks, _mm256i *indices, __mmask8 to_find) {
+static inline int pmem_nvm_hash_table_insert_internal_simd64(__m512i *inums, __m512i *lblks, __mm256i *indices, __mmask8 to_find) {
     //create keys vector
   __mmask8 zeroMask = _cvtu32_mask8(0); //zeros
   __mmask8 oneMask = _cvtu32_mask8(~0);
