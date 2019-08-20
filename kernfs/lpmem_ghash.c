@@ -44,8 +44,7 @@ uint64_t writes;
 uint64_t blocks;
 pmem_nvm_hash_idx_t *pmem_ht = NULL;
 pmem_nvm_hash_vol_t *pmem_ht_vol = NULL;
-typedef union {__m512i vec, paddr_t arr[8]} u512i_64;
-typedef union {__m256i vec, uin32_t arr[8]} u256i_32;
+
 #if 0
 #define pthread_rwlock_rdlock(x) 0
 #define pthread_rwlock_wrlock(x) 0
@@ -324,7 +323,7 @@ __m512i pmem_make_key_simd64(__m512i *inums, __m512i *lblks) {
   return keys;
 }
 
-void pmem_nvm_hash_table_lookup_node_simd64(__mm512i *keys, __mm256i *node_indices, __mmask8 *failure) {
+void pmem_nvm_hash_table_lookup_node_simd64(__mm512i *keys, __mm256i *node_indices, __mmask8 *failure, __mmask8 searching) {
 
 #ifdef SEQ_STEP
   uint32_t step = 1;
@@ -342,7 +341,6 @@ void pmem_nvm_hash_table_lookup_node_simd64(__mm512i *keys, __mm256i *node_indic
   
   // if it's zero, we're done
   failure = _cvtu32_mask8(0);
-  __mmask8 searching = _cvtu32_mask8(~0);
 
   while(_cvtmask8_u32(searching) != 0) {
     searching = _mm512_mask_cmpneq_epi64_mask(searching, *keys, cur); //0 if key == cur || searching = 0, 1 otherwise
@@ -1115,15 +1113,39 @@ return success;
   //pthread_rwlock_unlock(hash_table->locks + node_index);
 }
 
-int pmem_nvm_hash_table_lookup_simd64(__m512i *inums, __m512i *lblks, _mm256i *val) {
-  
-  //create keys vector
+static inline int 
+pmem_nvm_hash_table_lookup_internal_simd64(__m512i *inums, __m512i *lblks, __mm256i *val, __mmask8 to_find) {
+    //create keys vector
   __mmask8 zeroMask = _cvtu32_mask8(0); //zeros
   __mmask8 failure = _cvtu32_mask8(0);
   val = _mm256_maskz_set1_epi32 (zeroMask, 0);
   __m512i keys = pmem_make_key_simd64(inums, lblks);
-  pmem_nvm_hash_table_lookup_node_simd64(&keys, &val, &failure);
+  pmem_nvm_hash_table_lookup_node_simd64(&keys, &val, &failure, to_find);
   return _cvtmask8_u32(failure) == 0;
+}
+
+int pmem_nvm_hash_table_lookup_simd64(uint32_t inum, uint32_t lblk, uint32_t len, uint32_t *pblks) {
+  u512i_64 inum_vec;
+	u512i_64 lblk_vec;
+	uint32_t pOfTwo[8] = {1, 2, 4, 8, 16, 32, 64, 128};
+	uint32_t to_do = 0;
+	for(size_t i = 0; i < len; ++i) {
+		inum_vec.arr[i] = inum;
+		lblk_vec.arr[i] = lblk + i;
+		to_do |= pOfTwo[i];
+	}
+
+  __mmask8 to_find = _cvtu32_mask8(to_do);
+
+	u256i_32 indices;
+  int success = pmem_nvm_hash_table_lookup_internal_simd64(&(inum_vec.vec), &(lblk_vec.vec), &(indices.vec), to_find);
+  if(!success) {
+    return success;
+  }
+  for(size_t i = 0; i < len; ++i) {
+    pblks[i] = indices.arr[i];
+  }
+  return success;
 
 
 }
@@ -1317,20 +1339,19 @@ void pmem_find_next_invalid_entry_simd64(__m256i *node_indices, uint32_t duplica
   }
 }
 
-int pmem_nvm_hash_table_insert_simd64(__m512i *inums, __m512i *lblks, _mm256i *indices) {
+static inline int pmem_nvm_hash_table_insert_internal_simd64(__m512i *inums, __m512i *lblks, _mm256i *indices, __mmask8 to_find) {
     //create keys vector
   __mmask8 zeroMask = _cvtu32_mask8(0); //zeros
   __mmask8 oneMask = _cvtu32_mask8(~0);
   __mmask8 notFound = _cvtu32_mask8(0);
   __m512i keys = pmem_make_key_simd64(inums, lblks);
-  pmem_nvm_hash_table_lookup_node_simd64(&keys, &indices, &notFound);
+  pmem_nvm_hash_table_lookup_node_simd64(&keys, &indices, &notFound, to_find);
   if(_cvtmask8_u32(notFound) != 255) {
     panic("tried to insert duplicate!");
   }
   u256i_32 node_indices;
-  node_indices.vec = _mm256_mask_mov_epi32(*indices, oneMask, *indices) //if(mask) node_indices else original
-  if()
-  uint32_t pOfTwo = [1, 2, 4, 8, 16, 32, 64, 128];
+  node_indices.vec = _mm256_mask_mov_epi32(*indices, oneMask, *indices); //if(mask) node_indices else original
+  uint32_t pOfTwo[8] = {1, 2, 4, 8, 16, 32, 64, 128};
   do {
     uint32_t duplicates_mask = 0;
     for(uint32_t i = 0; i < 8; ++i) {
@@ -1349,12 +1370,33 @@ int pmem_nvm_hash_table_insert_simd64(__m512i *inums, __m512i *lblks, _mm256i *i
 
   _mm512_mask_i32scatter_epi64(pmem_ht_vol->entries, oneMask, node_indices, keys, sizeof(paddr_t) * 8);
 
-  
-
-  return _cvtmask8_u32(failure) == 0;
+  return true;
 
 }
 
+int pmem_nvm_hash_table_insert_simd64(uint32_t inum, uint32_t lblk, uint32_t len, uint32_t *pblks){
+  u512i_64 inum_vec;
+	u512i_64 lblk_vec;
+	uint32_t pOfTwo[8] = {1, 2, 4, 8, 16, 32, 64, 128};
+	uint32_t to_do = 0;
+	for(size_t i = 0; i < len; ++i) {
+		inum_vec.arr[i] = inum;
+		lblk_vec.arr[i] = lblk + i;
+		to_do |= pOfTwo[i];
+	}
+
+  __mmask8 to_find = _cvtu32_mask8(to_do);
+
+	u256i_32 indices;
+  int success = pmem_nvm_hash_table_insert_internal_simd64(&(inum_vec.vec), &(lblk_vec.vec), &(indices.vec), to_find);
+  if(!success) {
+    return success;
+  }
+  for(size_t i = 0; i < len; ++i) {
+    pblks[i] = indices.arr[i];
+  }
+  return success;
+}
 /*
  * nvm_hash_table_remove_internal:
  * @hash_table: our #nvm_hash_idx_t
@@ -1444,13 +1486,14 @@ pmem_nvm_hash_table_remove_internal (paddr_t         key,
   return 0;
 }
 
-int pmem_nvm_hash_table_remove_simd64(__m512i *inums, __m512i *lblks) {
+static inline
+int pmem_nvm_hash_table_remove_internal_simd64(__m512i *inums, __m512i *lblks, __mmask8 to_remove) {
   
   __mmask8 zeroMask = _cvtu32_mask8(0); //zeros
   __mmask8 failure = _cvtu32_mask8(0);
   __m256i node_indices = _mm256_maskz_set1_epi32 (zeroMask, 0);
   __m512i keys = pmem_make_key_simd64(inums, lblks);
-  pmem_nvm_hash_table_lookup_node_simd64(&keys, &node_indices, &failure);
+  pmem_nvm_hash_table_lookup_node_simd64(&keys, &node_indices, &failure, to_remove);
 
   __mmask8 to_tombstone = _knot_mask8(failure);
   __m512i tombstone_val = _mm512_set1_epi64(TOMBSTONE_VAL); //vector of tombstones for comparison
@@ -1459,6 +1502,29 @@ int pmem_nvm_hash_table_remove_simd64(__m512i *inums, __m512i *lblks) {
 
   return _cvtmask8_u32(failure) == 0;
 
+}
+
+int pmem_nvm_hash_table_remove_simd64(uint32_t inum, uint32_t lblk, uint32_t len){
+  u512i_64 inum_vec;
+	u512i_64 lblk_vec;
+	uint32_t pOfTwo[8] = {1, 2, 4, 8, 16, 32, 64, 128};
+	uint32_t to_do = 0;
+	for(size_t i = 0; i < len; ++i) {
+		inum_vec.arr[i] = inum;
+		lblk_vec.arr[i] = lblk + i;
+		to_do |= pOfTwo[i];
+	}
+
+  __mmask8 to_find = _cvtu32_mask8(to_do);
+
+  int success = pmem_nvm_hash_table_remove_internal_simd64(&(inum_vec.vec), &(lblk_vec.vec), to_find);
+  if(!success) {
+    return success;
+  }
+  for(size_t i = 0; i < len; ++i) {
+    pblks[i] = indices.arr[i];
+  }
+  return success;
 }
 
 /**
