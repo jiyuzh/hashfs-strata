@@ -44,6 +44,8 @@ uint64_t writes;
 uint64_t blocks;
 pmem_nvm_hash_idx_t *pmem_ht = NULL;
 pmem_nvm_hash_vol_t *pmem_ht_vol = NULL;
+typedef union {__m512i vec; uint64_t arr[8];} u512i_64;
+typedef union {__m256i vec; uint32_t arr[8];} u256i_32;
 
 #if 0
 #define pthread_rwlock_rdlock(x) 0
