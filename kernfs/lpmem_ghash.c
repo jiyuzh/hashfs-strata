@@ -1520,12 +1520,6 @@ int pmem_nvm_hash_table_remove_simd64(uint32_t inum, uint32_t lblk, uint32_t len
   __mmask8 to_find = _cvtu32_mask8(to_do);
 
   int success = pmem_nvm_hash_table_remove_internal_simd64(&(inum_vec.vec), &(lblk_vec.vec), to_find);
-  if(!success) {
-    return success;
-  }
-  for(size_t i = 0; i < len; ++i) {
-    pblks[i] = indices.arr[i];
-  }
   return success;
 }
 
