@@ -44,7 +44,8 @@ uint64_t writes;
 uint64_t blocks;
 pmem_nvm_hash_idx_t *pmem_ht = NULL;
 pmem_nvm_hash_vol_t *pmem_ht_vol = NULL;
-
+typedef union {__m512i vec, paddr_t arr[8]} u512i_64;
+typedef union {__m256i vec, uin32_t arr[8]} u256i_32;
 #if 0
 #define pthread_rwlock_rdlock(x) 0
 #define pthread_rwlock_wrlock(x) 0
@@ -300,7 +301,30 @@ end:
   return node_index;
 }
 
-__m512i pmem_nvm_hash_table_lookup_node_simd64(__mm512i *keys, __mm256i *node_indices, __mmask8 *failure) {
+__m256i pmem_mod_simd32(__m256i *vals) {
+  __mmask8 oneMask = _cvtu32_mask8(~0);
+  __m256i mod = _mm256_maskz_set1_epi32 (__mmask8 oneMask, pmem_ht->mod); // set mod vector
+  __m256i quotient = _mm256_div_epi32 (vals, mod); //divide hash_values by mod (SVML)
+  __m256i mult_result = _mm512_mul_epu32 (quotient, mod); // multiply quotient by mod
+  return _mm256_mask_sub_epi32 (mult_result, oneMask, hash_values, mult_result); //subtract mult result from hash_values
+  
+}
+
+void directHash_simd64(__m512 *keys, __m256i *node_indices) {
+  __mmask8 oneMask = _cvtu32_mask8(~0); // ones
+  __256i hash_values = _mm512_cvtepi64_epi32(*keys); // direct hash with truncation to 32-bit
+  *node_indices = pmem_mod_simd32(&hash_values);
+}
+
+__m512i pmem_make_key_simd64(__m512i *inums, __m512i *lblks) {
+  __mmask8 zeroMask = _cvtu32_mask8(0); //zeros
+  __m512i keys = _mm512_mask_set1_epi64(*inums, zeroMask, 0); // keys = inums
+  keys = _mm512_rol_epi64(keys, 32); // rotate left 32 bits
+  keys = _mm512_and_epi64(keys, *lblks); // & with lblks
+  return keys;
+}
+
+void pmem_nvm_hash_table_lookup_node_simd64(__mm512i *keys, __mm256i *node_indices, __mmask8 *failure) {
 
 #ifdef SEQ_STEP
   uint32_t step = 1;
@@ -309,20 +333,12 @@ __m512i pmem_nvm_hash_table_lookup_node_simd64(__mm512i *keys, __mm256i *node_in
 #endif
 
   __mmask8 oneMask = _cvtu32_mask8(~0); // ones
-  __m512i tombstone_val = _mm512_set1_epi64(((paddr_t)~0) - 1); //vector of tombstones for comparison
-  __m512i empty_val = _mm512_set1_epi64((paddr_t)~0);
+  __m512i tombstone_vec = _mm512_set1_epi64(TOMBSTONE_VAL); //vector of tombstones for comparison
+  __m512i empty_val = _mm512_set1_epi64(EMPTY_VAL);
   __m256i first_tombstone = _mm256_maskz_set1_epi32(oneMask, 0);
   __mmask8 found_tombstone = _cvtu32_mask8(0); // zeroes
-
-  // calculate hash, mod results by size of table
-  __256i hash_values = _mm512_cvtepi64_epi32(*keys); // direct hash with truncation to 32-bit
-  __m512i truncated_64 = _mm512_cvtepi32_epi64(hash_values); // convert back to 64 bit
-  __m512i mod = _mm512_set1_epi64 ((uint64_t) pmem_ht->mod); // set mod vector
-  __m512i mult_result = _mm512_mul_epu32 (truncated_64, mod); // multiply by mod
-  __m512i bit_shifted =  _mm512_ror_epi64(mult_result, 32); // bit shift right 32
-  *node_indices = _mm512_cvtepi64_epi32(bit_shifted); //convert back to 32 bit
-  
-  __m512i cur = _mm512_mask_i32gather_epi64 (mod, oneMask, node_indices, (void const*)(pmem_ht_vol->entries), sizeof(paddr_t));
+  directHash_simd64(keys, node_indices);
+  __m512i cur = _mm512_mask_i32gather_epi64 (mod, oneMask, node_indices, (void const*)(pmem_ht_vol->entries), sizeof(paddr_t)*8);
   
   // if it's zero, we're done
   failure = _cvtu32_mask8(0);
@@ -330,27 +346,26 @@ __m512i pmem_nvm_hash_table_lookup_node_simd64(__mm512i *keys, __mm256i *node_in
 
   while(_cvtmask8_u32(searching) != 0) {
     searching = _mm512_mask_cmpneq_epi64_mask(searching, *keys, cur); //0 if key == cur || searching = 0, 1 otherwise
-    __mmask8 seeking tombstone = _knot_mask8(found_tombstone);
-    __mmask8 is_tombstone = _mm512_mask_cmpeq_epi64_mask(searching, cur, tombstone_val); //1 if cur == tombstone and still searching
+    __mmask8 seeking_tombstone = _knot_mask8(found_tombstone);
+    __mmask8 is_tombstone = _mm512_mask_cmpeq_epi64_mask(searching, cur, tombstone_vec); //1 if cur == tombstone and still searching
     __mmask8 found_and_seeking = _kand_mask8(is_tombstone, seeking_tombstone); //1 if tombstone, seeking tombstone, still searching
-    first_tombstone = _mm512_mask_mov_epi64 (first_tombstone, found_and_seeking, cur);
-    found_tombstone = _kand_mask8(found_and_seeking, found_tombstone); //if already found or found this time, update found
-    
+    first_tombstone = _mm256_mask_mov_epi32(first_tombstone, found_and_seeking, *node_indices); //if(mask) node_indices else original
+    found_tombstone = _kor_mask8(found_and_seeking, found_tombstone); //if already found or found this time, update found
 
     __mmask8 is_empty = _mm512_mask_cmpeq_epi64_mask(searching, cur, empty_val); //1 if empty and searching, 0 otherwise
     failure = _kor_mask8(failure, is_empty);
-    __mmask8 nfound_t_and_empty = _kandn_mask8(found_tombstone, is_empty);
-    *node_indices = _mm512_mask_mov_epi64 (*node_indices, nfound_t_and_empty, cur);
     __mmask8 found_t_and_empty = _kand_mask8(is_empty, found_tombstone);
-    *node_indices = _mm512_mask_mov_epi64 (*node_indices, found_t_and_empty, first_tombstone);
+    *node_indices = _mm256_mask_mov_epi32 (*node_indices, found_t_and_empty, first_tombstone);
 
     searching = _kandn_mask8(is_empty, searching);
 
 #ifndef SEQ_STEP
     step++;
 #endif
-    __m512i step_vec = _mm512_set1_epi64((uint64_t) step);
-    *node_indices = _mm512_mask_add_epi64 (*node_indices, searching, *node_indices, step_vec);
+    __m256i step_vec = _mm256_maskz_set1_epi32(oneMask, step);
+    *node_indices = _mm256_mask_add_epi32(*node_indices, searching, *node_indices, step_vec);
+    *node_indices = pmem_mod_simd32(node_indices);
+    cur = _mm512_mask_i32gather_epi64 (cur, searching, node_indices, (void const*)(pmem_ht_vol->entries), sizeof(paddr_t)*8);
 
   }
   
@@ -1100,16 +1115,15 @@ return success;
   //pthread_rwlock_unlock(hash_table->locks + node_index);
 }
 
-int pmem_nvm_hash_table_lookup_simd64(__m512i *inums, __m512i *lblks, _mm512i *val) {
+int pmem_nvm_hash_table_lookup_simd64(__m512i *inums, __m512i *lblks, _mm256i *val) {
   
   //create keys vector
   __mmask8 zeroMask = _cvtu32_mask8(0); //zeros
-  __m512i keys = _mm512_mask_set1_epi64(*inums, zeroMask, 0); // keys = inums
-  keys = _mm512_rol_epi64(keys, 32); // rotate left 32 bits
-  keys = _mm512_and_epi64(keys, *lblks); // & with lblks
-
-  __m512i node_indices = pmem_nvm_hash_table_lookup_node_simd64(keys);
-
+  __mmask8 failure = _cvtu32_mask8(0);
+  val = _mm256_maskz_set1_epi32 (zeroMask, 0);
+  __m512i keys = pmem_make_key_simd64(inums, lblks);
+  pmem_nvm_hash_table_lookup_node_simd64(&keys, &val, &failure);
+  return _cvtmask8_u32(failure) == 0;
 
 
 }
@@ -1262,6 +1276,85 @@ pmem_nvm_hash_table_insert (inum_t     inum,
   return pmem_nvm_hash_table_insert_internal(key, index);//, index, size);
 }
 
+void pmem_find_next_invalid_entry_simd64(__m256i *node_indices, uint32_t duplicates) {
+  
+
+#ifdef SEQ_STEP
+  uint32_t step = 1;
+#else
+  panic("simd insert doesn't work with this!");
+  uint32_t step = 0;
+#endif
+
+  __mmask8 oneMask = _cvtu32_mask8(~0); // ones
+  __m512i tombstone_vec = _mm512_set1_epi64(TOMBSTONE_VAL); //vector of tombstones for comparison
+  __m512i empty_val = _mm512_set1_epi64(EMPTY_VAL);
+
+  __mmask8 searching = _cvtu32_mask8(duplicates);
+  __m256i step_vec = _mm256_maskz_set1_epi32(oneMask, step);
+  *node_indices = _mm256_mask_add_epi32(*node_indices, searching, *node_indices, step_vec);
+  *node_indices = pmem_mod_simd32(node_indices);
+
+  __m512i cur = _mm512_mask_i32gather_epi64 (mod, oneMask, node_indices, (void const*)(pmem_ht_vol->entries), sizeof(paddr_t)*8);
+  
+  
+
+  while(_cvtmask8_u32(searching) != 0) {
+    __mmask8 is_tombstone = _mm512_mask_cmpeq_epi64_mask(searching, cur, tombstone_vec); //1 if cur == tombstone and still searching
+    __mmask8 is_empty = _mm512_mask_cmpeq_epi64_mask(searching, cur, empty_val); //1 if empty and searching, 0 otherwise
+    __mmask8 tombstone_or_empty = _kand_mask8(is_empty, is_tombstone);
+
+    searching = _kandn_mask8(tombstone_or_empty, searching);
+
+#ifndef SEQ_STEP
+    step++;
+#endif
+    
+    *node_indices = _mm256_mask_add_epi32(*node_indices, searching, *node_indices, step_vec);
+    *node_indices = pmem_mod_simd32(node_indices);
+    cur = _mm512_mask_i32gather_epi64 (cur, searching, node_indices, (void const*)(pmem_ht_vol->entries), sizeof(paddr_t)*8);
+
+  }
+}
+
+int pmem_nvm_hash_table_insert_simd64(__m512i *inums, __m512i *lblks, _mm256i *indices) {
+    //create keys vector
+  __mmask8 zeroMask = _cvtu32_mask8(0); //zeros
+  __mmask8 oneMask = _cvtu32_mask8(~0);
+  __mmask8 notFound = _cvtu32_mask8(0);
+  __m512i keys = pmem_make_key_simd64(inums, lblks);
+  pmem_nvm_hash_table_lookup_node_simd64(&keys, &indices, &notFound);
+  if(_cvtmask8_u32(notFound) != 255) {
+    panic("tried to insert duplicate!");
+  }
+  u256i_32 node_indices;
+  node_indices.vec = _mm256_mask_mov_epi32(*indices, oneMask, *indices) //if(mask) node_indices else original
+  if()
+  uint32_t pOfTwo = [1, 2, 4, 8, 16, 32, 64, 128];
+  do {
+    uint32_t duplicates_mask = 0;
+    for(uint32_t i = 0; i < 8; ++i) {
+      for(uint32_t j = i; j < 8; ++j) {
+        if(i != j && node_indices.arr[i] == node_indices.arr[j]) {
+          duplicates_mask |= pOfTwo[j];
+        }
+      }
+    }
+    
+    if(duplicates_mask != 0) {
+      pmem_find_next_invalid_entry_simd64(&node_indices.vec, duplicates_mask);
+    }
+    //_cvtmask8_u32(searching) != 0
+  } while(duplicates_mask != 0);
+
+  _mm512_mask_i32scatter_epi64(pmem_ht_vol->entries, oneMask, node_indices, keys, sizeof(paddr_t) * 8);
+
+  
+
+  return _cvtmask8_u32(failure) == 0;
+
+}
+
 /*
  * nvm_hash_table_remove_internal:
  * @hash_table: our #nvm_hash_idx_t
@@ -1349,6 +1442,23 @@ pmem_nvm_hash_table_remove_internal (paddr_t         key,
   //cur = entries[node_index];
   *index = 0;
   return 0;
+}
+
+int pmem_nvm_hash_table_remove_simd64(__m512i *inums, __m512i *lblks) {
+  
+  __mmask8 zeroMask = _cvtu32_mask8(0); //zeros
+  __mmask8 failure = _cvtu32_mask8(0);
+  __m256i node_indices = _mm256_maskz_set1_epi32 (zeroMask, 0);
+  __m512i keys = pmem_make_key_simd64(inums, lblks);
+  pmem_nvm_hash_table_lookup_node_simd64(&keys, &node_indices, &failure);
+
+  __mmask8 to_tombstone = _knot_mask8(failure);
+  __m512i tombstone_val = _mm512_set1_epi64(TOMBSTONE_VAL); //vector of tombstones for comparison
+
+  _mm512_mask_i32scatter_epi64(pmem_ht_vol->entries, to_tombstone, node_indices, tombstone_val, sizeof(paddr_t) * 8);
+
+  return _cvtmask8_u32(failure) == 0;
+
 }
 
 /**

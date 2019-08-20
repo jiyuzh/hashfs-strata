@@ -67,6 +67,8 @@ extern "C" {
 // _Static_assert(16 % sizeof(hash_ent_t) == 0, "Entries cross block boundary!");
 
 #ifdef SIMPLE_ENTRIES
+#define TOMBSTONE_VAL ((paddr_t)~0) - 1
+#define EMPTY_VAL (paddr_t)~0
 #define HASH_ENT_IS_TOMBSTONE(x) (x == ((paddr_t)~0) - 1)
 #define HASH_ENT_IS_EMPTY(x) (x == (paddr_t)~0)
 #define HASH_ENT_IS_VALID(x) (!HASH_ENT_IS_EMPTY(x) && !HASH_ENT_IS_TOMBSTONE(x))
