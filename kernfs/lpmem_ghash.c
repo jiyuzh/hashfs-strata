@@ -1,4 +1,3 @@
-//finished new and lookup, insert, update, next is remove
 /* GLIB - Library of useful routines for C programming
  * Copyright (C) 1995-1997  Peter Mattis, Spencer Kimball and Josh MacDonald
  *
@@ -338,7 +337,7 @@ void pmem_nvm_hash_table_lookup_node_simd64(__m512i *keys, __m256i *node_indices
   __m256i first_tombstone = _mm256_maskz_set1_epi32(oneMask, 0);
   __mmask8 found_tombstone = _cvtu32_mask8(0); // zeroes
   directHash_simd64(keys, node_indices);
-  __m512i cur = _mm512_mask_i32gather_epi64 (empty_val, oneMask, *node_indices, (void const*)(pmem_ht_vol->entries), sizeof(paddr_t)*8);
+  __m512i cur = _mm512_mask_i32gather_epi64 (empty_val, oneMask, *node_indices, (void const*)(pmem_ht_vol->entries), 8);
   
   // if it's zero, we're done
   failure = _cvtu32_mask8(0);
@@ -364,7 +363,7 @@ void pmem_nvm_hash_table_lookup_node_simd64(__m512i *keys, __m256i *node_indices
     __m256i step_vec = _mm256_maskz_set1_epi32(oneMask, step);
     *node_indices = _mm256_mask_add_epi32(*node_indices, searching, *node_indices, step_vec);
     pmem_mod_simd32(node_indices, node_indices);
-    cur = _mm512_mask_i32gather_epi64 (cur, searching, *node_indices, (void const*)(pmem_ht_vol->entries), sizeof(paddr_t)*8);
+    cur = _mm512_mask_i32gather_epi64 (cur, searching, *node_indices, (void const*)(pmem_ht_vol->entries), 8);
 
   }
   
@@ -1319,7 +1318,7 @@ void pmem_find_next_invalid_entry_simd64(__m256i *node_indices, uint32_t duplica
   *node_indices = _mm256_mask_add_epi32(*node_indices, searching, *node_indices, step_vec);
   pmem_mod_simd32(node_indices, node_indices);
 
-  __m512i cur = _mm512_mask_i32gather_epi64 (empty_val, oneMask, *node_indices, (void const*)(pmem_ht_vol->entries), sizeof(paddr_t)*8);
+  __m512i cur = _mm512_mask_i32gather_epi64 (empty_val, oneMask, *node_indices, (void const*)(pmem_ht_vol->entries), 8);
   
   
 
@@ -1336,7 +1335,7 @@ void pmem_find_next_invalid_entry_simd64(__m256i *node_indices, uint32_t duplica
     
     *node_indices = _mm256_mask_add_epi32(*node_indices, searching, *node_indices, step_vec);
     pmem_mod_simd32(node_indices, node_indices);
-    cur = _mm512_mask_i32gather_epi64 (cur, searching, *node_indices, (void const*)(pmem_ht_vol->entries), sizeof(paddr_t)*8);
+    cur = _mm512_mask_i32gather_epi64 (cur, searching, *node_indices, (void const*)(pmem_ht_vol->entries), 8);
 
   }
 }
@@ -1348,7 +1347,7 @@ static inline int pmem_nvm_hash_table_insert_internal_simd64(__m512i *inums, __m
   __mmask8 notFound = _cvtu32_mask8(0);
   __m512i keys;
   pmem_make_key_simd64(inums, lblks, &keys);
-  pmem_nvm_hash_table_lookup_node_simd64(&keys, &indices, &notFound, to_find);
+  pmem_nvm_hash_table_lookup_node_simd64(&keys, indices, &notFound, to_find);
   if(_cvtmask8_u32(notFound) != 255) {
     panic("tried to insert duplicate!");
   }
@@ -1373,7 +1372,7 @@ static inline int pmem_nvm_hash_table_insert_internal_simd64(__m512i *inums, __m
     //_cvtmask8_u32(searching) != 0
   } while(duplicates_mask != 0);
 
-  _mm512_mask_i32scatter_epi64(pmem_ht_vol->entries, oneMask, node_indices.vec, keys, sizeof(paddr_t) * 8);
+  _mm512_mask_i32scatter_epi64(pmem_ht_vol->entries, oneMask, node_indices.vec, keys, 8);
 
   return true;
 
@@ -1504,7 +1503,7 @@ int pmem_nvm_hash_table_remove_internal_simd64(__m512i *inums, __m512i *lblks, _
   __mmask8 to_tombstone = _knot_mask8(failure);
   __m512i tombstone_val = _mm512_set1_epi64(TOMBSTONE_VAL); //vector of tombstones for comparison
 
-  _mm512_mask_i32scatter_epi64(pmem_ht_vol->entries, to_tombstone, node_indices, tombstone_val, sizeof(paddr_t) * 8);
+  _mm512_mask_i32scatter_epi64(pmem_ht_vol->entries, to_tombstone, node_indices, tombstone_val, 8);
 
   return _cvtmask8_u32(failure) == 0;
 
