@@ -318,7 +318,7 @@ void pmem_mod_simd32(__m256i *vals, __m256i *ret) {
 }
 
 void printVec_simd64(char* what, __m512i *vec) {
-    printf("%s ", what);
+    printf("%s: ", what);
     u512i_64 *temp = (u512i_64*)vec;
     for(size_t i = 0; i < 8; ++i) {
 	printf("%lu ", temp->arr[i]);
@@ -328,7 +328,7 @@ void printVec_simd64(char* what, __m512i *vec) {
 
 
 void printVec_simd32(char* what, __m256i *vec) {
-    printf("%s ", what);
+    printf("%s: ", what);
     u256i_32 *temp = (u256i_32*)vec;
     for(size_t i = 0; i < 8; ++i) {
 	printf("%lu ", temp->arr[i]);
@@ -337,12 +337,12 @@ void printVec_simd32(char* what, __m256i *vec) {
 }
 
 void printMask_simd8(char* what, __mmask8 *mask) {
-    printf("%s ", what);
-    int m = _cvtmask8_u32(*mask);
+    printf("%s: ", what);
+    uint32_t m = _cvtmask8_u32(*mask);
     int pOf2[8] = {1, 2, 4, 8, 16, 32, 64, 128};
     int i;
-    for(i = 0; i < 8; ++i); {
-	if(m & pOf2[i] == 0) {
+    for(i = 0; i < 8; ++i) {
+	if((m & pOf2[i]) == 0) {
 	    printf("0 ");
 	}
 	else {
@@ -360,10 +360,10 @@ void directHash_simd64(__m512i *keys, __m256i *node_indices) {
 }
 
 void pmem_make_key_simd64(__m512i *inums, __m512i *lblks, __m512i *keys) {
-  __mmask8 zeroMask = _cvtu32_mask8(0); //zeros
-  *keys = _mm512_mask_set1_epi64(*inums, zeroMask, 0); // keys = inums
+  __mmask8 oneMask = _cvtu32_mask8(~0); //zeros
+  *keys = _mm512_mask_mov_epi64(*inums, oneMask, *inums); // keys = inums
   *keys = _mm512_rol_epi64(*keys, 32); // rotate left 32 bits
-  *keys = _mm512_and_epi64(*keys, *lblks); // & with lblks
+  *keys = _mm512_or_epi64(*keys, *lblks); // & with lblks
 }
 
 void pmem_nvm_hash_table_lookup_node_simd64(__m512i *keys, __m256i *node_indices, __mmask8 *failure, __mmask8 searching) {
@@ -386,6 +386,7 @@ void pmem_nvm_hash_table_lookup_node_simd64(__m512i *keys, __m256i *node_indices
   *failure = _cvtu32_mask8(0);
 
   while(_cvtmask8_u32(searching) != 0) {
+    //printVec_simd64("cur", &cur);
     searching = _mm512_mask_cmpneq_epi64_mask(searching, *keys, cur); //0 if key == cur || searching = 0, 1 otherwise
     __mmask8 seeking_tombstone = _knot_mask8(found_tombstone);
     __mmask8 is_tombstone = _mm512_mask_cmpeq_epi64_mask(searching, cur, tombstone_vec); //1 if cur == tombstone and still searching
@@ -399,9 +400,9 @@ void pmem_nvm_hash_table_lookup_node_simd64(__m512i *keys, __m256i *node_indices
     *node_indices = _mm256_mask_mov_epi32 (*node_indices, found_t_and_empty, first_tombstone);
 
     searching = _kandn_mask8(is_empty, searching);
-    printVec_simd32("node_indices", node_indices);
-    printMask_simd8("searching", &searching);
-    printMask_simd8("failure", failure);
+    //printVec_simd32("node_indices", node_indices);
+    //printMask_simd8("searching", &searching);
+    //printMask_simd8("failure", failure);
 #ifndef SEQ_STEP
     step++;
 #endif
@@ -1392,9 +1393,10 @@ static inline int pmem_nvm_hash_table_insert_internal_simd64(__m512i *inums, __m
   __mmask8 notFound = _cvtu32_mask8(0);
   __m512i keys;
   pmem_make_key_simd64(inums, lblks, &keys);
+  //printVec_simd64("keys", &keys);
   pmem_nvm_hash_table_lookup_node_simd64(&keys, indices, &notFound, to_find);
-  if(_cvtmask8_u32(_knot_mask8(to_find, notFound)) == 0) {
-    panic("tried to insert duplicate!");
+  if(_cvtmask8_u32(_kxor_mask8(to_find, notFound)) != 0) {
+    return false;
   }
   u256i_32 node_indices;
   node_indices.vec = _mm256_mask_mov_epi32(*indices, oneMask, *indices); //if(mask) node_indices else original
@@ -1410,7 +1412,7 @@ static inline int pmem_nvm_hash_table_insert_internal_simd64(__m512i *inums, __m
         }
       }
     }
-    
+    duplicates_mask &= to_find; 
     if(duplicates_mask != 0) {
       pmem_find_next_invalid_entry_simd64(&node_indices.vec, duplicates_mask);
     }
@@ -1432,18 +1434,15 @@ int pmem_nvm_hash_table_insert_simd64(uint32_t inum, uint32_t lblk, uint32_t len
 		inum_vec.arr[i] = inum;
 		lblk_vec.arr[i] = lblk + i;
 		to_do |= pOfTwo[i];
+
 	}
-
   __mmask8 to_find = _cvtu32_mask8(to_do);
-
+	printMask_simd8("to_find", &to_find);
 	u256i_32 indices;
   int success = pmem_nvm_hash_table_insert_internal_simd64(&(inum_vec.vec), &(lblk_vec.vec), &(indices.vec), to_find);
-  if(!success) {
-    return success;
-  }
   for(size_t i = 0; i < len; ++i) {
     pblks[i] = indices.arr[i];
-    printf("INSERTED %d-%d in index %d", inum, lblk, indices.arr[i]);
+    printf("%d INSERTED %d-%d in index %d\n", success, inum, lblk, indices.arr[i]);
   }
   return success;
 }
