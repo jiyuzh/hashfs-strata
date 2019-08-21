@@ -1399,8 +1399,7 @@ static inline int pmem_nvm_hash_table_insert_internal_simd64(__m512i *inums, __m
   if(_cvtmask8_u32(_kxor_mask8(to_find, notFound)) != 0) {
     return false;
   }
-  u256i_32 node_indices;
-  node_indices.vec = _mm256_mask_mov_epi32(*indices, oneMask, *indices); //if(mask) node_indices else original
+  u256i_32 *node_indices = (u256i_32*) indices;
   uint32_t pOfTwo[8] = {1, 2, 4, 8, 16, 32, 64, 128};
   
   uint32_t duplicates_mask = 0;
@@ -1408,19 +1407,19 @@ static inline int pmem_nvm_hash_table_insert_internal_simd64(__m512i *inums, __m
     duplicates_mask = 0;
     for(uint32_t i = 0; i < 8; ++i) {
       for(uint32_t j = i; j < 8; ++j) {
-        if(i != j && node_indices.arr[i] == node_indices.arr[j]) {
+        if(i != j && node_indices->arr[i] == node_indices->arr[j]) {
           duplicates_mask |= pOfTwo[j];
         }
       }
     }
     duplicates_mask &= to_find; 
     if(duplicates_mask != 0) {
-      pmem_find_next_invalid_entry_simd64(&node_indices.vec, duplicates_mask);
+      pmem_find_next_invalid_entry_simd64(indices, duplicates_mask);
     }
     //_cvtmask8_u32(searching) != 0
   } while(duplicates_mask != 0);
-
-  _mm512_mask_i32scatter_epi64(pmem_ht_vol->entries, to_find, node_indices.vec, keys, 8);
+  printVec_simd32("to_insert", indices);
+  _mm512_mask_i32scatter_epi64(pmem_ht_vol->entries, to_find, *indices, keys, 8);
 
   return true;
 
