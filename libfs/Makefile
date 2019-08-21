@@ -8,7 +8,7 @@
 #CC=clang-3.8
 #CC=gcc
 CXX=g++ --std=c++11
-CC=gcc5 --std=gnu99
+CC=gcc --std=gnu99
 
 ########
 #  List of all modules' directories
@@ -69,7 +69,7 @@ endif
 	MLFS_FLAGS += -DINDEX_NAME=\"ext\ \"
 endif
 
-OPT_ARGS ?= -g -O3
+OPT_ARGS ?= -g -O0 -march=skylake-avx512 -mavx -mavx512f -mavx512vl -mavx512cd -mavx512bw -mavx512dq
 #######
 # Optimization definitions
 #######
