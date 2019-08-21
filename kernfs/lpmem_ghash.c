@@ -317,6 +317,42 @@ void pmem_mod_simd32(__m256i *vals, __m256i *ret) {
   
 }
 
+void printVec_simd64(char* what, __m512i *vec) {
+    printf("%s ", what);
+    u512i_64 *temp = (u512i_64*)vec;
+    for(size_t i = 0; i < 8; ++i) {
+	printf("%lu ", temp->arr[i]);
+    }
+    printf("\n");
+}
+
+
+void printVec_simd32(char* what, __m256i *vec) {
+    printf("%s ", what);
+    u256i_32 *temp = (u256i_32*)vec;
+    for(size_t i = 0; i < 8; ++i) {
+	printf("%lu ", temp->arr[i]);
+    }
+    printf("\n");
+}
+
+void printMask_simd8(char* what, __mmask8 *mask) {
+    printf("%s ", what);
+    int m = _cvtmask8_u32(*mask);
+    int pOf2[8] = {1, 2, 4, 8, 16, 32, 64, 128};
+    int i;
+    for(i = 0; i < 8; ++i); {
+	if(m & pOf2[i] == 0) {
+	    printf("0 ");
+	}
+	else {
+	    printf("1 ");
+	}
+    } 
+   printf("\n"); 
+
+}
+
 void directHash_simd64(__m512i *keys, __m256i *node_indices) {
   __mmask8 oneMask = _cvtu32_mask8(~0); // ones
   __m256i hash_values = _mm512_cvtepi64_epi32(*keys); // direct hash with truncation to 32-bit
@@ -363,7 +399,9 @@ void pmem_nvm_hash_table_lookup_node_simd64(__m512i *keys, __m256i *node_indices
     *node_indices = _mm256_mask_mov_epi32 (*node_indices, found_t_and_empty, first_tombstone);
 
     searching = _kandn_mask8(is_empty, searching);
-
+    printVec_simd32("node_indices", node_indices);
+    printMask_simd8("searching", &searching);
+    printMask_simd8("failure", failure);
 #ifndef SEQ_STEP
     step++;
 #endif
@@ -835,7 +873,7 @@ static void pmem_nvm_hash_table_remove_node (int              i//,
 #endif
   paddr_t *entries = pmem_ht_vol->entries;
   //*pblk = D_RO(entries)[i].value;
-  HASH_ENT_SET_TOMBSTONE(entries[i]);
+  HASHFS_ENT_SET_TOMBSTONE(entries[i]);
   pmem_nvm_flush((void*)(entries + i), sizeof(paddr_t));
   pmem_ht->nnodes -= 1;
   pmem_nvm_flush((void*)(&(pmem_ht->nnodes)), sizeof(int));
@@ -912,7 +950,7 @@ pmem_nvm_hash_table_new(struct disk_superblock *sblk,
     // pmem_nvm_flush(&(pmem_ht->valid), sizeof(int));
     pmem_ht_vol = (pmem_nvm_hash_vol_t *)malloc(sizeof(pmem_nvm_hash_vol_t));
     pmem_ht_vol->hash_func = hash_func ? hash_func : nvm_idx_direct_hash;
-    pmem_ht_vol->entries = (pmem_nvm_hash_vol_t*)(dax_addr[g_root_dev] + (pmem_ht->entries_blk * g_block_size_bytes));
+    pmem_ht_vol->entries = (paddr_t*)(dax_addr[g_root_dev] + (pmem_ht->entries_blk * g_block_size_bytes));
     // pmem_ht->valid = 1;
     // pmem_nvm_flush(&(pmem_ht->valid), sizeof(int));
     return;
@@ -932,7 +970,7 @@ pmem_nvm_hash_table_new(struct disk_superblock *sblk,
   //need to update num blocks available somewhere?
   pmem_ht_vol = (pmem_nvm_hash_vol_t *)malloc(sizeof(pmem_nvm_hash_vol_t));
   pmem_ht_vol->hash_func = hash_func ? hash_func : nvm_idx_direct_hash;
-  pmem_ht_vol->entries = (pmem_nvm_hash_vol_t*)(dax_addr[g_root_dev] + (pmem_ht->entries_blk * g_block_size_bytes));
+  pmem_ht_vol->entries = (paddr_t*)(dax_addr[g_root_dev] + (pmem_ht->entries_blk * g_block_size_bytes));
   pmem_ht->nnodes = 0;
   pmem_ht->noccupied = 0;
   pmem_ht->mod = pmem_ht->num_entries;
@@ -1356,6 +1394,7 @@ static inline int pmem_nvm_hash_table_insert_internal_simd64(__m512i *inums, __m
   pmem_make_key_simd64(inums, lblks, &keys);
   pmem_nvm_hash_table_lookup_node_simd64(&keys, indices, &notFound, to_find);
   if(_cvtmask8_u32(notFound) != 255) {
+    printf("%d\n", _cvtmask8_u32(notFound));
     panic("tried to insert duplicate!");
   }
   u256i_32 node_indices;
@@ -1379,7 +1418,7 @@ static inline int pmem_nvm_hash_table_insert_internal_simd64(__m512i *inums, __m
     //_cvtmask8_u32(searching) != 0
   } while(duplicates_mask != 0);
 
-  _mm512_mask_i32scatter_epi64(pmem_ht_vol->entries, oneMask, node_indices.vec, keys, 8);
+  _mm512_mask_i32scatter_epi64(pmem_ht_vol->entries, to_find, node_indices.vec, keys, 8);
 
   return true;
 
@@ -1405,6 +1444,7 @@ int pmem_nvm_hash_table_insert_simd64(uint32_t inum, uint32_t lblk, uint32_t len
   }
   for(size_t i = 0; i < len; ++i) {
     pblks[i] = indices.arr[i];
+    printf("INSERTED %d-%d in index %d", inum, lblk, indices.arr[i]);
   }
   return success;
 }

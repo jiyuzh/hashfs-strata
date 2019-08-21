@@ -563,7 +563,7 @@ void iappend(uint8_t dev, uint32_t inum, void *xp, int n)
 						pmem_cuckoohash_create(inum, 0, &index);
 					}
 					else {
-						pmem_nvm_hash_table_insert(inum, 0, &index);
+						pmem_nvm_hash_table_insert_simd64(inum, 0, 1, &index);
 					}
 					din.l1_addrs[fbn] = xint(index);
 				}
