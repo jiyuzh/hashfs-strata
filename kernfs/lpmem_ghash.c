@@ -1355,7 +1355,7 @@ static inline int pmem_nvm_hash_table_insert_internal_simd64(__m512i *inums, __m
   __m512i keys;
   pmem_make_key_simd64(inums, lblks, &keys);
   pmem_nvm_hash_table_lookup_node_simd64(&keys, indices, &notFound, to_find);
-  if(_cvtmask8_u32(notFound) != 255) {
+  if(_cvtmask8_u32(_knot_mask8(to_find, notFound)) == 0) {
     panic("tried to insert duplicate!");
   }
   u256i_32 node_indices;
