@@ -1189,8 +1189,9 @@ int pmem_nvm_hash_table_lookup_simd64(uint32_t inum, uint32_t lblk, uint32_t len
   if(!success) {
     return success;
   }
+  uint32_t meta_size = pmem_ht->meta_size;
   for(size_t i = 0; i < len; ++i) {
-    pblks[i] = indices.arr[i];
+    pblks[i] = indices.arr[i] + meta_size;
   }
   return success;
 
@@ -1440,8 +1441,9 @@ int pmem_nvm_hash_table_insert_simd64(uint32_t inum, uint32_t lblk, uint32_t len
 	printMask_simd8("to_find", &to_find);
 	u256i_32 indices;
   int success = pmem_nvm_hash_table_insert_internal_simd64(&(inum_vec.vec), &(lblk_vec.vec), &(indices.vec), to_find);
+  uint32_t meta_size = pmem_ht->meta_size;
   for(size_t i = 0; i < len; ++i) {
-    pblks[i] = indices.arr[i];
+    pblks[i] = indices.arr[i] + meta_size;
     printf("%d INSERTED %d-%d in index %d\n", success, inum, lblk, indices.arr[i]);
   }
   return success;
