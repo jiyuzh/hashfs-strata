@@ -112,7 +112,7 @@ void pEntries() {
 	}
 }
 
-static void pmem_nvm_flush(void* start, void* len) {
+static void pmem_nvm_flush(void* start, uint32_t len) {
     if(pmem_ht->is_pmem) {
       pmem_persist(start, len);
     }
@@ -836,9 +836,9 @@ static void pmem_nvm_hash_table_remove_node (int              i//,
   paddr_t *entries = pmem_ht_vol->entries;
   //*pblk = D_RO(entries)[i].value;
   HASH_ENT_SET_TOMBSTONE(entries[i]);
-  pmem_nvm_flush(entries + i, sizeof(paddr_t));
+  pmem_nvm_flush((void*)(entries + i), sizeof(paddr_t));
   pmem_ht->nnodes -= 1;
-  pmem_nvm_flush(&(pmem_ht->nnodes), sizeof(int));
+  pmem_nvm_flush((void*)(&(pmem_ht->nnodes)), sizeof(int));
   
   /* Erect tombstone */
 
@@ -947,9 +947,9 @@ pmem_nvm_hash_table_new(struct disk_superblock *sblk,
   //   paddr_t index;
   //   pmem_nvm_hash_table_insert(key, &index);
   // }
-  pmem_nvm_flush(pmem_ht, ent_num_blocks_needed * g_block_size_bytes);
+  pmem_nvm_flush((void*)(pmem_ht), ent_num_blocks_needed * g_block_size_bytes);
   pmem_ht->valid = 1;
-  pmem_nvm_flush(&(pmem_ht->valid), sizeof(int));
+  pmem_nvm_flush((void*)(&(pmem_ht->valid)), sizeof(int));
   // // initialize read-writer locks
   // ht->locks = MALLOC(idx_spec, max_entries * sizeof(pthread_rwlock_t));
   // assert(ht->locks);
@@ -1045,7 +1045,7 @@ pmem_nvm_hash_table_insert_node(uint32_t node_index, uint32_t key_hash,
   }
   int success = atomic_compare_exchange_strong(entries + node_index, &expected, new_key);
   if(success) {
-    pmem_nvm_flush(entries + node_index, sizeof(paddr_t));
+    pmem_nvm_flush((void*)(entries + node_index), sizeof(paddr_t));
   }
   return success;
     
@@ -1269,7 +1269,7 @@ pmem_nvm_hash_table_insert_internal (paddr_t    key,
       }
     }
   pmem_ht->nnodes = pmem_ht->nnodes + 1;
-  pmem_nvm_flush(&(pmem_ht->nnodes), sizeof(int));
+  pmem_nvm_flush((void*)(&(pmem_ht->nnodes)), sizeof(int));
   //if (hash_table->do_lock) pthread_rwlock_unlock(hash_table->locks + node_index);
   *index = node_index + pmem_ht->meta_size;
   //pthread_rwlock_unlock(hash_table->cache_lock);
