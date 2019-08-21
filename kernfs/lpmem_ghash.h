@@ -68,15 +68,15 @@ extern "C" {
 // _Static_assert(16 % sizeof(hash_ent_t) == 0, "Entries cross block boundary!");
 
 #ifdef SIMPLE_ENTRIES
-#define TOMBSTONE_VAL ((paddr_t)~0) - 1
-#define EMPTY_VAL (paddr_t)~0
-#define HASH_ENT_IS_TOMBSTONE(x) (x == ((paddr_t)~0) - 1)
-#define HASH_ENT_IS_EMPTY(x) (x == (paddr_t)~0)
-#define HASH_ENT_IS_VALID(x) (!HASH_ENT_IS_EMPTY(x) && !HASH_ENT_IS_TOMBSTONE(x))
+#define HASHFS_TOMBSTONE_VAL ((paddr_t)~0) - 1
+#define HASHFS_EMPTY_VAL (paddr_t)~0
+#define HASHFS_ENT_IS_TOMBSTONE(x) (x == ((paddr_t)~0) - 1)
+#define HASHFS_ENT_IS_EMPTY(x) (x == (paddr_t)~0)
+#define HASHFS_ENT_IS_VALID(x) (!HASHFS_ENT_IS_EMPTY(x) && !HASHFS_ENT_IS_TOMBSTONE(x))
 
-#define HASH_ENT_SET_TOMBSTONE(x) (x = ((paddr_t)~0) - 1)
-#define HASH_ENT_SET_EMPTY(x) (x = (paddr_t)~0)
-#define HASH_ENT_SET_VAL(x,v) (x = v)
+#define HASHFS_ENT_SET_TOMBSTONE(x) (x = ((paddr_t)~0) - 1)
+#define HASHFS_ENT_SET_EMPTY(x) (x = (paddr_t)~0)
+#define HASHFS_ENT_SET_VAL(x,v) (x = v)
 #else
 #define HASH_ENT_VAL(x) (((paddr_t)(x).value_hi16 << 32) | ((paddr_t)(x).value_low32))
 #define HASH_ENT_IS_TOMBSTONE(x) ((x).value_hi16 == (uint16_t)~0 && \
@@ -91,14 +91,8 @@ extern "C" {
                                   (x).value_low32 = (uint32_t)(v);} while(0)
 #endif
 
-//#define RANGE_SIZE (1 << 5) // 32
-#define RANGE_SIZE (1 << 9) // 512 -- 2MB
-#define RANGE_BITS (RANGE_SIZE - 1)
-#define RANGE_MASK (~RANGE_BITS)
-#define RANGE_KEY(i, l) ( (((uint64_t)(i)) << 32) | ((l) & RANGE_MASK))
-
-#define MAKEKEY(inum, lblk) (((uint64_t)inum << 32) | lblk)
-#define HASH_IS_REAL(h_) ((h_) >= 2)
+#define HASHFS_MAKEKEY(inum, lblk) (((uint64_t)inum << 32) | lblk)
+//#define HASH_IS_REAL(h_) ((h_) >= 2)
 
 //#define BLK_IDX(ht, x) (x % (ht->blksz / sizeof(hash_ent_t)))
 //#define BLK_NUM(ht, x) (x / (ht->blksz / sizeof(hash_ent_t)))

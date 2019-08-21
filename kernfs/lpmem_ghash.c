@@ -235,8 +235,8 @@ pmem_nvm_hash_table_lookup_node (paddr_t        key,
 	
   count++;
 
-  while (!HASH_ENT_IS_EMPTY(cur)) {
-    if (cur == key && HASH_ENT_IS_VALID(cur)) {
+  while (!HASHFS_ENT_IS_EMPTY(cur)) {
+    if (cur == key && HASHFS_ENT_IS_VALID(cur)) {
       *ent_return = cur;
 //       #if 1
 //       if (hash_table->do_lock) pthread_rwlock_unlock(hash_table->locks + node_index);
@@ -259,7 +259,7 @@ pmem_nvm_hash_table_lookup_node (paddr_t        key,
 //      #endif
       return node_index;
     }
-    else if (HASH_ENT_IS_TOMBSTONE(cur) && !have_tombstone) {
+    else if (HASHFS_ENT_IS_TOMBSTONE(cur) && !have_tombstone) {
       first_tombstone = node_index;
       have_tombstone = TRUE;
     }
@@ -339,15 +339,15 @@ void pmem_nvm_hash_table_lookup_node_simd64(__m512i *keys, __m256i *node_indices
 #endif
 
   __mmask8 oneMask = _cvtu32_mask8(~0); // ones
-  __m512i tombstone_vec = _mm512_set1_epi64(TOMBSTONE_VAL); //vector of tombstones for comparison
-  __m512i empty_val = _mm512_set1_epi64(EMPTY_VAL);
+  __m512i tombstone_vec = _mm512_set1_epi64(HASHFS_TOMBSTONE_VAL); //vector of tombstones for comparison
+  __m512i empty_val = _mm512_set1_epi64(HASHFS_EMPTY_VAL);
   __m256i first_tombstone = _mm256_maskz_set1_epi32(oneMask, 0);
   __mmask8 found_tombstone = _cvtu32_mask8(0); // zeroes
   directHash_simd64(keys, node_indices);
   __m512i cur = _mm512_mask_i32gather_epi64 (empty_val, oneMask, *node_indices, (void const*)(pmem_ht_vol->entries), 8);
   
   // if it's zero, we're done
-  failure = _cvtu32_mask8(0);
+  *failure = _cvtu32_mask8(0);
 
   while(_cvtmask8_u32(searching) != 0) {
     searching = _mm512_mask_cmpneq_epi64_mask(searching, *keys, cur); //0 if key == cur || searching = 0, 1 otherwise
@@ -358,7 +358,7 @@ void pmem_nvm_hash_table_lookup_node_simd64(__m512i *keys, __m256i *node_indices
     found_tombstone = _kor_mask8(found_and_seeking, found_tombstone); //if already found or found this time, update found
 
     __mmask8 is_empty = _mm512_mask_cmpeq_epi64_mask(searching, cur, empty_val); //1 if empty and searching, 0 otherwise
-    failure = _kor_mask8(failure, is_empty);
+    *failure = _kor_mask8(*failure, is_empty);
     __mmask8 found_t_and_empty = _kand_mask8(is_empty, found_tombstone);
     *node_indices = _mm256_mask_mov_epi32 (*node_indices, found_t_and_empty, first_tombstone);
 
@@ -774,8 +774,8 @@ int pmem_nvm_hash_table_update(paddr_t         key,
   //nvm_read_entry(hash_table, node_index, &cur, false);
   //cur = hash_table->cache[BLK_NUM(node_index)][BLK_IDX(node_index)];
 
-  while (!HASH_ENT_IS_EMPTY(cur)) {
-    if (cur == key && HASH_ENT_IS_VALID(cur)) {
+  while (!HASHFS_ENT_IS_EMPTY(cur)) {
+    if (cur == key && HASHFS_ENT_IS_VALID(cur)) {
       pmem_nvm_hash_table_update_internal(cur, node_index, new_range);
       //if (hash_table->do_lock) pthread_rwlock_unlock(hash_table->locks + node_index);
       //pthread_rwlock_unlock(hash_table->cache_lock);
@@ -905,14 +905,14 @@ pmem_nvm_hash_table_new(struct disk_superblock *sblk,
                    ) {
   printf("inside ht_new\n");
   //*buf = dax_addr[g_root_dev] + (blk * g_block_size_bytes) + off; 
-  pmem_ht = dax_addr[g_root_dev] + (sblk->datablock_start * g_block_size_bytes);
+  pmem_ht = (pmem_nvm_hash_idx_t*)(dax_addr[g_root_dev] + (sblk->datablock_start * g_block_size_bytes));
   if(pmem_ht->valid == 1) {
     printf("ht exists\n");
     // pmem_ht->valid = 0;
     // pmem_nvm_flush(&(pmem_ht->valid), sizeof(int));
     pmem_ht_vol = (pmem_nvm_hash_vol_t *)malloc(sizeof(pmem_nvm_hash_vol_t));
     pmem_ht_vol->hash_func = hash_func ? hash_func : nvm_idx_direct_hash;
-    pmem_ht_vol->entries = dax_addr[g_root_dev] + (pmem_ht->entries_blk * g_block_size_bytes);
+    pmem_ht_vol->entries = (pmem_nvm_hash_vol_t*)(dax_addr[g_root_dev] + (pmem_ht->entries_blk * g_block_size_bytes));
     // pmem_ht->valid = 1;
     // pmem_nvm_flush(&(pmem_ht->valid), sizeof(int));
     return;
@@ -932,7 +932,7 @@ pmem_nvm_hash_table_new(struct disk_superblock *sblk,
   //need to update num blocks available somewhere?
   pmem_ht_vol = (pmem_nvm_hash_vol_t *)malloc(sizeof(pmem_nvm_hash_vol_t));
   pmem_ht_vol->hash_func = hash_func ? hash_func : nvm_idx_direct_hash;
-  pmem_ht_vol->entries = dax_addr[g_root_dev] + (pmem_ht->entries_blk * g_block_size_bytes);
+  pmem_ht_vol->entries = (pmem_nvm_hash_vol_t*)(dax_addr[g_root_dev] + (pmem_ht->entries_blk * g_block_size_bytes));
   pmem_ht->nnodes = 0;
   pmem_ht->noccupied = 0;
   pmem_ht->mod = pmem_ht->num_entries;
@@ -1040,7 +1040,7 @@ pmem_nvm_hash_table_insert_node(uint32_t node_index, uint32_t key_hash,
 
   // todo consider bookkeeping (nnodes, noccupied?)
   paddr_t expected = (paddr_t)~0;
-  if(HASH_ENT_IS_TOMBSTONE(ent)) {
+  if(HASHFS_ENT_IS_TOMBSTONE(ent)) {
     expected -= 1;
   }
   int success = atomic_compare_exchange_strong(entries + node_index, &expected, new_key);
@@ -1102,13 +1102,13 @@ int pmem_nvm_hash_table_lookup(inum_t inum, paddr_t lblk,
       node_index = nvm_hash_table_lookup_node(hash_table, key, &ent, &hash_return, force);
   }
 #else
-  paddr_t key = MAKEKEY(inum, lblk);
+  paddr_t key = HASHFS_MAKEKEY(inum, lblk);
   node_index = pmem_nvm_hash_table_lookup_node(key, &ent, &hash_return/*,force*/);
 #endif
 
   //pthread_rwlock_rdlock(hash_table->locks + node_index);
   *val = node_index + pmem_ht->meta_size;
-  int success = HASH_ENT_IS_VALID(ent);
+  int success = HASHFS_ENT_IS_VALID(ent);
 
 // #ifdef SIMPLE_ENTRIES
 //   *size = 1;
@@ -1220,12 +1220,12 @@ pmem_nvm_hash_table_insert_internal (paddr_t    key,
   //   __builtin_prefetch((void*)( ((char*)cur) + 192 ), 1);
   //   __builtin_prefetch((void*)( ((char*)cur) + 256 ), 1);
   
-  while (!HASH_ENT_IS_EMPTY(cur)) {
-    if (cur == key && HASH_ENT_IS_VALID(cur)) {
+  while (!HASHFS_ENT_IS_EMPTY(cur)) {
+    if (cur == key && HASHFS_ENT_IS_VALID(cur)) {
       printf("already exists: %lx (trying to insert: %lx at index %u)\n",
         cur, key, node_index);
       return 0;
-    } else if (HASH_ENT_IS_TOMBSTONE(cur) && !have_tombstone) {
+    } else if (HASHFS_ENT_IS_TOMBSTONE(cur) && !have_tombstone) {
       // keep lock until we decide we don't need it
       first_tombstone = node_index;
       have_tombstone = 1;
@@ -1255,7 +1255,7 @@ pmem_nvm_hash_table_insert_internal (paddr_t    key,
   }
 
   while(!success) {
-      if(!HASH_ENT_IS_VALID(cur)) {
+      if(!HASHFS_ENT_IS_VALID(cur)) {
         success = pmem_nvm_hash_table_insert_node(
           node_index, hash_value, key);//, index, size);
       }
@@ -1302,7 +1302,7 @@ pmem_nvm_hash_table_insert (inum_t     inum,
                        )
 {
   // printf("inside ht_insert\n");
-  paddr_t key = MAKEKEY(inum, lblk);
+  paddr_t key = HASHFS_MAKEKEY(inum, lblk);
   return pmem_nvm_hash_table_insert_internal(key, index);//, index, size);
 }
 
@@ -1317,8 +1317,8 @@ void pmem_find_next_invalid_entry_simd64(__m256i *node_indices, uint32_t duplica
 #endif
 
   __mmask8 oneMask = _cvtu32_mask8(~0); // ones
-  __m512i tombstone_vec = _mm512_set1_epi64(TOMBSTONE_VAL); //vector of tombstones for comparison
-  __m512i empty_val = _mm512_set1_epi64(EMPTY_VAL);
+  __m512i tombstone_vec = _mm512_set1_epi64(HASHFS_TOMBSTONE_VAL); //vector of tombstones for comparison
+  __m512i empty_val = _mm512_set1_epi64(HASHFS_EMPTY_VAL);
 
   __mmask8 searching = _cvtu32_mask8(duplicates);
   __m256i step_vec = _mm256_maskz_set1_epi32(oneMask, step);
@@ -1461,8 +1461,8 @@ pmem_nvm_hash_table_remove_internal (paddr_t         key,
 
   //nvm_read_entry(hash_table, node_index, &cur, false);
 
-  while (!HASH_ENT_IS_EMPTY(cur)) {
-    if (cur == key && HASH_ENT_IS_VALID(cur)) {
+  while (!HASHFS_ENT_IS_EMPTY(cur)) {
+    if (cur == key && HASHFS_ENT_IS_VALID(cur)) {
 	break;
     }
 #ifndef SEQ_STEP
@@ -1482,7 +1482,7 @@ pmem_nvm_hash_table_remove_internal (paddr_t         key,
     node_index = new_idx;
   }
   
-  if (HASH_ENT_IS_VALID(cur)) {
+  if (HASHFS_ENT_IS_VALID(cur)) {
       pmem_nvm_hash_table_remove_node(node_index/*, old_pblk, old_idx, old_size*/);
       //if (hash_table->do_lock) pthread_rwlock_unlock(hash_table->locks + node_index);
       *index = node_index + pmem_ht->meta_size;
@@ -1508,7 +1508,7 @@ int pmem_nvm_hash_table_remove_internal_simd64(__m512i *inums, __m512i *lblks, _
   pmem_nvm_hash_table_lookup_node_simd64(&keys, &node_indices, &failure, to_remove);
 
   __mmask8 to_tombstone = _knot_mask8(failure);
-  __m512i tombstone_val = _mm512_set1_epi64(TOMBSTONE_VAL); //vector of tombstones for comparison
+  __m512i tombstone_val = _mm512_set1_epi64(HASHFS_TOMBSTONE_VAL); //vector of tombstones for comparison
 
   _mm512_mask_i32scatter_epi64(pmem_ht_vol->entries, to_tombstone, node_indices, tombstone_val, 8);
 
@@ -1556,7 +1556,7 @@ pmem_nvm_hash_table_remove (inum_t         inum,
                        )
 {
   // printf("inside ht_remove\n");
-  paddr_t key = MAKEKEY(inum, lblk);
+  paddr_t key = HASHFS_MAKEKEY(inum, lblk);
   return pmem_nvm_hash_table_remove_internal(key, removed
                                         //, nprevious, ncontiguous
                                         );
