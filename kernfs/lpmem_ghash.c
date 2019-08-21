@@ -303,11 +303,18 @@ end:
 }
 
 void pmem_mod_simd32(__m256i *vals, __m256i *ret) {
-  __mmask8 oneMask = _cvtu32_mask8(~0);
-  __m256i mod_vec = _mm256_maskz_set1_epi32 (oneMask, pmem_ht->mod); // set mod vector
-  __m256i quotient = _mm256_div_epi32 (*vals, mod_vec); //divide hash_values by mod (SVML)
-  __m256i mult_result = _mm256_mask_mul_epu32 (quotient, oneMask, quotient, mod_vec); // multiply quotient by mod
-  *ret = _mm256_mask_sub_epi32 (mult_result, oneMask, *vals, mult_result); //subtract mult result from hash_values
+  u256i_32 *tempVals = (u256i_32*) vals;
+  u256i_32 *tempMods = (u256i_32*) ret;
+  uint32_t mod = pmem_ht->mod;
+  for(int i = 0; i < 8; ++i) {
+    tempMods->arr[i] = tempVals->arr[i] % mod;
+  }
+
+  // __mmask8 oneMask = _cvtu32_mask8(~0);
+  // __m256i mod_vec = _mm256_maskz_set1_epi32 (oneMask, pmem_ht->mod); // set mod vector
+  // __m256i quotient = _mm256_div_epi32(*vals, mod_vec); //divide hash_values by mod (SVML)
+  // __m256i mult_result = _mm256_mask_mul_epu32(quotient, oneMask, quotient, mod_vec); // multiply quotient by mod
+  // *ret = _mm256_mask_sub_epi32 (mult_result, oneMask, *vals, mult_result); //subtract mult result from hash_values
   
 }
 
