@@ -75,16 +75,14 @@ void print_global_idx_stats(bool enable_perf_stats) {
         case GLOBAL_CUCKOO_HASH:
             fns = &cuckoohash_fns;
             break;
-	default:
-	    fprintf(stderr, "global stats method not found\n");
-	    return;
-	    break;
+        default:
+            fprintf(stderr, "global stats method not found\n");
+            return;
     }
 
     if (fns->im_print_global_stats) {
         fns->im_print_global_stats();
     }
-
 
     if (fns->im_clean_global_stats) {
         fns->im_clean_global_stats();

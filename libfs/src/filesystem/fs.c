@@ -207,6 +207,7 @@ void show_libfs_stats(const char *title)
   printf("storage(read nr/ts)     : %lu / %lu(%.2f)\n", tri_ratio(storage_rnr.total, storage_rtsc.total));
   print_stats_dist(&storage_rtsc, "storage read tsc");
   print_stats_dist(&storage_rnr, "storage read nr");
+  printf("  LLC miss latency : %lu \n", calculate_llc_latency(&dax_cache_stats));
   printf("storage(write nr/ts)    : %lu / %lu(%.2f)\n", tri_ratio(storage_wnr.total, storage_wtsc.total));
   print_stats_dist(&storage_wtsc, "storage write tsc");
   print_stats_dist(&storage_wnr, "storage write nr");
@@ -220,7 +221,9 @@ void show_libfs_stats(const char *title)
   printf("directory search miss (nr) : %lu \n", g_perf_stats.dir_search_nr_miss);
   printf("directory search notfound (nr) : %lu \n", g_perf_stats.dir_search_nr_notfound);
 #endif
-  printf("--------------------------------------\n");
+      printf("--------------------------------------\n");
+    print_global_idx_stats(enable_perf_stats);
+	printf("--------------------------------------\n");
 }
 
 void shutdown_fs(void)

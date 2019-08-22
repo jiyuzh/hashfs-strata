@@ -18,6 +18,7 @@ static uint32_t n_threads;
 static double seq_ratio;
 static uint32_t file_num;
 static size_t max_file_size;
+static size_t start_file_size;
 static size_t read_unit;
 static size_t write_unit;
 static int opt_num;
@@ -32,7 +33,7 @@ typedef struct {
 static worker_result_t worker_results[MAX_THREADS];
 
 static inline int panic(char *str) {
-    fprintf(stderr, str);
+    fprintf(stderr, "%s", str);
     exit(-1);
 }
 static uint64_t *write_buf;
@@ -41,10 +42,10 @@ static void *worker_thread(void *);
 #ifndef PREFIX
 #define PREFIX "/mlfs"
 #endif
-#define OPTSTRING "b:j:n:s:M:r:w:h"
+#define OPTSTRING "b:j:n:s:M:r:w:h:S"
 #define OPTNUM 7
 void print_help(char **argv) {
-    printf("usage: %s -b block_size -j n_threads -s seq_ratio -n num_file -M max_file_size -w write_unit_size -r read_unit_size\n", argv[0]);
+    printf("usage: %s -b block_size -j n_threads -s seq_ratio -n num_file -M max_file_size -S start_file_size -w write_unit_size -r read_unit_size\n", argv[0]);
 }
 uint32_t get_unit(char c) {
     switch (c) {
@@ -98,6 +99,12 @@ int main(int argc, char **argv) {
                 assert((max_file_size % block_size == 0) && "max_file_size should be dividable by block_size");
                 opt_num++;
                 break;
+            case 'S': // start file size
+                max_file_size = atoi(optarg);
+                max_file_size *= get_unit(optarg[strlen(optarg)-1]);
+                assert((max_file_size % block_size == 0) && "max_file_size should be dividable by block_size");
+                opt_num++;
+                break;
             case 'r': // read_unit size
                 read_unit = atoi(optarg);
                 read_unit *= get_unit(optarg[strlen(optarg)-1]);
@@ -135,28 +142,35 @@ int main(int argc, char **argv) {
             perror("open failed");
             exit(-1);
         }
-        // init each file with read_unit data
-        for (size_t s = 0; s < read_unit; s += write_unit)
+        // init each file with read_unit data or start size, whichever is larger
+        size_t sz = read_unit > start_file_size ? read_unit : start_file_size;
+        for (size_t s = 0; s < sz; s += write_unit) {
             assert(write(fd_v[i], write_buf, write_unit) != -1);
+        }
     }
+
     for (int i=0; i < n_threads; ++i) {
         assert(pthread_create(&threads[i], NULL, worker_thread, (void*)(&worker_results[i])) == 0);
     }
+
     for (int i=0; i < n_threads; ++i) {
         assert(pthread_join(threads[i], NULL) == 0);
     }
+
     for (int i=0; i < file_num; ++i) {
         struct stat file_stat;
         fstat(fd_v[i], &file_stat);
         printf("%s size is %lu\n", filename_v[i], file_stat.st_size);
         close(fd_v[i]);
     }
+    
     for (int i=0; i < n_threads; ++i) {
         printf("thread %d : read %lu (seq %lu rand %lu), write %lu\n", i,
                 worker_results[i].total_seq_read + worker_results[i].total_rand_read,
                 worker_results[i].total_seq_read, worker_results[i].total_rand_read,
                 worker_results[i].total_write);
     }
+    
     return 0;
 }
 

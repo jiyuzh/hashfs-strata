@@ -17,8 +17,9 @@ extern uint8_t g_hdd_dev;
  * Allocates all structures using the global values.
  */
 
-#define g_n_devices			4
+#define g_n_devices			5
 #define g_root_dev			1
+#define g_root_log_dev      5
 #define g_block_size_bytes	4096UL
 #define g_block_size_mask   (g_block_size_bytes - 1)
 #define g_block_size_shift	12UL
@@ -81,6 +82,7 @@ extern char pwd[MAX_PATH + 1];
 
 typedef enum indexing_api_choice {
     EXTENT_TREES,
+    EXTENT_TREES_TOP_CACHED,
     GLOBAL_CUCKOO_HASH,
     GLOBAL_HASH_TABLE,
     HASHFS,

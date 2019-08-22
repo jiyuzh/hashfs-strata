@@ -38,6 +38,14 @@ typedef struct mlfs_kernfs_stats {
 	uint64_t n_digest;
 	uint64_t n_digest_skipped;
 	uint64_t total_migrated_mb;
+    // block allocator
+    uint64_t balloc_tsc;
+    uint64_t balloc_nblk;
+    uint64_t balloc_nr;
+    // undo log
+    uint64_t undo_tsc;
+    uint64_t undo_nr;
+
 	stats_dist_t read_per_index;
     // Indexing cache rates
     cache_stats_t cache_stats;

@@ -160,6 +160,7 @@ struct dinode {
 	uint8_t dev;		// Device id for multi-level storage
 	uint8_t itype;		// File type
 	uint8_t nlink;		// Number of links to inode in file system
+    uint8_t _padding[5];
 	uint64_t size;		// Size of file (bytes)
 
 	mlfs_time_t atime;

@@ -85,11 +85,18 @@ static inline ssize_t alloc_generic(size_t nblk,
                                     enum alloc_type a_type) {
     trace_me();
 
+#if defined(STORAGE_PERF) && defined(KERNFS)
+    uint64_t tsc_begin = asm_rdtscp();
+#endif
+
     balloc_lock();
     struct super_block *sblk = sb[g_root_dev];
 
     int r = mlfs_new_blocks(sblk, pblk, nblk, 0, 0, a_type, 0);
     if (r > 0) {
+#ifdef KERNFS
+        balloc_undo_log(*pblk, r, 0);
+#endif
         bitmap_bits_set_range(sblk->s_blk_bitmap, *pblk, r);
         sblk->used_blocks += r;
     } else if (r == -ENOSPC) {
@@ -104,6 +111,14 @@ static inline ssize_t alloc_generic(size_t nblk,
     }
 
     balloc_unlock();
+
+#if defined(STORAGE_PERF) && defined(KERNFS)
+    if (enable_perf_stats) {
+        g_perf_stats.balloc_tsc += asm_rdtscp() - tsc_begin;
+        g_perf_stats.balloc_nblk += r;
+        g_perf_stats.balloc_nr++;
+    }
+#endif
 
     return (ssize_t)r;
 }
@@ -122,17 +137,32 @@ ssize_t alloc_data_blocks(size_t nblocks, paddr_t *pblk) {
 static inline ssize_t dealloc_generic(size_t nblk, paddr_t pblk) {
     trace_me();
 
+#ifdef STORAGE_PERF
+    uint64_t tsc_begin = asm_rdtscp();
+#endif
+
     balloc_lock();
 
     struct super_block *sblk = sb[g_root_dev];
     int ret = mlfs_free_blocks_node(sblk, pblk, nblk, 0, 0);
     if (ret == 0) {
+#ifdef KERNFS
+        balloc_undo_log(pblk, nblk, 1);
+#endif
         bitmap_bits_free(sblk->s_blk_bitmap, pblk, nblk);
         sblk->used_blocks -= nblk;
         ret = nblk;
     }
 
     balloc_unlock();
+    
+#if defined(STORAGE_PERF) && defined(KERNFS)
+    if (enable_perf_stats) {
+        g_perf_stats.balloc_tsc += asm_rdtscp() - tsc_begin;
+        g_perf_stats.balloc_nblk += ret;
+        g_perf_stats.balloc_nr++;
+    }
+#endif
 
     return (ssize_t) ret;
 }
@@ -154,6 +184,10 @@ int get_dev_info(device_info_t* di) {
     return 0;
 }
 
+int log_change(inum_t inum, void *nvm_addr, size_t nbytes) {
+
+}
+
 callback_fns_t strata_callbacks = {
     .cb_write            = nvm_write,
     .cb_read             = nvm_read,
@@ -162,7 +196,8 @@ callback_fns_t strata_callbacks = {
     .cb_alloc_data       = alloc_data_blocks,
     .cb_dealloc_metadata = dealloc_metadata_blocks,
     .cb_dealloc_data     = dealloc_data_blocks,
-    .cb_get_dev_info     = get_dev_info
+    .cb_get_dev_info     = get_dev_info,
+    .cb_log_change       = log_change
 };
 
 idx_spec_t strata_idx_spec = {

@@ -290,10 +290,10 @@ static uint64_t calculate_llc_latency(cache_stats_t *cs)
 
     printf("l1i misses = %.2f\n", cs->li_misses);
 
-    printf("l1 (%.2f %.2f %.2f)\nl2 (%.2f %.2f %.2f)\nl3 (%.2f %.2f %.2f)\n",
-            cs->l1_accesses, l1_hits, cs->l1_misses,
-            cs->l2_accesses, l2_hits, cs->l2_misses,
-            cs->l3_accesses, l3_hits, cs->l3_misses);
+    printf("l1 (%.2f %.2f %.2f) (%.0f)\nl2 (%.2f %.2f %.2f) (%.0f)\nl3 (%.2f %.2f %.2f) (%.0f)\n",
+            cs->l1_accesses, l1_hits, cs->l1_misses, (cs->l1_misses * 100.0) / cs->l1_accesses,
+            cs->l2_accesses, l2_hits, cs->l2_misses, (cs->l2_misses * 100.0) / cs->l2_accesses,
+            cs->l3_accesses, l3_hits, cs->l3_misses, (cs->l3_misses * 100.0) / cs->l3_accesses);
     printf("total (%.2f)\nremaining (%.2f)\n", cs->perf_event_time, remaining_time);
 
     if (l3_miss == 0) return 0;

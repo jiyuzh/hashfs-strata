@@ -20,6 +20,7 @@ extern "C" {
 #define g_ssd_dev 2
 #define g_hdd_dev 3
 #define g_log_dev 4
+#define g_root_log_dev 5
 
 #ifndef static_assert
 #define static_assert(a, b) do { switch (0) case 0: case (a): ; } while (0)
@@ -295,10 +296,15 @@ int main(int argc, char *argv[])
 	}
 #endif
 
+    if (dev_id > g_log_dev) {
+        printf("--- KernFS UNDO LOG should be all zeros\n");
+        exit(0);
+    }
+
 	memset(buf, 0, sizeof(buf));
-	printf("== Write superblock\n");
-	memmove(buf, &ondisk_sb, sizeof(ondisk_sb));
-	wsect(1, buf);
+    printf("== Write superblock\n");
+    memmove(buf, &ondisk_sb, sizeof(ondisk_sb));
+    wsect(1, buf);
 
 	if(IDXAPI_IS_HASHFS() && dev_id == g_root_dev) {
 		pmem_nvm_hash_table_new(&ondisk_sb, NULL);

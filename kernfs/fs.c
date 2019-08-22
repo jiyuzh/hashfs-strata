@@ -23,7 +23,7 @@
 
 #include "inode_hash.h"
 #include "lpmem_ghash.h"
-
+#include "undo_log.h"
 
 #define _min(a, b) ({\
 		__typeof__(a) _a = a;\
@@ -243,6 +243,19 @@ void show_kernfs_stats(void)
 	printf("-- blocks indexed: %lu blocks / %lu ops (%.1f tsc/blk)\n",
 			g_perf_stats.path_search_size, g_perf_stats.path_search_nr,
             (float)g_perf_stats.path_search_tsc / (float)g_perf_stats.path_search_size);
+    printf("-- balloc: \n");
+    printf("---- time per op : %lu / %lu (%.1f) tsc/op\n",
+            g_perf_stats.balloc_tsc, g_perf_stats.balloc_nr, 
+            (float)g_perf_stats.balloc_tsc / (float)g_perf_stats.balloc_nr);
+    printf("---- time per blk: %lu / %lu (%.1f) tsc/blk\n",
+            g_perf_stats.balloc_tsc, g_perf_stats.balloc_nblk, 
+            (float)g_perf_stats.balloc_tsc / (float)g_perf_stats.balloc_nblk);
+    printf("UNDO: %lu / %lu (%.1f) tsc/op\n",
+            g_perf_stats.undo_tsc, g_perf_stats.undo_nr,
+            (float)g_perf_stats.undo_tsc / (float)g_perf_stats.undo_nr);
+    printf("---- blk per op  : %lu / %lu (%.1f) blk/op\n",
+            g_perf_stats.balloc_nblk, g_perf_stats.balloc_nr, 
+            (float)g_perf_stats.balloc_nblk / (float)g_perf_stats.balloc_nr);
     printf("  LLC miss latency : %lu \n", calculate_llc_latency(&(g_perf_stats.cache_stats)));
 	printf("total migrated  : %lu MB\n", g_perf_stats.total_migrated_mb);
 	printf("--------------------------------------\n");
@@ -290,6 +303,9 @@ void show_kernfs_stats(void)
     show_storage_stats();
 	printf("--------------------------------------\n");
     print_global_idx_stats(enable_perf_stats);
+	printf("--------------------------------------\n");
+    //undo_log_sanity_check(true);
+	//printf("--------------------------------------\n");
 }
 
 void show_storage_stats(void)
@@ -1920,6 +1936,8 @@ static void handle_digest_request(void *arg)
 			//g_perf_stats.n_digest = 0;
 		}
 
+        undo_log_start_tx();
+
 		digest_count = digest_logs(dev_id, digest_count, &digest_blkno, &rotated);
 
 		mlfs_debug("-- Total used block %d\n",
@@ -1942,8 +1960,12 @@ static void handle_digest_request(void *arg)
 		persist_dirty_objects_hdd();
 #endif
 
+        // MUST commit before sending the ACK.
+        undo_log_commit_tx();
+
 		sendto(sock_fd, response, MAX_SOCK_BUF, 0,
 				(struct sockaddr *)&digest_arg->cli_addr, sizeof(struct sockaddr_un));
+
 
 		/*show_storage_stats();
 
@@ -2099,6 +2121,8 @@ void shutdown_fs(void)
 		close(prof_fd);
 	}
 
+    shutdown_undo_log();
+
 	unlink(SRV_SOCK_PATH);
 	device_shutdown();
 	return ;
@@ -2250,6 +2274,8 @@ void init_fs(void)
 		enable_perf_stats = 0;
 	}
 
+    init_undo_log();
+
     if (IDXAPI_IS_GLOBAL()) {
         init_hash(sb[g_root_dev], enable_perf_stats);
     }
@@ -2276,6 +2302,7 @@ void init_fs(void)
 #ifdef FCONCURRENT
 	file_digest_thread_pool = thpool_init(8);
 #endif
+
 
 	wait_for_event();
 }
