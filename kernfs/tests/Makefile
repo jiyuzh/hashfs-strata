@@ -1,4 +1,4 @@
-CC=gcc5
+CC=gcc9.2
 CXX=g++ -std=c++11
 
 #CC = clang-3.8
@@ -28,9 +28,10 @@ LD_FLAGS_CXX = -lpthread -lm -L$(NVML_DIR)/nondebug/ -lpmem -lrt \
 	-Wl,-rpath=$(abspath $(GLIB_DIR)/glib/.libs) -L$(abspath $(GLIB_DIR)/glib/.libs) \
 	-Wl,-rpath=$(abspath $(API_DIR)/build) -L$(abspath $(API_DIR)/build) -lNVMIndexingAPI
 
-DEBUG = -g -O0
+#DEBUG = -g -O0
 #DEBUG = -g -Ofast
-#DEBUG = -g -O3
+DEBUG = -g -O3 -march=skylake-avx512 -mavx -mavx512f -mavx512vl -mavx512cd -mavx512bw -mavx512dq
+OPT_ARGS = -march=skylake-avx512 -mavx -mavx512f -mavx512vl -mavx512cd -mavx512bw -mavx512dq
 
 #MLFS_FLAGS = -DUSE_SLAB -DMLFS_INFO -DKERNFS
 MLFS_FLAGS = -DMLFS_INFO -DKERNFS

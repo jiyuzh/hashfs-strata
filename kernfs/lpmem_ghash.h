@@ -227,8 +227,8 @@ int pmem_nvm_hash_table_contains(inum_t inum, paddr_t lblk);
 
 unsigned pmem_nvm_hash_table_size();
 
-int pmem_nvm_hash_table_insert_simd64(uint32_t inum, uint32_t lblk, uint32_t len, uint32_t *pblks);
-int pmem_nvm_hash_table_lookup_simd64(uint32_t inum, uint32_t lblk, uint32_t len, uint32_t *pblks);
+int pmem_nvm_hash_table_insert_simd64(uint32_t inum, uint32_t lblk, uint32_t len, uint64_t *pblks);
+int pmem_nvm_hash_table_lookup_simd64(uint32_t inum, uint32_t lblk, uint32_t len, uint64_t *pblks);
 int pmem_nvm_hash_table_remove_simd64(uint32_t inum, uint32_t lblk, uint32_t len);
 
 

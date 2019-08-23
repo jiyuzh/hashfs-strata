@@ -2840,6 +2840,7 @@ int mlfs_hashfs_get_blocks(handle_t *handle, struct inode *inode,
         }
 		success = pmem_nvm_hash_table_lookup_simd64(inode->inum, map_arr->m_lblk, map_arr->m_len, map_arr->m_pblk);
 	}
+	printf("pblk: %u", map_arr->m_pblk[0]);
 	return map_arr->m_len;
 	
 	
