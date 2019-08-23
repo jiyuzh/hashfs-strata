@@ -68,7 +68,8 @@ endif
 	MLFS_FLAGS += -DINDEX_NAME=\"ext\ \"
 endif
 
-OPT_ARGS ?= -g -O0 -march=skylake-avx512 -mavx -mavx512f -mavx512vl -mavx512cd -mavx512bw -mavx512dq
+OPT_ARGS ?= -g -O3 
+AVX_FLAGS = -march=skylake-avx512 -mavx -mavx512f -mavx512vl -mavx512cd -mavx512bw -mavx512dq
 
 
 #######
@@ -87,12 +88,12 @@ MLFS_FLAGS += -DSIMULATE_FRAGMENTATION
 vpath %.c $(SRC_DIR)
 
 #CC = clang-3.8
-CC = gcc --std=gnu99
+CC = gcc9.2 --std=gnu99
 CXX = g++ -std=c++11
 
 define make-goal
 $1/%.o: %.c
-	$(CC) $(INCLUDES) -fPIC $(OPT_ARGS) -c $$< -o $$@ -DKERNFS $(MLFS_FLAGS)
+	$(CC) $(INCLUDES) -fPIC $(OPT_ARGS) $(AVX_FLAGS) -c $$< -o $$@ -DKERNFS $(MLFS_FLAGS)
 endef
 
 ########
@@ -115,8 +116,8 @@ $(BUILD_DIR):
 #  Targets
 ########
 filesystem: $(OBJ) $(SRC) $(HDER)
-	#$(CC) -shared $(OPT_ARGS) -o $(PREFIX)/libkernfs.so $(OBJ) $(CUCKOO_FILTER_DIR)/libcuckoofilter.a $(LD_FLAGS) $(MLFS_FLAGS)
-	$(CC) -shared $(OPT_ARGS) -o $(PREFIX)/libkernfs.so $(OBJ) $(LD_FLAGS) $(MLFS_FLAGS)
+	#$(CC) -shared $(OPT_ARGS) $(AVX_FLAGS) -o $(PREFIX)/libkernfs.so $(OBJ) $(CUCKOO_FILTER_DIR)/libcuckoofilter.a $(LD_FLAGS) $(MLFS_FLAGS)
+	$(CC) -shared $(OPT_ARGS) $(AVX_FLAGS) -o $(PREFIX)/libkernfs.so $(OBJ) $(LD_FLAGS) $(MLFS_FLAGS)
 
 ########
 #  Compile each source into an object

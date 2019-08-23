@@ -1171,7 +1171,7 @@ pmem_nvm_hash_table_lookup_internal_simd64(__m512i *inums, __m512i *lblks, __m25
   return _cvtmask8_u32(failure) == 0;
 }
 
-int pmem_nvm_hash_table_lookup_simd64(uint32_t inum, uint32_t lblk, uint32_t len, uint32_t *pblks) {
+int pmem_nvm_hash_table_lookup_simd64(uint32_t inum, uint32_t lblk, uint32_t len, uint64_t *pblks) {
   u512i_64 inum_vec;
 	u512i_64 lblk_vec;
 	uint32_t pOfTwo[8] = {1, 2, 4, 8, 16, 32, 64, 128};
@@ -1191,7 +1191,7 @@ int pmem_nvm_hash_table_lookup_simd64(uint32_t inum, uint32_t lblk, uint32_t len
   }
   uint32_t meta_size = pmem_ht->meta_size;
   for(size_t i = 0; i < len; ++i) {
-    pblks[i] = indices.arr[i] + meta_size;
+    pblks[i] = ((uint64_t)indices.arr[i]) + ((uint64_t)meta_size);
   }
   return success;
 
@@ -1372,7 +1372,7 @@ void pmem_find_next_invalid_entry_simd64(__m256i *node_indices, uint32_t duplica
   while(_cvtmask8_u32(searching) != 0) {
     __mmask8 is_tombstone = _mm512_mask_cmpeq_epi64_mask(searching, cur, tombstone_vec); //1 if cur == tombstone and still searching
     __mmask8 is_empty = _mm512_mask_cmpeq_epi64_mask(searching, cur, empty_val); //1 if empty and searching, 0 otherwise
-    __mmask8 tombstone_or_empty = _kand_mask8(is_empty, is_tombstone);
+    __mmask8 tombstone_or_empty = _kor_mask8(is_empty, is_tombstone);
 
     searching = _kandn_mask8(tombstone_or_empty, searching);
 
@@ -1412,7 +1412,8 @@ static inline int pmem_nvm_hash_table_insert_internal_simd64(__m512i *inums, __m
         }
       }
     }
-    duplicates_mask &= to_find; 
+    duplicates_mask &= to_find;
+    printf("%u\n", duplicates_mask); 
     if(duplicates_mask != 0) {
       pmem_find_next_invalid_entry_simd64(indices, duplicates_mask);
     }
@@ -1425,7 +1426,7 @@ static inline int pmem_nvm_hash_table_insert_internal_simd64(__m512i *inums, __m
 
 }
 
-int pmem_nvm_hash_table_insert_simd64(uint32_t inum, uint32_t lblk, uint32_t len, uint32_t *pblks){
+int pmem_nvm_hash_table_insert_simd64(uint32_t inum, uint32_t lblk, uint32_t len, uint64_t *pblks){
   u512i_64 inum_vec;
 	u512i_64 lblk_vec;
 	uint32_t pOfTwo[8] = {1, 2, 4, 8, 16, 32, 64, 128};
@@ -1442,8 +1443,8 @@ int pmem_nvm_hash_table_insert_simd64(uint32_t inum, uint32_t lblk, uint32_t len
   int success = pmem_nvm_hash_table_insert_internal_simd64(&(inum_vec.vec), &(lblk_vec.vec), &(indices.vec), to_find);
   uint32_t meta_size = pmem_ht->meta_size;
   for(size_t i = 0; i < len; ++i) {
-    pblks[i] = indices.arr[i] + meta_size;
-    printf("%d INSERTED %d-%d in index %d\n", success, inum, lblk, indices.arr[i]);
+    pblks[i] = ((uint64_t)indices.arr[i]) + ((uint64_t)meta_size);
+    printf("%d INSERTED %d-%d in index %d (pblk: %u)\n", success, inum, lblk + i, indices.arr[i], pblks[i]);
   }
   return success;
 }
