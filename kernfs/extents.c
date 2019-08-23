@@ -2805,6 +2805,15 @@ static mlfs_lblk_t mlfs_ext_determine_hole(handle_t *handle, struct inode *inode
 int mlfs_hashfs_get_blocks(handle_t *handle, struct inode *inode, 
 			struct mlfs_map_blocks_arr *map_arr, int flags)
 {
+
+#ifdef STORAGE_PERF
+    //g_perf_stats.path_storage_nr = 0;
+	if (enable_perf_stats) {
+		tsc_start = asm_rdtscp();
+        start_cache_stats();
+    }
+#endif
+
     assert(map_arr->m_len <= 8 && "fs_get_blocks m_len > 8");
     struct super_block *sblk = sb[g_root_dev];
     //printf("retrieving %u blocks\nmap_arr: ", map_arr->m_len);
@@ -2814,8 +2823,21 @@ int mlfs_hashfs_get_blocks(handle_t *handle, struct inode *inode,
 	int success = 0;
 	if(create || create2) {
 		success = pmem_nvm_hash_table_insert_simd64(inode->inum, map_arr->m_lblk, map_arr->m_len, map_arr->m_pblk);
+#ifdef KERNFS
+		if (enable_perf_stats) {
+			g_perf_stats.path_search_tsc += (asm_rdtscp() - tsc_start);
+			g_perf_stats.path_search_size += map_arr->m_len;
+			g_perf_stats.path_search_nr++;
+			end_cache_stats(&(g_perf_stats.cache_stats));
+		}
+#endif
 	}
 	else {
+		if (enable_perf_stats) {
+			update_stats_dist(&(g_perf_stats.read_per_index),
+								g_perf_stats.path_storage_nr);
+			end_cache_stats(&(g_perf_stats.cache_stats));
+        }
 		success = pmem_nvm_hash_table_lookup_simd64(inode->inum, map_arr->m_lblk, map_arr->m_len, map_arr->m_pblk);
 	}
 	return map_arr->m_len;
@@ -2879,31 +2901,6 @@ int mlfs_ext_get_blocks(handle_t *handle, struct inode *inode,
 			struct mlfs_map_blocks *map, int flags)
 {
 
-	if(IDXAPI_IS_HASHFS()) {
-		int create = flags & MLFS_GET_BLOCKS_CREATE_DATA;
-		//paddr_t *index = (paddr_t*)malloc(sizeof(paddr_t));
-		paddr_t index;
-		if(create) {
-			int success = pmem_nvm_hash_table_insert(inode->inum, map->m_lblk, &index);
-			if(!success) {
-				//block already existed, so this does nothing
-				printf("block already existed\n");
-			}
-		}
-		else {
-			int found = pmem_nvm_hash_table_lookup(inode->inum, map->m_lblk, &index);
-				if(!found) {
-				//did not find the requested block
-				printf("block not found\n");
-			}	
-		}
-		struct super_block *sblk = sb[g_root_dev];
-		map->m_pblk = index + sblk->ondisk->datablock_start;
-		printf("map->m_pblk: %d\n", map->m_pblk);
-		map->m_len = 1;
-		return map->m_len;		
-	}
-
 	struct mlfs_ext_path *path = NULL;
 	struct mlfs_extent newex, *ex;
 	int goal, err = 0, depth;
@@ -2917,7 +2914,7 @@ int mlfs_ext_get_blocks(handle_t *handle, struct inode *inode,
 	create = flags & MLFS_GET_BLOCKS_CREATE_DATA;
 
 #ifdef STORAGE_PERF
-    g_perf_stats.path_storage_nr = 0;
+    //g_perf_stats.path_storage_nr = 0;
 	if (enable_perf_stats) {
 		tsc_start = asm_rdtscp();
         start_cache_stats();
