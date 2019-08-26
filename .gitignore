@@ -1,3 +1,5 @@
+.vscode/
+
 # Build directories.
 kernel/kbuild
 !kernel/kbuild/Makefile.setup
@@ -24,6 +26,7 @@ autom4te.cache/
 shim/libshim/*.o
 shim/libshim/*.so
 shim/glibc-build-all
+shim/glibc-build-opt
 
 # Test files.
 kernfs/tests/extent_test
@@ -81,6 +84,25 @@ bench/filebench/install-sh
 bench/filebench/missing
 bench/filebench/ylwrap
 bench/filebench/install
+bench/filebench/Makefile
+bench/filebench/Makefile.in
+bench/filebench/aclocal.m4
+bench/filebench/config.h
+bench/filebench/config.log
+bench/filebench/config.status
+bench/filebench/configure
+bench/filebench/hello
+bench/filebench/hello.c
+bench/filebench/libtool
+bench/filebench/parser_gram.c
+bench/filebench/parser_gram.h
+bench/filebench/parser_lex.c
+bench/filebench/thing.txt
+bench/filebench/workloads/Makefile
+bench/filebench/workloads/Makefile.in
+
+
+
 
 bench/benchout
 
