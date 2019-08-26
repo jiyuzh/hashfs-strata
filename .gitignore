@@ -64,7 +64,9 @@ libfs/tests/partial_update_test
 libfs/tests/readdir_test
 libfs/tests/simple_spdk_test
 libfs/tests/small_io
-
+libfs/tests/MTCCcorrect
+libfs/tests/write_bench
+libfs/tests/read_bench
 
 # Bench files.
 bench/hash_bench/hash_bench
