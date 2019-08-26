@@ -25,6 +25,7 @@ autom4te.cache/
 
 shim/libshim/*.o
 shim/libshim/*.so
+shim/glibc/build
 shim/glibc-build-all
 shim/glibc-build-opt
 
@@ -47,6 +48,7 @@ libfs/tests/MTCC
 libfs/tests/a.out
 libfs/tests/age
 libfs/tests/append_test
+libfs/tests/core
 libfs/tests/deepqueue
 libfs/tests/dir_test
 libfs/tests/falloc_test
