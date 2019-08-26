@@ -54,7 +54,6 @@ class KernFSThread:
         '''
 
         mkfs_args = [ 'sudo', '-E', str(self.kernfs_path / 'mkfs.sh') ]
-        print("mkfs.sh env", self.env['MLFS_IDX_STRUCT'])
         proc = subprocess.run(mkfs_args, cwd=self.kernfs_path, check=True, env=self.env)#,
                               # stdout=DEVNULL, stderr=DEVNULL)
        

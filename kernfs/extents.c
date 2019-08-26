@@ -2805,6 +2805,7 @@ static mlfs_lblk_t mlfs_ext_determine_hole(handle_t *handle, struct inode *inode
 int mlfs_hashfs_get_blocks(handle_t *handle, struct inode *inode, 
 			struct mlfs_map_blocks_arr *map_arr, int flags)
 {
+	uint64_t tsc_start = 0;
 
 #ifdef STORAGE_PERF
     //g_perf_stats.path_storage_nr = 0;
@@ -2840,7 +2841,7 @@ int mlfs_hashfs_get_blocks(handle_t *handle, struct inode *inode,
         }
 		success = pmem_nvm_hash_table_lookup_simd64(inode->inum, map_arr->m_lblk, map_arr->m_len, map_arr->m_pblk);
 	}
-	printf("pblk: %u", map_arr->m_pblk[0]);
+	//printf("pblk: %u", map_arr->m_pblk[0]);
 	return map_arr->m_len;
 	
 	
