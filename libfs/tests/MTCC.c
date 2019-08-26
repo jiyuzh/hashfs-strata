@@ -6,10 +6,15 @@
 #include <time.h>
 #include <assert.h>
 #include <sys/stat.h>
+#include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <string.h>
+#include <signal.h>
+#include "kernfs_interface.h"
+#include <mlfs/mlfs_interface.h>
+
 #define MAX_FILE_NUM 1024
 #define MAX_FILE_NAME_LEN 1024
 #define MAX_THREADS 1024
@@ -42,7 +47,7 @@ static void *worker_thread(void *);
 #ifndef PREFIX
 #define PREFIX "/mlfs"
 #endif
-#define OPTSTRING "b:j:n:s:M:r:w:h:S"
+#define OPTSTRING "b:j:n:s:M:r:w:h:S:"
 #define OPTNUM 7
 void print_help(char **argv) {
     printf("usage: %s -b block_size -j n_threads -s seq_ratio -n num_file -M max_file_size -S start_file_size -w write_unit_size -r read_unit_size\n", argv[0]);
@@ -147,8 +152,42 @@ int main(int argc, char **argv) {
         for (size_t s = 0; s < sz; s += write_unit) {
             assert(write(fd_v[i], write_buf, write_unit) != -1);
         }
+
+        close(fd_v[i]);
+        fd_v[i] = open(filename_v[i], O_RDWR | O_CREAT, 0666);
+        if (fd_v[i] == -1) {
+            perror("re-open failed");
+            exit(-1);
+        }
     }
 
+    // Force digest request
+    while(make_digest_request_async(100));
+    printf("Wait for digest to start...\n");
+    wait_on_not_digesting();
+    printf("\tDone\nWait for digest to stop...\n");
+    wait_on_digesting();
+    printf("\tDone.\n");
+
+    // Reset kernfs stats before we start
+    FILE *f = fopen(KERNFSPIDPATH, "r");
+    if (f == NULL) {
+        perror("can't open kernfs pid file");
+        exit(-1);
+    }
+    pid_t kernfs_pid;
+    fscanf(f, "%d", &kernfs_pid);
+    printf("kernfs id is %d\n", kernfs_pid);
+    fclose(f);
+    if (kill(kernfs_pid, SIGUSR2) != 0) {
+        perror("SIGUSR2 kernfs failed");
+    }
+    // -- also reset libfs stats
+    reset_libfs_stats();
+
+    struct timeval start, end;
+    int terr = gettimeofday(&start, NULL);
+    if (terr) panic("GETTIMEOFDAY\n");
     for (int i=0; i < n_threads; ++i) {
         assert(pthread_create(&threads[i], NULL, worker_thread, (void*)(&worker_results[i])) == 0);
     }
