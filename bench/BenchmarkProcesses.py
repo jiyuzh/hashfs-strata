@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 from pprint import pprint 
 import re
+import signal
 import shlex
 import subprocess
 from subprocess import DEVNULL, PIPE, STDOUT, TimeoutExpired
@@ -40,7 +41,7 @@ class KernFSThread:
         'Reset the stats after init.'
         # kill whole process group
         pgid = os.getpgid(self.proc.pid)
-        kill_args = [ 'kill', '-2', '--', '-'+str(pgid) ]
+        kill_args = shlex.split(f'kill -{signal.SIGUSR2.value} -- -{pgid}')
         subprocess.run(kill_args, check=True, stdout=DEVNULL, stderr=DEVNULL)
 
     def start(self):
@@ -57,8 +58,8 @@ class KernFSThread:
         proc = subprocess.run(mkfs_args, cwd=self.kernfs_path, check=True, env=self.env)#,
                               # stdout=DEVNULL, stderr=DEVNULL)
        
-        kernfs_arg_str = '{0}/run.sh numactl -N 1 -m 1 {0}/kernfs'.format(
-                                  str(self.kernfs_path))
+        kernfs_arg_str = '{0}/run.sh numactl -N {1} -m {1} {0}/kernfs'.format(
+                                  str(self.kernfs_path), '0')
         kernfs_args = shlex.split(kernfs_arg_str)
 
         opt_args = {}
@@ -127,10 +128,17 @@ class KernFSThread:
 
 class BenchRunner:
 
+<<<<<<< HEAD
     IDX_STRUCTS   = [ 'HASHFS', 'EXTENT_TREES', 'GLOBAL_HASH_TABLE',
                       'LEVEL_HASH_TABLES', 'RADIX_TREES', 'NONE' ]
     IDX_DEFAULT   = [ 'EXTENT_TREES', 'GLOBAL_HASH_TABLE',
                       'LEVEL_HASH_TABLES', 'RADIX_TREES', 'HASHFS', 'NONE']
+=======
+    IDX_STRUCTS   = [ 'EXTENT_TREES', 'EXTENT_TREES_TOP_CACHED', 
+                      'GLOBAL_HASH_TABLE', 'GLOBAL_CUCKOO_HASH'
+                      'LEVEL_HASH_TABLES', 'RADIX_TREES', 'NONE' ]
+    IDX_DEFAULT   = IDX_STRUCTS
+>>>>>>> Update automate script to match new MTCC better and better isolate perf
     LAYOUT_SCORES = ['100', '90', '80', '70', '60']
 
     def __init__(self, args):
@@ -295,6 +303,10 @@ class BenchRunner:
                             help='List of layout scores to use.')
         parser.add_argument('--trials', '-t', nargs='?', default=1, type=int,
                             help='Number of trials to run, default 1')
+
+        parser.add_argument('--numa-node', '-M', default=0, type=int,
+                            help='Which NUMA node to lock to.')
+
         parser.add_argument('--outdir', '-o', default='./benchout',
                             help='Where to output the results.')
         parser.add_argument('--verbose', '-v', action='store_true',

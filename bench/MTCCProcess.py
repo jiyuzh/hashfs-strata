@@ -1,6 +1,7 @@
 from argparse import ArgumentParser, Namespace
 import copy
 from datetime import datetime
+import itertools
 from IPython import embed
 import json
 import glob
@@ -18,6 +19,7 @@ from warnings import warn
 import progressbar
 from progressbar import ProgressBar
 
+from Utils import *
 from BenchmarkProcesses import BenchRunner
 
 class MTCCRunner(BenchRunner):
@@ -44,7 +46,7 @@ class MTCCRunner(BenchRunner):
         pprint(lines)
         raise Exception('Could not find throughput numbers!')
 
-    def _parse_trial_stat_files(self, workload_name, layout, struct, time_elapsed):
+    def _parse_trial_stat_files(self, time_elapsed, labels):
         stat_objs = []
 
         stats_files = [Path(x) for x in glob.glob('/tmp/libfs_prof.*')]
@@ -68,9 +70,13 @@ class MTCCRunner(BenchRunner):
                     obj['struct'] = struct.lower()
                     stat_objs += [obj]
 
-        if len(stat_objs) != 1:
+        if len(stat_objs) > 1:
+            stat_objs = [s for s in stat_objs if s['lsm']['nr'] > 0]
+
+        if not stat_objs:
             pprint(stat_objs)
-            print(workload_name, layout, struct, time_elapsed)
+            print(time_elapsed)
+            pprint(labels)
             raise Exception('No valid statistics from trial run!')
 
         for stat_file in stats_files:
@@ -83,8 +89,8 @@ class MTCCRunner(BenchRunner):
         stat_objs = []
 
         stats_files = [Path(x) for x in glob.glob('/tmp/libfs_prof.*')]
-        assert len(stats_files)
-        
+        assert stats_files
+   
         for stat_file in stats_files:
             with stat_file.open() as f:
                 file_data = f.read()
@@ -111,29 +117,70 @@ class MTCCRunner(BenchRunner):
         assert len(stat_objs) == 1
         return stat_objs[0]
 
+
+    def _run_mtcc_trial(self, cwd, setup_args, trial_args, labels):
+
+        if setup_args:
+            self.env['MLFS_PROFILE'] = '0'
+            self._run_trial_continue(setup_args, cwd, None)
+            self.env['MLFS_PROFILE'] = '1'
+
+            total_time = self._run_trial_end(trial_args, cwd, self._parse_readfile_time)
+
+            # Get the stats.
+            stat_obj = self._parse_trial_stat_files(total_time, labels)
+        else:
+            self.env['MLFS_PROFILE'] = '1'
+
+            total_time = self._run_trial(trial_args, cwd, self._parse_readfile_time)
+
+            # Get the stats.
+            stat_obj = self._parse_trial_stat_files(total_time, labels)
+
+
+        stat_obj['kernfs'] = self._get_kernfs_stats()
+
+        '''
+        pr = lambda stdout: print(stdout.decode())
+        if self.args.measure_cache_perf:
+            self.env['MLFS_PROFILE'] = '0'
+            pprint(setup_args)
+            self._run_trial_continue(setup_args, mtcc_path, None, timeout=(10*60))
+            self.env['MLFS_PROFILE'] = '1'
+
+            self.env['MLFS_CACHE_PERF'] = '1'
+            pprint(readfile_args)
+            self._run_trial_end(readfile_args, mtcc_path, pr, no_warn=True, timeout=(10*60))
+
+            cache_stat_obj = self._parse_trial_stat_files_cache(
+                    workload_name, layout, struct)
+            stat_obj['cache'] = cache_stat_obj['cache']
+            stat_obj['cache']['kernfs'] = self._get_kernfs_stats()
+        '''
+
+        return [stat_obj]
+
     def _run_mtcc(self):
         print('Running MTCC profiles.')
         mtcc_path = (self.root_path / 'libfs' / 'tests').resolve()
         assert mtcc_path.exists()
        
-        workloads = self.args.thread_nums
+        workloads = self._get_workloads()
 
         old_stats_files = [Path(x) for x in glob.glob('/tmp/libfs_prof.*')]
         for old_file in old_stats_files:
             rm_args = shlex.split('sudo rm -f {}'.format(str(old_file)))
             subprocess.run(rm_args, check=True)
 
-        num_trials = len(workloads) * len(self.layout_scores) * \
-                     len(self.structs) * self.args.trials
         widgets = [
                     progressbar.Percentage(),
-                    ' (', progressbar.Counter(), ' of {})'.format(num_trials),
+                    ' (', progressbar.Counter(), ' of {})'.format(len(workloads)),
                     ' ', progressbar.Bar(left='[', right=']'),
                     ' ', progressbar.Timer(),
                     ' ', progressbar.ETA(),
                   ]
 
-        with ProgressBar(widgets=widgets, max_value=num_trials) as bar:
+        with ProgressBar(widgets=widgets, max_value=len(workloads)) as bar:
             bar.start()
             counter = 0
 
@@ -152,89 +199,153 @@ class MTCCRunner(BenchRunner):
             self.update_bar_proc = Process(target=update_bar, args=(shared_q,))
             self.update_bar_proc.start()
 
+<<<<<<< HEAD
             mtcc_arg_str = ('{0}/run.sh numactl -N 1 -m 1 {0}/MTCC -b 32k -s 0 '
                             '-j {1} -n {1} -M 1G -w 32k -r 0k')
             readfile_arg_str = ('{0}/run.sh numactl -N 1 -m 1 {0}/readfile '
             '-b 32k -s %d -j {1} -n {1} -r {1}G') % (1 if self.args.sequential else 0)
+=======
+            numa_node = self.args.numa_node
+            dir_str   = str(mtcc_path)
+>>>>>>> Update automate script to match new MTCC better and better isolate perf
 
+            stat_objs = []
             try:
                 for workload in workloads:
-                    stat_objs = []
-                    workload_name = '{}_threads'.format(workload)
-                    for layout in self.layout_scores:
-                        for struct in self.structs:
-                            self.env['MLFS_IDX_STRUCT'] = struct
-                            self.env['MLFS_LAYOUT_SCORE'] = layout
-                            self.env['MLFS_CACHE_PERF'] = '0'
+                    try:
 
-                            for trialno in range(self.args.trials):
+                        idx_struct, layout_score, start_size, io_size, reps, \
+                                nfiles, trial_num = workload
 
-                                setup_args = shlex.split(
-                                        mtcc_arg_str.format(mtcc_path, workload))
-                                readfile_args = shlex.split(
-                                        readfile_arg_str.format(mtcc_path, workload))
+                        self.env['MLFS_IDX_STRUCT'] = idx_struct
+                        self.env['MLFS_LAYOUT_SCORE'] = layout_score
+                        self.env['MLFS_CACHE_PERF'] = '0'
 
-                                self.env['MLFS_PROFILE'] = '0'
-                                pr = lambda stdout: print(stdout.decode())
-                                self._run_trial_continue(setup_args, mtcc_path, None)
-                                self.env['MLFS_PROFILE'] = '1'
+                        labels = {}
+                        labels['struct'] = idx_struct
+                        labels['layout'] = layout_score
+                        labels['start size'] = start_size
+                        labels['io size'] = io_size
+                        labels['repetitions'] = reps
+                        labels['num files'] = nfiles
+                        labels['trial num'] = trial_num
 
-                                total_time = self._run_trial_end(readfile_args, 
-                                        mtcc_path, self._parse_readfile_time)
+                        mtcc_arg_str = \
+                            f'''numactl -N {numa_node} -m {numa_node} {dir_str}/run.sh
+                                {dir_str}/MTCC -b {io_size} -s 1 -j 1 -n {nfiles}
+                                -S {start_size} -M {start_size + io_size} 
+                                -w {io_size * reps} -r 0'''
 
-                                # Get the stats.
-                                stat_obj = self._parse_trial_stat_files(
-                                        workload_name, layout, struct, total_time)
+                        setup_size = 4096 if start_size > 4096 else start_size
 
-                                stat_obj['kernfs'] = self._get_kernfs_stats()
+                        readfile_setup_arg_str = \
+                            f'''numactl -N {numa_node} -m {numa_node} {dir_str}/run.sh
+                                {dir_str}/MTCC -b {setup_size} -s 1 -j 1 -n {nfiles}
+                                -M {start_size} -w {setup_size} -r 0'''
 
-                                if self.args.measure_cache_perf:
-                                    self.env['MLFS_PROFILE'] = '0'
-                                    pprint(setup_args)
-                                    self._run_trial_continue(setup_args, mtcc_path, None, timeout=(10*60))
-                                    self.env['MLFS_PROFILE'] = '1'
+                        readfile_seq_arg_str = \
+                            f'''numactl -N {numa_node} -m {numa_node} {dir_str}/run.sh
+                                {dir_str}/readfile -b {io_size} -s 1 -j 1 -n {nfiles}
+                                -r {io_size * reps}'''
 
-                                    self.env['MLFS_CACHE_PERF'] = '1'
-                                    pprint(readfile_args)
-                                    self._run_trial_end(readfile_args, mtcc_path, pr, no_warn=True, timeout=(10*60))
+                        readfile_rand_arg_str = \
+                            f'''numactl -N {numa_node} -m {numa_node} {dir_str}/run.sh
+                                {dir_str}/readfile -b {io_size} -s 0 -j 1 -n {nfiles}
+                                -r {io_size * reps} -x'''
 
-                                    cache_stat_obj = self._parse_trial_stat_files_cache(
-                                            workload_name, layout, struct)
-                                    stat_obj['cache'] = cache_stat_obj['cache']
-                                    stat_obj['cache']['kernfs'] = self._get_kernfs_stats()
+                        insert_trial_args = shlex.split(mtcc_arg_str)
 
-                                stat_objs += [stat_obj]
+                        seq_setup_args = shlex.split(readfile_setup_arg_str)
+                        seq_trial_args = shlex.split(readfile_seq_arg_str)
 
-                                counter += 1
-                                shared_q.put(counter)
+                        rand_setup_args = seq_setup_args
+                        rand_trial_args = shlex.split(readfile_rand_arg_str)
 
-                    timestamp_str = datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
-                    fname = 'mtcc_{}_{}.json'.format(workload_name, timestamp_str)
-                    self._write_bench_output(stat_objs, fname)
-                    # also write a summarized version
-                    keys = ['layout', 'total_time', 'struct', 'bench', 'workload', 'cache']
-                    stat_summary = []
-                    for stat_obj in stat_objs:
-                        small_obj = { k: stat_obj[k] for k in keys if k in stat_obj}
-                        stat_summary += [small_obj]
-                    sname = 'mtcc_summary_{}_{}.json'.format(workload_name, 
-                                                             timestamp_str)
-                    self._write_bench_output(stat_summary, sname)
-            except:
-                raise
+                        # Run the benchmarks
+                        # 1) Insert test
+                        insert_labels = {}
+                        insert_labels.update(labels)
+                        insert_labels['test'] = 'Insert'
+                        stat_objs += self._run_mtcc_trial(mtcc_path, None, 
+                                insert_trial_args, insert_labels)
+
+                        # 2) Sequential read test
+                        seq_labels = {}
+                        seq_labels.update(labels)
+                        seq_labels['test'] = 'Sequential Read'
+                        stat_objs += self._run_mtcc_trial(mtcc_path, seq_setup_args,
+                                seq_trial_args, seq_labels)
+
+                        # 3) Random read test
+                        rand_labels = {}
+                        rand_labels.update(labels)
+                        rand_labels['test'] = 'Random Read'
+                        stat_objs += self._run_mtcc_trial(mtcc_path, rand_setup_args,
+                                rand_trial_args, rand_labels)
+
+                        counter += 1
+                        shared_q.put(counter)
+
+                    except:
+                        pprint(workload)
+                        raise
+
             finally:
+                # Output all the results
+                timestamp_str = datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
+                fname = f'mtcc_{timestamp_str}.json'
+                self._write_bench_output(stat_objs, fname)
+                # also write a summarized version
+                keys = ['layout', 'total_time', 'struct', 'bench', 'workload', 'cache']
+                stat_summary = []
+                for stat_obj in stat_objs:
+                    small_obj = { k: stat_obj[k] for k in keys if k in stat_obj}
+                    stat_summary += [small_obj]
+                sname = f'mtcc_summary_{timestamp_str}.json'
+                self._write_bench_output(stat_summary, sname)
+
+                # Shutdown async tasks
                 self.update_bar_proc.terminate()
                 self.update_bar_proc.join()
                 assert self.update_bar_proc is not None
 
-   
+    def _get_workloads(self):
+        io_sizes    = resolve_units(self.args.io_sizes)
+        repetitions = self.args.repetitions
+        start_sizes = resolve_units(self.args.start_sizes)
+        idx_structs = self.args.data_structures
+        layouts     = self.args.layout_scores
+        ntrials     = self.args.trials
+        nfiles      = self.args.num_files_per_test
+
+        workloads = itertools.product(idx_structs, layouts, start_sizes,
+                              io_sizes, repetitions, nfiles, range(ntrials))
+        
+        return list(workloads)
+
     @classmethod
     def add_arguments(cls, parser):
         parser.set_defaults(fn=cls._run_mtcc)
-        parser.add_argument('thread_nums', nargs='+', type=int,
-                help='Workloads of numbers of threads to run')
+        #parser.add_argument('thread_nums', nargs='+', type=int,
+        #        help='Workloads of numbers of threads to run')
+        #parser.add_argument('--sequential', '-s', action='store_true',
+        #                    help='Run reads sequentially rather than randomly')
+
+        # Requirements
+        parser.add_argument('--io-sizes', '-i', nargs='+', type=str,
+                            help='The data read/write units to use.')
+        parser.add_argument('--repetitions', '-r', nargs='+', type=int,
+                help=('The number of times to do reads/writes in an experiment.'
+                      ' Used for locality tests'))
+
+        parser.add_argument('--start-sizes', '-s', nargs='+', type=str,
+                help=('The starting file sizes to use. Used to measure the '
+                      'effects of indexing structure size.'))
+        parser.add_argument('--num-files-per-test', '-f', nargs='+', type=int,
+                help='The number of files per test.')
+
+        # Options
         parser.add_argument('--measure-cache-perf', '-c', action='store_true',
                             help='Measure cache perf as well.')
-        parser.add_argument('--sequential', '-s', action='store_true',
-                            help='Run reads sequentially rather than randomly')
+
         cls._add_common_arguments(parser)
