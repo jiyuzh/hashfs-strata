@@ -7,7 +7,7 @@ for arg in $@; do
   if [ "$arg" == "mirror" ]; then
     echo "debug"
     OPT_ARGS="-g -O0"
-    DEBUG_ARGS="${DEBUG_ARGS}"
+    DEBUG_ARGS="${DEBUG_ARGS} -DMIRROR_SYSCALL"
   fi
   if [ "$arg" == "debug" ]; then
     echo "debug"
