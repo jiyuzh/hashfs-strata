@@ -82,6 +82,8 @@ bench/filebench/missing
 bench/filebench/ylwrap
 bench/filebench/install
 
+bench/benchout
+
 # Graphs.
 *.pdf
 __pycache__
