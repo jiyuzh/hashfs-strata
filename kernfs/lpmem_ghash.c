@@ -942,7 +942,7 @@ pmem_nvm_hash_table_new(struct disk_superblock *sblk,
                    //paddr_t           metadata_location,
                    //const idx_spec_t *idx_spec
                    ) {
-  printf("inside ht_new\n");
+  //printf("inside ht_new\n");
   //*buf = dax_addr[g_root_dev] + (blk * g_block_size_bytes) + off; 
   pmem_ht = (pmem_nvm_hash_idx_t*)(dax_addr[g_root_dev] + (sblk->datablock_start * g_block_size_bytes));
   if(pmem_ht->valid == 1) {
@@ -1413,13 +1413,13 @@ static inline int pmem_nvm_hash_table_insert_internal_simd64(__m512i *inums, __m
       }
     }
     duplicates_mask &= to_find;
-    printf("%u\n", duplicates_mask); 
+    //printf("%u\n", duplicates_mask); 
     if(duplicates_mask != 0) {
       pmem_find_next_invalid_entry_simd64(indices, duplicates_mask);
     }
     //_cvtmask8_u32(searching) != 0
   } while(duplicates_mask != 0);
-  printVec_simd32("to_insert", indices);
+  //printVec_simd32("to_insert", indices);
   _mm512_mask_i32scatter_epi64(pmem_ht_vol->entries, to_find, *indices, keys, 8);
 
   return true;
@@ -1438,13 +1438,13 @@ int pmem_nvm_hash_table_insert_simd64(uint32_t inum, uint32_t lblk, uint32_t len
 
 	}
   __mmask8 to_find = _cvtu32_mask8(to_do);
-	printMask_simd8("to_find", &to_find);
+	//printMask_simd8("to_find", &to_find);
 	u256i_32 indices;
   int success = pmem_nvm_hash_table_insert_internal_simd64(&(inum_vec.vec), &(lblk_vec.vec), &(indices.vec), to_find);
   uint32_t meta_size = pmem_ht->meta_size;
   for(size_t i = 0; i < len; ++i) {
     pblks[i] = ((uint64_t)indices.arr[i]) + ((uint64_t)meta_size);
-    printf("%d INSERTED %d-%d in index %d (pblk: %u)\n", success, inum, lblk + i, indices.arr[i], pblks[i]);
+    //printf("%d INSERTED %d-%d in index %d (pblk: %u)\n", success, inum, lblk + i, indices.arr[i], pblks[i]);
   }
   return success;
 }

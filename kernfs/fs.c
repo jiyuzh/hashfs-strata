@@ -2204,7 +2204,7 @@ void init_fs(void)
 	int i;
 	const char *perf_profile;
 	printf("getchar()\n");
-	getchar();
+	// getchar();
     g_idx_choice = get_indexing_choice();
     g_idx_cached = get_indexing_is_cached();
 
@@ -2242,8 +2242,6 @@ void init_fs(void)
 #endif
 	if(IDXAPI_IS_HASHFS()) {
 		struct super_block *sblk = sb[g_root_dev];
-		printf("getchar\n");
-	//	getchar();
 		if(IDXAPI_IS_CUCKOOFS()) {
 			pmem_cuckoohash_initialize(sblk->ondisk);
 		}

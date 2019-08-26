@@ -2848,7 +2848,7 @@ int mlfs_hashfs_get_blocks(handle_t *handle, struct inode *inode,
 		//paddr_t *index = (paddr_t*)malloc(sizeof(paddr_t));
 		paddr_t index;
 		if(create || create2) {
-			printf("inside get_blocks create\n");
+			//printf("inside get_blocks create\n");
 			int success = 0;
 			if(IDXAPI_IS_CUCKOOFS()) {
 				success = pmem_cuckoohash_create(inode->inum, map_arr->m_lblk + i, &index);
@@ -2862,7 +2862,7 @@ int mlfs_hashfs_get_blocks(handle_t *handle, struct inode *inode,
 				return i;
 			}
 		} else {
-			printf("inside get_blocks lookup\n");
+			//printf("inside get_blocks lookup\n");
 			int found = 0;
 			if(IDXAPI_IS_CUCKOOFS()) {
 				found = pmem_cuckoohash_lookup(inode->inum, map_arr->m_lblk + i, &index);

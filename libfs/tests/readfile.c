@@ -58,8 +58,6 @@ uint32_t get_unit(char c) {
     }
 }
 int main(int argc, char **argv) {
-    printf("getchar\n");
-    getchar();
     int c;
     srand(time(NULL));
     while ((c = getopt(argc, argv, OPTSTRING)) != -1) {
