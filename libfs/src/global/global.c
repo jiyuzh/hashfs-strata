@@ -12,6 +12,9 @@ indexing_choice_t get_indexing_choice(void) {
     if (env != NULL && !strcmp(env, "EXTENT_TREES")) {
         printf("%s -> using API per-file extent trees!\n", env);
         return EXTENT_TREES;
+    } else if (env != NULL && !strcmp(env, "EXTENT_TREES_TOP_CACHED")) {
+        printf("%s -> using API per-file extent trees (with top-level caching)!\n", env);
+        return EXTENT_TREES_TOP_CACHED;
     } else if (env != NULL && !strcmp(env, "GLOBAL_HASH_TABLE")) {
         printf("%s -> using API global hash table!\n", env);
         return GLOBAL_HASH_TABLE;
@@ -39,15 +42,17 @@ indexing_choice_t get_indexing_choice(void) {
 bool get_indexing_is_cached(void) {
     const char *env = getenv("MLFS_IDX_CACHE");
 
-    if (!env) {
+    if (!env || g_idx_choice != EXTENT_TREES_TOP_CACHED) {
         printf("MLFS_IDX_CACHE not set -> disabling caches by default!\n");
         return false;
     }
 
-    if (!strcmp(env, "1") ||
+    if (g_idx_choice == EXTENT_TREES_TOP_CACHED ||
+        !strcmp(env, "1") ||
         !strcmp(env, "TRUE") || !strcmp(env, "true") ||
         !strcmp(env, "YES") || !strcmp(env, "yes")) {
-        printf("%s -> using API indexing caching!\n", env);
+        printf("%s -> using API indexing caching!\n", 
+                env ? env : getenv("MLFS_IDX_STRUCT"));
         return true;
     } 
     
@@ -61,6 +66,7 @@ void print_global_idx_stats(bool enable_perf_stats) {
     idx_fns_t *fns;
     switch(g_idx_choice) {
         case EXTENT_TREES:
+        case EXTENT_TREES_TOP_CACHED:
             fns = &extent_tree_fns;
             break;
         case RADIX_TREES:
