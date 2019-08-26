@@ -117,19 +117,20 @@ int main(int argc, char **argv) {
     show_libfs_stats("init done");
     reset_libfs_stats();
     //uint64_t tsc_begin = asm_rdtscp();
-    struct timeval start, end;
-    int terr = gettimeofday(&start, NULL);
-    if (terr) panic("GETTIMEOFDAY\n");
 
     for (int i=0; i < file_num; ++i) {
         snprintf(filename_v[i], MAX_FILE_NAME_LEN, PREFIX "/MTCC-%d", i);
         fd_v[i] = open(filename_v[i], O_RDWR);
         if (fd_v[i] == -1) {
-            perror("open failed");
-	    printf("filename: %s\n", filename_v[i]);
+            perror("readfile open failed");
             exit(-1);
         }
     }
+
+    struct timeval start, end;
+    int terr = gettimeofday(&start, NULL);
+    if (terr) panic("GETTIMEOFDAY\n");
+
     for (int i=0; i < n_threads; ++i) {
         worker_results[i].tid = i;
         assert(pthread_create(&threads[i], NULL, 

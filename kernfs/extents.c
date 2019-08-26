@@ -2896,6 +2896,7 @@ int mlfs_ext_get_blocks(handle_t *handle, struct inode *inode,
 
 	create = flags & MLFS_GET_BLOCKS_CREATE_DATA;
 
+
 #ifdef STORAGE_PERF
     //g_perf_stats.path_storage_nr = 0;
 	if (enable_perf_stats) {

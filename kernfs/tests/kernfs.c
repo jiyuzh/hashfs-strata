@@ -22,6 +22,7 @@ static void sig_handler(int signum) {
             reset_kernfs_stats();
             break;
         case SIGQUIT:
+            show_kernfs_stats();
             safe_exit();
         default:
             ;

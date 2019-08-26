@@ -65,14 +65,14 @@ uint32_t get_unit(char c) {
 int main(int argc, char **argv) {
     int c;
     srand(time(NULL));
-    //getchar();
+
     while ((c = getopt(argc, argv, OPTSTRING)) != -1) {
         switch (c) {
             case 'b': // block_size
                 block_size = atoi(optarg);
                 block_size *= get_unit(optarg[strlen(optarg)-1]);
                 if (block_size % sizeof(uint64_t)) {
-                    panic("block_size should be dividable by 64");
+                    panic("block_size should be divisable by 64");
                 }
                 opt_num++;
                 break;
@@ -100,9 +100,9 @@ int main(int argc, char **argv) {
                 opt_num++;
                 break;
             case 'S': // start file size
-                max_file_size = atoi(optarg);
-                max_file_size *= get_unit(optarg[strlen(optarg)-1]);
-                assert((max_file_size % block_size == 0) && "max_file_size should be dividable by block_size");
+                start_file_size = atoi(optarg);
+                start_file_size *= get_unit(optarg[strlen(optarg)-1]);
+                assert((start_file_size % block_size == 0) && "start_file_size should be dividable by block_size");
                 opt_num++;
                 break;
             case 'r': // read_unit size
@@ -156,6 +156,11 @@ int main(int argc, char **argv) {
     for (int i=0; i < n_threads; ++i) {
         assert(pthread_join(threads[i], NULL) == 0);
     }
+    terr = gettimeofday(&end, NULL);
+    if (terr) panic("GETTIMEOFDAY\n");
+    double secs = ((double)(end.tv_sec - start.tv_sec)) + 
+                   ((double)(end.tv_usec - start.tv_usec) * 1e-6);
+    printf("elapsed time: %f\n", secs);
 
     for (int i=0; i < file_num; ++i) {
         struct stat file_stat;
@@ -183,7 +188,7 @@ static void *worker_thread(void *arg) {
         assert(fstat(fd, &file_stat) == 0 && "fstat failed");
         size_t size = file_stat.st_size;
         size_t block_num = size/block_size;
-        if (size > max_file_size) // exceeds max file size
+        if (size >= max_file_size) // exceeds max file size
             break;
         if ((double)(rand())/RAND_MAX < seq_ratio) { // sequential read
             int start_offset = (rand()%(block_num - read_unit/block_size + 1)) * block_size;

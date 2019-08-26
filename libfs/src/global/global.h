@@ -58,7 +58,7 @@ extern uint8_t g_hdd_dev;
 
 #define SHM_START_ADDR (void *)0x7ff000000000UL
 #define SHM_SIZE (200 << 20)
-#define SHM_NAME "/mlfs_shm"
+#define SHM_NAME "/tmp/mlfs_shm"
 
 /**
  *

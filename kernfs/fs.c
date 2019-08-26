@@ -1950,9 +1950,10 @@ static void handle_digest_request(void *arg)
 		mlfs_info("Write %s to libfs\n", response);
 
 		persist_dirty_objects_nvm();
-		if (enable_perf_stats)
+		if (enable_perf_stats) {
 			g_perf_stats.digest_time_tsc +=
 				(asm_rdtscp() - tsc_begin);
+        }
 #ifdef USE_SSD
 		persist_dirty_objects_ssd();
 #endif
@@ -1963,8 +1964,13 @@ static void handle_digest_request(void *arg)
         // MUST commit before sending the ACK.
         undo_log_commit_tx();
 
-		sendto(sock_fd, response, MAX_SOCK_BUF, 0,
+		ssize_t err = sendto(sock_fd, response, MAX_SOCK_BUF, 0,
 				(struct sockaddr *)&digest_arg->cli_addr, sizeof(struct sockaddr_un));
+
+        if (err < 0) {
+            fprintf(stderr, "Bad response to libfs: %d (%s)\n", errno,
+                    strerror(errno));
+        }
 
 
 		/*show_storage_stats();
@@ -2236,7 +2242,7 @@ void init_fs(void)
 
 	init_device_lru_list();
 
-	shared_memory_init();
+	//shared_memory_init();
 	cache_init(g_root_dev);
 
 	locks_init();

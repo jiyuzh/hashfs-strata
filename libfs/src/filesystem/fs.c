@@ -219,6 +219,11 @@ void show_libfs_stats(const char *title)
   printf("read data blocks (nr) : %lu \n", g_perf_stats.read_data_nr);
   printf("directory search hit  (nr) : %lu \n", g_perf_stats.dir_search_nr_hit);
   printf("directory search miss (nr) : %lu \n", g_perf_stats.dir_search_nr_miss);
+#ifndef KERNFS
+#include "filesystem/cache_stats.h"
+#else
+#include "cache_stats.h"
+#endif
   printf("directory search notfound (nr) : %lu \n", g_perf_stats.dir_search_nr_notfound);
 #endif
       printf("--------------------------------------\n");
@@ -320,8 +325,9 @@ void shared_slab_init(uint8_t _shm_slab_index)
 static void shared_memory_init(void)
 {
   shm_fd = shm_open(SHM_NAME, O_RDWR, 0666);
-  if (shm_fd == -1)
-    panic("cannot open shared memory\n");
+  if (shm_fd == -1) {
+    panic("(%d) (%s) cannot open shared memory\n", errno, strerror(errno));
+  }
 
   // the first 4096 is reserved for lru_head array.
   //shm_base = (uint8_t *)mmap(SHM_START_ADDR,
@@ -331,8 +337,9 @@ static void shared_memory_init(void)
       //MAP_SHARED | MAP_FIXED,
       MAP_SHARED,
       shm_fd, 0);
-  if (shm_base == MAP_FAILED)
-    panic("cannot map shared memory\n");
+  if (shm_base == MAP_FAILED) {
+    panic("(%d) (%s) cannot map shared memory\n", errno, strerror(errno));
+  }
 
   shm_slab_index = 0;
   shared_slab_init(shm_slab_index);
@@ -430,7 +437,7 @@ void init_fs(void)
 
     cache_init();
 
-    shared_memory_init();
+    //shared_memory_init();
 
     locks_init();
 
