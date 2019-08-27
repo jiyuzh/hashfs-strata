@@ -152,10 +152,10 @@ class MTCCRunner(BenchRunner):
             self.update_bar_proc = Process(target=update_bar, args=(shared_q,))
             self.update_bar_proc.start()
 
-            mtcc_arg_str = ('{0}/run.sh numactl -N 1 -m 1 {0}/MTCC -b 4k -s 0 '
-                            '-j {1} -n {1} -M 1G -w 4k -r 0k')
+            mtcc_arg_str = ('{0}/run.sh numactl -N 1 -m 1 {0}/MTCC -b 32k -s 0 '
+                            '-j {1} -n {1} -M 1G -w 32k -r 0k')
             readfile_arg_str = ('{0}/run.sh numactl -N 1 -m 1 {0}/readfile '
-            '-b 4k -s %d -j {1} -n {1} -r {1}G') % (1 if self.args.sequential else 0)
+            '-b 32k -s %d -j {1} -n {1} -r {1}G') % (1 if self.args.sequential else 0)
 
             try:
                 for workload in workloads:
