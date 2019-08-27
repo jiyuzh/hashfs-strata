@@ -50,7 +50,7 @@ class MTCCRunner(BenchRunner):
         stat_objs = []
 
         stats_files = [Path(x) for x in glob.glob('/tmp/libfs_prof.*')]
-        assert len(stats_files)
+        assert stats_files
         
         for stat_file in stats_files:
             with stat_file.open() as f:
@@ -68,6 +68,7 @@ class MTCCRunner(BenchRunner):
                     obj['layout'] = float(layout) / 100.0
                     obj['total_time'] = time_elapsed
                     obj['struct'] = struct.lower()
+                    obj.update(labels)
                     stat_objs += [obj]
 
         if len(stat_objs) > 1:
@@ -119,6 +120,7 @@ class MTCCRunner(BenchRunner):
 
 
     def _run_mtcc_trial(self, cwd, setup_args, trial_args, labels):
+        self.env['MLFS_CACHE_PERF'] = '0'
 
         if setup_args:
             self.env['MLFS_PROFILE'] = '0'
@@ -127,38 +129,42 @@ class MTCCRunner(BenchRunner):
 
             total_time = self._run_trial_end(trial_args, cwd, self._parse_readfile_time)
 
-            # Get the stats.
-            stat_obj = self._parse_trial_stat_files(total_time, labels)
         else:
             self.env['MLFS_PROFILE'] = '1'
 
             total_time = self._run_trial(trial_args, cwd, self._parse_readfile_time)
 
-            # Get the stats.
-            stat_obj = self._parse_trial_stat_files(total_time, labels)
-
-
+        # Get the stats.
+        stat_obj = self._parse_trial_stat_files(total_time, labels)
         stat_obj['kernfs'] = self._get_kernfs_stats()
 
-        '''
-        pr = lambda stdout: print(stdout.decode())
         if self.args.measure_cache_perf:
-            self.env['MLFS_PROFILE'] = '0'
-            pprint(setup_args)
-            self._run_trial_continue(setup_args, mtcc_path, None, timeout=(10*60))
             self.env['MLFS_PROFILE'] = '1'
-
             self.env['MLFS_CACHE_PERF'] = '1'
-            pprint(readfile_args)
-            self._run_trial_end(readfile_args, mtcc_path, pr, no_warn=True, timeout=(10*60))
+            if setup_args:
+                self._run_trial_continue(setup_args, cwd, None, timeout=(10*60))
 
-            cache_stat_obj = self._parse_trial_stat_files_cache(
-                    workload_name, layout, struct)
-            stat_obj['cache'] = cache_stat_obj['cache']
-            stat_obj['cache']['kernfs'] = self._get_kernfs_stats()
-        '''
+                total_time = self._run_trial_end(
+                    trial_args, cwd, self._parse_readfile_time, timeout=(10*60))
+
+            else:
+
+                total_time = self._run_trial(
+                    trial_args, cwd, self._parse_readfile_time, timeout=(10*60))
+
+            # Get the stats.
+            cache_stat_obj = self._parse_trial_stat_files(total_time, labels)
+
+            try:
+                stat_obj['cache'] = cache_stat_obj['idx_cache']
+                stat_obj['cache']['kernfs'] = self._get_kernfs_stats()['idx_cache']
+            except:
+                pprint(cache_stat_obj)
+                pprint(self._get_kernfs_stats())
+                raise
 
         return [stat_obj]
+
 
     def _run_mtcc(self):
         print('Running MTCC profiles.')
@@ -230,7 +236,7 @@ class MTCCRunner(BenchRunner):
                         labels['num files'] = nfiles
                         labels['trial num'] = trial_num
 
-                        mtcc_arg_str = \
+                        mtcc_insert_arg_str = \
                             f'''numactl -N {numa_node} -m {numa_node} {dir_str}/run.sh
                                 {dir_str}/MTCC -b {io_size} -s 1 -j 1 -n {nfiles}
                                 -S {start_size} -M {start_size + io_size} 
@@ -238,50 +244,50 @@ class MTCCRunner(BenchRunner):
 
                         setup_size = 4096 if start_size > 4096 else start_size
 
-                        readfile_setup_arg_str = \
+                        readtest_setup_arg_str = \
                             f'''numactl -N {numa_node} -m {numa_node} {dir_str}/run.sh
                                 {dir_str}/MTCC -b {setup_size} -s 1 -j 1 -n {nfiles}
                                 -M {start_size} -w {setup_size} -r 0'''
 
-                        readfile_seq_arg_str = \
+                        mtcc_seq_arg_str = \
                             f'''numactl -N {numa_node} -m {numa_node} {dir_str}/run.sh
                                 {dir_str}/readfile -b {io_size} -s 1 -j 1 -n {nfiles}
                                 -r {io_size * reps}'''
 
-                        readfile_rand_arg_str = \
+                        mtcc_rand_arg_str = \
                             f'''numactl -N {numa_node} -m {numa_node} {dir_str}/run.sh
                                 {dir_str}/readfile -b {io_size} -s 0 -j 1 -n {nfiles}
                                 -r {io_size * reps} -x'''
 
-                        insert_trial_args = shlex.split(mtcc_arg_str)
+                        insert_trial_args = shlex.split(mtcc_insert_arg_str)
 
-                        seq_setup_args = shlex.split(readfile_setup_arg_str)
-                        seq_trial_args = shlex.split(readfile_seq_arg_str)
+                        seq_setup_args = shlex.split(readtest_setup_arg_str)
+                        seq_trial_args = shlex.split(mtcc_seq_arg_str)
 
                         rand_setup_args = seq_setup_args
-                        rand_trial_args = shlex.split(readfile_rand_arg_str)
+                        rand_trial_args = shlex.split(mtcc_rand_arg_str)
 
                         # Run the benchmarks
                         # 1) Insert test
                         insert_labels = {}
                         insert_labels.update(labels)
                         insert_labels['test'] = 'Insert'
-                        stat_objs += self._run_mtcc_trial(mtcc_path, None, 
-                                insert_trial_args, insert_labels)
+                        stat_objs += self._run_mtcc_trial(
+                            mtcc_path, None, insert_trial_args, insert_labels)
 
                         # 2) Sequential read test
                         seq_labels = {}
                         seq_labels.update(labels)
                         seq_labels['test'] = 'Sequential Read'
-                        stat_objs += self._run_mtcc_trial(mtcc_path, seq_setup_args,
-                                seq_trial_args, seq_labels)
+                        stat_objs += self._run_mtcc_trial(
+                            mtcc_path, seq_setup_args, seq_trial_args, seq_labels)
 
                         # 3) Random read test
                         rand_labels = {}
                         rand_labels.update(labels)
                         rand_labels['test'] = 'Random Read'
-                        stat_objs += self._run_mtcc_trial(mtcc_path, rand_setup_args,
-                                rand_trial_args, rand_labels)
+                        stat_objs += self._run_mtcc_trial(
+                            mtcc_path, rand_setup_args, rand_trial_args, rand_labels)
 
                         counter += 1
                         shared_q.put(counter)
@@ -296,10 +302,12 @@ class MTCCRunner(BenchRunner):
                 fname = f'mtcc_{timestamp_str}.json'
                 self._write_bench_output(stat_objs, fname)
                 # also write a summarized version
-                keys = ['layout', 'total_time', 'struct', 'bench', 'workload', 'cache']
+                keys = ['layout', 'total_time', 'struct', 'test', 'io size',
+                        'repetitions', 'num files', 'trial num', 'start size']
+
                 stat_summary = []
                 for stat_obj in stat_objs:
-                    small_obj = { k: stat_obj[k] for k in keys if k in stat_obj}
+                    small_obj = {k: stat_obj[k] for k in keys if k in stat_obj}
                     stat_summary += [small_obj]
                 sname = f'mtcc_summary_{timestamp_str}.json'
                 self._write_bench_output(stat_summary, sname)
@@ -318,9 +326,10 @@ class MTCCRunner(BenchRunner):
         ntrials     = self.args.trials
         nfiles      = self.args.num_files_per_test
 
-        workloads = itertools.product(idx_structs, layouts, start_sizes,
-                              io_sizes, repetitions, nfiles, range(ntrials))
-        
+        workloads = itertools.product(
+            idx_structs, layouts, start_sizes, io_sizes,
+            repetitions, nfiles, range(ntrials))
+
         return list(workloads)
 
     @classmethod

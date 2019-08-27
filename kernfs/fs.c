@@ -201,6 +201,8 @@ void show_kernfs_stats(void)
         js_add_int64(search, "nr_search", g_perf_stats.path_search_nr);
         json_object_object_add(root, "search", search);
     }
+    add_cache_stats_to_json(root, "idx_cache", &(g_perf_stats.cache_stats)); 
+
 	json_object_array_add(kernfs_stats_json, root);
 
     // Convert JSON to a string

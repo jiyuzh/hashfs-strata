@@ -78,7 +78,7 @@ class IDXDataObject:
                 parsed['read_data'] = data_obj['kernfs']['digest'] - parsed['indexing']
 
             total = parsed['indexing'] + parsed['read_data']
-            scale = parsed['throughput'] if 'throughput' in parsed else parsed['total_time']
+            #scale = parsed['throughput'] if 'throughput' in parsed else parsed['total_time']
             parsed['indexing'] /= total
             #parsed['indexing'] *= scale
             parsed['read_data'] /= total

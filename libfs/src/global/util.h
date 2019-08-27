@@ -187,6 +187,7 @@ static inline char* get_parent_path(const char *path, char *parent_path, char *n
 }
 #define tri_ratio(tsc,nr) tsc, nr, (double)tsc/nr
 #define js_add_int64(obj, name, val) json_object_object_add(obj, name, json_object_new_int64(val));
+#define js_add_double(obj, name, val) json_object_object_add(obj, name, json_object_new_double(val));
 // statistics utils
 typedef struct {
     uint64_t cnt;

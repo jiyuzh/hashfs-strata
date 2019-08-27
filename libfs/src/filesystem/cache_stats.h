@@ -17,8 +17,10 @@
 #include <asm/unistd.h>
 #include <unistd.h>
 #include <sys/syscall.h>
+#include <json-c/json.h>
 
 #include "global/global.h"
+#include "global/util.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -301,6 +303,8 @@ static uint64_t calculate_llc_latency(cache_stats_t *cs)
 
     return (uint64_t)nvm_latency;
 }
+
+void add_cache_stats_to_json(json_object *root, const char *object_name, cache_stats_t *cs);
 
 #ifdef __cplusplus
 }

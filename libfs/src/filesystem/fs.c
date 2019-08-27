@@ -147,8 +147,10 @@ void show_libfs_stats(const char *title)
     json_object_object_add(root, "storage", storage);
   }
 
-	json_object_array_add(libfs_stats_json, root);
+  add_cache_stats_to_json(root, "idx_cache", &(g_perf_stats.cache_stats)); 
+  json_object_array_add(libfs_stats_json, root);
   const char *js_str = json_object_get_string(libfs_stats_json);
+
   if (enable_perf_stats) {
     ftruncate(prof_fd, 0);
     lseek(prof_fd, 0, SEEK_SET);

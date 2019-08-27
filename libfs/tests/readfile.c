@@ -172,22 +172,28 @@ static void *worker_thread(void *arg) {
         assert(fstat(fd, &file_stat) == 0 && "fstat failed");
         size_t size = file_stat.st_size;
         size_t block_num = size/block_size;
-        if (r->total_seq_read + r->total_rand_read > read_total) // exceeds max file size
+        if (r->total_seq_read + r->total_rand_read >= read_total) // exceeds max file size
             break;
         if ((double)(rand())/RAND_MAX < seq_ratio) { // sequential read
-            for (int i=0; i < size; i += block_size) {
-                ssize_t rs = pread(fd, read_buf, block_size, i);
-                assert(rs != -1 && "sequential read failed");
-                r->total_seq_read += rs;
-            }
+            off_t offset = lseek(fd, 0, SEEK_CUR);
+            assert(offset != -1 && "lseek failed");
+            offset = offset + block_size < size ? offset : 0;
+
+            ssize_t rs = pread(fd, read_buf, block_size, offset);
+            assert(rs != -1 && "sequential read failed");
+            r->total_seq_read += rs;
+
+            offset = lseek(fd, offset + block_size, SEEK_SET);
+            assert(offset != -1 && "post-seq read lseek failed");
         }
         else { // random read
-            for (int i=0; i < size; i += block_size) {
-                int rand_offset = (rand()%(block_num)) * block_size;
-                ssize_t rs = pread(fd, read_buf, block_size, rand_offset);
-                assert(rs != -1 && "random read failed");
-                r->total_rand_read += rs;
-            }
+            int rand_offset = (rand()%(block_num)) * block_size;
+            ssize_t rs = pread(fd, read_buf, block_size, rand_offset);
+            assert(rs != -1 && "random read failed");
+            r->total_rand_read += rs;
+
+            off_t offset = lseek(fd, block_size, SEEK_CUR);
+            assert(offset != -1 && "lseek failed");
         }
     }
     return NULL;
@@ -203,7 +209,7 @@ static void *worker_thread_rand(void *arg) {
         assert(fstat(fd, &file_stat) == 0 && "fstat failed");
         size_t size = file_stat.st_size;
         size_t block_num = size/block_size;
-        if (r->total_seq_read + r->total_rand_read > read_total) // exceeds max file size
+        if (r->total_seq_read + r->total_rand_read >= read_total) // exceeds max file size
             break;
 
         int rand_offset = (rand()%(block_num)) * block_size;
