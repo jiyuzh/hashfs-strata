@@ -52,21 +52,6 @@ extern "C" {
 
 //#undef SIMPLE_ENTRIES
 
-// For the big hash table, mapping (inode, lblk) -> single block
-//struct hash_index_entry{
-// #ifdef SIMPLE_ENTRIES
-//    paddr_t key;
-//    paddr_t value;
-// #else
-//     paddr_t  key;
-//     uint8_t  index; // Go backwards to modify size on truncate
-//     uint8_t  size;
-//     uint16_t value_hi16;
-//     uint32_t value_low32;
-// #endif
-//};
-// _Static_assert(16 % sizeof(hash_ent_t) == 0, "Entries cross block boundary!");
-
 #ifdef SIMPLE_ENTRIES
 #define HASHFS_TOMBSTONE_VAL ((paddr_t)~0) - 1
 #define HASHFS_EMPTY_VAL (paddr_t)~0
@@ -92,11 +77,6 @@ extern "C" {
 #endif
 
 #define HASHFS_MAKEKEY(inum, lblk) (((uint64_t)inum << 32) | lblk)
-//#define HASH_IS_REAL(h_) ((h_) >= 2)
-
-//#define BLK_IDX(ht, x) (x % (ht->blksz / sizeof(hash_ent_t)))
-//#define BLK_NUM(ht, x) (x / (ht->blksz / sizeof(hash_ent_t)))
-
 /*
 #define HASHCACHE
 
@@ -193,35 +173,22 @@ extern pmem_nvm_hash_idx_t *pmem_ht;
 void
 pmem_nvm_hash_table_new (struct disk_superblock *sblk,
                     hash_func_t       hash_func
-                    //size_t            block_size,
-                    //size_t            range_size,
-                    //paddr_t           metadata_location,
-                    //const idx_spec_t *idx_spec
                     );
 
 void
 pmem_nvm_hash_table_close ();
-//void nvm_hash_table_destroy(nvm_hash_idx_t     *hash_table);
 
 int pmem_nvm_hash_table_insert(inum_t         inum,
                           paddr_t             lblk,
-                          paddr_t         *index//,
-                          //size_t          index,
-                          //size_t          range
+                          paddr_t         *index
                           );
-
-// Used for truncate
-int pmem_nvm_hash_table_update(paddr_t         key,
-                          size_t          new_range);
 
 int pmem_nvm_hash_table_remove(inum_t         inum,
                           paddr_t             lblk,
-                          paddr_t        *value/*,
-                          size_t         *nprevious,
-                          size_t         *nblocks*/);
+                          paddr_t        *value);
 
 int pmem_nvm_hash_table_lookup(inum_t inum, paddr_t lblk,
-    paddr_t *val/*, paddr_t *size, bool force*/);
+    paddr_t *val);
 
 int pmem_nvm_hash_table_contains(inum_t inum, paddr_t lblk);
 
@@ -236,184 +203,6 @@ extern uint64_t reads;
 extern uint64_t writes;
 extern uint64_t blocks;
 
-
-/*
- * Convenience wrapper for when you need to look up the single value within
- * the block and nothing else. Index is offset from start (bytes).
- */
-/*#if 0
-static void
-nvm_read_entry(nvm_hash_idx_t *ht, paddr_t idx, hash_ent_t **ret, bool force) {
-
-    paddr_t block  = ht->data + BLK_NUM(ht, idx);
-    off_t   offset = BLK_IDX(ht, idx) * sizeof(**ret);
-
-    if (!ht->do_cache) {
-#if 0
-        ssize_t err = CB(ht, cb_get_addr, block, offset, (char**)ret);
-        if_then_panic(err, "Could not get device address!");
-#else
-        *ret = (hash_ent_t*)(ht->data_ptr + (BLK_NUM(ht, idx) * ht->blksz) + offset);
-#endif
-                        
-    } else if (ht->do_cache && ht->cache_state[idx] < 0) {
-        ssize_t err = CB(ht, cb_read, 
-                         block, offset, sizeof(*ht->cache), (char*)&(ht->cache[idx]));
-
-        if_then_panic(sizeof(*ht->cache) != err, "Did not read enough bytes!");
-
-        ht->cache_state[idx] = 0;
-
-        *ret = &(ht->cache[idx]);
-    }
-
-
-    reads++;
-}
-#else
-#define nvm_read_entry(ht, idx, ret, force) \
-    do { *ret = (hash_ent_t*)(ht->data_ptr + (BLK_NUM(ht, idx) * ht->blksz) + (BLK_IDX(ht, idx) * sizeof(**ret))); } while(0)
-#endif
-*/
-
-/*
- * Read the hashtable metadata from disk. If the size is zero, then we need to
- * allocate the table. Otherwise, the structures have already been
- * pre-allocated.
- *
- * Returns 1 on success, 0 on failure.
- */
-
-/*
-static int
-nvm_read_metadata(nvm_hash_idx_t *ht) {
-
-    dev_hash_metadata_t metadata;
-    ssize_t err = CB(ht, cb_read, ht->metadata, 0,
-                                         sizeof(metadata), (char*)&metadata);
-
-    if_then_panic(err != sizeof(metadata), "Could not read metadata!");
-
-    // now check the actual metadata
-    if (metadata.nvram_size == 0) {
-        return 0;
-    }
-
-    assert(ht->nvram_size == metadata.nvram_size);
-    assert(ht->range_size == metadata.range_size);
-    // reconsititute the rest of the httable from
-    ht->size = metadata.size;
-    ht->blksz = metadata.blksz;
-    ht->mod = metadata.mod;
-    ht->mask = metadata.mask;
-    ht->nnodes = metadata.nnodes;
-    ht->noccupied = metadata.noccupied;
-    ht->data = metadata.data_start;
-
-    return 1;
-}
-*/
-
-
-/*
-static int
-nvm_write_metadata(nvm_hash_idx_t *ht) {
-    dev_hash_metadata_t metadata;
-
-    // reconsititute the rest of the httable from
-    metadata.nvram_size = ht->nvram_size;
-    metadata.blksz = ht->blksz;
-    metadata.size = ht->size;
-    metadata.range_size = ht->range_size;
-    metadata.mod = ht->mod;
-    metadata.mask = ht->mask;
-    metadata.nnodes = ht->nnodes;
-    metadata.noccupied = ht->noccupied;
-    metadata.data_start = ht->data;
-
-    ssize_t err = CB(ht, cb_write, ht->metadata, 0,
-                                          sizeof(metadata), (char*)&metadata);
-
-    if_then_panic(err != sizeof(metadata), "Could not write metadata!");
-
-    return 1;
-}
-*/
-
-/*
- * Update a single slot in NVRAM.
- * Used to insert or update a key -- since we'll never need to modify keys
- * en-masse, this will be fine.
- *
- * start: block address of range.
- * index: byte index into range.
- */
-/* static inline void
-// nvm_update(nvm_hash_idx_t *ht, paddr_t idx) {
-
-    if (ht->do_cache) {
-#if 0
-        paddr_t paddr = ht->data + BLK_NUM(ht, idx);
-        ssize_t size  = sizeof(*ht->cache);
-        off_t offset  = BLK_IDX(ht, idx) * size;
-
-        ssize_t ret = CB(ht, cb_write, 
-                         paddr, offset, size, (char*)&(ht->cache[idx]));
-
-        if_then_panic(ret != size, "did not write full entry!");
-#endif
-        ht->cache_state[idx] = 1;
-    }
-    // This is a no-op for non-cached, as it reads directly from the device.
-
-}
-*/
-
-
-/*
-static inline int nvm_invalidate(nvm_hash_idx_t *ht) {
-    if (unlikely(!ht->do_cache)) return 0;
-
-    pthread_rwlock_wrlock(ht->cache_lock);
-    memset(ht->cache_state, -1, ht->nvram_size);
-    pthread_rwlock_unlock(ht->cache_lock);
-    return 0;
-} 
-*/
-
-/*
- * The more interesting function. Find ranges and write them all back at once.
- */
-// static inline int nvm_persist(nvm_hash_idx_t *ht) {
-//     if (unlikely(!ht->do_cache)) return 0;
-
-//     pthread_rwlock_wrlock(ht->cache_lock);
-//     for (paddr_t idx = 0; idx < ht->nvram_size; ++idx) {
-//         if (ht->cache_state[idx] > 0) {
-//             paddr_t end = idx;
-//             while (ht->cache_state[end] > 0) {
-//                 ht->cache_state[end] = 0;
-//                 ++end;
-//             }
-
-//             paddr_t paddr = ht->data + BLK_NUM(ht, idx);
-//             ssize_t size  = sizeof(*ht->cache) * (end - idx);
-//             off_t offset  = BLK_IDX(ht, idx) * sizeof(*ht->cache);
-
-//             ssize_t ret = CB(ht, cb_write, 
-//                              paddr, offset, size, (char*)&(ht->cache[idx]));
-//             if(ret != size) {
-//                 pthread_rwlock_unlock(ht->cache_lock);
-//                 return -EIO;
-//             }
-
-//             idx = end;
-//         } 
-//     }
-//     pthread_rwlock_unlock(ht->cache_lock);
-
-//     return 0;
-// }
 
 #ifdef __cplusplus
 }

@@ -121,43 +121,6 @@ static void pmem_nvm_flush(void* start, uint32_t len) {
     }
 }
 
-static void
-pmem_nvm_hash_table_set_shift (nvm_hash_idx_t *hash_table, int shift) {
-  int i;
-  uint32_t mask = 0;
-
-  hash_table->size = 1 << shift;
-  hash_table->mod  = prime_mod [shift];
-
-  for (i = 0; i < shift; i++) {
-    mask <<= 1;
-    mask |= 1;
-  }
-
-  hash_table->mask = mask;
-}
-
-static int
-pmem_nvm_hash_table_find_closest_shift (int n) {
-  int i;
-
-  for (i = 0; n; i++) {
-    n >>= 1;
-  }
-
-  return i;
-}
-
-static void
-pmem_nvm_hash_table_set_shift_from_size (nvm_hash_idx_t *hash_table, int size) {
-  int shift;
-
-  shift = pmem_nvm_hash_table_find_closest_shift(size);
-  shift = MAX(shift, HASH_TABLE_MIN_SHIFT);
-
-  pmem_nvm_hash_table_set_shift(hash_table, shift);
-}
-
 /*
  * nvm_hash_table_lookup_node:
  * @hash_table: our #nvm_hash_idx_t
@@ -184,12 +147,7 @@ pmem_nvm_hash_table_set_shift_from_size (nvm_hash_idx_t *hash_table, int size) {
 #define SEQ_STEP
 #pragma GCC push_options
 //#pragma GCC optimize ("unroll-loops")
-// static uint32_t
-// pmem_nvm_hash_table_lookup_node_simd (nvm_hash_idx_t *hash_table,
-//                                  paddr_t         key,
-//                                  hash_ent_t    **ent_return,
-//                                  uint32_t       *hash_return, 
-//                                  int start);
+
 static inline uint32_t
 pmem_nvm_hash_table_lookup_node (paddr_t        key,
                           paddr_t  *ent_return,
@@ -207,56 +165,18 @@ pmem_nvm_hash_table_lookup_node (paddr_t        key,
   uint32_t step = 0;
 #endif
   paddr_t cur;
-
   paddr_t *entries = pmem_ht_vol->entries;
   hash_value = pmem_ht_vol->hash_func(key);
   mod = pmem_ht->mod;
   node_index = hash_value % mod;
   cur = entries[node_index];
-
-#if 0
-  if (unlikely (!HASH_IS_REAL (hash_value))) {
-    hash_value = 2;
-  }
-#endif
-// #if 1
-//   if (hash_table->do_lock) pthread_rwlock_rdlock(hash_table->locks + node_index);
-// #endif
-
   uint64_t count = 0;
-
-  //pthread_rwlock_rdlock(hash_table->cache_lock);
-
   *hash_return = hash_value;
-
-  //node_index = hash_value & hash_table->mask;
-
-  //cur = hash_table->cache[BLK_NUM(node_index)][BLK_IDX(node_index)]; 
-	
   count++;
 
   while (!HASHFS_ENT_IS_EMPTY(cur)) {
     if (cur == key && HASHFS_ENT_IS_VALID(cur)) {
       *ent_return = cur;
-//       #if 1
-//       if (hash_table->do_lock) pthread_rwlock_unlock(hash_table->locks + node_index);
-//       //pthread_rwlock_unlock(hash_table->cache_lock);
-      
-//       // Only update on valid
-//       if (hash_table->enable_stats) {
-//           hash_table->stats.n_ents += count;
-//           if (!hash_table->stats.n_min_ents_per_lookup) {
-//               hash_table->stats.n_min_ents_per_lookup = count;
-//           }
-
-//           hash_table->stats.n_min_ents_per_lookup = min(count,
-//                   hash_table->stats.n_min_ents_per_lookup);
-//           hash_table->stats.n_max_ents_per_lookup = max(count,
-//                   hash_table->stats.n_max_ents_per_lookup);
-
-//           UPDATE_TIMING(&(hash_table->stats), loop_time);
-//       }
-//      #endif
       return node_index;
     }
     else if (HASHFS_ENT_IS_TOMBSTONE(cur) && !have_tombstone) {
@@ -266,14 +186,7 @@ pmem_nvm_hash_table_lookup_node (paddr_t        key,
 #ifndef SEQ_STEP
     step++;
 #endif
-    //uint32_t new_idx = (node_index + step) & hash_table->mask;
     uint32_t new_idx = (node_index + step) % mod;
-// #if 1
-//     if (unlikely(hash_table->do_lock)) {
-//       pthread_rwlock_unlock(hash_table->locks + node_index);
-//       pthread_rwlock_rdlock(hash_table->locks + new_idx);
-//     }
-// #endif
     node_index = new_idx;
     cur = entries[node_index];
     
@@ -284,20 +197,10 @@ pmem_nvm_hash_table_lookup_node (paddr_t        key,
 end:
   if (have_tombstone) {
     *ent_return = entries[first_tombstone];
-   
-// #if 1
-//     if (hash_table->do_lock) pthread_rwlock_unlock(hash_table->locks + node_index);
-//       //pthread_rwlock_unlock(hash_table->cache_lock);
-// #endif
     return first_tombstone;
   }
+  *ent_return = entries[node_index];
 
-  
-    *ent_return = entries[node_index];
-
-// #if 1
-//   if (hash_table->do_lock) pthread_rwlock_unlock(hash_table->locks + node_index);
-// #endif
   return node_index;
 }
 
@@ -317,17 +220,17 @@ void pmem_mod_simd32(__m256i *vals, __m256i *ret) {
   
 }
 
-void printVec_simd64(char* what, __m512i *vec) {
+static void printVec_simd64(char* what, __m512i *vec) {
     printf("%s: ", what);
     u512i_64 *temp = (u512i_64*)vec;
     for(size_t i = 0; i < 8; ++i) {
-	printf("%lu ", temp->arr[i]);
+	    printf("%lu ", temp->arr[i]);
     }
     printf("\n");
 }
 
 
-void printVec_simd32(char* what, __m256i *vec) {
+static void printVec_simd32(char* what, __m256i *vec) {
     printf("%s: ", what);
     u256i_32 *temp = (u256i_32*)vec;
     for(size_t i = 0; i < 8; ++i) {
@@ -336,7 +239,7 @@ void printVec_simd32(char* what, __m256i *vec) {
     printf("\n");
 }
 
-void printMask_simd8(char* what, __mmask8 *mask) {
+static void printMask_simd8(char* what, __mmask8 *mask) {
     printf("%s: ", what);
     uint32_t m = _cvtmask8_u32(*mask);
     int pOf2[8] = {1, 2, 4, 8, 16, 32, 64, 128};
@@ -353,13 +256,13 @@ void printMask_simd8(char* what, __mmask8 *mask) {
 
 }
 
-void directHash_simd64(__m512i *keys, __m256i *node_indices) {
+static void directHash_simd64(__m512i *keys, __m256i *node_indices) {
   __mmask8 oneMask = _cvtu32_mask8(~0); // ones
   __m256i hash_values = _mm512_cvtepi64_epi32(*keys); // direct hash with truncation to 32-bit
   pmem_mod_simd32(&hash_values, node_indices);
 }
 
-void pmem_make_key_simd64(__m512i *inums, __m512i *lblks, __m512i *keys) {
+static void pmem_make_key_simd64(__m512i *inums, __m512i *lblks, __m512i *keys) {
   __mmask8 oneMask = _cvtu32_mask8(~0); //zeros
   *keys = _mm512_mask_mov_epi64(*inums, oneMask, *inums); // keys = inums
   *keys = _mm512_rol_epi64(*keys, 32); // rotate left 32 bits
@@ -386,7 +289,6 @@ void pmem_nvm_hash_table_lookup_node_simd64(__m512i *keys, __m256i *node_indices
   *failure = _cvtu32_mask8(0);
 
   while(_cvtmask8_u32(searching) != 0) {
-    //printVec_simd64("cur", &cur);
     searching = _mm512_mask_cmpneq_epi64_mask(searching, *keys, cur); //0 if key == cur || searching = 0, 1 otherwise
     __mmask8 seeking_tombstone = _knot_mask8(found_tombstone);
     __mmask8 is_tombstone = _mm512_mask_cmpeq_epi64_mask(searching, cur, tombstone_vec); //1 if cur == tombstone and still searching
@@ -400,9 +302,6 @@ void pmem_nvm_hash_table_lookup_node_simd64(__m512i *keys, __m256i *node_indices
     *node_indices = _mm256_mask_mov_epi32 (*node_indices, found_t_and_empty, first_tombstone);
 
     searching = _kandn_mask8(is_empty, searching);
-    //printVec_simd32("node_indices", node_indices);
-    //printMask_simd8("searching", &searching);
-    //printMask_simd8("failure", failure);
 #ifndef SEQ_STEP
     step++;
 #endif
@@ -423,422 +322,6 @@ void pmem_nvm_hash_table_lookup_node_simd64(__m512i *keys, __m256i *node_indices
  * Also I think we can only use this in libfs.
  */
 
-static const int simd_offsets[] = {
-    0,
-1 * 16,
-3 * 16,
-6 * 16,
-10 * 16,
-15 * 16,
-21 * 16,
-28 * 16,
-36 * 16,
-45 * 16,
-55 * 16,
-66 * 16,
-78 * 16,
-91 * 16,
-105 * 16,
-120 * 16,
-136 * 16,
-153 * 16,
-171 * 16,
-190 * 16,
-210 * 16,
-231 * 16,
-253 * 16,
-276 * 16,
-300 * 16,
-325 * 16,
-351 * 16,
-378 * 16,
-406 * 16,
-435 * 16,
-465 * 16,
-496 * 16,
-528 * 16,
-561 * 16,
-595 * 16,
-630 * 16,
-666 * 16,
-703 * 16,
-741 * 16,
-780 * 16,
-820 * 16,
-861 * 16,
-903 * 16,
-946 * 16,
-990 * 16,
-1035 * 16,
-1081 * 16,
-1128 * 16,
-1176 * 16,
-1225 * 16
-};
-
-#define SIM_W 8
-#define SIM_TYPE __m512i
-typedef union {
-    SIM_TYPE v;
-    paddr_t a[8];
-} simd64_t;
-
-
-int pmem_countSetBits(unsigned int n)
-{
-    unsigned int c; // the total bits set in n
-    for (c = 0; n; n = n & (n-1)) {
-        c++;
-    }
-    return c;
-}
-
-// static simd64_t incr = {.a = {
-//     8 * sizeof(hash_ent_t),
-//     8 * sizeof(hash_ent_t),
-//     8 * sizeof(hash_ent_t),
-//     8 * sizeof(hash_ent_t),
-//     8 * sizeof(hash_ent_t),
-//     8 * sizeof(hash_ent_t),
-//     8 * sizeof(hash_ent_t),
-//     8 * sizeof(hash_ent_t)
-// }};
-
-// static simd64_t bitmask = {.a = {
-//     0x0000FFFFFFFFFFFF,
-//     0x0000FFFFFFFFFFFF,
-//     0x0000FFFFFFFFFFFF,
-//     0x0000FFFFFFFFFFFF,
-//     0x0000FFFFFFFFFFFF,
-//     0x0000FFFFFFFFFFFF,
-//     0x0000FFFFFFFFFFFF,
-//     0x0000FFFFFFFFFFFF
-// }};
-
-/*#define OFFSETS(n) \
-static simd64_t offsets ## n = {.a = { \
-    ((n * 8) + 0) * sizeof(hash_ent_t), \
-    ((n * 8) + 1) * sizeof(hash_ent_t), \
-    ((n * 8) + 2) * sizeof(hash_ent_t), \
-    ((n * 8) + 3) * sizeof(hash_ent_t), \
-    ((n * 8) + 4) * sizeof(hash_ent_t), \
-    ((n * 8) + 5) * sizeof(hash_ent_t), \
-    ((n * 8) + 6) * sizeof(hash_ent_t), \
-    ((n * 8) + 7) * sizeof(hash_ent_t), \
-}}
-
-OFFSETS(0);
-OFFSETS(1);
-OFFSETS(2);
-OFFSETS(3);
-OFFSETS(4);
-
-#define VOFFSETS(n) \
-static simd64_t voffsets ## n = {.a = { \
-    ((n * 8) + 0) * sizeof(hash_ent_t) + 8, \
-    ((n * 8) + 1) * sizeof(hash_ent_t) + 8, \
-    ((n * 8) + 2) * sizeof(hash_ent_t) + 8, \
-    ((n * 8) + 3) * sizeof(hash_ent_t) + 8, \
-    ((n * 8) + 4) * sizeof(hash_ent_t) + 8, \
-    ((n * 8) + 5) * sizeof(hash_ent_t) + 8, \
-    ((n * 8) + 6) * sizeof(hash_ent_t) + 8, \
-    ((n * 8) + 7) * sizeof(hash_ent_t) + 8, \
-}}
-
-VOFFSETS(0);
-VOFFSETS(1);
-VOFFSETS(2);
-VOFFSETS(3);
-VOFFSETS(4);
-*/
-// static uint32_t
-// nvm_hash_table_lookup_node_simd (nvm_hash_idx_t *hash_table,
-//                                  paddr_t         key,
-//                                  hash_ent_t    **ent_return,
-//                                  uint32_t       *hash_return, 
-//                                  int start) {
-//     uint32_t node_index;
-//     uint32_t hash_value;
-//     hash_ent_t *cur;
-
-//     hash_value = hash_table->hash_func(key);
-// #if 0
-//     if (unlikely (!HASH_IS_REAL (hash_value))) {
-//         hash_value = 2;
-//     }
-// #endif
-
-//     *hash_return = hash_value;
-
-//     //node_index = hash_value & hash_table->mask;
-//     node_index = (hash_value + start) % hash_table->mod;
-
-//     nvm_read_entry(hash_table, node_index, &cur, false);
-
-//     *ent_return = NULL;
-// #undef CL
-// #define CL(n) (n * 64)
-//     __builtin_prefetch((void*)( ((char*)cur) + CL(0) ));
-//     __builtin_prefetch((void*)( ((char*)cur) + CL(1) ));
-//     __builtin_prefetch((void*)( ((char*)cur) + CL(2) ));
-//     __builtin_prefetch((void*)( ((char*)cur) + CL(3) ));
-//     __builtin_prefetch((void*)( ((char*)cur) + CL(4) ));
-//     __builtin_prefetch((void*)( ((char*)cur) + CL(5) ));
-//     __builtin_prefetch((void*)( ((char*)cur) + CL(6) ));
-//     __builtin_prefetch((void*)( ((char*)cur) + CL(7) ));
-
-//     int inc = 0;
-// #if 1
-//     SIM_TYPE tombstone = bitmask.v;
-//     SIM_TYPE inval = _mm512_set1_epi64(0);
-
-//     simd64_t keys;
-//     keys.v = _mm512_set1_epi64(key);
-//     //offsets.v = _mm512_set1_epi64(0);
-//     //val_offsets.v = _mm512_set1_epi64(0);
-
-//         simd64_t ent_keys, ent_vals;
-// #if 1
-
-//         ent_keys.v = _mm512_i64gather_epi64(offsets0.v, (void*)cur, 1);
-
-//         __mmask8 res = _mm512_cmpeq_epi64_mask(keys.v,
-//                             _mm512_i64gather_epi64(offsets0.v, (void*)cur, 1));
-
-//         // Now also mask which entries are valid
-//         ent_vals.v = _mm512_i64gather_epi64(voffsets0.v, (void*)cur, 1);
-//         ent_vals.v = _mm512_and_epi64(ent_vals.v, bitmask.v);
-
-
-//         __mmask8 is_tomb = _mm512_cmpeq_epi64_mask(ent_vals.v, tombstone);
-//         __mmask8 is_empty = _mm512_cmpeq_epi64_mask(ent_vals.v, inval);
-
-//         // Remove things from the res mask
-//         res = _kandn_mask8(is_tomb, _kandn_mask8(is_empty, res));
-
-//         if (countSetBits(res) == 1) {
-//             // Find the one remaining thing
-//             uint64_t offset = _mm512_mask_reduce_add_epi64(res, offsets0.v);
-//             *ent_return = (hash_ent_t*)(((char*)cur) + offset);
-//             return node_index + (uint32_t)offset;
-//         } 
-
-//         //---------------------------------------------------------------------
-
-//         ent_keys.v = _mm512_i64gather_epi64(offsets1.v, (void*)cur, 1);
-
-//         res = _mm512_cmpeq_epi64_mask(keys.v,
-//                             _mm512_i64gather_epi64(offsets1.v, (void*)cur, 1));
-
-//         // Now also mask which entries are valid
-//         ent_vals.v = _mm512_i64gather_epi64(voffsets1.v, (void*)cur, 1);
-//         ent_vals.v = _mm512_and_epi64(ent_vals.v, bitmask.v);
-
-
-//         is_tomb = _mm512_cmpeq_epi64_mask(ent_vals.v, tombstone);
-//         is_empty = _mm512_cmpeq_epi64_mask(ent_vals.v, inval);
-
-//         // Remove things from the res mask
-//         res = _kandn_mask8(is_tomb, _kandn_mask8(is_empty, res));
-
-//         if (countSetBits(res) == 1) {
-//             // Find the one remaining thing
-//             uint64_t offset = _mm512_mask_reduce_add_epi64(res, offsets1.v);
-//             *ent_return = (hash_ent_t*)(((char*)cur) + offset);
-//             return node_index + (uint32_t)offset;
-//         } 
-
-//         //---------------------------------------------------------------------
-
-//         ent_keys.v = _mm512_i64gather_epi64(offsets2.v, (void*)cur, 1);
-
-//         res = _mm512_cmpeq_epi64_mask(keys.v,
-//                             _mm512_i64gather_epi64(offsets2.v, (void*)cur, 1));
-
-//         // Now also mask which entries are valid
-//         ent_vals.v = _mm512_i64gather_epi64(voffsets2.v, (void*)cur, 1);
-//         ent_vals.v = _mm512_and_epi64(ent_vals.v, bitmask.v);
-
-
-//         is_tomb = _mm512_cmpeq_epi64_mask(ent_vals.v, tombstone);
-//         is_empty = _mm512_cmpeq_epi64_mask(ent_vals.v, inval);
-
-//         // Remove things from the res mask
-//         res = _kandn_mask8(is_tomb, _kandn_mask8(is_empty, res));
-
-//         if (countSetBits(res) == 1) {
-//             // Find the one remaining thing
-//             uint64_t offset = _mm512_mask_reduce_add_epi64(res, offsets2.v);
-//             *ent_return = (hash_ent_t*)(((char*)cur) + offset);
-//             return node_index + (uint32_t)offset;
-//         } 
-
-//         //---------------------------------------------------------------------
-
-//         ent_keys.v = _mm512_i64gather_epi64(offsets3.v, (void*)cur, 1);
-
-//         res = _mm512_cmpeq_epi64_mask(keys.v,
-//                             _mm512_i64gather_epi64(offsets3.v, (void*)cur, 1));
-
-//         // Now also mask which entries are valid
-//         ent_vals.v = _mm512_i64gather_epi64(voffsets3.v, (void*)cur, 1);
-//         ent_vals.v = _mm512_and_epi64(ent_vals.v, bitmask.v);
-
-
-//         is_tomb = _mm512_cmpeq_epi64_mask(ent_vals.v, tombstone);
-//         is_empty = _mm512_cmpeq_epi64_mask(ent_vals.v, inval);
-
-//         // Remove things from the res mask
-//         res = _kandn_mask8(is_tomb, _kandn_mask8(is_empty, res));
-
-//         if (countSetBits(res) == 1) {
-//             // Find the one remaining thing
-//             uint64_t offset = _mm512_mask_reduce_add_epi64(res, offsets3.v);
-//             *ent_return = (hash_ent_t*)(((char*)cur) + offset);
-//             return node_index + (uint32_t)offset;
-//         } 
-
-//         //---------------------------------------------------------------------
-
-//         ent_keys.v = _mm512_i64gather_epi64(offsets4.v, (void*)cur, 1);
-
-//         res = _mm512_cmpeq_epi64_mask(keys.v,
-//                             _mm512_i64gather_epi64(offsets4.v, (void*)cur, 1));
-
-//         // Now also mask which entries are valid
-//         ent_vals.v = _mm512_i64gather_epi64(voffsets4.v, (void*)cur, 1);
-//         ent_vals.v = _mm512_and_epi64(ent_vals.v, bitmask.v);
-
-
-//         is_tomb = _mm512_cmpeq_epi64_mask(ent_vals.v, tombstone);
-//         is_empty = _mm512_cmpeq_epi64_mask(ent_vals.v, inval);
-
-//         // Remove things from the res mask
-//         res = _kandn_mask8(is_tomb, _kandn_mask8(is_empty, res));
-
-//         if (countSetBits(res) == 1) {
-//             // Find the one remaining thing
-//             uint64_t offset = _mm512_mask_reduce_add_epi64(res, offsets4.v);
-//             *ent_return = (hash_ent_t*)(((char*)cur) + offset);
-//             return node_index + (uint32_t)offset;
-//         } 
-
-//         return 0;
-// #else
-//         for (int i = 0; i < SIM_W; ++i) {
-//             offsets.a[i] = simd_offsets[(inc * SIM_W) + i];
-//             val_offsets.a[i] = simd_offsets[(inc * SIM_W) + i] + 8;
-//         }
-//         inc++;
-
-//         keys.v = _mm_set1_epi64x(key);
-
-//         ent_keys.v = _mm_i64gather_epi64((int64_t*)cur, offsets.v, 1);
-//         //ent_keys.v = _mm512_i64gather_epi64(offsets.v, (void*)cur, 1);
-
-//         __mmask8 res = _mm_cmpeq_epi64_mask(keys.v, ent_keys.v);
-
-//         // Now also mask which entries are valid
-//         //ent_vals.v = _mm_i64gather_epi64(val_offsets.v, (void*)cur, 1);
-//         ent_vals.v = _mm_i64gather_epi64((void*)cur, val_offsets.v, 1);
-//         //SIM_TYPE bitmask = _mm_set1_epi64(0x0000FFFFFFFFFFFF);
-//         SIM_TYPE bitmask = _mm_set1_epi64x(0x0000FFFFFFFFFFFF);
-//         //ent_vals.v = _mm512_and_epi64(ent_vals.v, bitmask);
-//         ent_vals.v = _mm_and_si128(ent_vals.v, bitmask);
-
-//         SIM_TYPE tombstone = bitmask;
-//         SIM_TYPE inval = _mm_set1_epi64x(0);
-
-//         __mmask8 is_tomb = _mm_cmpeq_epi64_mask(ent_vals.v, tombstone);
-//         __mmask8 is_empty = _mm_cmpeq_epi64_mask(ent_vals.v, inval);
-
-//         // Remove things from the res mask
-//         res = _kandn_mask8(is_tomb, res);
-//         res = _kandn_mask8(is_empty, res);
-
-//         if (countSetBits(res) == 1) {
-//             // Find the one remaining thing
-//             //uint64_t offset = _mm512_mask_reduce_add_epi64(res, offsets.v);
-//             offsets.v = _mm_maskz_compress_epi64(res, offsets.v);
-//             uint64_t offset = offsets.a[0];
-//             *ent_return = (hash_ent_t*)(((char*)cur) + offset);
-//             return node_index + (uint32_t)offset;
-//         } else if (countSetBits(is_tomb) == 0) {
-//             return 0;
-//         }
-// #endif
-// #endif
-
-//     return 0;
-// }
-
-static void 
-pmem_nvm_hash_table_update_internal(paddr_t     ent,
-                               uint32_t        node_index,
-                               size_t          new_range) 
-{
-// #ifndef SIMPLE_ENTRIES
-//    ent->size = new_range;
-//    nvm_update(pop, node_index);
-// #endif
-}
-// Very similar to lookup, but we also update the entry at the end.
-int pmem_nvm_hash_table_update(paddr_t         key,
-                          size_t          new_range) {
-#ifdef SEQ_STEP
-  uint32_t step = 1;
-#else
-  uint32_t step = 0;
-#endif
-
-
-  paddr_t *entries = pmem_ht_vol->entries;
-  int mod = pmem_ht->mod;
-  uint32_t hash_value = pmem_ht_vol->hash_func(key);
-  uint32_t node_index = hash_value % mod;
-  paddr_t cur = entries[node_index];
-
-#if 0
-  if (unlikely (!HASH_IS_REAL (hash_value))) {
-    hash_value = 2;
-  }
-#endif
-
-  //pthread_rwlock_rdlock(hash_table->cache_lock);
-
-  
-  //node_index = hash_value & hash_table->mask;
-  //if (hash_table->do_lock) pthread_rwlock_rdlock(hash_table->locks + node_index);
-
-  //nvm_read_entry(hash_table, node_index, &cur, false);
-  //cur = hash_table->cache[BLK_NUM(node_index)][BLK_IDX(node_index)];
-
-  while (!HASHFS_ENT_IS_EMPTY(cur)) {
-    if (cur == key && HASHFS_ENT_IS_VALID(cur)) {
-      pmem_nvm_hash_table_update_internal(cur, node_index, new_range);
-      //if (hash_table->do_lock) pthread_rwlock_unlock(hash_table->locks + node_index);
-      //pthread_rwlock_unlock(hash_table->cache_lock);
-      return 1;
-    } 
-#ifndef SEQ_STEP
-    step++;
-#endif
-    //uint32_t new_idx = (node_index + step) & hash_table->mask;
-    uint32_t new_idx = (node_index + step) % mod;
-    // if (hash_table->do_lock) {
-    //   pthread_rwlock_unlock(hash_table->locks + node_index);
-    //   pthread_rwlock_rdlock(hash_table->locks + new_idx);
-    // }
-    node_index = new_idx;
-    cur = entries[node_index];
-  }
-
-  //if (hash_table->do_lock) pthread_rwlock_unlock(hash_table->locks + node_index);
-
-  //pthread_rwlock_unlock(hash_table->cache_lock);
-  return 0;
-}
-
 /*
  * nvm_hash_table_remove_node:
  * @hash_table: our #nvm_hash_idx_t
@@ -856,57 +339,15 @@ static void pmem_nvm_hash_table_remove_node (int              i//,
                                         size_t          *old_precursor,
                                         size_t          *old_size*/) {
   
-  //pthread_rwlock_wrlock(hash_table->locks + i);
-  // nvm_read_entry(hash_table, i, &ent, true);
-  // *pblk = HASH_ENT_VAL(*ent);
-// #ifdef SIMPLE_ENTRIES
-//   *old_size = 1;
-//   *old_precursor = 0;
-// #else
-//   *old_size = (size_t)ent->size;
-//   *old_precursor = (size_t)ent->index;
-// #endif
-
-  // HASH_ENT_SET_TOMBSTONE(*ent);
 #ifndef SIMPLE_ENTRIES
   // ent->size = 0;
   // ent->index = 0;
 #endif
   paddr_t *entries = pmem_ht_vol->entries;
-  //*pblk = D_RO(entries)[i].value;
   HASHFS_ENT_SET_TOMBSTONE(entries[i]);
   pmem_nvm_flush((void*)(entries + i), sizeof(paddr_t));
   pmem_ht->nnodes -= 1;
   pmem_nvm_flush((void*)(&(pmem_ht->nnodes)), sizeof(int));
-  
-  /* Erect tombstone */
-
-  //pthread_rwlock_unlock(hash_table->locks + i);
-}
-
-/*
- * nvm_hash_table_maybe_resize:
- * @hash_table: our #nvm_hash_idx_t
- *
- * Resizes the hash table, if needed.
- *
- * Essentially, calls nvm_hash_table_resize() if the table has strayed
- * too far from its ideal size for its number of nodes.
- *
- * iangneal: Hijacking this function to assure that we haven't over-committed.
- */
-static inline void
-pmem_nvm_hash_table_maybe_resize (nvm_hash_idx_t *hash_table) {
-#if 0
-  int noccupied = hash_table->noccupied;
-  int size = hash_table->size;
-
-  assert(noccupied <= size);
-  if ((size > hash_table->nnodes * 4 && size > 1 << HASH_TABLE_MIN_SHIFT) ||
-      (size <= noccupied + (noccupied / 16))) {
-    nvm_hash_table_resize (hash_table);
-  }
-#endif
 }
 
 /**
@@ -942,18 +383,12 @@ pmem_nvm_hash_table_new(struct disk_superblock *sblk,
                    //paddr_t           metadata_location,
                    //const idx_spec_t *idx_spec
                    ) {
-  //printf("inside ht_new\n");
-  //*buf = dax_addr[g_root_dev] + (blk * g_block_size_bytes) + off; 
   pmem_ht = (pmem_nvm_hash_idx_t*)(dax_addr[g_root_dev] + (sblk->datablock_start * g_block_size_bytes));
   if(pmem_ht->valid == 1) {
     printf("ht exists\n");
-    // pmem_ht->valid = 0;
-    // pmem_nvm_flush(&(pmem_ht->valid), sizeof(int));
     pmem_ht_vol = (pmem_nvm_hash_vol_t *)malloc(sizeof(pmem_nvm_hash_vol_t));
     pmem_ht_vol->hash_func = hash_func ? hash_func : nvm_idx_direct_hash;
     pmem_ht_vol->entries = (paddr_t*)(dax_addr[g_root_dev] + (pmem_ht->entries_blk * g_block_size_bytes));
-    // pmem_ht->valid = 1;
-    // pmem_nvm_flush(&(pmem_ht->valid), sizeof(int));
     return;
   }
   printf("ht does not exist\n");
@@ -965,8 +400,6 @@ pmem_nvm_hash_table_new(struct disk_superblock *sblk,
   pmem_ht->meta_size = ent_num_blocks_needed;
   pmem_ht->num_entries = sblk->ndatablocks - ent_num_blocks_needed;
   pmem_ht->entries_blk = sblk->datablock_start + 1;
-  //sblk->datablock_start = pmem_ht->entries_blk + ent_num_blocks_needed;
-  //sblk->ndatablocks = pmem_ht->num_entries;
 
   //need to update num blocks available somewhere?
   pmem_ht_vol = (pmem_nvm_hash_vol_t *)malloc(sizeof(pmem_nvm_hash_vol_t));
@@ -980,65 +413,9 @@ pmem_nvm_hash_table_new(struct disk_superblock *sblk,
 
   pmem_ht->is_pmem = pmem_is_pmem(pmem_ht, ent_num_blocks_needed * g_block_size_bytes);
   memset(pmem_ht_vol->entries, ~0, (ent_num_blocks_needed - 1) * g_block_size_bytes);
-  //hardcoding / and /mlfs
-  // for(paddr_t i = 1; i <= 2; ++i) {
-  //   paddr_t key = i << 32;
-  //   paddr_t index;
-  //   pmem_nvm_hash_table_insert(key, &index);
-  // }
   pmem_nvm_flush((void*)(pmem_ht), ent_num_blocks_needed * g_block_size_bytes);
   pmem_ht->valid = 1;
   pmem_nvm_flush((void*)(&(pmem_ht->valid)), sizeof(int));
-  // // initialize read-writer locks
-  // ht->locks = MALLOC(idx_spec, max_entries * sizeof(pthread_rwlock_t));
-  // assert(ht->locks);
-  // for (size_t i = 0; i < max_entries; ++i) {
-  //   int err = pthread_rwlock_init(ht->locks + i, NULL);
-  //   if_then_panic(err, "Could not init rwlock!");
-  // }
-
-  // // init metadata lock
-  // ht->metalock = MALLOC(idx_spec, sizeof(pthread_mutex_t));
-  // assert(ht->metalock);
-  // pthread_mutex_init(ht->metalock, NULL);
-
-  //   if (!nvm_read_metadata(ht)) {
-  //       ssize_t nalloc = CB(idx_spec, cb_alloc_metadata, nblocks, &(ht->data));
-  //       if_then_panic(nalloc < nblocks, "no large contiguous region!");
-
-  //       nvm_write_metadata(ht);
-  //   }
-
-  // ssize_t perr = CB(ht, cb_get_addr, ht->data, 0, &(ht->data_ptr));
-  // if_then_panic(perr, "Could not get data_ptr!");
-  // // -- CACHING
-  // ht->do_cache = false;
-  // ht->do_lock  = false;
-  // // cache lock
-  // ht->cache_lock = MALLOC(idx_spec, sizeof(pthread_rwlock_t));
-  // assert(ht->cache_lock);
-  // int err = pthread_rwlock_init(ht->cache_lock, NULL);
-  // if_then_panic(err, "Could not init rwlock!");
-
-  // ht->cache = MALLOC(idx_spec, max_entries * sizeof(hash_ent_t));
-  // assert(ht->cache);
-
-  // // allocate cache bitmap -- unset for valid, set for invalid
-  // //size_t cache_bitmap_size = (max_entries / BITS_PER_LONG) * sizeof(unsigned long);
-  // size_t cache_state_size = max_entries * sizeof(int8_t);
-  // ht->cache_state = ZALLOC(ht, cache_state_size);
-  // assert(ht->cache_state);
-  // memset(ht->cache_state, -1, cache_state_size);
-
-#if 0
-  for (int i = 0; i < nblocks; ++i) {
-    hash_ent_t *unused;
-    ht->cache[i] = MALLOC(idx_spec, block_size);
-    // load from NVRAM (force flag)
-    nvm_read(ht, i, &unused, 1);
-  }
-#endif
-
   return;
 }
 
@@ -1073,7 +450,6 @@ pmem_nvm_hash_table_insert_node(uint32_t node_index, uint32_t key_hash,
                            //, size_t new_index, size_t new_range
                            )
 {
-    // TX_ADD(ht);
   paddr_t *entries = pmem_ht_vol->entries;
   paddr_t ent = entries[node_index];
 
@@ -1096,26 +472,6 @@ pmem_nvm_hash_table_insert_node(uint32_t node_index, uint32_t key_hash,
 }
 
 /**
- * nvm_hash_table_destroy:
- * @hash_table: a #nvm_hash_idx_t
- *
- * Destroys all keys and values in the #nvm_hash_idx_t and decrements its
- * reference count by 1. If keys and/or values are dynamically allocated,
- * you should either free them first or create the #nvm_hash_idx_t with destroy
- * destruction phase.
- */
-// void
-// nvm_hash_table_destroy (nvm_hash_idx_t *hash_table)
-// {
-//   assert (hash_table != NULL);
-
-//   for (size_t i = 0; i < hash_table->nvram_size; ++i) {
-//     int err = pthread_rwlock_destroy(hash_table->locks + i);
-//     if (err) panic("Could not destroy rwlock!");
-//   }
-// }
-
-/**
  * nvm_hash_table_lookup:
  * @hash_table: a #nvm_hash_idx_t
  * @key: the key to look up
@@ -1128,35 +484,16 @@ pmem_nvm_hash_table_insert_node(uint32_t node_index, uint32_t key_hash,
  * Returns: (nullable): the associated value, or %NULL if the key is not found
  */
 int pmem_nvm_hash_table_lookup(inum_t inum, paddr_t lblk,
-    paddr_t *val/*, paddr_t *size, bool force*/) {
-  //printf("inside ht_lookup\n");
+    paddr_t *val) {
   uint32_t node_index;
   uint32_t hash_return;
   paddr_t ent;
-
-#if 0
-  if (!hash_table->do_lock) {
-      node_index = nvm_hash_table_lookup_node_simd(hash_table, key, &ent, &hash_return, 0);
-  } else {
-      node_index = nvm_hash_table_lookup_node(hash_table, key, &ent, &hash_return, force);
-  }
-#else
   paddr_t key = HASHFS_MAKEKEY(inum, lblk);
   node_index = pmem_nvm_hash_table_lookup_node(key, &ent, &hash_return/*,force*/);
-#endif
 
-  //pthread_rwlock_rdlock(hash_table->locks + node_index);
   *val = node_index + pmem_ht->meta_size;
   int success = HASHFS_ENT_IS_VALID(ent);
-
-// #ifdef SIMPLE_ENTRIES
-//   *size = 1;
-// #else
-//   *size = ent->size;
-// #endif
-
-return success;
-  //pthread_rwlock_unlock(hash_table->locks + node_index);
+  return success;
 }
 
 static inline int 
@@ -1194,8 +531,6 @@ int pmem_nvm_hash_table_lookup_simd64(uint32_t inum, uint32_t lblk, uint32_t len
     pblks[i] = ((uint64_t)indices.arr[i]) + ((uint64_t)meta_size);
   }
   return success;
-
-
 }
 /*
  * nvm_hash_table_insert_internal:
@@ -1241,25 +576,7 @@ pmem_nvm_hash_table_insert_internal (paddr_t    key,
   uint32_t hash_value = pmem_ht_vol->hash_func(key);
   uint32_t node_index = hash_value % mod;
   paddr_t cur = entries[node_index];
-  // printf("key: %u, hash: %u", key, hash_value); 
-#if 0
-  if (unlikely (!HASH_IS_REAL (hash_value))) {
-    hash_value = 2;
-  }
-#endif
-  //pthread_rwlock_rdlock( hash_table->cache_lock);
 
-  
-  //node_index = hash_value & hash_table->mask;
-  //if (hash_table->do_lock) pthread_rwlock_wrlock(hash_table->locks + node_index);
-
-  // nvm_read_entry(hash_table, node_index, &cur, false);
-
-  //   __builtin_prefetch((void*)( ((char*)cur) + 64 ), 1);
-  //   __builtin_prefetch((void*)( ((char*)cur) + 128 ), 1);
-  //   __builtin_prefetch((void*)( ((char*)cur) + 192 ), 1);
-  //   __builtin_prefetch((void*)( ((char*)cur) + 256 ), 1);
-  
   while (!HASHFS_ENT_IS_EMPTY(cur)) {
     if (cur == key && HASHFS_ENT_IS_VALID(cur)) {
       printf("already exists: %lx (trying to insert: %lx at index %u)\n",
@@ -1272,16 +589,11 @@ pmem_nvm_hash_table_insert_internal (paddr_t    key,
 #ifndef SEQ_STEP
       tombstone_step = step;
 #endif
-    } else {
-      //if (hash_table->do_lock) pthread_rwlock_unlock(hash_table->locks + node_index);
     }
 #ifndef SEQ_STEP
     step++;
 #endif
-    //uint32_t new_idx = (node_index + step) & hash_table->mask;
     uint32_t new_idx = (node_index + step) % mod;
-    //if (hash_table->do_lock) pthread_rwlock_wrlock(hash_table->locks + new_idx);
-
     node_index = new_idx;
     cur = entries[node_index];
   }
@@ -1297,7 +609,7 @@ pmem_nvm_hash_table_insert_internal (paddr_t    key,
   while(!success) {
       if(!HASHFS_ENT_IS_VALID(cur)) {
         success = pmem_nvm_hash_table_insert_node(
-          node_index, hash_value, key);//, index, size);
+          node_index, hash_value, key);
       }
       if(!success) {
 
@@ -1310,9 +622,7 @@ pmem_nvm_hash_table_insert_internal (paddr_t    key,
     }
   pmem_ht->nnodes = pmem_ht->nnodes + 1;
   pmem_nvm_flush((void*)(&(pmem_ht->nnodes)), sizeof(int));
-  //if (hash_table->do_lock) pthread_rwlock_unlock(hash_table->locks + node_index);
   *index = node_index + pmem_ht->meta_size;
-  //pthread_rwlock_unlock(hash_table->cache_lock);
   return true;
 }
 
@@ -1341,7 +651,6 @@ pmem_nvm_hash_table_insert (inum_t     inum,
                        //size_t      size
                        )
 {
-  // printf("inside ht_insert\n");
   paddr_t key = HASHFS_MAKEKEY(inum, lblk);
   return pmem_nvm_hash_table_insert_internal(key, index);//, index, size);
 }
@@ -1394,7 +703,6 @@ static inline int pmem_nvm_hash_table_insert_internal_simd64(__m512i *inums, __m
   __mmask8 notFound = _cvtu32_mask8(0);
   __m512i keys;
   pmem_make_key_simd64(inums, lblks, &keys);
-  //printVec_simd64("keys", &keys);
   pmem_nvm_hash_table_lookup_node_simd64(&keys, indices, &notFound, to_find);
   if(_cvtmask8_u32(_kxor_mask8(to_find, notFound)) != 0) {
     return false;
@@ -1413,13 +721,10 @@ static inline int pmem_nvm_hash_table_insert_internal_simd64(__m512i *inums, __m
       }
     }
     duplicates_mask &= to_find;
-    //printf("%u\n", duplicates_mask); 
     if(duplicates_mask != 0) {
       pmem_find_next_invalid_entry_simd64(indices, duplicates_mask);
     }
-    //_cvtmask8_u32(searching) != 0
   } while(duplicates_mask != 0);
-  //printVec_simd32("to_insert", indices);
   _mm512_mask_i32scatter_epi64(pmem_ht_vol->entries, to_find, *indices, keys, 8);
 
   return true;
@@ -1438,13 +743,11 @@ int pmem_nvm_hash_table_insert_simd64(uint32_t inum, uint32_t lblk, uint32_t len
 
 	}
   __mmask8 to_find = _cvtu32_mask8(to_do);
-	//printMask_simd8("to_find", &to_find);
 	u256i_32 indices;
   int success = pmem_nvm_hash_table_insert_internal_simd64(&(inum_vec.vec), &(lblk_vec.vec), &(indices.vec), to_find);
   uint32_t meta_size = pmem_ht->meta_size;
   for(size_t i = 0; i < len; ++i) {
     pblks[i] = ((uint64_t)indices.arr[i]) + ((uint64_t)meta_size);
-    //printf("%d INSERTED %d-%d in index %d (pblk: %u)\n", success, inum, lblk + i, indices.arr[i], pblks[i]);
   }
   return success;
 }
@@ -1463,43 +766,21 @@ int pmem_nvm_hash_table_insert_simd64(uint32_t inum, uint32_t lblk, uint32_t len
  */
 static int
 pmem_nvm_hash_table_remove_internal (paddr_t         key,
-                                paddr_t        *index//,
-                                //size_t         *old_idx,
-                                //size_t         *old_size
+                                paddr_t        *index
                                 )
 {
-  /*
-   * iangneal: for concurrency reasons, we can't do lookup -> insert, as another
-   * thread may come in and use the slot we just looked for.
-   * This is basically a copy of lookup_node, but with write locks.
-   */
-
 #ifdef SEQ_STEP
   uint32_t step = 1;
 #else
   uint32_t step = 0;
 #endif
 
-    //assert(D_RO(ht)->ref_count > 0);
   paddr_t *entries = pmem_ht_vol->entries;
   
   int mod = pmem_ht->mod;
   uint32_t hash_value = pmem_ht_vol->hash_func(key);
   uint32_t node_index = hash_value % mod;
   paddr_t cur = entries[node_index];
-
-#if 0
-  if (unlikely (!HASH_IS_REAL (hash_value))) {
-    hash_value = 2;
-  }
-#endif
-
-  //pthread_rwlock_rdlock(hash_table->cache_lock);
-  //node_index = hash_value % mod;
-  //node_index = hash_value & hash_table->mask;
-  //if (hash_table->do_lock) pthread_rwlock_wrlock(hash_table->locks + node_index);
-
-  //nvm_read_entry(hash_table, node_index, &cur, false);
 
   while (!HASHFS_ENT_IS_EMPTY(cur)) {
     if (cur == key && HASHFS_ENT_IS_VALID(cur)) {
@@ -1508,31 +789,16 @@ pmem_nvm_hash_table_remove_internal (paddr_t         key,
 #ifndef SEQ_STEP
     step++;
 #endif
-    //uint32_t new_idx = (node_index + step) & hash_table->mask;
     uint32_t new_idx = (node_index + step) % mod;
-
-    // if (hash_table->do_lock) {
-    //   pthread_rwlock_unlock(hash_table->locks + node_index);
-    //   pthread_rwlock_wrlock(hash_table->locks + new_idx);
-    // }
-
-    //nvm_read_entry(hash_table, new_idx, &cur, false);
-  
     cur = entries[new_idx];
     node_index = new_idx;
   }
   
   if (HASHFS_ENT_IS_VALID(cur)) {
-      pmem_nvm_hash_table_remove_node(node_index/*, old_pblk, old_idx, old_size*/);
-      //if (hash_table->do_lock) pthread_rwlock_unlock(hash_table->locks + node_index);
+      pmem_nvm_hash_table_remove_node(node_index);
       *index = node_index + pmem_ht->meta_size;
       return 1;
   }
-
-  //if (hash_table->do_lock) pthread_rwlock_unlock(hash_table->locks + node_index);
-
-  //pthread_rwlock_unlock(hash_table->cache_lock);
-  //cur = entries[node_index];
   *index = 0;
   return 0;
 }
@@ -1590,12 +856,9 @@ int pmem_nvm_hash_table_remove_simd64(uint32_t inum, uint32_t lblk, uint32_t len
 int
 pmem_nvm_hash_table_remove (inum_t         inum,
                        paddr_t             lblk,
-                       paddr_t        *removed//,
-                       //size_t         *nprevious,
-                       //size_t         *ncontiguous
+                       paddr_t        *removed
                        )
 {
-  // printf("inside ht_remove\n");
   paddr_t key = HASHFS_MAKEKEY(inum, lblk);
   return pmem_nvm_hash_table_remove_internal(key, removed
                                         //, nprevious, ncontiguous
