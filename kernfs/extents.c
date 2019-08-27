@@ -3265,6 +3265,9 @@ int mlfs_ext_truncate(handle_t *handle, struct inode *inode,
 	if(IDXAPI_IS_HASHFS()) {
 		size_t rc = 0;
 		printf("Start: %ld, End: %ld\n", start, end);
+		int success = pmem_nvm_hash_table_remove_simd64(inode->inum, start, end - start);
+		return 0;
+		
 		for(size_t i = start; i <= end; ++i) {
 			paddr_t index;
 			int success = pmem_nvm_hash_table_remove(inode->inum, i, &index);

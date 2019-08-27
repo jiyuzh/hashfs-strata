@@ -318,7 +318,7 @@ void pmem_nvm_hash_table_lookup_node_simd64(__m512i *keys, __m256i *node_indices
   __m256i first_tombstone = _mm256_maskz_set1_epi32(oneMask, 0);
   __mmask8 found_tombstone = _cvtu32_mask8(0); // zeroes
   mixHash_simd64(keys, node_indices, searching);
-  __m512i cur = _mm512_mask_i32gather_epi64 (empty_val, oneMask, *node_indices, (void const*)(pmem_ht_vol->entries), 8);
+  __m512i cur = _mm512_mask_i32gather_epi64 (empty_val, searching, *node_indices, (void const*)(pmem_ht_vol->entries), 8);
   
   // if it's zero, we're done
   *failure = _cvtu32_mask8(0);
@@ -709,7 +709,7 @@ void pmem_find_next_invalid_entry_simd64(__m256i *node_indices, uint32_t duplica
   *node_indices = _mm256_mask_add_epi32(*node_indices, searching, *node_indices, step_vec);
   pmem_mod_simd32(node_indices, node_indices);
 
-  __m512i cur = _mm512_mask_i32gather_epi64 (empty_val, oneMask, *node_indices, (void const*)(pmem_ht_vol->entries), 8);
+  __m512i cur = _mm512_mask_i32gather_epi64 (cur, searching, *node_indices, (void const*)(pmem_ht_vol->entries), 8);
   
   
 
