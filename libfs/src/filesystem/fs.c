@@ -229,12 +229,7 @@ void shutdown_fs(void)
   int ret;
   int _enable_perf_stats = enable_perf_stats;
   if(IDXAPI_IS_HASHFS()) {
-		if(IDXAPI_IS_CUCKOOFS()) {
-			pmem_cuckoohash_close();
-		}
-		else {
-			pmem_nvm_hash_table_close();
-		}
+		pmem_nvm_hash_table_close();
 	}
   if (!strata_initialized) {
     return;
@@ -454,15 +449,7 @@ void init_fs(void)
     read_root_inode(g_root_dev);
     if(IDXAPI_IS_HASHFS()) {
       struct super_block *sblk = sb[g_root_dev];
-      printf("getchar\n");
-      // getchar();
-      if(IDXAPI_IS_CUCKOOFS()) {
-        pmem_cuckoohash_initialize(sblk->ondisk);
-      }
-      else {
-        pmem_nvm_hash_table_new(sblk->ondisk, NULL);
-      }
-      
+      pmem_nvm_hash_table_new(sblk->ondisk, NULL);
     }
 
     mlfs_info("LibFS is initialized with id %d\n", g_log_dev);

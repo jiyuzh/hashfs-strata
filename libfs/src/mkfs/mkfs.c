@@ -302,12 +302,7 @@ int main(int argc, char *argv[])
 	wsect(1, buf);
 
 	if(IDXAPI_IS_HASHFS() && dev_id == g_root_dev) {
-		if(IDXAPI_IS_CUCKOOFS()) {
-			pmem_cuckoohash_initialize(&ondisk_sb);
-		}
-		else {
-			pmem_nvm_hash_table_new(&ondisk_sb, NULL);
-		}
+		pmem_nvm_hash_table_new(&ondisk_sb, NULL);
 	}
 
 	// Create / directory
@@ -401,12 +396,7 @@ int main(int argc, char *argv[])
 		storage_hdd.commit(dev_id);
 
 	if(IDXAPI_IS_HASHFS() && dev_id == g_root_dev) {
-		if(IDXAPI_IS_CUCKOOFS()) {
-			pmem_cuckoohash_close();
-		}
-		else {
-			pmem_nvm_hash_table_close();
-		}	
+		pmem_nvm_hash_table_close();
 	}
 	exit(0);
 }
@@ -548,23 +538,8 @@ void iappend(uint8_t dev, uint32_t inum, void *xp, int n)
             if(xint(din.l1_addrs[fbn]) == 0) {
                 // sequential allocation for freeblock
 				if(IDXAPI_IS_HASHFS() && dev_id == g_root_dev) {
-					// addr_t ndb = ondisk_sb.ndatablocks;
-					// uint64_t ent_num_bytes = sizeof(paddr_t) * ndb;
-  					// int ent_num_blocks_needed = 1 + ent_num_bytes / g_block_size_bytes;
-  					// if(ent_num_bytes % g_block_size_bytes != 0) {
-    				// 	++ent_num_blocks_needed;
-  					// }
-					// addr_t hash = key;
-					// addr_t modded = hash % (ndb - ent_num_blocks_needed);
-					// addr_t pblk = modded + ent_num_blocks_needed;
 					addr_t index;
-					if(IDXAPI_IS_CUCKOOFS()) {
-						//getchar();
-						pmem_cuckoohash_create(inum, 0, &index);
-					}
-					else {
-						pmem_nvm_hash_table_insert_simd64(inum, 0, 1, &index);
-					}
+					pmem_nvm_hash_table_insert_simd64(inum, 0, 1, &index);
 					din.l1_addrs[fbn] = xint(index);
 				}
 				else {

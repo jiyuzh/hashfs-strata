@@ -30,8 +30,10 @@ LD_FLAGS_CXX = -lpthread -lm -L$(NVML_DIR)/nondebug/ -lpmem -lrt \
 
 #DEBUG = -g -O0
 #DEBUG = -g -Ofast
-DEBUG = -g -O3 -march=skylake-avx512 -mavx -mavx512f -mavx512vl -mavx512cd -mavx512bw -mavx512dq
-OPT_ARGS = -march=skylake-avx512 -mavx -mavx512f -mavx512vl -mavx512cd -mavx512bw -mavx512dq
+AVX_ARGS = -march=skylake-avx512 -mavx -mavx512f -mavx512vl -mavx512cd -mavx512bw -mavx512dq
+DEBUG = -g -O0 $(AVX_ARGS)
+OPT_ARGS = -g 03 $(AVX_ARGS)
+
 
 #MLFS_FLAGS = -DUSE_SLAB -DMLFS_INFO -DKERNFS
 MLFS_FLAGS = -DMLFS_INFO -DKERNFS

@@ -419,7 +419,7 @@ again:
 			continue;
 		}
 
-		// mlfs_assert(map.m_pblk != 0);
+		mlfs_assert(map.m_pblk != 0);
 
 		nr_done += ret;
 

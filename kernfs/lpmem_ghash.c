@@ -262,6 +262,58 @@ static void directHash_simd64(__m512i *keys, __m256i *node_indices) {
   pmem_mod_simd32(&hash_values, node_indices);
 }
 
+// static inline laddr_t mix(paddr_t c)
+// {
+//     paddr_t a = 0xff51afd7ed558ccdL;
+//     paddr_t b = 0xc4ceb9fe1a85ec53L;
+// 	a=a-b;  a=a-c;  a=a^(c >> 13);
+// 	b=b-c;  b=b-a;  b=b^(a << 8);
+// 	c=c-a;  c=c-b;  c=c^(b >> 13);
+// 	a=a-b;  a=a-c;  a=a^(c >> 12);
+// 	b=b-c;  b=b-a;  b=b^(a << 16);
+// 	c=c-a;  c=c-b;  c=c^(b >> 5);
+// 	a=a-b;  a=a-c;  a=a^(c >> 3);
+// 	b=b-c;  b=b-a;  b=b^(a << 10);
+// 	c=c-a;  c=c-b;  c=c^(b >> 15);
+// 	return (laddr_t)c;
+// }
+// first = first - second; first = first - third; first = first XOR (third << || >> shifCount)
+
+static void
+mixHash_simd64_helper(__m512i *first, __m512i *second, __m512i *third, int right, uint32_t shiftCount, __mmask8 searching) {
+  *first = _mm512_maskz_sub_epi64(searching, *first, *second);
+  *first = _mm512_maskz_sub_epi64(searching, *first, *third);
+  __m512i bsTemp;
+  if(right) {
+    bsTemp = _mm512_maskz_srli_epi64(searching, *third, shiftCount); //>>
+  }
+  else {
+    bsTemp = _mm512_maskz_slli_epi64(searching, *third, shiftCount); //<<
+  }
+  *first = _mm512_maskz_xor_epi64(searching, *first, bsTemp);  
+}
+
+
+static void mixHash_simd64(__m512i *c, __m256i *node_indices, __mmask8 searching) {
+  int RIGHT = 1;
+  int LEFT = 0;
+  __mmask8 oneMask = _cvtu32_mask8(~0); // ones
+  __m512i a = _mm512_set1_epi64(0xff51afd7ed558ccdL);
+  __m512i b = _mm512_set1_epi64(0xc4ceb9fe1a85ec53L);
+  mixHash_simd64_helper(&a, &b, c, RIGHT, 13, searching);
+  mixHash_simd64_helper(&b, c, &a, LEFT, 8, searching);
+  mixHash_simd64_helper(c, &a, &b, RIGHT, 13, searching);
+  mixHash_simd64_helper(&a, &b, c, RIGHT, 12, searching);
+  mixHash_simd64_helper(&b, c, &a, LEFT, 16, searching);
+  mixHash_simd64_helper(c, &a, &b, RIGHT, 5, searching);
+  mixHash_simd64_helper(&a, &b, c, RIGHT, 3, searching);
+  mixHash_simd64_helper(&b, c, &a, LEFT, 10, searching);
+  mixHash_simd64_helper(c, &a, &b, RIGHT, 15, searching);
+
+  __m256i hash_values = _mm512_cvtepi64_epi32(*c); // direct hash with truncation to 32-bit
+  pmem_mod_simd32(&hash_values, node_indices);
+}
+
 static void pmem_make_key_simd64(__m512i *inums, __m512i *lblks, __m512i *keys) {
   __mmask8 oneMask = _cvtu32_mask8(~0); //zeros
   *keys = _mm512_mask_mov_epi64(*inums, oneMask, *inums); // keys = inums
@@ -282,7 +334,7 @@ void pmem_nvm_hash_table_lookup_node_simd64(__m512i *keys, __m256i *node_indices
   __m512i empty_val = _mm512_set1_epi64(HASHFS_EMPTY_VAL);
   __m256i first_tombstone = _mm256_maskz_set1_epi32(oneMask, 0);
   __mmask8 found_tombstone = _cvtu32_mask8(0); // zeroes
-  directHash_simd64(keys, node_indices);
+  mixHash_simd64(keys, node_indices, searching);
   __m512i cur = _mm512_mask_i32gather_epi64 (empty_val, oneMask, *node_indices, (void const*)(pmem_ht_vol->entries), 8);
   
   // if it's zero, we're done

@@ -1313,7 +1313,6 @@ static int mlfs_ext_grow_indepth(handle_t *handle,
 	if (ext_depth(handle, inode))
 		goal = mlfs_idx_pblock(EXT_FIRST_INDEX(ext_inode_hdr(handle, inode)));
 	goal = mlfs_inode_to_goal_block(inode);
-	//printf("hello world\n");
 	newblock = mlfs_new_meta_blocks(handle, inode, goal, flags, &count, &err);
 	if (newblock == 0)
 		return err;
@@ -2817,12 +2816,10 @@ int mlfs_hashfs_get_blocks(handle_t *handle, struct inode *inode,
 
     assert(map_arr->m_len <= 8 && "fs_get_blocks m_len > 8");
     struct super_block *sblk = sb[g_root_dev];
-    //printf("retrieving %u blocks\nmap_arr: ", map_arr->m_len);
-	int create = flags & MLFS_GET_BLOCKS_CREATE_DATA;
-	int create2 = flags & MLFS_GET_BLOCKS_CREATE_META;
-	//printf("%s. Start: %u, End: %u\n", create ? "Insert" : "Lookup", map_arr->m_lblk, map_arr->m_lblk + map_arr->m_len);
+	int create_data = flags & MLFS_GET_BLOCKS_CREATE_DATA;
+	int create_meta = flags & MLFS_GET_BLOCKS_CREATE_META;
 	int success = 0;
-	if(create || create2) {
+	if(create_data || create_meta) {
 		success = pmem_nvm_hash_table_insert_simd64(inode->inum, map_arr->m_lblk, map_arr->m_len, map_arr->m_pblk);
 #ifdef KERNFS
 		if (enable_perf_stats) {
@@ -2841,36 +2838,22 @@ int mlfs_hashfs_get_blocks(handle_t *handle, struct inode *inode,
         }
 		success = pmem_nvm_hash_table_lookup_simd64(inode->inum, map_arr->m_lblk, map_arr->m_len, map_arr->m_pblk);
 	}
-	//printf("pblk: %u", map_arr->m_pblk[0]);
 	return map_arr->m_len;
 	
 	
 	for(size_t i = 0; i < map_arr->m_len; ++i) {
-		//paddr_t *index = (paddr_t*)malloc(sizeof(paddr_t));
 		paddr_t index;
-		if(create || create2) {
-			//printf("inside get_blocks create\n");
-			int success = 0;
-			if(IDXAPI_IS_CUCKOOFS()) {
-				success = pmem_cuckoohash_create(inode->inum, map_arr->m_lblk + i, &index);
-			}
-			else {
-				success = pmem_nvm_hash_table_insert(inode->inum, map_arr->m_lblk + i, &index);
-			}
-			if(!success) {
-				//block already existed, so this does nothing
-				printf("block already existed\n");
-				return i;
-			}
+		if(create_data || create_meta) {
+			int success = pmem_nvm_hash_table_insert(inode->inum, map_arr->m_lblk + i, &index);
+		}
+		if(!success) {
+			//block already existed, so this does nothing
+			printf("block already existed\n");
+			return i;
+		}
 		} else {
-			//printf("inside get_blocks lookup\n");
-			int found = 0;
-			if(IDXAPI_IS_CUCKOOFS()) {
-				found = pmem_cuckoohash_lookup(inode->inum, map_arr->m_lblk + i, &index);
-			}
-			else {
-				found = pmem_nvm_hash_table_lookup(inode->inum, map_arr->m_lblk + i, &index);
-			}
+			int found = pmem_nvm_hash_table_lookup(inode->inum, map_arr->m_lblk + i, &index);
+			
 			if(!found) {
 				//did not find the requested block
 				printf("block not found\n");
@@ -2878,9 +2861,7 @@ int mlfs_hashfs_get_blocks(handle_t *handle, struct inode *inode,
 			}	
 		}
 		map_arr->m_pblk[i] = index + sblk->ondisk->datablock_start;
-		//printf(" pblk: %d\n", map_arr->m_pblk[i]);
 	}
-	//printf("\n");
 	return map_arr->m_len;		
 	
 }
@@ -3281,27 +3262,19 @@ int mlfs_ext_truncate(handle_t *handle, struct inode *inode,
 		mlfs_lblk_t start, mlfs_lblk_t end)
 {
 
-	printf("HELLO WORLD\n");
 	if(IDXAPI_IS_HASHFS()) {
 		size_t rc = 0;
 		printf("Start: %ld, End: %ld\n", start, end);
 		for(size_t i = start; i <= end; ++i) {
-			//remove
 			paddr_t index;
-			int success;
-			if(IDXAPI_IS_CUCKOOFS()) {
-				success = pmem_cuckoohash_remove(inode->inum, i, &index);
-			}
-			else {
-				success = pmem_nvm_hash_table_remove(inode->inum, i, &index);
-			}
+			int success = pmem_nvm_hash_table_remove(inode->inum, i, &index);
+			
 			if(!success) {
 			//	printf("block not found\n");
 			}
 			else {
 				++rc;
 			}
-			//not sure what to return
 		}
 		printf("removed %ld blocks\n", rc);
 		return 0;

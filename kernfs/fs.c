@@ -205,8 +205,6 @@ void show_kernfs_stats(void)
 
     // Convert JSON to a string
 	const char *js_str = json_object_get_string(kernfs_stats_json);
-	//const char *js_str = json_object_get_string(root);
-	printf("%s\n", js_str);
     // Write the JSON string to a file.
 	if (enable_perf_stats) {
 		ftruncate(prof_fd, 0);
@@ -2093,14 +2091,8 @@ static void wait_for_event(void)
 
 void shutdown_fs(void)
 {
-	printf("Finalize FS\n");
 	if(IDXAPI_IS_HASHFS()) {
-		if(IDXAPI_IS_CUCKOOFS()) {
-			pmem_cuckoohash_close();
-		}
-		else {
-			pmem_nvm_hash_table_close();
-		}
+		pmem_nvm_hash_table_close();
 	}
 	if (enable_perf_stats) {
 		show_kernfs_stats();
@@ -2242,12 +2234,8 @@ void init_fs(void)
 #endif
 	if(IDXAPI_IS_HASHFS()) {
 		struct super_block *sblk = sb[g_root_dev];
-		if(IDXAPI_IS_CUCKOOFS()) {
-			pmem_cuckoohash_initialize(sblk->ondisk);
-		}
-		else {
-			pmem_nvm_hash_table_new(sblk->ondisk, NULL);
-		}
+		pmem_nvm_hash_table_new(sblk->ondisk, NULL);
+		
 		
 	}
 
