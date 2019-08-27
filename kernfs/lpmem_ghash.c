@@ -262,27 +262,10 @@ static void directHash_simd64(__m512i *keys, __m256i *node_indices) {
   pmem_mod_simd32(&hash_values, node_indices);
 }
 
-// static inline laddr_t mix(paddr_t c)
-// {
-//     paddr_t a = 0xff51afd7ed558ccdL;
-//     paddr_t b = 0xc4ceb9fe1a85ec53L;
-// 	a=a-b;  a=a-c;  a=a^(c >> 13);
-// 	b=b-c;  b=b-a;  b=b^(a << 8);
-// 	c=c-a;  c=c-b;  c=c^(b >> 13);
-// 	a=a-b;  a=a-c;  a=a^(c >> 12);
-// 	b=b-c;  b=b-a;  b=b^(a << 16);
-// 	c=c-a;  c=c-b;  c=c^(b >> 5);
-// 	a=a-b;  a=a-c;  a=a^(c >> 3);
-// 	b=b-c;  b=b-a;  b=b^(a << 10);
-// 	c=c-a;  c=c-b;  c=c^(b >> 15);
-// 	return (laddr_t)c;
-// }
-// first = first - second; first = first - third; first = first XOR (third << || >> shifCount)
-
 static void
 mixHash_simd64_helper(__m512i *first, __m512i *second, __m512i *third, int right, uint32_t shiftCount, __mmask8 searching) {
-  *first = _mm512_maskz_sub_epi64(searching, *first, *second);
-  *first = _mm512_maskz_sub_epi64(searching, *first, *third);
+  *first = _mm512_maskz_sub_epi64(searching, *first, *second); //first = first - second
+  *first = _mm512_maskz_sub_epi64(searching, *first, *third); //first = first - third
   __m512i bsTemp;
   if(right) {
     bsTemp = _mm512_maskz_srli_epi64(searching, *third, shiftCount); //>>
@@ -290,7 +273,7 @@ mixHash_simd64_helper(__m512i *first, __m512i *second, __m512i *third, int right
   else {
     bsTemp = _mm512_maskz_slli_epi64(searching, *third, shiftCount); //<<
   }
-  *first = _mm512_maskz_xor_epi64(searching, *first, bsTemp);  
+  *first = _mm512_maskz_xor_epi64(searching, *first, bsTemp); //first = first XOR (third (<< || >>) shiftcount)
 }
 
 
@@ -317,7 +300,7 @@ static void mixHash_simd64(__m512i *c, __m256i *node_indices, __mmask8 searching
 static void pmem_make_key_simd64(__m512i *inums, __m512i *lblks, __m512i *keys) {
   __mmask8 oneMask = _cvtu32_mask8(~0); //zeros
   *keys = _mm512_mask_mov_epi64(*inums, oneMask, *inums); // keys = inums
-  *keys = _mm512_rol_epi64(*keys, 32); // rotate left 32 bits
+  *keys = _mm512_slli_epi64(*keys, 32); // rotate left 32 bits
   *keys = _mm512_or_epi64(*keys, *lblks); // & with lblks
 }
 
