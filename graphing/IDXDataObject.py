@@ -43,6 +43,10 @@ class IDXDataObject:
         if 'bench' in data_obj and data_obj['bench'] == 'db_bench':
             return self._parse_db_bench(data_obj)
 
+        labels = ['struct', 'layout', 'start size', 'io size', 'repetitions',
+                  'num files', 'test', 'trial num']
+        parsed = {l: data_obj[l] for l in labels}
+
         if 'read_data' in data_obj:
             parsed['read_data_bytes_per_cycle'] = data_obj['read_data']['bytes'] / max(data_obj['read_data']['tsc'], 1.0)
         if 'threads' in data_obj and data_obj['threads'] != 'T1':
@@ -78,10 +82,11 @@ class IDXDataObject:
                 parsed['read_data'] = data_obj['kernfs']['digest'] - parsed['indexing']
 
             total = parsed['indexing'] + parsed['read_data']
+            parsed['total_breakdown'] = total
             #scale = parsed['throughput'] if 'throughput' in parsed else parsed['total_time']
-            parsed['indexing'] /= total
+            #parsed['indexing'] /= total
             #parsed['indexing'] *= scale
-            parsed['read_data'] /= total
+            #parsed['read_data'] /= total
             #parsed['read_data'] *= scale
 
         return parsed
@@ -118,51 +123,62 @@ class IDXDataObject:
 
     def _parse_results(self, results_dir):
         from scipy.stats.mstats import gmean
-        data = defaultdict(lambda: defaultdict(dict))
+        data = defaultdict(list)
         files = [f for f in results_dir.iterdir() if f.is_file() and 'summary' not in f.name]
         for fp in files:
             with fp.open() as f:
                 objs = json.load(f)
                 for obj in objs:
-                    bench = obj['workload'] if 'workload' in obj else obj['bench']
-                    config = obj['struct']
-                    layout = obj['layout']
-                    if layout not in data[bench][config]:
-                        data[bench][config][layout] = []
-
                     parsed_data = self._parse_relevant_fields(obj)
                     if parsed_data is not None:
-                        data[bench][config][layout] += [parsed_data]
+                        data[parsed_data['trial num']] += [parsed_data]
 
         dfs = defaultdict(lambda: defaultdict(dict))
-        geofields = ['indexing', 'read_data']
-        for bench, bench_data in data.items():
-            for config, config_data in bench_data.items():
-                for layout in sorted(config_data.keys()):
-                    layout_data = config_data[layout]
-                    series = [pd.Series(x) for x in layout_data]
-                    df = pd.DataFrame(series)
-                    s = df.mean()
-                    s['count'] = len(df)
-                    dfs[bench][config][layout] = s
+        #geofields = ['indexing', 'read_data']
+        #for bench, bench_data in data.items():
+        #    for config, config_data in bench_data.items():
+        #        for layout in sorted(config_data.keys()):
+        #            layout_data = config_data[layout]
+        #            series = [pd.Series(x) for x in layout_data]
+        #            df = pd.DataFrame(series)
+        #            s = df.mean()
+        #            s['count'] = len(df)
+        #            dfs[bench][config][layout] = s
 
-            self._normalize_fields(dfs[bench])
+        #    self._normalize_fields(dfs[bench])
+
+        #self.dfs = dfs
+        df_list = []
+        for trial, d in data.items():
+            df_list += [pd.DataFrame(d)]
 
         self.dfs = dfs
+        df_combined = pd.concat(df_list)
+        df_mean = df_combined.groupby(df_combined.index).mean()
+        df_mean['indexing'] /= df_mean['total_breakdown']
+        df_mean['read_data'] /= df_mean['total_breakdown']
+        df_mean['total_breakdown'] /= df_mean['total_breakdown']
+        
+        self.df = df_list[0] # to preserve string fields
+        self.df[df_mean.columns] = df_mean
+
+        embed()
 
     def _load_results_file(self, file_path):
         with file_path.open() as f:
-            results_data = json.load(f)
+            self.df = pd.DataFrame(json.load(f))
+            embed()
+            #results_data = json.load(f)
 
-            self.dfs = defaultdict(dict)
-            for benchmark, config_data in results_data.items():
-                for config_name, raw_df in config_data.items():
-                    df = None
-                    try:
-                        df = pd.DataFrame(raw_df)
-                    except:
-                        df = pd.Series(raw_df)
-                    self.dfs[benchmark][config_name.lower()] = df
+            #self.dfs = defaultdict(dict)
+            #for benchmark, config_data in results_data.items():
+            #    for config_name, raw_df in config_data.items():
+            #        df = None
+            #        try:
+            #            df = pd.DataFrame(raw_df)
+            #        except:
+            #            df = pd.Series(raw_df)
+            #        self.dfs[benchmark][config_name.lower()] = df
 
     def __init__(self, results_dir=None, file_path=None):
         assert results_dir is not None or file_path is not None
@@ -173,14 +189,14 @@ class IDXDataObject:
             self._parse_results(Path(results_dir))
 
     def save_to_file(self, file_path):
-        json_obj = defaultdict(lambda: defaultdict(dict))
-        for bench, bench_data in self.dfs.items():
-            for config, config_data in bench_data.items():
-                for layout, layout_data in config_data.items():
-                    json_obj[bench][config][layout] = layout_data.to_dict()
+        #json_obj = defaultdict(lambda: defaultdict(dict))
+        #for bench, bench_data in self.dfs.items():
+        #    for config, config_data in bench_data.items():
+        #        for layout, layout_data in config_data.items():
+        #            json_obj[bench][config][layout] = layout_data.to_dict()
 
         with file_path.open('w') as f:
-            json.dump(json_obj, f, indent=4)
+            json.dump(self.df.to_dict(), f, indent=4)
 
     def _reorder_data_frames(self):
         new_dict = defaultdict(dict)

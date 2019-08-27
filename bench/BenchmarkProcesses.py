@@ -135,7 +135,7 @@ class BenchRunner:
                       'LEVEL_HASH_TABLES', 'RADIX_TREES', 'HASHFS', 'NONE']
 =======
     IDX_STRUCTS   = [ 'EXTENT_TREES', 'EXTENT_TREES_TOP_CACHED', 
-                      'GLOBAL_HASH_TABLE', 'GLOBAL_CUCKOO_HASH'
+                      'GLOBAL_HASH_TABLE', 'GLOBAL_CUCKOO_HASH',
                       'LEVEL_HASH_TABLES', 'RADIX_TREES', 'NONE' ]
     IDX_DEFAULT   = IDX_STRUCTS
 >>>>>>> Update automate script to match new MTCC better and better isolate perf
@@ -203,8 +203,9 @@ class BenchRunner:
             self.outdir.mkdir()
                 
         filepath = self.outdir / name
-        with filepath.open('w') as f:
-            json.dump(json_obj, f, indent=4)
+        if json_obj:
+            with filepath.open('w') as f:
+                json.dump(json_obj, f, indent=4)
 
     def _run_trial(self, bench_args, bench_cwd, processing_fn, timeout=(2*60),
             no_warn=False):
