@@ -179,6 +179,7 @@ void reset_kernfs_stats(void)
     cache_stats_init();
 	kernfs_stats_json = json_object_new_array();	
 	
+    flush_llc();
 }
 
 void show_kernfs_stats(void)

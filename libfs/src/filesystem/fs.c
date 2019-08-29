@@ -80,6 +80,8 @@ void reset_libfs_stats(void)
     reset_stats_dist(&(g_perf_stats.read_data_bytes));
     cache_stats_init();
     libfs_stats_json = json_object_new_array();
+
+    flush_llc();
 }
 void show_libfs_stats(const char *title)
 {

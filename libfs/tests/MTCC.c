@@ -140,6 +140,11 @@ int main(int argc, char **argv) {
     for (int i=0; i < write_unit/sizeof(uint64_t); ++i) {
         write_buf[i] = i;
     }
+
+    char *init_unit = (char*)malloc(64 * 1024 * 1024);
+    assert(init_unit);
+    memset(init_unit, 42, 64*1024*1024);
+
     for (int i=0; i < file_num; ++i) {
         snprintf(filename_v[i], MAX_FILE_NAME_LEN, PREFIX "/MTCC-%d", i);
         fd_v[i] = open(filename_v[i], O_RDWR | O_CREAT, 0666);
@@ -149,8 +154,14 @@ int main(int argc, char **argv) {
         }
         // init each file with read_unit data or start size, whichever is larger
         size_t sz = read_unit > start_file_size ? read_unit : start_file_size;
-        for (size_t s = 0; s < sz; s += write_unit) {
-            assert(write(fd_v[i], write_buf, write_unit) != -1);
+        // We don't need to make the write unit so small for init size
+        size_t incr = start_file_size < 64 * 1024 * 1024 ? start_file_size 
+                        : 64 * 1024 * 1024;
+        for (size_t s = 0; s < sz; ) {
+            size_t amount = sz - s > incr ? incr : sz - s;
+            ssize_t ret = write(fd_v[i], init_unit, amount);
+            assert(ret != -1);
+            s += ret;
         }
 
         close(fd_v[i]);

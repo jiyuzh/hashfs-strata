@@ -4,6 +4,7 @@ display_options:
     radix_trees: Radix Trees
     extent_trees: Extent Trees
     level_hash_tables: Level Hash Tables
+    global_cuckoo_hash: Global Cuckoo Hash Table
 
   benchmark_names:
     filemicro_seq_one_4k: 4kB
@@ -27,10 +28,12 @@ display_options:
     Radix Trees: '#ffffb3'
     Extent Trees: '#bebada'
     Level Hash Tables: '#fb8072'
+    Global Cuckoo Hash Table: '#999999'
 
   config_order:
     - Global Hash Table
     - Radix Trees
     - Extent Trees
     - Level Hash Tables
+    - Global Cuckoo Hash Table
 

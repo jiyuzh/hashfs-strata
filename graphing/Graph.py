@@ -226,6 +226,8 @@ class Grapher:
             axis.set_ylim(min_y_pos, max_y_pos)
 
         artist = []
+
+        
         #labels = self._clean_benchmark_names(labels)
 
         ax.invert_yaxis()
@@ -255,6 +257,7 @@ class Grapher:
             #bar.set_hatch(hatch)
             bar.set_color(color)
             bar.set_edgecolor('black')
+        
 
         scale = self._kwargs_default(kwargs, 'scale', 1.0)
         if scale < 1.0:
@@ -266,6 +269,8 @@ class Grapher:
 
         plt.sca(axis)
         self.__class__._do_grid_lines()
+
+        
 
         plt.xlabel(self._kwargs_default(kwargs, 'label', ''))
         plt.xscale(self._kwargs_default(kwargs, 'xscale', 'linear'))

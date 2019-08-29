@@ -58,21 +58,18 @@ class IDXDataObject:
         if 'total_time' in data_obj:
             parsed['total_time'] = data_obj['total_time']
         if 'cache' in data_obj:
-            parsed['cache_accesses'] = data_obj['cache']['l1_accesses']
-            #parsed['cache_misses'] = data_obj['cache']['l1_misses']
-            #parsed['llc_misses'] = data_obj['cache']['l3_misses'] / max(data_obj['cache']['l3_accesses'], 1.0)
-            parsed['llc_misses'] = data_obj['cache']['l3_misses']
-            parsed['llc_accesses'] = data_obj['cache']['l3_accesses']
-            parsed['tlb_misses'] = data_obj['cache']['tlb_misses']
+            cache_obj = data_obj['cache']
+            parsed['cache_accesses'] = cache_obj['l1']['accesses']
+            parsed['llc_misses'] = cache_obj['l3']['misses']
+            parsed['llc_accesses'] = cache_obj['l3']['accesses']
 
-            if 'cache' in data_obj['cache']['kernfs']:
-                kern_cache = data_obj['cache']['kernfs']['cache']
-                parsed['kernfs_cache_accesses'] = kern_cache['l1_accesses']
+            if 'cache' in cache_obj['kernfs']:
+                kern_cache = cache_obj['kernfs']
+                parsed['kernfs_cache_accesses'] = kern_cache['l1']['accesses']
                 #parsed['kernfs_cache_misses'] = kern_cache['l1_misses']
                 #parsed['kernfs_llc_misses'] = kern_cache['l3_misses'] / max(kern_cache['l3_accesses'], 1.0)
-                parsed['kernfs_llc_misses'] = kern_cache['l3_misses']
-                parsed['kernfs_llc_accesses'] = kern_cache['l3_accesses']
-                parsed['kernfs_tlb_misses'] = kern_cache['tlb_misses']
+                parsed['kernfs_llc_misses'] = kern_cache['l3']['misses']
+                parsed['kernfs_llc_accesses'] = kern_cache['l3']['accesses']
         if 'lsm' in data_obj:
             if data_obj['lsm']['nr'] > 0:
                 parsed['indexing'] = data_obj['lsm']['tsc']
@@ -83,6 +80,7 @@ class IDXDataObject:
 
             total = parsed['indexing'] + parsed['read_data']
             parsed['total_breakdown'] = total
+
             #scale = parsed['throughput'] if 'throughput' in parsed else parsed['total_time']
             #parsed['indexing'] /= total
             #parsed['indexing'] *= scale
@@ -138,15 +136,24 @@ class IDXDataObject:
             df_list += [pd.DataFrame(d)]
 
         df_combined = pd.concat(df_list)
-        df_mean = df_combined.groupby(df_combined.index).mean()
-        # df_mean['indexing'] /= df_mean['total_breakdown']
-        # df_mean['read_data'] /= df_mean['total_breakdown']
-        # df_mean['total_breakdown'] /= df_mean['total_breakdown']
-        df_mean['indexing'] /= df_mean['indexing'].min()
-        df_mean['read_data'] /= df_mean['read_data'].min()
-        df_mean['total_breakdown'] /= df_mean['total_breakdown'].min()
+        dfg = df_combined.groupby(df_combined.index)
+        df_mean = dfg.mean()
+        ntrials = len(data)
+        df_ci = ((1.96 * dfg.std(ddof=0)) / np.sqrt(ntrials))
+
+        embed()
         
-        self.df = df_list[0] # to preserve string fields
+        df_mean = df_mean[df_mean.indexing != 0]
+        df_mean = df_mean[df_mean.indexing.notna()]
+
+        # df_mean['indexing'] /= df_mean['indexing'].min()
+        # df_mean['read_data'] /= df_mean['read_data'].min()
+        # df_mean['total_breakdown'] /= df_mean['total_breakdown'].min()
+        df_mean['indexing'] /= df_mean['total_breakdown']
+        df_mean['read_data'] /= df_mean['total_breakdown']
+        df_mean['total_breakdown'] /= df_mean['total_breakdown']
+        
+        self.df = df_list[0].reindex(df_mean.index) # to preserve string fields
         self.df[df_mean.columns] = df_mean
 
 

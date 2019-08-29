@@ -216,6 +216,7 @@ class MTCCRunner(BenchRunner):
 >>>>>>> Update automate script to match new MTCC better and better isolate perf
 
             stat_objs = []
+            current = ''
             try:
                 for workload in workloads:
                     try:
@@ -242,7 +243,7 @@ class MTCCRunner(BenchRunner):
                                 -S {start_size} -M {start_size + io_size} 
                                 -w {io_size * reps} -r 0'''
 
-                        setup_size = 4096 if start_size > 4096 else start_size
+                        setup_size = 1024 * 4096 if start_size > (1024 * 4096) else start_size
 
                         readtest_setup_arg_str = \
                             f'''numactl -N {numa_node} -m {numa_node} {dir_str}/run.sh
@@ -269,6 +270,7 @@ class MTCCRunner(BenchRunner):
 
                         # Run the benchmarks
                         # 1) Insert test
+                        current = 'Insert'
                         insert_labels = {}
                         insert_labels.update(labels)
                         insert_labels['test'] = 'Insert'
@@ -276,6 +278,7 @@ class MTCCRunner(BenchRunner):
                             mtcc_path, None, insert_trial_args, insert_labels)
 
                         # 2) Sequential read test
+                        current = 'Sequential'
                         seq_labels = {}
                         seq_labels.update(labels)
                         seq_labels['test'] = 'Sequential Read'
@@ -283,6 +286,7 @@ class MTCCRunner(BenchRunner):
                             mtcc_path, seq_setup_args, seq_trial_args, seq_labels)
 
                         # 3) Random read test
+                        current = 'Random'
                         rand_labels = {}
                         rand_labels.update(labels)
                         rand_labels['test'] = 'Random Read'
@@ -293,6 +297,7 @@ class MTCCRunner(BenchRunner):
                         shared_q.put(counter)
 
                     except:
+                        print(current)
                         pprint(workload)
                         raise
 
@@ -304,6 +309,9 @@ class MTCCRunner(BenchRunner):
                 # also write a summarized version
                 keys = ['layout', 'total_time', 'struct', 'test', 'io size',
                         'repetitions', 'num files', 'trial num', 'start size']
+
+                if len(stat_objs) != 3 * len(workloads):
+                    print(f'What? Should have {3 * len(workloads)}, only have {len(stat_objs)}!')
 
                 stat_summary = []
                 for stat_obj in stat_objs:

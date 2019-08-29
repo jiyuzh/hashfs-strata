@@ -46,13 +46,11 @@ class KernFSThread:
 
     def start(self):
         'First we run mkfs, then start up the kernfs process.'
-        '''
-        rm_args = shlex.split('sudo umount /mlfs')
-        subprocess.run(rm_args, check=True, stdout=DEVNULL, stderr=DEVNULL)
 
-        mkdir_args = shlex.split('sudo mount -t tmpfs tmpfs /mlfs')
-        subprocess.run(mkdir_args, check=True, stdout=DEVNULL, stderr=DEVNULL)
-        '''
+        # Make sure there are no stats files from prior runs.
+        stats_files = [Path(x) for x in glob.glob('/tmp/kernfs_prof.*')]
+        for s in stats_files:
+            s.unlink()
 
         mkfs_args = [ 'sudo', '-E', str(self.kernfs_path / 'mkfs.sh') ]
         proc = subprocess.run(mkfs_args, cwd=self.kernfs_path, check=True, env=self.env)#,
@@ -72,14 +70,14 @@ class KernFSThread:
             print('Running verbose KernFSThread.')
             self.proc = subprocess.Popen(kernfs_args, cwd=self.kernfs_path,
                                          env=self.env, start_new_session=True)
-        time.sleep(20)
+        time.sleep(30)
         self._clear_stats()
 
     def _parse_kernfs_stats(self):
         stat_objs = []
 
         stats_files = [Path(x) for x in glob.glob('/tmp/kernfs_prof.*')]
-        assert len(stats_files)
+        assert stats_files
         
         for stat_file in stats_files:
             with stat_file.open() as f:

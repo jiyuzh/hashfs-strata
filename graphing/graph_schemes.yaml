@@ -9,9 +9,9 @@ config_sets:
 schemes:
 
   single:
-    print_size: [3.5, 3.0]
+    print_size: [7.0, 3.0]
     file_name: single.pdf
-    dimensions: [1, 1]
+    dimensions: [3, 3]
     plots: [
       {
         pos: [0, 0],
