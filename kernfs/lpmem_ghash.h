@@ -47,12 +47,6 @@ extern "C" {
 // local includes
 #include "hash_functions.h"
 
-#define SIMPLE_ENTRIES
-
-
-//#undef SIMPLE_ENTRIES
-
-#ifdef SIMPLE_ENTRIES
 #define HASHFS_TOMBSTONE_VAL ((paddr_t)~0) - 1
 #define HASHFS_EMPTY_VAL (paddr_t)~0
 #define HASHFS_ENT_IS_TOMBSTONE(x) (x == ((paddr_t)~0) - 1)
@@ -62,19 +56,6 @@ extern "C" {
 #define HASHFS_ENT_SET_TOMBSTONE(x) (x = ((paddr_t)~0) - 1)
 #define HASHFS_ENT_SET_EMPTY(x) (x = (paddr_t)~0)
 #define HASHFS_ENT_SET_VAL(x,v) (x = v)
-#else
-#define HASH_ENT_VAL(x) (((paddr_t)(x).value_hi16 << 32) | ((paddr_t)(x).value_low32))
-#define HASH_ENT_IS_TOMBSTONE(x) ((x).value_hi16 == (uint16_t)~0 && \
-                                  (x).value_low32 == (uint32_t)~0)
-#define HASH_ENT_IS_EMPTY(x) ((x).value_hi16 == 0 && (x).value_low32 == 0)
-#define HASH_ENT_IS_VALID(x) (!HASH_ENT_IS_EMPTY(x) && !HASH_ENT_IS_TOMBSTONE(x))
-
-#define HASH_ENT_SET_TOMBSTONE(x) do {(x).value_hi16 = ~0; \
-                                      (x).value_low32 = ~0;} while(0)
-#define HASH_ENT_SET_EMPTY(x) do {(x).value_hi16 = 0; (x).value_low32 = 0;} while(0)
-#define HASH_ENT_SET_VAL(x,v) do {(x).value_hi16 = (uint16_t)(v >> 32); \
-                                  (x).value_low32 = (uint32_t)(v);} while(0)
-#endif
 
 #define HASHFS_MAKEKEY(inum, lblk) (((uint64_t)inum << 32) | lblk)
 /*

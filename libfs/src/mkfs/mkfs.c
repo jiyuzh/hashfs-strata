@@ -11,7 +11,6 @@
 #include "storage/storage.h"
 #include "mlfs/kerncompat.h"
 #include "filesystem/lpmem_ghash.h"
-#include "filesystem/lpmem_cuckoohash.h"
 
 #ifdef __cplusplus
 extern "C" {

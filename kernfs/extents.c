@@ -12,7 +12,7 @@
 #include "cache_stats.h"
 #include "inode_hash.h"
 #include "lpmem_ghash.h"
-#include "lpmem_cuckoohash.h"
+
 /*
  * used by extent splitting.
  */

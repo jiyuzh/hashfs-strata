@@ -1,3 +1,5 @@
+//same as MTCC but includes truncating and checks reads for correctness against control file
+
 #include <stdio.h>
 #include <pthread.h>
 #include <getopt.h>

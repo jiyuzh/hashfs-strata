@@ -116,8 +116,7 @@ uint8_t *get_dirent_block(struct inode *dir_inode, offset_t offset)
 			ret = bmap_hashfs(dir_inode, &bmap_req_arr);
 			blk_count_found = bmap_req_arr.blk_count_found;
 			block_num = bmap_req_arr.block_no[0];
-		}
-		else {
+		} else {
 			ret = bmap(dir_inode, &bmap_req);
 			blk_count_found = bmap_req.blk_count_found;
 			block_num = bmap_req.block_no;
@@ -147,8 +146,7 @@ uint8_t *get_dirent_block(struct inode *dir_inode, offset_t offset)
 	
 			d_block = dcache_alloc_add(dev, dir_inode->inum,
 				offset, data, block_num, (struct fs_log*)g_fs_log);
-			
-		
+
 			mlfs_assert(d_block);
 		}
 	}

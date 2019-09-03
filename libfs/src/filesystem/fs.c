@@ -20,7 +20,6 @@
 #include "filesystem/cache_stats.h"
 
 #include "lpmem_ghash.h"
-#include "lpmem_cuckoohash.h"
 #include "inode_hash.h"
 
 #define _min(a, b) ({\

@@ -23,7 +23,7 @@
 
 #include "inode_hash.h"
 #include "lpmem_ghash.h"
-#include "lpmem_cuckoohash.h"
+
 
 #define _min(a, b) ({\
 		__typeof__(a) _a = a;\

@@ -374,10 +374,6 @@ static void pmem_nvm_hash_table_remove_node (int              i//,
                                         size_t          *old_precursor,
                                         size_t          *old_size*/) {
   
-#ifndef SIMPLE_ENTRIES
-  // ent->size = 0;
-  // ent->index = 0;
-#endif
   paddr_t *entries = pmem_ht_vol->entries;
   HASHFS_ENT_SET_TOMBSTONE(entries[i]);
   pmem_nvm_flush((void*)(entries + i), sizeof(paddr_t));
@@ -498,12 +494,6 @@ pmem_nvm_hash_table_insert_node(uint32_t node_index, uint32_t key_hash,
     pmem_nvm_flush((void*)(entries + node_index), sizeof(paddr_t));
   }
   return success;
-    
-
-#ifndef SIMPLE_ENTRIES
-    // ent->index = new_index;
-    // ent->size = new_range;
-#endif
 }
 
 /**
