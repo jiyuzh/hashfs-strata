@@ -2906,51 +2906,8 @@ int mlfs_ext_get_blocks(handle_t *handle, struct inode *inode,
 #endif
 
     if (IDXAPI_IS_PER_FILE()) {
-        if (!inode->ext_idx) {
-            static bool notify = false;
-            if (!notify) {
-                printf("Init API extent trees!!!\n");
-                notify = true;
-            }
 
-            paddr_range_t direct_extents = {
-                .pr_start      = get_inode_block(handle->dev, inode->inum),
-                .pr_blk_offset = (sizeof(struct dinode) * (inode->inum % IPB)) + 64,
-                .pr_nbytes     = 64
-            };
-            idx_struct_t *tmp = mlfs_zalloc(sizeof(*inode->ext_idx));
-            int init_err;
-            if (g_idx_choice == EXTENT_TREES) {
-                init_err = extent_tree_fns.im_init_prealloc(&strata_idx_spec,
-                                                            &direct_extents,
-                                                            tmp);
-            } else if (g_idx_choice == LEVEL_HASH_TABLES) {
-                init_err = levelhash_fns.im_init_prealloc(&strata_idx_spec,
-                                                          &direct_extents,
-                                                          tmp);
-            } else {
-                init_err = radixtree_fns.im_init_prealloc(&strata_idx_spec,
-                                                          &direct_extents,
-                                                          tmp);
-            }
-
-            if (g_idx_cached) {
-                FN(tmp, im_set_caching, tmp, true);
-            } else {
-                FN(tmp, im_set_caching, tmp, false);
-            }
-
-            if (init_err) {
-                fprintf(stderr, "Error in extent tree API init: %d\n", init_err);
-                panic("Could not initialize API per-inode structure!\n");
-            }
-
-            if (tmp->idx_fns->im_set_stats) {
-                FN(tmp, im_set_stats, tmp, enable_perf_stats);
-            }
-
-            inode->ext_idx = tmp;
-        }
+        assert(inode->ext_idx);
 
         if (create) {
             ssize_t nblk = FN(inode->ext_idx, im_create,

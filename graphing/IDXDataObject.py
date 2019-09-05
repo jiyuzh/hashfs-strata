@@ -60,6 +60,7 @@ class IDXDataObject:
         if 'cache' in data_obj:
             cache_obj = data_obj['cache']
             parsed['cache_accesses'] = cache_obj['l1']['accesses']
+            parsed['l1_cache_misses'] = cache_obj['l1']['misses']
             parsed['llc_misses'] = cache_obj['l3']['misses']
             parsed['llc_accesses'] = cache_obj['l3']['accesses']
 
