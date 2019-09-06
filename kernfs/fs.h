@@ -123,31 +123,9 @@ static inline addr_t get_inode_block(uint8_t dev, uint32_t inum)
 	return (inum / IPB) + disk_sb[dev].inode_start;
 }
 
-static inline struct inode *icache_alloc_add(uint8_t dev, uint32_t inum)
-{
-	struct inode *inode;
-
-#ifdef __cplusplus
-	inode = static_cast<struct inode *>(mlfs_zalloc(sizeof(*inode)));
-#else
-	inode = mlfs_zalloc(sizeof(*inode));
-#endif
-
-	if (!inode)
-		panic("Fail to allocate inode\n");
-
-	mlfs_assert(dev == g_root_dev);
-
-	inode->dev = dev;
-	inode->inum = inum;
-	inode->i_ref = 1;
-	//inode->filter = NULL;
-	inode->flags = 0;
-	inode->i_dirty_dblock = RB_ROOT;
-	inode->_dinode = (struct dinode *)inode;
-
+static inline void init_api_idx_struct(uint8_t dev, struct inode *inode) {
     // iangneal: indexing API init.
-    if (IDXAPI_IS_PER_FILE()) {
+    if (IDXAPI_IS_PER_FILE() && inode->itype == T_FILE) {
         static bool notify = false;
 
         if (!notify) {
@@ -197,6 +175,30 @@ static inline struct inode *icache_alloc_add(uint8_t dev, uint32_t inum)
 
         inode->ext_idx = tmp;
     }
+}
+
+static inline struct inode *icache_alloc_add(uint8_t dev, uint32_t inum)
+{
+	struct inode *inode;
+
+#ifdef __cplusplus
+	inode = static_cast<struct inode *>(mlfs_zalloc(sizeof(*inode)));
+#else
+	inode = mlfs_zalloc(sizeof(*inode));
+#endif
+
+	if (!inode)
+		panic("Fail to allocate inode\n");
+
+	mlfs_assert(dev == g_root_dev);
+
+	inode->dev = dev;
+	inode->inum = inum;
+	inode->i_ref = 1;
+	//inode->filter = NULL;
+	inode->flags = 0;
+	inode->i_dirty_dblock = RB_ROOT;
+	inode->_dinode = (struct dinode *)inode;
 
 	pthread_spin_init(&inode->de_cache_spinlock, PTHREAD_PROCESS_SHARED);
 	inode->de_cache = NULL;

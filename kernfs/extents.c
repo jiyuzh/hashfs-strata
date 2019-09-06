@@ -2896,6 +2896,10 @@ int mlfs_ext_get_blocks(handle_t *handle, struct inode *inode,
 
 	create = flags & MLFS_GET_BLOCKS_CREATE_DATA;
 
+    // iangneal: API init that doesn't affect timing.
+    if (IDXAPI_IS_PER_FILE() && unlikely(!inode->ext_idx)) {
+        init_api_idx_struct(handle->dev, inode);
+    }
 
 #ifdef STORAGE_PERF
     //g_perf_stats.path_storage_nr = 0;

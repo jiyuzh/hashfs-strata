@@ -919,6 +919,7 @@ int bmap(struct inode *ip, struct bmap_request *bmap_req)
 
     // L1 search
     handle.dev = g_root_dev;
+
     ret = mlfs_ext_get_blocks(&handle, ip, &map, 0);
 
     // all blocks are found in the L1 tree
