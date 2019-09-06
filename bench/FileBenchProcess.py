@@ -49,6 +49,7 @@ class FileBenchRunner(BenchRunner):
         workloads = []
         for pattern in self.args.workloads:
             pattern_path = str(filebench_path / pattern)
+            print(pattern_path)
             matches = glob.glob(pattern_path, recursive=True)
             if len(matches) == 0:
                 warn('Pattern "{}" resulted in no workload file matches'.format(
@@ -70,14 +71,15 @@ class FileBenchRunner(BenchRunner):
         for stat_file in stats_files:
             with stat_file.open() as f:
                 file_data = f.read()
-                data_objs = [ x.strip() for x in file_data.split(os.linesep) ]
-                for data in data_objs:
-                    data = data.strip('\x00')
-                    if 'master' in data or 'shutdown' in data:
+                stats_arr = []
+                stats_arr = json.loads(file_data)
+                # data_objs = [ x.strip() for x in file_data.split(os.linesep) ]
+                for obj in stats_arr:
+                    # data = data.strip('\x00')
+                    if 'master' in obj or 'shutdown' in obj:
                         continue
-                    if len(data) < 2:
-                        continue
-                    obj = json.loads(data)
+                    # if len(data) < 2:
+                    #     continue
                     obj['bench'] = 'filebench'
                     obj['workload'] = workload_name
                     obj['layout'] = float(layout) / 100.0
@@ -101,14 +103,15 @@ class FileBenchRunner(BenchRunner):
         for stat_file in stats_files:
             with stat_file.open() as f:
                 file_data = f.read()
-                data_objs = [ x.strip() for x in file_data.split(os.linesep) ]
-                for data in data_objs:
-                    data = data.strip('\x00')
+                stats_arr = []
+                stats_arr = json.loads(file_data)
+                # data_objs = [ x.strip() for x in file_data.split(os.linesep) ]
+                for obj in stats_arr:
+                    # data = data.strip('\x00')
                     if 'master' in data or 'shutdown' in data:
                         continue
-                    if len(data) < 2:
-                        continue
-                    obj = json.loads(data)
+                    # if len(data) < 2:
+                    #     continue
                     obj['bench'] = 'filebench'
                     obj['workload'] = workload_name
                     obj['layout'] = float(layout) / 100.0

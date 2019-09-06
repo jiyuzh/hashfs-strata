@@ -4,6 +4,7 @@ config_sets:
     - radix_trees
     - extent_trees
     - level_hash_tables
+    - hashfs
 
 schemes:
   breakdown:

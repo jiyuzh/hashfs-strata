@@ -1,3 +1,5 @@
+//same as MTCC but includes truncating and checks reads for correctness against control file
+
 #include <stdio.h>
 #include <pthread.h>
 #include <getopt.h>
@@ -23,13 +25,16 @@ static size_t write_unit;
 static int opt_num;
 static int fd_v[MAX_FILE_NUM];
 static char filename_v[MAX_FILE_NUM][MAX_FILE_NAME_LEN];
+static int fd_v_c[MAX_FILE_NUM];
+static char filename_v_c[MAX_FILE_NUM][MAX_FILE_NAME_LEN];
 static pthread_t threads[MAX_THREADS];
 typedef struct {
+    size_t i;
     size_t total_seq_read;
     size_t total_rand_read;
     size_t total_write;
 } worker_result_t;
-static worker_result_t worker_results[MAX_THREADS];
+static worker_result_t worker_results[2][MAX_THREADS];
 
 static inline int panic(char *str) {
     fprintf(stderr, str);
@@ -62,9 +67,11 @@ uint32_t get_unit(char c) {
     }
 }
 int main(int argc, char **argv) {
+    printf("hello world\n");
     int c;
     srand(time(NULL));
-    //getchar();
+    printf("getchar\n");
+	getchar();
     while ((c = getopt(argc, argv, OPTSTRING)) != -1) {
         switch (c) {
             case 'b': // block_size
@@ -135,12 +142,22 @@ int main(int argc, char **argv) {
             perror("open failed");
             exit(-1);
         }
+        snprintf(filename_v_c[i], MAX_FILE_NAME_LEN, "/tmp/MTCC-%d", i);
+        fd_v_c[i] = open(filename_v_c[i], O_RDWR | O_CREAT | O_TRUNC, 0666);
+        if (fd_v_c[i] == -1) {
+            perror("open failed (correct)");
+            exit(-1);
+        }
         // init each file with read_unit data
-        for (size_t s = 0; s < read_unit; s += write_unit)
+        // init each file with read_unit data
+        for (size_t s = 0; s < read_unit; s += write_unit) {
             assert(write(fd_v[i], write_buf, write_unit) != -1);
+            assert(write(fd_v_c[i], write_buf, write_unit) != -1);
+		}
     }
     for (int i=0; i < n_threads; ++i) {
-        assert(pthread_create(&threads[i], NULL, worker_thread, (void*)(&worker_results[i])) == 0);
+	worker_results[0][i].i = i;
+        assert(pthread_create(&threads[i], NULL, worker_thread, (void*)(&worker_results[0][i])) == 0);
     }
     for (int i=0; i < n_threads; ++i) {
         assert(pthread_join(threads[i], NULL) == 0);
@@ -150,12 +167,18 @@ int main(int argc, char **argv) {
         fstat(fd_v[i], &file_stat);
         printf("%s size is %lu\n", filename_v[i], file_stat.st_size);
         close(fd_v[i]);
+		close(fd_v_c[i]);
     }
+	//remove("/tmp/MTCC-0");
     for (int i=0; i < n_threads; ++i) {
         printf("thread %d : read %lu (seq %lu rand %lu), write %lu\n", i,
-                worker_results[i].total_seq_read + worker_results[i].total_rand_read,
-                worker_results[i].total_seq_read, worker_results[i].total_rand_read,
-                worker_results[i].total_write);
+                worker_results[0][i].total_seq_read + worker_results[0][i].total_rand_read,
+                worker_results[0][i].total_seq_read, worker_results[0][i].total_rand_read,
+                worker_results[0][i].total_write);
+        printf("thread %d : read %lu (seq %lu rand %lu), write %lu (correct)\n", i,
+                worker_results[1][i].total_seq_read + worker_results[1][i].total_rand_read,
+                worker_results[1][i].total_seq_read, worker_results[1][i].total_rand_read,
+                worker_results[1][i].total_write);
     }
     return 0;
 }
@@ -163,20 +186,54 @@ int main(int argc, char **argv) {
 static void *worker_thread(void *arg) {
     worker_result_t *r = (worker_result_t *)(arg);
     struct stat file_stat;
+    struct stat file_stat_c;
     void *read_buf = malloc(block_size);
+    void *read_buf_c = malloc(block_size);
+    int stop = 0;
     while (1) {
-        int fd = fd_v[rand()%file_num];
+	int random_num = rand()%file_num;
+        int fd = fd_v[random_num];
+        int fd_c = fd_v_c[random_num];
         assert(fstat(fd, &file_stat) == 0 && "fstat failed");
-        size_t size = file_stat.st_size;
+        assert(fstat(fd_c, &file_stat_c) == 0 && "fstat_c failed");
+	size_t size = file_stat.st_size;
+	size_t size_c = file_stat_c.st_size;
+	assert(size == size_c);
         size_t block_num = size/block_size;
-        if (size > max_file_size) // exceeds max file size
-            break;
-        if ((double)(rand())/RAND_MAX < seq_ratio) { // sequential read
+        if (size > max_file_size) { // exceeds max file size
+	    ++stop;
+	    printf("truncating\n");
+	    printf("size1: %ld, size2: %ld\n", size/block_size, size_c/block_size);
+	    //size_t half = (block_num / 2) * block_size;
+	    size_t half = 0;
+	    printf("half: %ld\n", half/block_size);
+	    //assert(ftruncate(fd, half) == 0 && "truncate failed");
+	    //assert(ftruncate(fd_c, half) == 0 && "truncate_c failed");
+	    
+            assert(fstat(fd, &file_stat) == 0 && "fstat failed");
+            assert(fstat(fd_c, &file_stat_c) == 0 && "fstat_c failed");
+	    size = file_stat.st_size;
+	    size_c = file_stat_c.st_size;
+	    block_num = size/block_size;
+	    assert(size == size_c);
+	    printf("new size: %ld\n", block_num);
+	}
+	else {
+	    // printf("size: %ld\n", block_num);
+	}
+	if(block_num == 0) {}
+	else if ((double)(rand())/RAND_MAX < seq_ratio) { // sequential read
+	    assert(block_num - read_unit/block_size + 1 >= 0);
             int start_offset = (rand()%(block_num - read_unit/block_size + 1)) * block_size;
+	    // printf("testing block %u\n", start_offset/block_size);
             for (int i=start_offset; i < start_offset + read_unit; i += block_size) {
                 ssize_t rs = pread(fd, read_buf, block_size, i);
                 assert(rs != -1 && "sequential read failed");
                 r->total_seq_read += rs;
+                ssize_t rs_c = pread(fd_c, read_buf_c, block_size, i);
+                assert(rs_c != -1 && "sequential read failed");
+		worker_results[1][r->i].total_seq_read += rs_c;
+		assert(memcmp(read_buf, read_buf_c, block_size) == 0 && "sequential read incorrect");
             }
         }
         else { // random read
@@ -185,11 +242,21 @@ static void *worker_thread(void *arg) {
                 ssize_t rs = pread(fd, read_buf, block_size, rand_offset);
                 assert(rs != -1 && "random read failed");
                 r->total_rand_read += rs;
+                ssize_t rs_c = pread(fd_c, read_buf_c, block_size, rand_offset);
+                assert(rs_c != -1 && "random read failed");
+                worker_results[1][r->i].total_rand_read += rs_c;
+		assert(memcmp(read_buf, read_buf_c, block_size) ==  0 && "random read incorrect");
             }
         }
         lseek(fd, 0, SEEK_END);
         assert(write(fd, write_buf, write_unit) != -1);
         r->total_write += write_unit;
+        lseek(fd_c, 0, SEEK_END);
+        assert(write(fd_c, write_buf, write_unit) != -1);
+        worker_results[1][r->i].total_write += write_unit;
+	if(stop == 2) {
+	    break;
+	}
     }
     return NULL;
 }

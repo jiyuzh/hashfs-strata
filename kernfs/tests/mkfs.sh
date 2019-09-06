@@ -1,4 +1,4 @@
-#! /usr/bin/sudo /bin/bash
+#! /bin/bash
 
 ../../libfs/bin/mkfs.mlfs 1
 #sudo ../../libfs/bin/mkfs.mlfs 2

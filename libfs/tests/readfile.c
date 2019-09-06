@@ -119,6 +119,7 @@ int main(int argc, char **argv) {
         fd_v[i] = open(filename_v[i], O_RDWR);
         if (fd_v[i] == -1) {
             perror("open failed");
+	    printf("filename: %s\n", filename_v[i]);
             exit(-1);
         }
     }

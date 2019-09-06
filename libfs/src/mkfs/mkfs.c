@@ -10,6 +10,7 @@
 #include "global/global.h"
 #include "storage/storage.h"
 #include "mlfs/kerncompat.h"
+#include "filesystem/lpmem_ghash.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -24,8 +25,8 @@ extern "C" {
 #define static_assert(a, b) do { switch (0) case 0: case (a): ; } while (0)
 #endif
 
-#define dbg_printf
-//#define dbg_printf printf
+//#define dbg_printf
+#define dbg_printf printf
 
 // In-kernel fs Disk layout:
 // [ sb block | inode blocks | free bitmap | data blocks ]
@@ -37,6 +38,7 @@ struct disk_superblock ondisk_sb;
 char zeroes[g_block_size_bytes];
 addr_t freeinode = 1;
 addr_t freeblock;
+extern indexing_choice_t g_idx_choice;
 
 void balloc(int);
 void wsect(addr_t, uint8_t *buf);
@@ -138,6 +140,7 @@ struct storage_operations storage_hdd = {
 
 int main(int argc, char *argv[])
 {
+	g_idx_choice = get_indexing_choice();
 	int i, cc, fd;
 	uint32_t rootino, mlfs_dir_ino;
 	addr_t off;
@@ -244,7 +247,7 @@ int main(int argc, char *argv[])
             ondisk_sb.api_metadata_block,
 			ondisk_sb.datablock_start,
 			ondisk_sb.log_start,
-			ndatablocks,
+			ondisk_sb.ndatablocks,
 			nlog,
 			file_size_blks,
 			(file_size_blks * g_block_size_bytes) >> 20);
@@ -296,6 +299,10 @@ int main(int argc, char *argv[])
 	printf("== Write superblock\n");
 	memmove(buf, &ondisk_sb, sizeof(ondisk_sb));
 	wsect(1, buf);
+
+	if(IDXAPI_IS_HASHFS() && dev_id == g_root_dev) {
+		pmem_nvm_hash_table_new(&ondisk_sb, NULL);
+	}
 
 	// Create / directory
 	rootino = mkfs_ialloc(dev_id, T_DIR);
@@ -387,6 +394,9 @@ int main(int argc, char *argv[])
 	else if (storage_mode == HDD)
 		storage_hdd.commit(dev_id);
 
+	if(IDXAPI_IS_HASHFS() && dev_id == g_root_dev) {
+		pmem_nvm_hash_table_close();
+	}
 	exit(0);
 }
 
@@ -526,7 +536,14 @@ void iappend(uint8_t dev, uint32_t inum, void *xp, int n)
         if(fbn < NDIRECT) {
             if(xint(din.l1_addrs[fbn]) == 0) {
                 // sequential allocation for freeblock
-                din.l1_addrs[fbn] = xint(freeblock++);
+				if(IDXAPI_IS_HASHFS() && dev_id == g_root_dev) {
+					addr_t index;
+					pmem_nvm_hash_table_insert_simd64(inum, 0, 1, &index);
+					din.l1_addrs[fbn] = xint(index);
+				}
+				else {
+            		din.l1_addrs[fbn] = xint(freeblock++);
+				}
             }
             block_address = xint(din.l1_addrs[fbn]);
         }

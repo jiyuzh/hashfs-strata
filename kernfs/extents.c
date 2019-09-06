@@ -11,6 +11,7 @@
 
 #include "cache_stats.h"
 #include "inode_hash.h"
+#include "lpmem_ghash.h"
 
 /*
  * used by extent splitting.
@@ -235,8 +236,16 @@ mlfs_fsblk_t mlfs_new_meta_blocks(handle_t *handle,
 	mlfs_lblk_t nrblocks = (count) ? (*count) : 1;
 
 	flags |= MLFS_GET_BLOCKS_CREATE_META;
-
-	*errp = mlfs_ext_alloc_blocks(handle, inode, goal, flags, &block, count);
+	// if(IDXAPI_IS_HASHFS()) {
+	if(0) {
+		struct mlfs_map_blocks_arr map_arr;
+		map_arr.m_lblk = 0; //eshiple
+		map_arr.m_len = nrblocks;
+		*errp = (mlfs_hashfs_get_blocks(&handle, &inode, &map_arr, flags) == map_arr.m_len);
+		block = map_arr.m_pblk[0];
+	} else {
+		*errp = mlfs_ext_alloc_blocks(handle, inode, goal, flags, &block, count);
+	}
 #ifdef ZERO_FREED_BLOCKS
     char zero_buf[g_block_size_bytes];
     memset(zero_buf, 0, g_block_size_bytes);
@@ -564,7 +573,8 @@ static mlfs_fsblk_t mlfs_ext_new_meta_block(handle_t *handle,
 	mlfs_lblk_t count = 1;
 
 	//goal = mlfs_ext_find_goal(inode, path, le32_to_cpu(ex->ee_block));
-	mlfs_debug("meta: start offset %lx, len %lu\n", ex->ee_block, ex->ee_len);
+	mlfs_debug("meta: start offset %lx, len %lu\n", ex->ee_block, ex->ee_len);	
+	printf("meta: start offset %lx, len %lu\n", ex->ee_block, ex->ee_len);
 	flags |= MLFS_GET_BLOCKS_CREATE_META;
 	newblock = mlfs_new_meta_blocks(handle, inode, goal, flags, &count, err);
 
@@ -1303,7 +1313,6 @@ static int mlfs_ext_grow_indepth(handle_t *handle,
 	if (ext_depth(handle, inode))
 		goal = mlfs_idx_pblock(EXT_FIRST_INDEX(ext_inode_hdr(handle, inode)));
 	goal = mlfs_inode_to_goal_block(inode);
-
 	newblock = mlfs_new_meta_blocks(handle, inode, goal, flags, &count, &err);
 	if (newblock == 0)
 		return err;
@@ -2792,6 +2801,71 @@ static mlfs_lblk_t mlfs_ext_determine_hole(handle_t *handle, struct inode *inode
 	return len;
 }
 
+int mlfs_hashfs_get_blocks(handle_t *handle, struct inode *inode, 
+			struct mlfs_map_blocks_arr *map_arr, int flags)
+{
+	uint64_t tsc_start = 0;
+
+#ifdef STORAGE_PERF
+    //g_perf_stats.path_storage_nr = 0;
+	if (enable_perf_stats) {
+		tsc_start = asm_rdtscp();
+        start_cache_stats();
+    }
+#endif
+
+    assert(map_arr->m_len <= 8 && "fs_get_blocks m_len > 8");
+    struct super_block *sblk = sb[g_root_dev];
+	int create_data = flags & MLFS_GET_BLOCKS_CREATE_DATA;
+	int create_meta = flags & MLFS_GET_BLOCKS_CREATE_META;
+	int success = 0;
+	if(create_data || create_meta) {
+		success = pmem_nvm_hash_table_insert_simd64(inode->inum, map_arr->m_lblk, map_arr->m_len, map_arr->m_pblk);
+#ifdef KERNFS
+		if (enable_perf_stats) {
+			g_perf_stats.path_search_tsc += (asm_rdtscp() - tsc_start);
+			g_perf_stats.path_search_size += map_arr->m_len;
+			g_perf_stats.path_search_nr++;
+			end_cache_stats(&(g_perf_stats.cache_stats));
+		}
+#endif
+	}
+	else {
+		if (enable_perf_stats) {
+			update_stats_dist(&(g_perf_stats.read_per_index),
+								g_perf_stats.path_storage_nr);
+			end_cache_stats(&(g_perf_stats.cache_stats));
+        }
+		success = pmem_nvm_hash_table_lookup_simd64(inode->inum, map_arr->m_lblk, map_arr->m_len, map_arr->m_pblk);
+	}
+	return map_arr->m_len;
+	
+	
+	for(size_t i = 0; i < map_arr->m_len; ++i) {
+		paddr_t index;
+		if(create_data || create_meta) {
+			int success = pmem_nvm_hash_table_insert(inode->inum, map_arr->m_lblk + i, &index);
+		}
+		if(!success) {
+			//block already existed, so this does nothing
+			printf("block already existed\n");
+			return i;
+		}
+		} else {
+			int found = pmem_nvm_hash_table_lookup(inode->inum, map_arr->m_lblk + i, &index);
+			
+			if(!found) {
+				//did not find the requested block
+				printf("block not found\n");
+				return i;
+			}	
+		}
+		map_arr->m_pblk[i] = index + sblk->ondisk->datablock_start;
+	}
+	return map_arr->m_len;		
+	
+}
+
 /* Core interface API to get/allocate blocks of an inode
  *
  * return > 0, number of of blocks already mapped/allocated
@@ -2805,9 +2879,11 @@ static mlfs_lblk_t mlfs_ext_determine_hole(handle_t *handle, struct inode *inode
  * return < 0, error case.
  *
  */
+
 int mlfs_ext_get_blocks(handle_t *handle, struct inode *inode,
 			struct mlfs_map_blocks *map, int flags)
 {
+
 	struct mlfs_ext_path *path = NULL;
 	struct mlfs_extent newex, *ex;
 	int goal, err = 0, depth;
@@ -2821,7 +2897,7 @@ int mlfs_ext_get_blocks(handle_t *handle, struct inode *inode,
 	create = flags & MLFS_GET_BLOCKS_CREATE_DATA;
 
 #ifdef STORAGE_PERF
-    g_perf_stats.path_storage_nr = 0;
+    //g_perf_stats.path_storage_nr = 0;
 	if (enable_perf_stats) {
 		tsc_start = asm_rdtscp();
         start_cache_stats();
@@ -3185,6 +3261,27 @@ out2:
 int mlfs_ext_truncate(handle_t *handle, struct inode *inode,
 		mlfs_lblk_t start, mlfs_lblk_t end)
 {
+
+	if(IDXAPI_IS_HASHFS()) {
+		size_t rc = 0;
+		printf("Start: %ld, End: %ld\n", start, end);
+		int success = pmem_nvm_hash_table_remove_simd64(inode->inum, start, end - start);
+		return 0;
+		
+		for(size_t i = start; i <= end; ++i) {
+			paddr_t index;
+			int success = pmem_nvm_hash_table_remove(inode->inum, i, &index);
+			
+			if(!success) {
+			//	printf("block not found\n");
+			}
+			else {
+				++rc;
+			}
+		}
+		printf("removed %ld blocks\n", rc);
+		return 0;
+	}
 	int ret;
     uint64_t tsc_start;
     static bool notify = false;
@@ -3253,3 +3350,5 @@ int mlfs_ext_truncate(handle_t *handle, struct inode *inode,
 
 	return ret;
 }
+
+

@@ -53,9 +53,9 @@ class KernFSThread:
         subprocess.run(mkdir_args, check=True, stdout=DEVNULL, stderr=DEVNULL)
         '''
 
-        mkfs_args = [ str(self.kernfs_path / 'mkfs.sh') ]
-        proc = subprocess.run(mkfs_args, cwd=self.kernfs_path, check=True,
-                              stdout=DEVNULL, stderr=DEVNULL)
+        mkfs_args = [ 'sudo', '-E', str(self.kernfs_path / 'mkfs.sh') ]
+        proc = subprocess.run(mkfs_args, cwd=self.kernfs_path, check=True, env=self.env)#,
+                              # stdout=DEVNULL, stderr=DEVNULL)
        
         kernfs_arg_str = '{0}/run.sh numactl -N 1 -m 1 {0}/kernfs'.format(
                                   str(self.kernfs_path))
@@ -83,13 +83,15 @@ class KernFSThread:
         for stat_file in stats_files:
             with stat_file.open() as f:
                 file_data = f.read()
-                data_objs = [ x.strip() for x in file_data.split(os.linesep) ]
-                for data in data_objs:
-                    data = data.strip('\x00')
-                    if len(data) < 2:
-                        continue
+                stats_arr = []
+                stats_arr = json.loads(file_data)
+                # data_objs = [ x.strip() for x in file_data.split(os.linesep) ]
+                for data in stats_arr:
+                    # data = data.strip('\x00')
+                    # if len(data) < 2:
+                    #     continue
                     try:
-                        stat_objs += [json.loads(data)]
+                        stat_objs += [data]
                     except:
                         continue
 
@@ -125,10 +127,10 @@ class KernFSThread:
 
 class BenchRunner:
 
-    IDX_STRUCTS   = [ 'EXTENT_TREES', 'GLOBAL_HASH_TABLE',
+    IDX_STRUCTS   = [ 'HASHFS', 'EXTENT_TREES', 'GLOBAL_HASH_TABLE',
                       'LEVEL_HASH_TABLES', 'RADIX_TREES', 'NONE' ]
     IDX_DEFAULT   = [ 'EXTENT_TREES', 'GLOBAL_HASH_TABLE',
-                      'LEVEL_HASH_TABLES', 'RADIX_TREES']
+                      'LEVEL_HASH_TABLES', 'RADIX_TREES', 'HASHFS', 'NONE']
     LAYOUT_SCORES = ['100', '90', '80', '70', '60']
 
     def __init__(self, args):

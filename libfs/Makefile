@@ -8,7 +8,7 @@
 #CC=clang-3.8
 #CC=gcc
 CXX=g++ --std=c++11
-CC=gcc5 --std=gnu99
+CC=gcc9.2 --std=gnu99
 
 ########
 #  List of all modules' directories
@@ -36,7 +36,8 @@ OBJ       := $(patsubst src/%.c,$(PREFIX)/%.o,$(SRC))
 ########
 #  Lib directories
 ########
-NVML_DIR := $(abspath $(CURDIR)/lib/nvml/src)
+#NVML_DIR := $(abspath $(CURDIR)/lib/nvml/src)
+NVML_DIR :=
 SPDK_DIR := $(abspath $(CURDIR)/lib/spdk)
 LIBSPDK_DIR := $(abspath $(CURDIR)/src/storage/spdk/)
 JEMALLOC_DIR := $(abspath $(CURDIR)/lib/jemalloc-4.5.0)
@@ -68,7 +69,8 @@ endif
 	MLFS_FLAGS += -DINDEX_NAME=\"ext\ \"
 endif
 
-OPT_ARGS ?= -g -O3
+OPT_ARGS ?= -g -O3 
+AVX_FLAGS = -march=skylake-avx512 -mavx -mavx512f -mavx512vl -mavx512cd -mavx512bw -mavx512dq
 #######
 # Optimization definitions
 #######
@@ -86,7 +88,7 @@ vpath %.c $(SRC_DIR)
 
 define make-goal
 $1/%.o: %.c
-	$(CC) $(INCLUDES) $(MLFS_FLAGS) $(OPT_ARGS) -fPIC -c $$< -o $$@ -DLIBFS
+	$(CC) $(INCLUDES) $(MLFS_FLAGS) $(OPT_ARGS) $(AVX_FLAGS) -fPIC -c $$< -o $$@ -DLIBFS
 endef
 
 ########

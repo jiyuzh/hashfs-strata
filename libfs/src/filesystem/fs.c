@@ -19,6 +19,7 @@
 
 #include "filesystem/cache_stats.h"
 
+#include "lpmem_ghash.h"
 #include "inode_hash.h"
 
 #define _min(a, b) ({\
@@ -44,6 +45,7 @@ uint8_t g_hdd_dev = 0;
 uint8_t strata_initialized = 0;
 
 // statistics
+json_object *libfs_stats_json;
 uint8_t enable_perf_stats;
 libfs_stat_t g_perf_stats;
 
@@ -77,6 +79,7 @@ void reset_libfs_stats(void)
     reset_stats_dist(&(g_perf_stats.read_per_index));
     reset_stats_dist(&(g_perf_stats.read_data_bytes));
     cache_stats_init();
+    libfs_stats_json = json_object_new_array();
 }
 void show_libfs_stats(const char *title)
 {
@@ -143,10 +146,14 @@ void show_libfs_stats(const char *title)
     js_add_int64(storage, "wnr" , storage_wnr.total);
     json_object_object_add(root, "storage", storage);
   }
-  const char *js_str = json_object_get_string(root);
+
+	json_object_array_add(libfs_stats_json, root);
+  const char *js_str = json_object_get_string(libfs_stats_json);
   if (enable_perf_stats) {
+    ftruncate(prof_fd, 0);
+    lseek(prof_fd, 0, SEEK_SET);
     write(prof_fd, js_str, strlen(js_str));
-    write(prof_fd, "\n", 2);
+    //write(prof_fd, "\n", 2);
   }
   json_object_put(root);
   printf("\n");
@@ -220,7 +227,9 @@ void shutdown_fs(void)
 {
   int ret;
   int _enable_perf_stats = enable_perf_stats;
-
+  if(IDXAPI_IS_HASHFS()) {
+		pmem_nvm_hash_table_close();
+	}
   if (!strata_initialized) {
     return;
   }
@@ -437,6 +446,10 @@ void init_fs(void)
 
     // read root inode in NVM
     read_root_inode(g_root_dev);
+    if(IDXAPI_IS_HASHFS()) {
+      struct super_block *sblk = sb[g_root_dev];
+      pmem_nvm_hash_table_new(sblk->ondisk, NULL);
+    }
 
     mlfs_info("LibFS is initialized with id %d\n", g_log_dev);
 
@@ -1022,6 +1035,184 @@ L3_search:
   return -EIO;
 }
 
+/* Get block addresses from extent trees.
+ * return = 0, if all requested offsets are found.
+ * return = -EAGAIN, if not all blocks are found.
+ *
+ */
+int bmap_hashfs(struct inode *ip, struct bmap_request_arr *bmap_req_arr)
+{
+  int ret = 0;
+  handle_t handle;
+  offset_t offset = bmap_req_arr->start_offset;
+  if (ip->itype == T_DIR) {
+    bmap_req_arr->block_no[0] = ip->l1.addrs[(offset >> g_block_size_shift)];
+    bmap_req_arr->blk_count_found = 1;
+    bmap_req_arr->dev = ip->dev;
+
+    return 0;
+  }
+  /*
+  if (ip->itype == T_DIR) {
+    handle.dev = g_root_dev;
+    struct mlfs_map_blocks map;
+
+    map.m_lblk = (offset >> g_block_size_shift);
+    map.m_len = bmap_req->blk_count;
+
+    ret = mlfs_ext_get_blocks(&handle, ip, &map, 0);
+
+    if (ret == bmap_req->blk_count)
+      bmap_req->blk_count_found = ret;
+    else
+      bmap_req->blk_count_found = 0;
+
+    return 0;
+  }
+  */
+  else if (ip->itype == T_FILE) {
+    struct mlfs_map_blocks_arr map_arr;
+
+    map_arr.m_lblk = (offset >> g_block_size_shift);
+    map_arr.m_len = bmap_req_arr->blk_count;
+    map_arr.m_flags = 0;
+
+    // get block address from extent tree.
+    mlfs_assert(ip->dev == g_root_dev);
+
+    // L1 search
+    handle.dev = g_root_dev;
+    ret = mlfs_hashfs_get_blocks(&handle, ip, &map_arr, 0);
+
+    // all blocks are found in the L1 tree
+    if (ret != 0) {
+      bmap_req_arr->blk_count_found = ret;
+      bmap_req_arr->dev = g_root_dev;
+      memcpy(bmap_req_arr->block_no, &(map_arr.m_pblk), bmap_req_arr->blk_count_found * sizeof(addr_t));
+      
+      mlfs_debug("physical block: %llu -> %llu\n", map_arr.m_lblk, map_arr.m_pblk[0]);
+
+      if (ret == bmap_req_arr->blk_count) {
+        mlfs_debug("[dev %d] Get all offset %lx: blockno %lx from NVM\n",
+            g_root_dev, offset, map.m_pblk[0]);
+        return 0;
+      } else {
+        mlfs_debug("[dev %d] Get partial offset %lx: blockno %lx from NVM\n",
+            g_root_dev, offset, map.m_pblk[0]);
+        return -EAGAIN;
+      }
+    }
+
+    // L2 search
+#ifdef USE_SSD
+    if (ret == 0) {
+      struct inode *l2_ip;
+      struct dinode l2_dip;
+
+      l2_ip = ip;
+
+      mlfs_assert(l2_ip);
+
+      if (!(l2_ip->dinode_flags & DI_VALID)) {
+        read_ondisk_inode(g_ssd_dev, ip->inum, &l2_dip);
+
+        iwrlock(l2_ip);
+
+        l2_ip->_dinode = (struct dinode *)l2_ip;
+        sync_inode_from_dinode(l2_ip, &l2_dip);
+        l2_ip->flags |= I_VALID;
+
+        iunlock(l2_ip);
+      }
+
+      map.m_lblk = (offset >> g_block_size_shift);
+      map.m_len = bmap_req->blk_count;
+      map.m_flags = 0;
+
+      handle.dev = g_ssd_dev;
+      ret = mlfs_ext_get_blocks(&handle, l2_ip, &map, 0);
+
+      mlfs_debug("search l2 tree: ret %d\n", ret);
+
+#ifndef USE_HDD
+      /* No blocks are found in all trees */
+      if (ret == 0)
+        return -EIO;
+#else
+      /* To L3 tree search */
+      if (ret == 0)
+        goto L3_search;
+#endif
+      bmap_req->blk_count_found = ret;
+      bmap_req->dev = g_ssd_dev;
+      bmap_req->block_no = map.m_pblk;
+
+      mlfs_debug("[dev %d] Get offset %lu: blockno %lu from SSD\n",
+          g_ssd_dev, offset, map.m_pblk);
+
+      if (ret != bmap_req->blk_count)
+        return -EAGAIN;
+      else
+        return 0;
+    }
+#endif
+    // L3 search
+#ifdef USE_HDD
+L3_search:
+    if (ret == 0) {
+      struct inode *l3_ip;
+      struct dinode l3_dip;
+
+      l3_ip = ip;
+
+      if (!(l3_ip->dinode_flags & DI_VALID)) {
+        read_ondisk_inode(g_hdd_dev, ip->inum, &l3_dip);
+
+        iwrlock(l3_ip);
+
+        l3_ip->_dinode = (struct dinode *)l3_ip;
+        sync_inode_from_dinode(l3_ip, &l3_dip);
+        l3_ip->flags |= I_VALID;
+
+        iunlock(l3_ip);
+      }
+
+      map.m_lblk = (offset >> g_block_size_shift);
+      map.m_len = bmap_req->blk_count;
+      map.m_flags = 0;
+
+      handle.dev = g_hdd_dev;
+      ret = mlfs_ext_get_blocks(&handle, l3_ip, &map, 0);
+
+      mlfs_debug("search l3 tree: ret %d\n", ret);
+
+      iwrlock(l3_ip);
+      // iput() without deleting
+      ip->i_ref--;
+      iunlock(l3_ip);
+
+      /* No blocks are found in all trees */
+      if (ret == 0)
+        return -EIO;
+
+      bmap_req->blk_count_found = ret;
+      bmap_req->dev = l3_ip->dev;
+      bmap_req->block_no = map.m_pblk;
+
+      mlfs_debug("[dev %d] Get offset %lx: blockno %lx from SSD\n",
+          g_ssd_dev, offset, map.m_pblk);
+
+      if (ret != bmap_req->blk_count)
+        return -EAGAIN;
+      else
+        return 0;
+    }
+#endif
+  }
+
+  return -EIO;
+}
+
 // Truncate inode (discard contents).
 // Only called when the inode has no links
 // to it (no directory entries referring to it)
@@ -1053,7 +1244,7 @@ int itrunc(struct inode *ip, offset_t length)
         if (fc_block->is_data_cached)
           list_del(&fc_block->l);
         if (fcache_del(ip, key)) {
-            mlfs_free(fc_block);
+            //mlfs_free(fc_block);
         };
       }
     }
@@ -1161,7 +1352,7 @@ static struct fcache_block *add_to_read_cache(struct inode *inode,
   return _fcache_block;
 }
 
-ssize_t do_unaligned_read(struct inode *ip, uint8_t *dst, offset_t off, size_t io_size)
+ssize_t do_unaligned_read(struct inode *ip, uint8_t *dst, offset_t off, size_t io_size) // always one block
 {
   ssize_t io_done = 0;
   int ret;
@@ -1171,6 +1362,7 @@ ssize_t do_unaligned_read(struct inode *ip, uint8_t *dst, offset_t off, size_t i
   struct buffer_head *bh, *_bh;
   struct list_head io_list_log;
   bmap_req_t bmap_req;
+  bmap_req_arr_t bmap_req_arr;
 
   INIT_LIST_HEAD(&io_list_log);
 
@@ -1225,16 +1417,29 @@ ssize_t do_unaligned_read(struct inode *ip, uint8_t *dst, offset_t off, size_t i
           uint8_t buffer[g_block_size_bytes];
           bmap_req.start_offset = off_aligned;
           bmap_req.blk_count = 1;
+          bmap_req_arr.start_offset = off_aligned;
+          bmap_req_arr.blk_count = 1;
           if (enable_perf_stats) {
               start_tsc = asm_rdtscp();
           }
-          ret = bmap(ip, &bmap_req);
+          if(IDXAPI_IS_HASHFS()) {
+            ret = bmap_hashfs(ip, &bmap_req_arr);
+          }
+          else {
+            ret = bmap(ip, &bmap_req);
+          }
           if (enable_perf_stats) {
               g_perf_stats.tree_search_tsc += (asm_rdtscp() - start_tsc);
               g_perf_stats.tree_search_nr++;
           }
           mlfs_assert(ret != -EIO);
-          bh = bh_get_sync_IO(bmap_req.dev, bmap_req.block_no, BH_NO_DATA_ALLOC);
+          if(IDXAPI_IS_HASHFS()) {
+            bh = bh_get_sync_IO(bmap_req.dev, bmap_req_arr.block_no[0], BH_NO_DATA_ALLOC);
+          }
+          else {
+            bh = bh_get_sync_IO(bmap_req.dev, bmap_req.block_no, BH_NO_DATA_ALLOC);
+          }
+          
           bh->b_offset = 0;
           bh->b_data = buffer;
           bh->b_size = fc_off;
@@ -1273,12 +1478,21 @@ ssize_t do_unaligned_read(struct inode *ip, uint8_t *dst, offset_t off, size_t i
   bmap_req.start_offset = off_aligned;
   bmap_req.blk_count_found = 0;
   bmap_req.blk_count = 1;
+  bmap_req_arr.start_offset = off_aligned;
+  bmap_req_arr.blk_count_found = 0;
+  bmap_req_arr.blk_count = 1;
 
   if (enable_perf_stats)
     start_tsc = asm_rdtscp();
 
   // Get block address from shared area.
-  ret = bmap(ip, &bmap_req);
+  if(IDXAPI_IS_HASHFS()) {
+    ret = bmap_hashfs(ip, &bmap_req_arr);
+  }
+  else {
+    ret = bmap(ip, &bmap_req);
+  }
+  
 
   if (enable_perf_stats) {
     g_perf_stats.tree_search_tsc += (asm_rdtscp() - start_tsc);
@@ -1286,7 +1500,12 @@ ssize_t do_unaligned_read(struct inode *ip, uint8_t *dst, offset_t off, size_t i
   }
 
   mlfs_assert(ret != -EIO);
-  bh = bh_get_sync_IO(bmap_req.dev, bmap_req.block_no, BH_NO_DATA_ALLOC);
+  if(IDXAPI_IS_HASHFS()) {
+    bh = bh_get_sync_IO(bmap_req.dev, bmap_req_arr.block_no[0], BH_NO_DATA_ALLOC);
+  }
+  else {
+    bh = bh_get_sync_IO(bmap_req.dev, bmap_req.block_no, BH_NO_DATA_ALLOC);
+  }
 
   // NVM case: no read caching.
   if (bmap_req.dev == g_root_dev) {
@@ -1354,6 +1573,7 @@ ssize_t do_aligned_read(struct inode *ip, uint8_t *dst, offset_t off, size_t io_
   uint32_t bitmap_size = (io_size >> g_block_size_shift), bitmap_pos;
   struct cache_copy_list copy_list[bitmap_size];
   bmap_req_t bmap_req;
+  bmap_req_arr_t bmap_req_arr;
 
   DECLARE_BITMAP(io_bitmap, bitmap_size);
 
@@ -1426,16 +1646,30 @@ ssize_t do_aligned_read(struct inode *ip, uint8_t *dst, offset_t off, size_t io_
         if (fc_off > 0) { // incomplete fcache
             bmap_req.start_offset = _off;
             bmap_req.blk_count = 1;
+            bmap_req_arr.start_offset = _off;
+            bmap_req_arr.blk_count = 1;
             if (enable_perf_stats) {
                 start_tsc = asm_rdtscp();
             }
-            ret = bmap(ip, &bmap_req);
+            if(IDXAPI_IS_HASHFS()) {
+              ret = bmap_hashfs(ip, &bmap_req_arr);
+            }
+            else {
+              ret = bmap(ip, &bmap_req);
+            }
+            
             if(enable_perf_stats) {
                 g_perf_stats.tree_search_tsc += (asm_rdtscp() - start_tsc);
                 g_perf_stats.tree_search_nr++;
             }
             mlfs_assert(ret != -EIO);
-            bh = bh_get_sync_IO(bmap_req.dev, bmap_req.block_no, BH_NO_DATA_ALLOC);
+            if(IDXAPI_IS_HASHFS()) {
+              bh = bh_get_sync_IO(bmap_req.dev, bmap_req_arr.block_no[0], BH_NO_DATA_ALLOC);
+            }
+            else {
+              bh = bh_get_sync_IO(bmap_req.dev, bmap_req.block_no, BH_NO_DATA_ALLOC);
+            }
+            
             bh->b_offset = 0;
             bh->b_data = dst + pos;
             bh->b_size = fc_off;
@@ -1487,12 +1721,24 @@ do_global_search:
   bmap_req.block_no = 0;
   bmap_req.blk_count_found = 0;
 
+  bmap_req_arr.start_offset = _off;
+  bmap_req_arr.blk_count =
+    min(MAX_GET_BLOCKS_RETURN, find_next_zero_bit(io_bitmap, bitmap_size, bitmap_pos) - bitmap_pos);
+  bmap_req_arr.dev = 0;
+  // bmap_req_arr.block_no = 0;
+  bmap_req_arr.blk_count_found = 0;
+
   if (enable_perf_stats) {
     start_tsc = asm_rdtscp();
   }
 
   // Get block address from shared area.
-  ret = bmap(ip, &bmap_req);
+  if(IDXAPI_IS_HASHFS()) {
+    ret = bmap_hashfs(ip, &bmap_req_arr);
+  }
+  else {
+    ret = bmap(ip, &bmap_req);
+  }
 
   if (enable_perf_stats) {
     g_perf_stats.tree_search_tsc += (asm_rdtscp() - start_tsc);
@@ -1502,13 +1748,25 @@ do_global_search:
   mlfs_assert(ret != -EIO);
 
   // NVM case: no read caching.
-  if (bmap_req.dev == g_root_dev) {
-    bh = bh_get_sync_IO(bmap_req.dev, bmap_req.block_no, BH_NO_DATA_ALLOC);
-    bh->b_offset = 0;
-    bh->b_data = dst + pos;
-    bh->b_size = min((bmap_req.blk_count_found << g_block_size_shift), io_size);
-
-    list_add_tail(&bh->b_io_list, &io_list);
+  int which_dev = IDXAPI_IS_HASHFS() ? bmap_req_arr.dev : bmap_req.dev;
+  if (which_dev == g_root_dev) {
+    if(IDXAPI_IS_HASHFS()) {
+      for(size_t j = 0; j < bmap_req_arr.blk_count_found; ++j) {
+        bh = bh_get_sync_IO(bmap_req_arr.dev, bmap_req_arr.block_no[j], BH_NO_DATA_ALLOC);
+        bh->b_offset = 0;
+        bh->b_data = dst + pos + (j * g_block_size_bytes);
+        bh->b_size = min(g_block_size_bytes, io_size);
+        list_add_tail(&bh->b_io_list, &io_list);
+      }
+    }
+    else {
+      bh = bh_get_sync_IO(bmap_req.dev, bmap_req.block_no, BH_NO_DATA_ALLOC);
+      bh->b_offset = 0;
+      bh->b_data = dst + pos;
+      bh->b_size = min((bmap_req.blk_count_found << g_block_size_shift), io_size);
+      list_add_tail(&bh->b_io_list, &io_list);
+    }
+    
   }
   // SSD and HDD cache: do read caching.
   else {
@@ -1532,6 +1790,7 @@ do_global_search:
 
     // register IO memory to read cache for each 4 KB blocks.
     // When bh finishes IO, the IO data will be in the read cache.
+    
     for (cur = _off, l = 0; l < bmap_req.blk_count_found;
         cur += g_block_size_bytes, l++) {
       bh = bh_get_sync_IO(bmap_req.dev, bmap_req.block_no + l, BH_NO_DATA_ALLOC);
@@ -1556,20 +1815,30 @@ do_global_search:
    * subsequent bmap call starts finding blocks in other lsm tree.
    */
   if (ret == -EAGAIN) {
-    bitmap_clear(io_bitmap, bitmap_pos, bmap_req.blk_count_found);
-    io_to_be_done += bmap_req.blk_count_found;
+    if(IDXAPI_IS_HASHFS()) {
+      bitmap_clear(io_bitmap, bitmap_pos, bmap_req_arr.blk_count_found);
+      io_to_be_done += bmap_req_arr.blk_count_found;
+    } else {
+      bitmap_clear(io_bitmap, bitmap_pos, bmap_req.blk_count_found);
+      io_to_be_done += bmap_req.blk_count_found;
+    }
+    
 
     goto do_global_search;
   } else {
-    bitmap_clear(io_bitmap, bitmap_pos, bmap_req.blk_count_found);
-    io_to_be_done += bmap_req.blk_count_found;
+    if(IDXAPI_IS_HASHFS()) {
+      bitmap_clear(io_bitmap, bitmap_pos, bmap_req_arr.blk_count_found);
+      io_to_be_done += bmap_req_arr.blk_count_found;
+    } else {
+      bitmap_clear(io_bitmap, bitmap_pos, bmap_req.blk_count_found);
+      io_to_be_done += bmap_req.blk_count_found;
+    }
 
     //mlfs_assert(bitmap_weight(io_bitmap, bitmap_size) == 0);
     if (bitmap_weight(io_bitmap, bitmap_size) != 0) {
       goto do_global_search;
     }
   }
-
   mlfs_assert(io_to_be_done == (io_size >> g_block_size_shift));
 
 do_io_aligned:

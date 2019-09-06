@@ -15,6 +15,9 @@ indexing_choice_t get_indexing_choice(void) {
     } else if (env != NULL && !strcmp(env, "GLOBAL_HASH_TABLE")) {
         printf("%s -> using API global hash table!\n", env);
         return GLOBAL_HASH_TABLE;
+    } else if (env != NULL && !strcmp(env, "HASHFS")) {
+        printf("%s -> using API hash fs!\n", env);
+        return HASHFS;
     } else if (env != NULL && !strcmp(env, "GLOBAL_CUCKOO_HASH")) {
         printf("%s -> using API global CUCKOO hash table!\n", env);
         return GLOBAL_CUCKOO_HASH;
@@ -72,6 +75,10 @@ void print_global_idx_stats(bool enable_perf_stats) {
         case GLOBAL_CUCKOO_HASH:
             fns = &cuckoohash_fns;
             break;
+	default:
+	    fprintf(stderr, "global stats method not found\n");
+	    return;
+	    break;
     }
 
     if (fns->im_print_global_stats) {

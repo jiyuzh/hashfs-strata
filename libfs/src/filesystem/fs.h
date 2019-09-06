@@ -27,6 +27,9 @@ extern "C" {
 // [ inode block | free bitmap | data blocks | log blocks ] is a block group.
 // If data blocks is full, then file system will allocate a new block group.
 // Block group expension is not implemented yet.
+#ifndef MAX_GET_BLOCKS_RETURN
+#define MAX_GET_BLOCKS_RETURN 8
+#endif
 
 // directory entry cache
 struct dirent_data {
@@ -90,10 +93,20 @@ struct dlookup_data {
 	struct inode *inode;
 };
 
+typedef struct bmap_request_arr {
+	// input
+	offset_t start_offset; //offset from file start in bytes
+	uint32_t blk_count; //num_blocks
+	// output
+	addr_t block_no[MAX_GET_BLOCKS_RETURN];
+	uint32_t blk_count_found;
+	uint8_t dev;
+} bmap_req_arr_t;
+
 typedef struct bmap_request {
 	// input
-	offset_t start_offset;
-	uint32_t blk_count;
+	offset_t start_offset; //offset from file start in bytes
+	uint32_t blk_count; //num_blocks
 	// output
 	addr_t block_no;
 	uint32_t blk_count_found;
@@ -505,6 +518,8 @@ static inline int fcache_del_all(struct inode *inode)
 			if (fc_block && fc_block->is_data_cached) {
 				list_del(&fc_block->l);
 				mlfs_free(fc_block->data);
+			} else if (fc_block) {
+				mlfs_free(fc_block);
 			}
 #ifndef USE_FCACHE_POOL
 			mlfs_free(fc_block);
@@ -731,6 +746,7 @@ void iunlockput(struct inode*);
 void iupdate(struct inode*);
 int itrunc(struct inode *inode, offset_t length);
 int bmap(struct inode *ip, struct bmap_request *bmap_req);
+int bmap_hashfs(struct inode *ip, struct bmap_request_arr *bmap_req_arr);
 
 int dir_check_entry_fast(struct inode *dir_inode);
 struct inode* dir_lookup(struct inode*, char*, offset_t *);

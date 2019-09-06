@@ -110,7 +110,6 @@ int mlfs_file_stat(struct file *f, struct stat *st)
 ssize_t mlfs_file_read(struct file *f, uint8_t *buf, size_t n)
 {
 	ssize_t r = 0;
-
 	if (f->readable == 0) 
 		return -EPERM;
 

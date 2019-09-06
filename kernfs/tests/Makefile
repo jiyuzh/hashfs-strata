@@ -1,4 +1,4 @@
-CC=gcc5
+CC=gcc9.2
 CXX=g++ -std=c++11
 
 #CC = clang-3.8
@@ -8,7 +8,8 @@ CXX=g++ -std=c++11
 #  Lib directories
 ########
 LIBFS_DIR := $(CURDIR)/../../libfs
-NVML_DIR := $(abspath $(LIBFS_DIR)/lib/nvml/src)
+#NVML_DIR := $(abspath $(LIBFS_DIR)/lib/nvml/src)
+NVML_DIR :=
 DPDK_DIR := $(abspath $(LIBFS_DIR)/lib/dpdk-16.07/x86_64-native-linuxapp-gcc)
 SPDK_DIR := $(abspath $(LIBFS_DIR)/lib/spdk)
 CUCKOO_DIR := $(abspath $(LIBFS_DIR)/lib/cuckoofilter)
@@ -20,16 +21,19 @@ API_DIR := $(abspath ../../../nvm-file-indexing/api)
 
 INCLUDES := $(addprefix -I, .. . $(LIBSPDK_DIR) $(NVML_DIR)/include $(CUCKOO_DIR)/src $(C_LIBCUCKOO_DIR) $(GLIB_DIR) $(GLIB_DIR)/glib $(API_DIR))
 
-LD_FLAGS = -lpthread -lm -L$(NVML_DIR)/nondebug/ -lpmem -lrt \
+LD_FLAGS = -lpthread -L$(NVML_DIR)/nondebug/ -lpmem -lrt \
 	-Wl,-rpath=$(abspath $(GLIB_DIR)/glib/.libs) -L$(abspath $(GLIB_DIR)/glib/.libs) \
-	-Wl,-rpath=$(abspath $(API_DIR)/build) -L$(abspath $(API_DIR)/build) -lNVMIndexingAPI
+	-Wl,-rpath=$(abspath $(API_DIR)/build) -L$(abspath $(API_DIR)/build) -lNVMIndexingAPI -lm
 LD_FLAGS_CXX = -lpthread -lm -L$(NVML_DIR)/nondebug/ -lpmem -lrt \
 	-Wl,-rpath=$(abspath $(GLIB_DIR)/glib/.libs) -L$(abspath $(GLIB_DIR)/glib/.libs) \
 	-Wl,-rpath=$(abspath $(API_DIR)/build) -L$(abspath $(API_DIR)/build) -lNVMIndexingAPI
 
-DEBUG = -g -O0
+#DEBUG = -g -O0
 #DEBUG = -g -Ofast
-#DEBUG = -g -O3
+AVX_ARGS = -march=skylake-avx512 -mavx -mavx512f -mavx512vl -mavx512cd -mavx512bw -mavx512dq
+DEBUG = -g -O0 $(AVX_ARGS)
+OPT_ARGS = -g 03 $(AVX_ARGS)
+
 
 #MLFS_FLAGS = -DUSE_SLAB -DMLFS_INFO -DKERNFS
 MLFS_FLAGS = -DMLFS_INFO -DKERNFS
