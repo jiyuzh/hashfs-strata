@@ -113,6 +113,8 @@ int do_migrate_blocks(uint8_t from_dev, uint8_t to_dev, uint32_t file_inum,
 	struct mlfs_ext_path *path = NULL;
 	struct mlfs_map_blocks map;
 	struct mlfs_map_blocks_arr map_arr;
+	struct mlfs_pblks to_lookup;
+	to_lookup.size = 0;
 	uint32_t nr_blocks = 0, nr_digested_blocks = 0;
 	offset_t cur_offset;
 
@@ -173,24 +175,17 @@ int do_migrate_blocks(uint8_t from_dev, uint8_t to_dev, uint32_t file_inum,
 			mlfs_assert(nr_block_get <= (nr_blocks - nr_digested_blocks));
 			mlfs_assert(nr_block_get > 0);
 
+			for(uint32_t i = 0; i < nr_block_get; ++i) {
+				to_lookup.m_pblk[to_lookup.size] = map_arr.m_pblk[i];
+				to_lookup.m_lens[to_lookup.size] = 1;
+				++to_lookup.size;
+			}
+
 			nr_digested_blocks += nr_block_get;
 
 			mlfs_debug("[migrate] inum %d, offset %lu len %u (dev %d:%lu) -> (dev %d:%lu)\n", 
 					file_inode->inum, cur_offset, nr_block_get << g_block_size_shift, 
 					from_dev, blknr, to_dev, map_arr.m_pblk[0]);
-			for(size_t j = 0; j < map_arr.m_len; ++j) {
-				bh_data = bh_get_sync_IO(to_dev, map_arr.m_pblk[j], BH_NO_DATA_ALLOC);
-
-				bh_data->b_data = data + (g_block_size_bytes * j);
-				bh_data->b_blocknr = map_arr.m_pblk[j];
-				bh_data->b_size = g_block_size_bytes;
-				bh_data->b_offset = 0;
-
-				ret = mlfs_write(bh_data);
-				mlfs_assert(!ret);
-				clear_buffer_uptodate(bh_data);
-				bh_release(bh_data);
-			}
 
 		}
 		else {
@@ -205,30 +200,38 @@ int do_migrate_blocks(uint8_t from_dev, uint8_t to_dev, uint32_t file_inum,
 			mlfs_assert(nr_block_get <= (nr_blocks - nr_digested_blocks));
 			mlfs_assert(nr_block_get > 0);
 
+			to_lookup.m_pblk[to_lookup.size] = map.m_pblk;
+			to_lookup.m_lens[to_lookup.size] = map.m_len;
+			++to_lookup.size;
+
 			nr_digested_blocks += nr_block_get;
 
 			mlfs_debug("[migrate] inum %d, offset %lu len %u (dev %d:%lu) -> (dev %d:%lu)\n", 
 					file_inode->inum, cur_offset, nr_block_get << g_block_size_shift, 
 					from_dev, blknr, to_dev, map.m_pblk);
-			
-			bh_data = bh_get_sync_IO(to_dev, map.m_pblk, BH_NO_DATA_ALLOC);
-
-			bh_data->b_data = data;
-			bh_data->b_blocknr = map.m_pblk;
-			bh_data->b_size = nr_block_get * g_block_size_bytes;
-			bh_data->b_offset = 0;
-
-			ret = mlfs_write(bh_data);
-			mlfs_assert(!ret);
-			clear_buffer_uptodate(bh_data);
-			bh_release(bh_data);
 		}
 		
 
 		// find block address of offset and update extent tree
 
 		cur_offset += nr_block_get * g_block_size_bytes;
-		data += nr_block_get * g_block_size_bytes;
+		//data += nr_block_get * g_block_size_bytes;
+	}
+
+	for(uint32_t i = 0; i < to_lookup.size; ++i) {
+		bh_data = bh_get_sync_IO(to_dev, to_lookup.m_pblk[i], BH_NO_DATA_ALLOC);
+
+		bh_data->b_data = data;
+		bh_data->b_blocknr = to_lookup.m_pblk[i];
+		bh_data->b_size = to_lookup.m_lens[i] * g_block_size_bytes;
+		bh_data->b_offset = 0;
+
+		ret = mlfs_write(bh_data);
+		mlfs_assert(!ret);
+		clear_buffer_uptodate(bh_data);
+		bh_release(bh_data);
+
+		data += to_lookup.m_lens[i] * g_block_size_bytes;
 	}
 
 	mlfs_assert(nr_blocks == nr_digested_blocks);
