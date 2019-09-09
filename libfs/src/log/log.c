@@ -1295,6 +1295,27 @@ void wait_on_digesting()
 	}
 }
 
+/**
+ * I think that sometimes when I explicitly wait on digesting, the digesting
+ * flag hasn't been set yet. So, let's make sure it's set before I wait for
+ * it to complete.
+ */
+void wait_on_not_digesting()
+{
+	uint64_t tsc_begin, tsc_end;
+	if (enable_perf_stats)
+		tsc_begin = asm_rdtsc();
+
+	while(!g_fs_log->digesting)
+		cpu_relax();
+
+	if (enable_perf_stats) {
+		tsc_end = asm_rdtsc();
+		g_perf_stats.digest_wait_tsc += (tsc_end - tsc_begin);
+		g_perf_stats.digest_wait_nr++;
+	}
+}
+
 int make_digest_request_async(int percent)
 {
 	char cmd_buf[MAX_CMD_BUF] = {0};
@@ -1306,10 +1327,14 @@ int make_digest_request_async(int percent)
 		mlfs_debug("Send digest command: %s\n", cmd_buf);
 		ret = write(g_fs_log->digest_fd[1], cmd_buf, MAX_CMD_BUF);
 		return 0;
-	} else
+	} else {
 		return -EBUSY;
+    }
 }
 
+/**
+ * Don't call this outside of strata.
+ */
 uint32_t make_digest_request_sync(int percent)
 {
 	int ret, i;
@@ -1363,6 +1388,8 @@ void handle_digest_response(char *ack_cmd)
 	addr_t next_hdr_of_digested_hdr;
 	int n_digested, rotated, lru_updated;
 	struct inode *inode, *tmp;
+
+    printf("digest response, %s\n", ack_cmd);
 
 	sscanf(ack_cmd, "|%s |%d|%lu|%d|%d|", ack, &n_digested,
 			&next_hdr_of_digested_hdr, &rotated, &lru_updated);
@@ -1514,8 +1541,9 @@ void *digest_thread(void *arg)
 		int i;
 		n = epoll_wait(epfd, epev, EVENT_COUNT, -1);
 
-		if (n < 0 && errno != EINTR)
+		if (n < 0 && errno != EINTR) {
 			panic("epoll wait problem: digest completion\n");
+        }
 
 		for (i = 0; i < n; i++) {
 			int _fd = epev[i].data.fd;

@@ -9,7 +9,8 @@ char *g_dev_path[] = {
 	//(char *)"/tmp/devone",
 	(char *)"PCIe-SSD",
 	(char *)"/backup/mlfs_hdd",
-	(char *)"/dev/dax0.2",
+	(char *)"/dev/dax0.1",
+    (char *)"/dev/dax0.5",
 	//(char *)"/tmp/devtwo",
 	//(char *)"/dev/dax2.0",
 };

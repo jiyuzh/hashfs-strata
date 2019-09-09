@@ -187,6 +187,7 @@ static inline char* get_parent_path(const char *path, char *parent_path, char *n
 }
 #define tri_ratio(tsc,nr) tsc, nr, (double)tsc/nr
 #define js_add_int64(obj, name, val) json_object_object_add(obj, name, json_object_new_int64(val));
+#define js_add_double(obj, name, val) json_object_object_add(obj, name, json_object_new_double(val));
 // statistics utils
 typedef struct {
     uint64_t cnt;
@@ -211,4 +212,6 @@ static inline void update_stats_dist(stats_dist_t *s, uint64_t newval) {
 static inline void print_stats_dist(stats_dist_t *s, const char *name) {
     printf("%s  : avg %.2f total %lu cnt %lu min %lu max %lu\n", name, (double)s->total/s->cnt, s->total, s->cnt, s->min, s->max);
 }
+
+void flush_llc(void);
 #endif

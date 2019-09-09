@@ -12,6 +12,7 @@
 #include "mlfs/mlfs_user.h"
 #include "storage/storage.h"
 
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -30,6 +31,7 @@ stats_dist_t storage_rtsc;
 stats_dist_t storage_rnr;
 stats_dist_t storage_wtsc;
 stats_dist_t storage_wnr;
+cache_stats_t dax_cache_stats;
 #endif
 // iangneal: because we're using real NVM!
 //#define ENABLE_PERF_MODEL
@@ -185,6 +187,7 @@ int dax_read(uint8_t dev, uint8_t *buf, addr_t blockno, uint32_t io_size)
 {
 #ifdef STORAGE_PERF
     uint64_t tsc_begin = asm_rdtscp();
+    start_cache_stats();
 #endif
     //printf("dax_read: %llu @ %llu\n", blockno, io_size);
 	memmove(buf, dax_addr[dev] + (blockno * g_block_size_bytes), io_size);
@@ -195,6 +198,7 @@ int dax_read(uint8_t dev, uint8_t *buf, addr_t blockno, uint32_t io_size)
 #ifdef STORAGE_PERF
     update_stats_dist(&storage_rtsc, asm_rdtscp() - tsc_begin);
     update_stats_dist(&storage_rnr, io_size);
+    end_cache_stats(&dax_cache_stats);
 #endif
 	return io_size;
 }
@@ -204,6 +208,7 @@ int dax_read_unaligned(uint8_t dev, uint8_t *buf, addr_t blockno, uint32_t offse
 {
 #ifdef STORAGE_PERF
     uint64_t tsc_begin = asm_rdtscp();
+    start_cache_stats();
 #endif
 	//copy and flush data to pmem.
 	memmove(buf, dax_addr[dev] + (blockno * g_block_size_bytes) + offset,
@@ -218,6 +223,7 @@ int dax_read_unaligned(uint8_t dev, uint8_t *buf, addr_t blockno, uint32_t offse
 #ifdef STORAGE_PERF
     update_stats_dist(&storage_rtsc, asm_rdtscp() - tsc_begin);
     update_stats_dist(&storage_rnr, io_size);
+    end_cache_stats(&dax_cache_stats);
 #endif
 	return io_size;
 }

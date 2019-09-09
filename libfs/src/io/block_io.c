@@ -44,7 +44,8 @@ void device_init(void)
 	// dev_id = 1 - NVMM
 	// dev_id = 2 - SSD
 	// dev_id = 3 - HDD
-	// dev_id > 4 - Per-application log
+	// dev_id = 4 - Per-application log
+    // dev_id = 5 - KernFS undo log
 	// ...
 	for (i = 1; i < g_n_devices + 1; i++) {
 		mlfs_debug("dev id %d\n", i);
@@ -100,9 +101,11 @@ void device_init(void)
 void device_shutdown(void)
 {
 	int i;
-	for (i = 1; i < g_n_devices + 1; i++)
-        if (g_bdev[i])
+	for (i = 1; i < g_n_devices + 1; i++) {
+        if (g_bdev[i]) {
 		    bdev_free(g_bdev[i]);
+        }
+    }
 
 	return;
 }

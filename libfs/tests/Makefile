@@ -23,7 +23,7 @@ LIBSPDK=../src/storage/spdk/libspdk.so
 LIBSPDK_INC=../src/storage/spdk/
 
 #INCLUDES= $(LIBFS_DIR)/../src -I$(CUR_DIR)/../lib/nvml/src/include
-INCLUDES= $(LIBFS_DIR)/../src 
+INCLUDES= $(LIBFS_DIR)/../src -I$(realpath $(LIBFS_DIR)/../../kernfs)
 DAX_OBJ = ../build/storage/storage_dax.o
 
 DPDK_VER := 16.07.2

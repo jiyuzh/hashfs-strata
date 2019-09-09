@@ -23,7 +23,7 @@
 
 #include "inode_hash.h"
 #include "lpmem_ghash.h"
-
+#include "undo_log.h"
 
 #define _min(a, b) ({\
 		__typeof__(a) _a = a;\
@@ -179,6 +179,7 @@ void reset_kernfs_stats(void)
     cache_stats_init();
 	kernfs_stats_json = json_object_new_array();	
 	
+    flush_llc();
 }
 
 void show_kernfs_stats(void)
@@ -201,6 +202,14 @@ void show_kernfs_stats(void)
         js_add_int64(search, "nr_search", g_perf_stats.path_search_nr);
         json_object_object_add(root, "search", search);
     }
+    add_cache_stats_to_json(root, "idx_cache", &(g_perf_stats.cache_stats)); 
+
+    if (USE_IDXAPI()) {
+        json_object *indexing = json_object_new_object();
+        add_idx_stats_to_json(enable_perf_stats, indexing);
+        json_object_object_add(root, "idx_stats", indexing);
+    }
+
 	json_object_array_add(kernfs_stats_json, root);
 
     // Convert JSON to a string
@@ -212,7 +221,6 @@ void show_kernfs_stats(void)
 		write(prof_fd, js_str, strlen(js_str));
 	}
 
-    // TODO: not sure what this does.
 	json_object_put(root);
 
 	//float clock_speed_mhz = get_cpu_clock_speed();
@@ -243,6 +251,19 @@ void show_kernfs_stats(void)
 	printf("-- blocks indexed: %lu blocks / %lu ops (%.1f tsc/blk)\n",
 			g_perf_stats.path_search_size, g_perf_stats.path_search_nr,
             (float)g_perf_stats.path_search_tsc / (float)g_perf_stats.path_search_size);
+    printf("-- balloc: \n");
+    printf("---- time per op : %lu / %lu (%.1f) tsc/op\n",
+            g_perf_stats.balloc_tsc, g_perf_stats.balloc_nr, 
+            (float)g_perf_stats.balloc_tsc / (float)g_perf_stats.balloc_nr);
+    printf("---- time per blk: %lu / %lu (%.1f) tsc/blk\n",
+            g_perf_stats.balloc_tsc, g_perf_stats.balloc_nblk, 
+            (float)g_perf_stats.balloc_tsc / (float)g_perf_stats.balloc_nblk);
+    printf("UNDO: %lu / %lu (%.1f) tsc/op\n",
+            g_perf_stats.undo_tsc, g_perf_stats.undo_nr,
+            (float)g_perf_stats.undo_tsc / (float)g_perf_stats.undo_nr);
+    printf("---- blk per op  : %lu / %lu (%.1f) blk/op\n",
+            g_perf_stats.balloc_nblk, g_perf_stats.balloc_nr, 
+            (float)g_perf_stats.balloc_nblk / (float)g_perf_stats.balloc_nr);
     printf("  LLC miss latency : %lu \n", calculate_llc_latency(&(g_perf_stats.cache_stats)));
 	printf("total migrated  : %lu MB\n", g_perf_stats.total_migrated_mb);
 	printf("--------------------------------------\n");
@@ -290,6 +311,9 @@ void show_kernfs_stats(void)
     show_storage_stats();
 	printf("--------------------------------------\n");
     print_global_idx_stats(enable_perf_stats);
+	printf("--------------------------------------\n");
+    //undo_log_sanity_check(true);
+	//printf("--------------------------------------\n");
 }
 
 void show_storage_stats(void)
@@ -1920,6 +1944,8 @@ static void handle_digest_request(void *arg)
 			//g_perf_stats.n_digest = 0;
 		}
 
+        undo_log_start_tx();
+
 		digest_count = digest_logs(dev_id, digest_count, &digest_blkno, &rotated);
 
 		mlfs_debug("-- Total used block %d\n",
@@ -1932,9 +1958,10 @@ static void handle_digest_request(void *arg)
 		mlfs_info("Write %s to libfs\n", response);
 
 		persist_dirty_objects_nvm();
-		if (enable_perf_stats)
+		if (enable_perf_stats) {
 			g_perf_stats.digest_time_tsc +=
 				(asm_rdtscp() - tsc_begin);
+        }
 #ifdef USE_SSD
 		persist_dirty_objects_ssd();
 #endif
@@ -1942,8 +1969,17 @@ static void handle_digest_request(void *arg)
 		persist_dirty_objects_hdd();
 #endif
 
-		sendto(sock_fd, response, MAX_SOCK_BUF, 0,
+        // MUST commit before sending the ACK.
+        undo_log_commit_tx();
+
+		ssize_t err = sendto(sock_fd, response, MAX_SOCK_BUF, 0,
 				(struct sockaddr *)&digest_arg->cli_addr, sizeof(struct sockaddr_un));
+
+        if (err < 0) {
+            fprintf(stderr, "Bad response to libfs: %d (%s)\n", errno,
+                    strerror(errno));
+        }
+
 
 		/*show_storage_stats();
 
@@ -2099,6 +2135,8 @@ void shutdown_fs(void)
 		close(prof_fd);
 	}
 
+    shutdown_undo_log();
+
 	unlink(SRV_SOCK_PATH);
 	device_shutdown();
 	return ;
@@ -2191,7 +2229,7 @@ void locks_init(void)
 	pthread_mutex_init(&block_bitmap_mutex, &attr);
 }
 
-void init_fs(void)
+void init_fs_callback(void (*callback_fn)(void)) 
 {
 	int i;
 	const char *perf_profile;
@@ -2212,7 +2250,7 @@ void init_fs(void)
 
 	init_device_lru_list();
 
-	shared_memory_init();
+	//shared_memory_init();
 	cache_init(g_root_dev);
 
 	locks_init();
@@ -2250,6 +2288,8 @@ void init_fs(void)
 		enable_perf_stats = 0;
 	}
 
+    init_undo_log();
+
     if (IDXAPI_IS_GLOBAL()) {
         init_hash(sb[g_root_dev], enable_perf_stats);
     }
@@ -2277,7 +2317,16 @@ void init_fs(void)
 	file_digest_thread_pool = thpool_init(8);
 #endif
 
+    callback_fn();
+
 	wait_for_event();
+}
+
+static void nothing(void) {}
+
+void init_fs(void)
+{
+    init_fs_callback(nothing);
 }
 
 void cache_init(uint8_t dev)

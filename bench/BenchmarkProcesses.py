@@ -6,8 +6,10 @@ import json
 import glob
 import os
 from pathlib import Path
-from pprint import pprint 
+from pprint import pprint
+import psutil
 import re
+import signal
 import shlex
 import subprocess
 from subprocess import DEVNULL, PIPE, STDOUT, TimeoutExpired
@@ -40,25 +42,23 @@ class KernFSThread:
         'Reset the stats after init.'
         # kill whole process group
         pgid = os.getpgid(self.proc.pid)
-        kill_args = [ 'kill', '-2', '--', '-'+str(pgid) ]
+        kill_args = shlex.split(f'kill -{signal.SIGUSR2.value} -- -{pgid}')
         subprocess.run(kill_args, check=True, stdout=DEVNULL, stderr=DEVNULL)
 
     def start(self):
         'First we run mkfs, then start up the kernfs process.'
-        '''
-        rm_args = shlex.split('sudo umount /mlfs')
-        subprocess.run(rm_args, check=True, stdout=DEVNULL, stderr=DEVNULL)
 
-        mkdir_args = shlex.split('sudo mount -t tmpfs tmpfs /mlfs')
-        subprocess.run(mkdir_args, check=True, stdout=DEVNULL, stderr=DEVNULL)
-        '''
+        # Make sure there are no stats files from prior runs.
+        stats_files = [Path(x) for x in glob.glob('/tmp/kernfs_prof.*')]
+        for s in stats_files:
+            s.unlink()
 
         mkfs_args = [ 'sudo', '-E', str(self.kernfs_path / 'mkfs.sh') ]
-        proc = subprocess.run(mkfs_args, cwd=self.kernfs_path, check=True, env=self.env)#,
-                              # stdout=DEVNULL, stderr=DEVNULL)
+        proc = subprocess.run(mkfs_args, cwd=self.kernfs_path, check=True, env=self.env,
+                              stdout=DEVNULL, stderr=DEVNULL)
        
-        kernfs_arg_str = '{0}/run.sh numactl -N 1 -m 1 {0}/kernfs'.format(
-                                  str(self.kernfs_path))
+        kernfs_arg_str = '{0}/run.sh taskset -c 0 numactl -N {1} -m {1} {0}/kernfs'.format(
+                                  str(self.kernfs_path), '0')
         kernfs_args = shlex.split(kernfs_arg_str)
 
         opt_args = {}
@@ -71,14 +71,35 @@ class KernFSThread:
             print('Running verbose KernFSThread.')
             self.proc = subprocess.Popen(kernfs_args, cwd=self.kernfs_path,
                                          env=self.env, start_new_session=True)
-        time.sleep(20)
+
+        # Wait for the kernfs PID file to appear.
+        start_time = time.time()
+        while (time.time() - start_time) < 5*60:
+            pid_files = [Path(x) for x in glob.glob('/tmp/kernfs*.pid')]
+
+            def find_in_pid_file(p):
+                with p.open() as f:
+                    pid = int(f.read())
+                    child_pids = [x.pid for x in psutil.Process(self.proc.pid
+                                    ).children(recursive=True)]
+                    if pid in child_pids:
+                        return True
+                    return False
+
+            res = [find_in_pid_file(p) for p in pid_files]
+            if True in res:
+                break
+
+        else:
+            raise Exception('Timed out waiting for kernfs!')
+
         self._clear_stats()
 
     def _parse_kernfs_stats(self):
         stat_objs = []
 
         stats_files = [Path(x) for x in glob.glob('/tmp/kernfs_prof.*')]
-        assert len(stats_files)
+        assert stats_files
         
         for stat_file in stats_files:
             with stat_file.open() as f:
@@ -127,10 +148,13 @@ class KernFSThread:
 
 class BenchRunner:
 
-    IDX_STRUCTS   = [ 'HASHFS', 'EXTENT_TREES', 'GLOBAL_HASH_TABLE',
-                      'LEVEL_HASH_TABLES', 'RADIX_TREES', 'NONE' ]
-    IDX_DEFAULT   = [ 'EXTENT_TREES', 'GLOBAL_HASH_TABLE',
-                      'LEVEL_HASH_TABLES', 'RADIX_TREES', 'HASHFS', 'NONE']
+    IDX_STRUCTS   = [ 'EXTENT_TREES', 'EXTENT_TREES_TOP_CACHED', 
+                      'GLOBAL_HASH_TABLE', 'GLOBAL_CUCKOO_HASH',
+                      'GLOBAL_HASH_TABLE_COMPACT',
+                      'GLOBAL_CUCKOO_HASH_COMPACT',
+                      'LEVEL_HASH_TABLES', 'RADIX_TREES', 'NONE'
+                      'HASHFS' ]
+    IDX_DEFAULT   = IDX_STRUCTS
     LAYOUT_SCORES = ['100', '90', '80', '70', '60']
 
     def __init__(self, args):
@@ -195,8 +219,9 @@ class BenchRunner:
             self.outdir.mkdir()
                 
         filepath = self.outdir / name
-        with filepath.open('w') as f:
-            json.dump(json_obj, f, indent=4)
+        if json_obj:
+            with filepath.open('w') as f:
+                json.dump(json_obj, f, indent=4)
 
     def _run_trial(self, bench_args, bench_cwd, processing_fn, timeout=(2*60),
             no_warn=False):
@@ -295,6 +320,10 @@ class BenchRunner:
                             help='List of layout scores to use.')
         parser.add_argument('--trials', '-t', nargs='?', default=1, type=int,
                             help='Number of trials to run, default 1')
+
+        parser.add_argument('--numa-node', '-M', default=0, type=int,
+                            help='Which NUMA node to lock to.')
+
         parser.add_argument('--outdir', '-o', default='./benchout',
                             help='Where to output the results.')
         parser.add_argument('--verbose', '-v', action='store_true',
