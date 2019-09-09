@@ -6,7 +6,8 @@ import json
 import glob
 import os
 from pathlib import Path
-from pprint import pprint 
+from pprint import pprint
+import psutil
 import re
 import signal
 import shlex
@@ -53,8 +54,8 @@ class KernFSThread:
             s.unlink()
 
         mkfs_args = [ 'sudo', '-E', str(self.kernfs_path / 'mkfs.sh') ]
-        proc = subprocess.run(mkfs_args, cwd=self.kernfs_path, check=True, env=self.env)#,
-                              # stdout=DEVNULL, stderr=DEVNULL)
+        proc = subprocess.run(mkfs_args, cwd=self.kernfs_path, check=True, env=self.env,
+                              stdout=DEVNULL, stderr=DEVNULL)
        
         kernfs_arg_str = '{0}/run.sh taskset -c 0 numactl -N {1} -m {1} {0}/kernfs'.format(
                                   str(self.kernfs_path), '0')
@@ -70,7 +71,28 @@ class KernFSThread:
             print('Running verbose KernFSThread.')
             self.proc = subprocess.Popen(kernfs_args, cwd=self.kernfs_path,
                                          env=self.env, start_new_session=True)
-        time.sleep(30)
+
+        # Wait for the kernfs PID file to appear.
+        start_time = time.time()
+        while (time.time() - start_time) < 5*60:
+            pid_files = [Path(x) for x in glob.glob('/tmp/kernfs*.pid')]
+
+            def find_in_pid_file(p):
+                with p.open() as f:
+                    pid = int(f.read())
+                    child_pids = [x.pid for x in psutil.Process(self.proc.pid
+                                    ).children(recursive=True)]
+                    if pid in child_pids:
+                        return True
+                    return False
+
+            res = [find_in_pid_file(p) for p in pid_files]
+            if True in res:
+                break
+
+        else:
+            raise Exception('Timed out waiting for kernfs!')
+
         self._clear_stats()
 
     def _parse_kernfs_stats(self):
@@ -126,19 +148,13 @@ class KernFSThread:
 
 class BenchRunner:
 
-<<<<<<< HEAD
-    IDX_STRUCTS   = [ 'HASHFS', 'EXTENT_TREES', 'GLOBAL_HASH_TABLE',
-                      'LEVEL_HASH_TABLES', 'RADIX_TREES', 'NONE' ]
-    IDX_DEFAULT   = [ 'EXTENT_TREES', 'GLOBAL_HASH_TABLE',
-                      'LEVEL_HASH_TABLES', 'RADIX_TREES', 'HASHFS', 'NONE']
-=======
     IDX_STRUCTS   = [ 'EXTENT_TREES', 'EXTENT_TREES_TOP_CACHED', 
                       'GLOBAL_HASH_TABLE', 'GLOBAL_CUCKOO_HASH',
                       'GLOBAL_HASH_TABLE_COMPACT',
                       'GLOBAL_CUCKOO_HASH_COMPACT',
-                      'LEVEL_HASH_TABLES', 'RADIX_TREES', 'NONE' ]
+                      'LEVEL_HASH_TABLES', 'RADIX_TREES', 'NONE'
+                      'HASHFS' ]
     IDX_DEFAULT   = IDX_STRUCTS
->>>>>>> Update automate script to match new MTCC better and better isolate perf
     LAYOUT_SCORES = ['100', '90', '80', '70', '60']
 
     def __init__(self, args):

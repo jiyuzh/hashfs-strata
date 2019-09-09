@@ -61,13 +61,10 @@ class MTCCRunner(BenchRunner):
                 for obj in stats_arr:
                     # if len(data) < 2:
                     #     continue
-                    if 'lsm' not in obj or 'nr' not in obj['lsm'] or obj['lsm']['nr'] <= 0:
+                    if 'lsm' not in obj or 'nr' not in obj['lsm']:
                         continue
                     obj['bench'] = 'MTCC (readfile)'
-                    obj['workload'] = workload_name
-                    obj['layout'] = float(layout) / 100.0
                     obj['total_time'] = time_elapsed
-                    obj['struct'] = struct.lower()
                     obj.update(labels)
                     stat_objs += [obj]
 
@@ -205,15 +202,8 @@ class MTCCRunner(BenchRunner):
             self.update_bar_proc = Process(target=update_bar, args=(shared_q,))
             self.update_bar_proc.start()
 
-<<<<<<< HEAD
-            mtcc_arg_str = ('{0}/run.sh numactl -N 1 -m 1 {0}/MTCC -b 32k -s 0 '
-                            '-j {1} -n {1} -M 1G -w 32k -r 0k')
-            readfile_arg_str = ('{0}/run.sh numactl -N 1 -m 1 {0}/readfile '
-            '-b 32k -s %d -j {1} -n {1} -r {1}G') % (1 if self.args.sequential else 0)
-=======
             numa_node = self.args.numa_node
             dir_str   = str(mtcc_path)
->>>>>>> Update automate script to match new MTCC better and better isolate perf
 
             stat_objs = []
             current = ''
@@ -241,7 +231,7 @@ class MTCCRunner(BenchRunner):
                             f'''taskset -c 0
                                 numactl -N {numa_node} -m {numa_node} {dir_str}/run.sh
                                 {dir_str}/MTCC -b {io_size} -s 1 -j 1 -n {nfiles}
-                                -S {start_size} -M {start_size + io_size} 
+                                -S {start_size} -M {start_size + (io_size * reps)} 
                                 -w {io_size * reps} -r 0'''
 
                         setup_size = 1024 * 4096 if start_size > (1024 * 4096) else start_size

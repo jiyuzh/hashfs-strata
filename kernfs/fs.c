@@ -213,9 +213,6 @@ void show_kernfs_stats(void)
 	json_object_array_add(kernfs_stats_json, root);
 
     // Convert JSON to a string
-	const char *js_str = json_object_get_string(root);
-
-    // Convert JSON to a string
 	const char *js_str = json_object_get_string(kernfs_stats_json);
     // Write the JSON string to a file.
 	if (enable_perf_stats) {
@@ -2232,7 +2229,7 @@ void locks_init(void)
 	pthread_mutex_init(&block_bitmap_mutex, &attr);
 }
 
-void init_fs(void)
+void init_fs_callback(void (*callback_fn)(void)) 
 {
 	int i;
 	const char *perf_profile;
@@ -2320,8 +2317,16 @@ void init_fs(void)
 	file_digest_thread_pool = thpool_init(8);
 #endif
 
+    callback_fn();
 
 	wait_for_event();
+}
+
+static void nothing(void) {}
+
+void init_fs(void)
+{
+    init_fs_callback(nothing);
 }
 
 void cache_init(uint8_t dev)

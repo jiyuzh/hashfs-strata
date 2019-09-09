@@ -47,10 +47,12 @@ static void *worker_thread(void *);
 #ifndef PREFIX
 #define PREFIX "/mlfs"
 #endif
-#define OPTSTRING "b:j:n:s:M:r:w:h:S:"
+#define OPTSTRING "b:j:f:s:M:r:w:h:S:N:"
 #define OPTNUM 7
 void print_help(char **argv) {
-    printf("usage: %s -b block_size -j n_threads -s seq_ratio -n num_file -M max_file_size -S start_file_size -w write_unit_size -r read_unit_size\n", argv[0]);
+    printf("usage: %s -b block_size -j n_threads -s seq_ratio -f num_file "
+           "-M max_file_size -S start_file_size -w write_unit_size "
+           "-r read_unit_size -N n_trials\n", argv[0]);
 }
 uint32_t get_unit(char c) {
     switch (c) {
@@ -91,7 +93,7 @@ int main(int argc, char **argv) {
                 assert(seq_ratio >= 0 && seq_ratio <= 1 && "seq ratio should in 0.0~1.0");
                 opt_num++;
                 break;
-            case 'n': // how many files are operated concurrently
+            case 'f': // how many files are operated concurrently
                 file_num = atoi(optarg);
                 if (file_num > MAX_FILE_NUM) {
                     panic("too many files");
@@ -132,6 +134,8 @@ int main(int argc, char **argv) {
                 panic("wrong args\n");
         }
     }
+
+    printf("Done with args\n");
     if (opt_num < OPTNUM) {
         print_help(argv);
         panic("insufficient args\n");

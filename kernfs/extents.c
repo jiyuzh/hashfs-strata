@@ -2850,7 +2850,6 @@ int mlfs_hashfs_get_blocks(handle_t *handle, struct inode *inode,
 			//block already existed, so this does nothing
 			printf("block already existed\n");
 			return i;
-		}
 		} else {
 			int found = pmem_nvm_hash_table_lookup(inode->inum, map_arr->m_lblk + i, &index);
 			

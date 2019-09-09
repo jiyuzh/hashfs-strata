@@ -85,6 +85,10 @@ static inline ssize_t alloc_generic(size_t nblk,
                                     enum alloc_type a_type) {
     trace_me();
 
+#if defined(LIBFS)
+    panic("LibFS shouldn't be allocating anything!\n");
+#endif
+
 #if defined(STORAGE_PERF) && defined(KERNFS)
     uint64_t tsc_begin = asm_rdtscp();
 #endif
