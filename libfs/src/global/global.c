@@ -21,8 +21,20 @@ indexing_choice_t get_indexing_choice(void) {
     } else if (env != NULL && !strcmp(env, "HASHFS")) {
         printf("%s -> using API hash fs!\n", env);
         return HASHFS;
+    } else if (env != NULL && !strcmp(env, "GLOBAL_HASH_TABLE_COMPACT")) {
+        printf("%s -> using API global hash table! (compact)\n", env);
+        if(setenv("IDX_COMPACT", "1", 1)) {
+            panic("could not make compact!");
+        }
+        return GLOBAL_HASH_TABLE;
     } else if (env != NULL && !strcmp(env, "GLOBAL_CUCKOO_HASH")) {
         printf("%s -> using API global CUCKOO hash table!\n", env);
+        return GLOBAL_CUCKOO_HASH;
+    } else if (env != NULL && !strcmp(env, "GLOBAL_CUCKOO_HASH_COMPACT")) {
+        printf("%s -> using API global CUCKOO hash table! (compact)\n", env);
+        if(setenv("IDX_COMPACT", "1", 1)) {
+            panic("could not make compact!");
+        }
         return GLOBAL_CUCKOO_HASH;
     } else if (env != NULL && !strcmp(env, "LEVEL_HASH_TABLES")) {
         printf("%s -> using API per-file level hashing!\n", env);
@@ -94,5 +106,36 @@ void print_global_idx_stats(bool enable_perf_stats) {
         fns->im_clean_global_stats();
     } else {
         fprintf(stderr, "(no clean method for global stats)\n");
+    }
+}
+
+void add_idx_stats_to_json(bool enable_perf_stats, json_object *root) {
+    if (!enable_perf_stats) return;
+
+    idx_fns_t *fns;
+    switch(g_idx_choice) {
+        case EXTENT_TREES:
+        case EXTENT_TREES_TOP_CACHED:
+            fns = &extent_tree_fns;
+            break;
+        case RADIX_TREES:
+            fns = &radixtree_fns;
+            break;
+        case LEVEL_HASH_TABLES:
+            fns = &levelhash_fns;
+            break;
+        case GLOBAL_HASH_TABLE:
+            fns = &hash_fns;
+            break;
+        case GLOBAL_CUCKOO_HASH:
+            fns = &cuckoohash_fns;
+            break;
+        default:
+            printf("(no print fn available)\n");
+            return;
+    }
+
+    if (fns->im_add_global_to_json) {
+        fns->im_add_global_to_json(root);
     }
 }

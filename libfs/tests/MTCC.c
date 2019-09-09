@@ -147,7 +147,7 @@ int main(int argc, char **argv) {
 
     for (int i=0; i < file_num; ++i) {
         snprintf(filename_v[i], MAX_FILE_NAME_LEN, PREFIX "/MTCC-%d", i);
-        fd_v[i] = open(filename_v[i], O_RDWR | O_CREAT, 0666);
+        fd_v[i] = open(filename_v[i], O_RDWR | O_CREAT | O_TRUNC, 0666);
         if (fd_v[i] == -1) {
             perror("open failed");
             exit(-1);

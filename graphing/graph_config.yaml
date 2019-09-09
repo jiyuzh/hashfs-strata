@@ -1,10 +1,12 @@
 display_options:
   config_names:
     global_hash_table: Global Hash Table
+    global_hash_table_compact: Global Hash Table (Compact)
     radix_trees: Radix Trees
     extent_trees: Extent Trees
     level_hash_tables: Level Hash Tables
     global_cuckoo_hash: Global Cuckoo Hash Table
+    global_cuckoo_hash_compact: Global Cuckoo Hash Table (Compact)
 
   benchmark_names:
     filemicro_seq_one_4k: 4kB
@@ -25,15 +27,19 @@ display_options:
 
   config_colors:
     Global Hash Table: '#8dd3c7'
+    Global Hash Table (Compact): '#FF0000'
     Radix Trees: '#ffffb3'
     Extent Trees: '#bebada'
     Level Hash Tables: '#fb8072'
     Global Cuckoo Hash Table: '#999999'
+    Global Cuckoo Hash Table (Compact): '#990099'
 
   config_order:
     - Global Hash Table
+    - Global Hash Table (Compact)
     - Radix Trees
     - Extent Trees
     - Level Hash Tables
     - Global Cuckoo Hash Table
+    - Global Cuckoo Hash Table (Compact)
 

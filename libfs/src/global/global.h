@@ -3,7 +3,7 @@
 
 #include "types.h"
 #include "defs.h"
-
+#include <json-c/json.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -94,6 +94,8 @@ typedef enum indexing_api_choice {
 extern indexing_choice_t g_idx_choice;
 extern bool g_idx_cached;
 
+#define USE_IDXAPI() (g_idx_choice != NONE)
+
 #define IDXAPI_IS_PER_FILE() (g_idx_choice == EXTENT_TREES || g_idx_choice == LEVEL_HASH_TABLES \
         || g_idx_choice == RADIX_TREES)
 
@@ -103,6 +105,7 @@ extern bool g_idx_cached;
 indexing_choice_t get_indexing_choice(void);
 bool get_indexing_is_cached(void);
 void print_global_idx_stats(bool enable_perf_stats);
+void add_idx_stats_to_json(bool enable_perf_stats, json_object *root);
 
 #ifdef __cplusplus
 }

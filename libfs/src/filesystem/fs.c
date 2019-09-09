@@ -150,6 +150,13 @@ void show_libfs_stats(const char *title)
   }
 
   add_cache_stats_to_json(root, "idx_cache", &(g_perf_stats.cache_stats)); 
+
+    if (USE_IDXAPI()) {
+        json_object *indexing = json_object_new_object();
+        add_idx_stats_to_json(enable_perf_stats, indexing);
+        json_object_object_add(root, "idx_stats", indexing);
+    }
+
   json_object_array_add(libfs_stats_json, root);
   const char *js_str = json_object_get_string(libfs_stats_json);
 

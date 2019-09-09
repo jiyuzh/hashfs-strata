@@ -238,7 +238,8 @@ class MTCCRunner(BenchRunner):
                         labels['trial num'] = trial_num
 
                         mtcc_insert_arg_str = \
-                            f'''numactl -N {numa_node} -m {numa_node} {dir_str}/run.sh
+                            f'''taskset -c 0
+                                numactl -N {numa_node} -m {numa_node} {dir_str}/run.sh
                                 {dir_str}/MTCC -b {io_size} -s 1 -j 1 -n {nfiles}
                                 -S {start_size} -M {start_size + io_size} 
                                 -w {io_size * reps} -r 0'''
@@ -246,17 +247,20 @@ class MTCCRunner(BenchRunner):
                         setup_size = 1024 * 4096 if start_size > (1024 * 4096) else start_size
 
                         readtest_setup_arg_str = \
-                            f'''numactl -N {numa_node} -m {numa_node} {dir_str}/run.sh
+                            f'''taskset -c 0
+                                numactl -N {numa_node} -m {numa_node} {dir_str}/run.sh
                                 {dir_str}/MTCC -b {setup_size} -s 1 -j 1 -n {nfiles}
                                 -M {start_size} -w {setup_size} -r 0'''
 
                         mtcc_seq_arg_str = \
-                            f'''numactl -N {numa_node} -m {numa_node} {dir_str}/run.sh
+                            f'''taskset -c 0
+                                numactl -N {numa_node} -m {numa_node} {dir_str}/run.sh
                                 {dir_str}/readfile -b {io_size} -s 1 -j 1 -n {nfiles}
                                 -r {io_size * reps}'''
 
                         mtcc_rand_arg_str = \
-                            f'''numactl -N {numa_node} -m {numa_node} {dir_str}/run.sh
+                            f'''taskset -c 0
+                                numactl -N {numa_node} -m {numa_node} {dir_str}/run.sh
                                 {dir_str}/readfile -b {io_size} -s 0 -j 1 -n {nfiles}
                                 -r {io_size * reps} -x'''
 

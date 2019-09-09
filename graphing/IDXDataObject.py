@@ -57,10 +57,14 @@ class IDXDataObject:
             parsed['throughput'] = data_obj['throughput']
         if 'total_time' in data_obj:
             parsed['total_time'] = data_obj['total_time']
+        if 'idx_stats' in data_obj:
+            parsed['idx_compute_per_op'] = data_obj['idx_stats']['compute_tsc'] / max(data_obj['idx_stats']['compute_nr'], 1.0)
         if 'cache' in data_obj:
             cache_obj = data_obj['cache']
             parsed['cache_accesses'] = cache_obj['l1']['accesses']
+            parsed['l1_hits'] = cache_obj['l1']['hits'] / max(cache_obj['l1']['accesses'], 1.0)
             parsed['l1_cache_misses'] = cache_obj['l1']['misses']
+            parsed['l2_hits'] = cache_obj['l2']['hits'] / max(cache_obj['l2']['accesses'], 1.0)
             parsed['llc_misses'] = cache_obj['l3']['misses']
             parsed['llc_accesses'] = cache_obj['l3']['accesses']
 
@@ -74,6 +78,7 @@ class IDXDataObject:
         if 'lsm' in data_obj:
             if data_obj['lsm']['nr'] > 0:
                 parsed['indexing'] = data_obj['lsm']['tsc']
+                parsed['nops'] = data_obj['lsm']['nr']
                 parsed['read_data'] = data_obj['l0']['tsc'] + data_obj['read_data']['tsc']
             else:
                 parsed['indexing'] = data_obj['kernfs']['path_search']
@@ -142,20 +147,44 @@ class IDXDataObject:
         ntrials = len(data)
         df_ci = ((1.96 * dfg.std(ddof=0)) / np.sqrt(ntrials))
 
-        embed()
+        pprint(df_ci)
+        pprint(df_mean)
+        pprint(df_ci / df_mean)
         
         df_mean = df_mean[df_mean.indexing != 0]
         df_mean = df_mean[df_mean.indexing.notna()]
 
+        df_ci = df_ci[df_ci.indexing != 0]
+        df_ci = df_ci[df_ci.indexing.notna()]
+
+        ci_columns = { c: f'{c}_ci' for c in df_ci.columns }
+
+        df_ci = df_ci.rename(columns=ci_columns)
+
         # df_mean['indexing'] /= df_mean['indexing'].min()
         # df_mean['read_data'] /= df_mean['read_data'].min()
         # df_mean['total_breakdown'] /= df_mean['total_breakdown'].min()
+
+        df_mean['read_data_raw'] = df_mean['read_data']
+        df_ci['read_data_raw_ci'] = df_ci['read_data_ci']
+
+        df_mean['indexing_per_op'] = df_mean['indexing'] / df_mean['nops']
+        df_ci['indexing_per_op_ci'] = df_ci['indexing_ci'] / df_mean['nops']
+
+        df_mean['indexing_raw'] = df_mean['indexing'] / df_mean['indexing'].min()
+        df_ci['indexing_raw_ci'] = df_ci['indexing_ci'] / df_mean['indexing'].min()
+
         df_mean['indexing'] /= df_mean['total_breakdown']
         df_mean['read_data'] /= df_mean['total_breakdown']
+        df_ci['indexing_ci'] /= df_mean['total_breakdown']
+        df_ci['read_data_ci'] /= df_mean['total_breakdown']
+
+        df_ci['total_breakdown_ci'] /= df_mean['total_breakdown']
         df_mean['total_breakdown'] /= df_mean['total_breakdown']
         
         self.df = df_list[0].reindex(df_mean.index) # to preserve string fields
         self.df[df_mean.columns] = df_mean
+        self.df = pd.concat([self.df, df_ci], axis=1)
 
 
     def _load_results_file(self, file_path):

@@ -204,7 +204,16 @@ void show_kernfs_stats(void)
     }
     add_cache_stats_to_json(root, "idx_cache", &(g_perf_stats.cache_stats)); 
 
+    if (USE_IDXAPI()) {
+        json_object *indexing = json_object_new_object();
+        add_idx_stats_to_json(enable_perf_stats, indexing);
+        json_object_object_add(root, "idx_stats", indexing);
+    }
+
 	json_object_array_add(kernfs_stats_json, root);
+
+    // Convert JSON to a string
+	const char *js_str = json_object_get_string(root);
 
     // Convert JSON to a string
 	const char *js_str = json_object_get_string(kernfs_stats_json);
@@ -215,7 +224,6 @@ void show_kernfs_stats(void)
 		write(prof_fd, js_str, strlen(js_str));
 	}
 
-    // TODO: not sure what this does.
 	json_object_put(root);
 
 	//float clock_speed_mhz = get_cpu_clock_speed();

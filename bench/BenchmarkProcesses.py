@@ -56,7 +56,7 @@ class KernFSThread:
         proc = subprocess.run(mkfs_args, cwd=self.kernfs_path, check=True, env=self.env)#,
                               # stdout=DEVNULL, stderr=DEVNULL)
        
-        kernfs_arg_str = '{0}/run.sh numactl -N {1} -m {1} {0}/kernfs'.format(
+        kernfs_arg_str = '{0}/run.sh taskset -c 0 numactl -N {1} -m {1} {0}/kernfs'.format(
                                   str(self.kernfs_path), '0')
         kernfs_args = shlex.split(kernfs_arg_str)
 
@@ -134,6 +134,8 @@ class BenchRunner:
 =======
     IDX_STRUCTS   = [ 'EXTENT_TREES', 'EXTENT_TREES_TOP_CACHED', 
                       'GLOBAL_HASH_TABLE', 'GLOBAL_CUCKOO_HASH',
+                      'GLOBAL_HASH_TABLE_COMPACT',
+                      'GLOBAL_CUCKOO_HASH_COMPACT',
                       'LEVEL_HASH_TABLES', 'RADIX_TREES', 'NONE' ]
     IDX_DEFAULT   = IDX_STRUCTS
 >>>>>>> Update automate script to match new MTCC better and better isolate perf

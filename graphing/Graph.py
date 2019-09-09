@@ -159,19 +159,23 @@ class Grapher:
 
     def graph_single_stat(self, means_df, ci_df, axis, **kwargs):
         all_means = self._rename_configs(self._reorder_configs(means_df))
-        all_error = self._rename_configs(self._reorder_configs(ci_df)) if ci_df else None
+        all_error = self._rename_configs(self._reorder_configs(ci_df)) if ci_df is not None else None
         all_perct = None
         labels = all_means.index.tolist()
 
         if self._kwargs_bool(kwargs, 'error_bars'):
-            threshold = 0.05
-            print('Setting error bar minimum to +/- {} for visibility'.format(threshold))
+            cutoff = self._kwargs_default(kwargs, 'cutoff', all_means.max().max())
+            threshold = 0.01 * cutoff
             #print(all_error)
-            all_error = all_error.clip(lower=threshold)
+            all_error_clipped = all_error.clip(lower=threshold)
+            are_equal = (all_error_clipped == all_error).all().all()
+            if not are_equal:
+                print('Setting error bar minimum to +/- {} for visibility'.format(threshold))
+                all_error = all_error_clipped
             if 'Average' in all_error.index:
                 all_error.loc['Average'][:] = 0.0
             #print(all_error)
-        elif all_error:
+        elif all_error is not None:
             all_error[:] = 0
         else:
             all_error = all_means.copy()
