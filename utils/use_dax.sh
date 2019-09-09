@@ -8,7 +8,7 @@ fi
 if [[ $1 == "bind" ]];
 then
 	sudo ndctl create-namespace -m dax -e namespace0.0 -f
-	sudo ndctl create-namespace -m dax -e namespace1.0 -f
+	sudo ndctl create-namespace -m dax -e namespace0.1 -f
 	#sudo ndctl create-namespace -m dax -e namespace2.0 -f
 
 	sudo chmod 777 /dev/dax0.0 /dev/dax1.0 

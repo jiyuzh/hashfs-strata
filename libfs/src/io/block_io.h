@@ -89,12 +89,16 @@ int mlfs_readahead(uint8_t dev, addr_t blockno, uint32_t io_size);
 
 int submit_bh(int is_write, struct buffer_head *bh);
 int write_dirty_buffer(struct buffer_head *bh);
+int sync_dirty_buffer(struct buffer_head *bh);
 int bh_submit_read(struct buffer_head *bh);
 void brelse(struct buffer_head *bh);
 void wait_on_buffer(struct buffer_head *bh, int isread);
 void sync_all_buffers(struct block_device *bdev);
 void sync_writeback_buffers(struct block_device *bdev);
+void move_buffer_to_writeback(struct buffer_head *bh);
 void remove_buffer_from_writeback(struct buffer_head *bh);
+
+void ensure_block_is_clear(struct block_device *bdev, mlfs_fsblk_t blk);
 
 extern pthread_rwlock_t *bcache_rwlock;
 
@@ -106,7 +110,7 @@ static inline struct buffer_head *bh_find(block_key_t key)
 	pthread_rwlock_rdlock(bcache_rwlock);
 
 	HASH_FIND(hash_handle, bh_hash[0], &key, sizeof(block_key_t), bh);
-	
+
 	pthread_rwlock_unlock(bcache_rwlock);
 
 	return bh;

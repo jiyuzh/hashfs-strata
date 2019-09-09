@@ -86,7 +86,7 @@ int get_arg_class(const char *name)
 	else
 		return FD;
 }
-		
+
 void do_trace(const char *name, int ret, int args, ...)
 {
 	va_list valist;
@@ -106,11 +106,11 @@ void do_trace(const char *name, int ret, int args, ...)
 
 	switch(arg_type) {
 		case PATH:
-			fprintf(stderr, "\nTRACE %s (path: %s) = %d (%s)\n", name, 
+			fprintf(stderr, "\nTRACE %s (path: %s) = %d (%s)\n", name,
 					va_arg(valist, char *), ret, strerror(-ret));
 			break;
 		case FD:
-			fprintf(stderr, "\nTRACE %s (fd: %d) = %d (%s)\n", name, 
+			fprintf(stderr, "\nTRACE %s (fd: %d) = %d (%s)\n", name,
 					va_arg(valist, int), ret, strerror(-ret));
 			break;
 		case NONE:

@@ -1,6 +1,7 @@
 #ifndef _FS_H_
 #define _FS_H_
 
+
 #include "global/global.h"
 #include "global/types.h"
 #include "global/defs.h"
@@ -14,15 +15,32 @@
 #include "ds/uthash.h"
 #include "ds/khash.h"
 
+#include "filesystem/cache_stats.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
+#include <sys/mman.h>
+
+// iangneal: for API init
+extern mem_man_fns_t strata_mem_man;
+extern callback_fns_t strata_callbacks;
+extern idx_spec_t strata_idx_spec;
+
+// global variables
+extern uint8_t fs_dev_id;
+extern struct disk_superblock *disk_sb;
+extern struct super_block *sb[g_n_devices + 1];
+
 
 // libmlfs Disk layout:
 // [ boot block | sb block | inode blocks | free bitmap | data blocks | log blocks ]
 // [ inode block | free bitmap | data blocks | log blocks ] is a block group.
 // If data blocks is full, then file system will allocate a new block group.
 // Block group expension is not implemented yet.
+#ifndef MAX_GET_BLOCKS_RETURN
+#define MAX_GET_BLOCKS_RETURN 8
+#endif
 
 // directory entry cache
 struct dirent_data {
@@ -34,7 +52,7 @@ struct dirent_data {
 
 /* A bug note. UThash has a weird bug that
  * if offset is uint64_t type, it cannot find data
- * It is OK to use 32 bit because the offset does not 
+ * It is OK to use 32 bit because the offset does not
  * overflow 32 bit */
 typedef struct dcache_key {
 	uint32_t inum;
@@ -43,7 +61,7 @@ typedef struct dcache_key {
 
 // dirent array block (4KB) cache
 struct dirent_block {
-	dcache_key_t key; 
+	dcache_key_t key;
 	mlfs_hash_t hash_handle;
 	uint8_t dirent_array[g_block_size_bytes];
 	addr_t log_addr;
@@ -61,6 +79,13 @@ struct fcache_block {
 	addr_t log_addr;		// block # of update log
 	uint8_t invalidate;
 	uint32_t log_version;
+	/* track what in-block offset the cached data for this block in the log
+	 * starts from, non-zero offset happens when previous zero-start log
+	 * expired while new write (append actually) to this block doesn't start
+	 * from zero. The correct data from 0 locates on NVM shared area
+	 * this offset should be 0 ~ g_block_size_bytes
+	 */
+	uint16_t start_offset;
 	uint8_t is_data_cached;
 	uint8_t *data;
 	struct list_head l;	// entry for global list
@@ -79,10 +104,20 @@ struct dlookup_data {
 	struct inode *inode;
 };
 
+typedef struct bmap_request_arr {
+	// input
+	offset_t start_offset; //offset from file start in bytes
+	uint32_t blk_count; //num_blocks
+	// output
+	addr_t block_no[MAX_GET_BLOCKS_RETURN];
+	uint32_t blk_count_found;
+	uint8_t dev;
+} bmap_req_arr_t;
+
 typedef struct bmap_request {
-	// input 
-	offset_t start_offset;
-	uint32_t blk_count;
+	// input
+	offset_t start_offset; //offset from file start in bytes
+	uint32_t blk_count; //num_blocks
 	// output
 	addr_t block_no;
 	uint32_t blk_count_found;
@@ -92,27 +127,76 @@ typedef struct bmap_request {
 // statistics
 typedef struct mlfs_libfs_stats {
 	uint64_t digest_wait_tsc;
-	uint32_t digest_wait_nr;
+	uint64_t digest_wait_nr;
+
 	uint64_t l0_search_tsc;
-	uint32_t l0_search_nr;
+	uint64_t l0_search_nr;
+        uint64_t fcache_lock_tsc;
+        uint64_t fcache_lock_nr;
+        uint64_t fcache_get_tsc;
+        uint64_t fcache_get_nr;
+        uint64_t fcache_val_tsc;
+        uint64_t fcache_val_nr;
+        uint64_t fcache_init_tsc;
+        uint64_t fcache_init_nr;
+        uint64_t fcache_all_tsc;
+        uint64_t fcache_all_nr;
+
 	uint64_t tree_search_tsc;
-	uint32_t tree_search_nr;
+	uint64_t tree_search_nr;
 	uint64_t log_write_tsc;
+	uint64_t log_write_nr;
+	uint64_t log_write_inode_tsc;
+	uint64_t log_write_inode_nr;
+	uint64_t log_write_data_tsc;
+	uint64_t log_write_data_nr;
+	uint64_t log_write_data_aligned_tsc;
+	uint64_t log_write_data_aligned_nr;
+	uint64_t log_aligned_wronly_tsc;
+	uint64_t log_aligned_wronly_nr;
+	uint64_t log_aligned_bh_tsc;
+	uint64_t log_aligned_bh_nr;
+	uint64_t log_hash_fc_add_tsc;
+	uint64_t log_hash_fc_add_nr;
+        uint64_t fc_add_zalloc_tsc;
+        uint64_t fc_add_zalloc_nr;
+	uint64_t log_write_data_unaligned_tsc;
+	uint64_t log_write_data_unaligned_nr;
+	uint64_t log_alloc_tsc;
+	uint64_t log_alloc_nr;
+	uint64_t loghdr_write_nr;
 	uint64_t loghdr_write_tsc;
-	uint32_t log_write_nr;
+    uint64_t log_hash_update_nr;
+    uint64_t log_hash_update_tsc;
 	uint64_t log_commit_tsc;
-	uint32_t log_commit_nr;
+	uint64_t log_commit_nr;
 	uint64_t read_data_tsc;
-	uint32_t read_data_nr;
+	stats_dist_t read_data_bytes;
 	uint64_t dir_search_tsc;
-	uint32_t dir_search_nr_hit;
-	uint32_t dir_search_nr_miss;
-	uint32_t dir_search_nr_notfound;
+	uint64_t dir_search_nr_hit;
+	uint64_t dir_search_nr_miss;
+	uint64_t dir_search_nr_notfound;
 	uint64_t ialloc_tsc;
-	uint32_t ialloc_nr;
+	uint64_t ialloc_nr;
+	uint64_t tmp_nr;
 	uint64_t tmp_tsc;
 	uint64_t bcache_search_tsc;
-	uint32_t bcache_search_nr;
+	uint64_t bcache_search_nr;
+	uint64_t dir_search_ext_nr;
+	uint64_t dir_search_ext_tsc;
+	uint64_t path_storage_nr;
+	uint64_t path_storage_tsc;
+	stats_dist_t read_per_index;
+    // hash table stuff
+    uint64_t n_entries_read;
+    uint64_t n_lookups;
+    uint64_t hash_fn_tsc;
+    uint64_t hash_fn_nr;
+    uint64_t hash_loop_tsc;
+    uint64_t hash_loop_nr;
+    uint64_t hash_iter_nr;
+    // Indexing cache rates
+    cache_stats_t cache_stats;
 } libfs_stat_t;
 
 extern struct lru g_fcache_head;
@@ -146,6 +230,72 @@ static inline struct inode *icache_find(uint8_t dev, uint32_t inum)
 	return inode;
 }
 
+// Inodes per block.
+#define IPB           (g_block_size_bytes / sizeof(struct dinode))
+
+// Block containing inode i
+/*
+#define IBLOCK(i, disk_sb)  ((i/IPB) + disk_sb.inode_start)
+*/
+static inline addr_t get_inode_block(uint8_t dev, uint32_t inum)
+{
+	return (inum / IPB) + disk_sb[dev].inode_start;
+}
+
+static inline void init_api_idx_struct(uint8_t dev, struct inode *inode) {
+    // iangneal: indexing API init.
+    if (IDXAPI_IS_PER_FILE() && inode->itype == T_FILE) {
+        static bool notify = false;
+
+        if (!notify) {
+            printf("Init API extent trees!!!\n");
+            notify = true;
+        }
+
+        paddr_range_t direct_extents = {
+            .pr_start      = get_inode_block(dev, inode->inum),
+            .pr_blk_offset = (sizeof(struct dinode) * (inode->inum % IPB)) + 64,
+            .pr_nbytes     = 64
+        };
+
+        idx_struct_t *tmp = (idx_struct_t*)mlfs_zalloc(sizeof(*inode->ext_idx));
+        int init_err;
+
+        switch(g_idx_choice) {
+            case EXTENT_TREES:
+                init_err = extent_tree_fns.im_init_prealloc(&strata_idx_spec,
+                                                            &direct_extents,
+                                                            tmp);
+                break;
+            case LEVEL_HASH_TABLES:
+                init_err = levelhash_fns.im_init_prealloc(&strata_idx_spec,
+                                                          &direct_extents,
+                                                          tmp);
+                break;
+            case RADIX_TREES:
+                init_err = radixtree_fns.im_init_prealloc(&strata_idx_spec,
+                                                          &direct_extents,
+                                                          tmp);
+                break;
+            default:
+                panic("Invalid choice!!!\n");
+        }
+
+        FN(tmp, im_set_caching, tmp, g_idx_cached);
+
+        if (init_err) {
+            fprintf(stderr, "Error in extent tree API init: %d\n", init_err);
+            panic("Could not initialize API per-inode structure!\n");
+        }
+
+        if (tmp->idx_fns->im_set_stats) {
+            FN(tmp, im_set_stats, tmp, enable_perf_stats);
+        }
+
+        inode->ext_idx = tmp;
+    }
+}
+
 static inline struct inode *icache_alloc_add(uint8_t dev, uint32_t inum)
 {
 	struct inode *inode;
@@ -177,7 +327,7 @@ static inline struct inode *icache_alloc_add(uint8_t dev, uint32_t inum)
 #endif
 
 	INIT_LIST_HEAD(&inode->i_slru_head);
-	
+
 	pthread_spin_init(&inode->de_cache_spinlock, PTHREAD_PROCESS_SHARED);
 	inode->de_cache = NULL;
 #endif
@@ -185,7 +335,7 @@ static inline struct inode *icache_alloc_add(uint8_t dev, uint32_t inum)
 	//pthread_rwlock_wrlock(icache_rwlock);
 
 	HASH_ADD(hash_handle, inode_hash[dev], inum,
-	 		sizeof(uint32_t), inode);
+			sizeof(uint32_t), inode);
 
 	//pthread_rwlock_unlock(icache_rwlock);
 
@@ -195,9 +345,9 @@ static inline struct inode *icache_alloc_add(uint8_t dev, uint32_t inum)
 static inline struct inode *icache_add(struct inode *inode)
 {
 	uint32_t inum = inode->inum;
+	// here seem suspicious, ialloc also initializes this rwlock
+	pthread_rwlock_init(&inode->i_rwlock, NULL);
 
-	pthread_mutex_init(&inode->i_mutex, NULL);
-	
 	pthread_rwlock_wrlock(icache_rwlock);
 
 	HASH_ADD(hash_handle, inode_hash[inode->dev], inum,
@@ -220,47 +370,165 @@ static inline int icache_del(struct inode *ip)
 }
 
 #ifdef KLIB_HASH
-static inline struct fcache_block *fcache_find(struct inode *inode, offset_t key)
+static struct fcache_block *fcache_find(struct inode *inode, offset_t key)
 {
+#define fcache_stats
 	khiter_t k;
 	struct fcache_block *fc_block = NULL;
+    uint64_t start_tsc, total_tsc;
+   
+#ifdef fcache_stats
+    if (enable_perf_stats)
+        total_tsc = asm_rdtscp();
+#endif
 
-	pthread_rwlock_rdlock(&inode->fcache_rwlock);
+	if (inode->fcache_hash == NULL) {
+#ifdef fcache_stats
+        if (enable_perf_stats)
+            start_tsc = asm_rdtscp();
+#endif
+
+		pthread_rwlock_wrlock(&inode->fcache_rwlock);
+		inode->fcache_hash = kh_init(fcache);
+		pthread_rwlock_unlock(&inode->fcache_rwlock);
+
+#ifdef fcache_stats
+        if (enable_perf_stats) {
+            g_perf_stats.fcache_init_tsc += (asm_rdtscp() - start_tsc);
+            g_perf_stats.fcache_init_nr++;
+        }
+#endif
+	}
+
+#ifdef fcache_stats
+    if (enable_perf_stats)
+        start_tsc = asm_rdtscp();
+#endif
+
+	//pthread_rwlock_rdlock(&inode->fcache_rwlock);
+    
+#ifdef fcache_stats
+    if (enable_perf_stats) {
+        g_perf_stats.fcache_lock_tsc += (asm_rdtscp() - start_tsc);
+    }
+
+    if (enable_perf_stats)
+        start_tsc = asm_rdtscp();
+#endif
 
 	k = kh_get(fcache, inode->fcache_hash, key);
+
+#ifdef fcache_stats
+    if (enable_perf_stats) {
+        g_perf_stats.fcache_get_tsc += (asm_rdtscp() - start_tsc);
+        g_perf_stats.fcache_get_nr++;
+    }
+#endif
+
 	if (k == kh_end(inode->fcache_hash)) {
-		pthread_rwlock_unlock(&inode->fcache_rwlock);
+#ifdef fcache_stats
+        if (enable_perf_stats)
+            start_tsc = asm_rdtscp();
+#endif
+	
+        //pthread_rwlock_unlock(&inode->fcache_rwlock);
+        
+#ifdef fcache_stats
+        if (enable_perf_stats) {
+            g_perf_stats.fcache_lock_tsc += (asm_rdtscp() - start_tsc);
+            g_perf_stats.fcache_lock_nr++;
+
+            g_perf_stats.fcache_all_tsc += (asm_rdtscp() - total_tsc);
+            g_perf_stats.fcache_all_nr++;
+        }
+#endif
 		return NULL;
 	}
 
-	fc_block = kh_value(inode->fcache_hash, k);
+#ifdef fcache_stats
+    if (enable_perf_stats)
+        start_tsc = asm_rdtscp();
+#endif
+	
+    fc_block = kh_value(inode->fcache_hash, k);
+    
+#ifdef fcache_stats
+    if (enable_perf_stats) {
+        g_perf_stats.fcache_val_tsc += (asm_rdtscp() - start_tsc);
+        g_perf_stats.fcache_val_nr++;
+    }
 
-	pthread_rwlock_unlock(&inode->fcache_rwlock);
+    if (enable_perf_stats)
+        start_tsc = asm_rdtscp();
+#endif
+	
+    pthread_rwlock_unlock(&inode->fcache_rwlock);
+    
+#ifdef fcache_stats
+    if (enable_perf_stats) {
+        g_perf_stats.fcache_lock_tsc += (asm_rdtscp() - start_tsc);
+        g_perf_stats.fcache_lock_nr++;
+
+        g_perf_stats.fcache_all_tsc += (asm_rdtscp() - total_tsc);
+        g_perf_stats.fcache_all_nr++;
+    }
+#endif
 
 	return fc_block;
 }
 
-static inline struct fcache_block *fcache_alloc_add(struct inode *inode, 
-		offset_t key, addr_t log_addr)
+// if cache data (instead of log), log_addr and start_offset aren't used
+static inline struct fcache_block *fcache_alloc_add(struct inode *inode,
+		offset_t key, addr_t log_addr, uint16_t start_offset)
 {
 	struct fcache_block *fc_block;
 	khiter_t k;
 	int ret;
+    uint64_t start_tsc;
 
+    if (enable_perf_stats)
+        start_tsc = asm_rdtscp();
+
+#define USE_FCACHE_POOL
+//#undef USE_FCACHE_POOL
+#ifdef USE_FCACHE_POOL
+    if (!inode->fcache_block_pool) {
+        inode->fcache_block_pool = (struct fcache_block*) mmap(NULL, 1024 * 1024 * 1024, 
+                PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, 0, 0);
+        if (inode->fcache_block_pool == (void*)-1) {
+            perror("pool");
+            panic("no mmap!");
+        }
+    }
+    fc_block = inode->fcache_block_pool + inode->pool_pointer;
+    inode->pool_pointer++;
+#else
 	fc_block = (struct fcache_block *)mlfs_zalloc(sizeof(*fc_block));
+#endif
 	if (!fc_block)
 		panic("Fail to allocate fcache block\n");
-
+    if (enable_perf_stats) {
+        g_perf_stats.fc_add_zalloc_tsc += (asm_rdtscp() - start_tsc);
+        g_perf_stats.fc_add_zalloc_nr++;
+    }
+    
+    //start_cache_stats();
 	fc_block->key = key;
 	fc_block->log_addr = log_addr;
 	fc_block->invalidate = 0;
 	fc_block->is_data_cached = 0;
 	fc_block->inum = inode->inum;
+    fc_block->start_offset = start_offset;
 	inode->n_fcache_entries++;
 	INIT_LIST_HEAD(&fc_block->l);
+    //end_cache_stats(&(g_perf_stats.cache_stats));
 
-	pthread_rwlock_wrlock(&inode->fcache_rwlock);
-	
+	//pthread_rwlock_wrlock(&inode->fcache_rwlock);
+
+	if (inode->fcache_hash == NULL) {
+		inode->fcache_hash = kh_init(fcache);
+	}
+
 	k = kh_put(fcache, inode->fcache_hash, key, &ret);
 	if (ret < 0)
 		panic("fail to insert fcache value");
@@ -274,22 +542,30 @@ static inline struct fcache_block *fcache_alloc_add(struct inode *inode,
 	kh_value(inode->fcache_hash, k) = fc_block;
 	//mlfs_info("add key %u @ inode %u\n", key, inode->inum);
 
-	pthread_rwlock_unlock(&inode->fcache_rwlock);
+	//pthread_rwlock_unlock(&inode->fcache_rwlock);
 
 	return fc_block;
 }
 
-static inline int fcache_del(struct inode *inode, 
-		struct fcache_block *fc_block)
+/*!
+ * try to delete key from inode's fcache hashtable
+ * @param[in] inode the file
+ * @param[in] key offset at block size granularity
+ * @return 0: already deleted 1: deleted successfully
+ */
+static inline int fcache_del(struct inode *inode,
+        offset_t key)
 {
-	khiter_t k;
+	khint_t k;
+    int ret = 0;
 	pthread_rwlock_wrlock(&inode->fcache_rwlock);
 
-	k = kh_get(fcache, inode->fcache_hash, fc_block->key);
+	k = kh_get(fcache, inode->fcache_hash, key);
 
-	if (kh_exist(inode->fcache_hash, k)) {
+	if (k != kh_end(inode->fcache_hash)) {
 		kh_del(fcache, inode->fcache_hash, k);
 		inode->n_fcache_entries--;
+        ret = 1;
 	}
 
 	/*
@@ -302,29 +578,36 @@ static inline int fcache_del(struct inode *inode,
 
 	pthread_rwlock_unlock(&inode->fcache_rwlock);
 
-	return 0;
+	return ret;
 }
 
 static inline int fcache_del_all(struct inode *inode)
 {
 	khiter_t k;
 	struct fcache_block *fc_block;
+	pthread_rwlock_wrlock(&inode->fcache_rwlock);
 
-	for (k = kh_begin(inode->fcache_hash); 
+	for (k = kh_begin(inode->fcache_hash);
 			k != kh_end(inode->fcache_hash); k++) {
 		if (kh_exist(inode->fcache_hash, k)) {
 			fc_block = kh_value(inode->fcache_hash, k);
 
-			if (fc_block->is_data_cached) {
+			if (fc_block && fc_block->is_data_cached) {
 				list_del(&fc_block->l);
 				mlfs_free(fc_block->data);
+			} else if (fc_block) {
+				mlfs_free(fc_block);
 			}
-			//mlfs_free(fc_block);
+#ifndef USE_FCACHE_POOL
+			mlfs_free(fc_block);
+#endif
 		}
 	}
 
 	mlfs_debug("destroy hash %u\n", inode->inum);
 	kh_destroy(fcache, inode->fcache_hash);
+	inode->fcache_hash = NULL;
+	pthread_rwlock_unlock(&inode->fcache_rwlock);
 	return 0;
 }
 // UTHash version
@@ -337,17 +620,16 @@ static inline struct fcache_block *fcache_find(struct inode *inode, offset_t key
 
 	HASH_FIND(hash_handle, inode->fcache, &key,
         		sizeof(offset_t), fc_block);
-	
+
 	pthread_rwlock_unlock(&inode->fcache_rwlock);
 
 	return fc_block;
 }
 
-static inline struct fcache_block *fcache_alloc_add(struct inode *inode, 
+static inline struct fcache_block *fcache_alloc_add(struct inode *inode,
 		offset_t key, addr_t log_addr)
 {
 	struct fcache_block *fc_block;
-
 	fc_block = (struct fcache_block *)mlfs_zalloc(sizeof(*fc_block));
 	if (!fc_block)
 		panic("Fail to allocate fcache block\n");
@@ -357,20 +639,20 @@ static inline struct fcache_block *fcache_alloc_add(struct inode *inode,
 	fc_block->log_addr = log_addr;
 	fc_block->invalidate = 0;
 	fc_block->is_data_cached = 0;
-	inode->n_fcache_entries++;
 	INIT_LIST_HEAD(&fc_block->l);
 
 	pthread_rwlock_wrlock(&inode->fcache_rwlock);
 
 	HASH_ADD(hash_handle, inode->fcache, key,
 	 		sizeof(offset_t), fc_block);
+	inode->n_fcache_entries++;
 
 	pthread_rwlock_unlock(&inode->fcache_rwlock);
 
 	return fc_block;
 }
 
-static inline int fcache_del(struct inode *inode, 
+static inline int fcache_del(struct inode *inode,
 		struct fcache_block *fc_block)
 {
 	pthread_rwlock_wrlock(&inode->fcache_rwlock);
@@ -407,7 +689,7 @@ static inline int fcache_del_all(struct inode *inode)
 }
 #endif
 
-static inline struct inode *de_cache_find(struct inode *dir_inode, 
+static inline struct inode *de_cache_find(struct inode *dir_inode,
 		const char *_name, offset_t *offset)
 {
 	struct dirent_data *dirent_data;
@@ -423,7 +705,7 @@ static inline struct inode *de_cache_find(struct inode *dir_inode,
 	}
 }
 
-static inline struct inode *de_cache_alloc_add(struct inode *dir_inode, 
+static inline struct inode *de_cache_alloc_add(struct inode *dir_inode,
 		const char *name, struct inode *inode, offset_t _offset)
 {
 	struct dirent_data *_dirent_data;
@@ -479,7 +761,7 @@ static inline struct inode *dlookup_find(uint8_t dev, const char *path)
 		return _dlookup_data->inode;
 }
 
-static inline struct inode *dlookup_alloc_add(uint8_t dev, 
+static inline struct inode *dlookup_alloc_add(uint8_t dev,
 		struct inode *inode, const char *_path)
 {
 	struct dlookup_data *_dlookup_data;
@@ -516,11 +798,6 @@ static inline int dlookup_del(uint8_t dev, const char *path)
 	return 0;
 }
 
-// global variables
-extern uint8_t fs_dev_id;
-extern struct disk_superblock *disk_sb;
-extern struct super_block *sb[g_n_devices + 1];
-
 //forward declaration
 struct fs_stat;
 
@@ -536,27 +813,26 @@ struct inode* ialloc(uint8_t dev, uint32_t inum, struct dinode *dip);
 int idealloc(struct inode *inode);
 struct inode* idup(struct inode*);
 struct inode* iget(uint8_t dev, uint32_t inum);
-void ilock(struct inode*);
 void iput(struct inode*);
-void iunlock(struct inode*);
 void iunlockput(struct inode*);
 void iupdate(struct inode*);
 int itrunc(struct inode *inode, offset_t length);
 int bmap(struct inode *ip, struct bmap_request *bmap_req);
+int bmap_hashfs(struct inode *ip, struct bmap_request_arr *bmap_req_arr);
 
 int dir_check_entry_fast(struct inode *dir_inode);
 struct inode* dir_lookup(struct inode*, char*, offset_t *);
-int dir_get_entry(struct inode *dir_inode, struct linux_dirent *buf, offset_t off);
+int dir_get_linux_dirent(struct inode *dir_inode, struct linux_dirent *buf, offset_t *p_off, size_t nbytes);
 int dir_add_entry(struct inode *inode, char *name, uint32_t inum);
 int dir_remove_entry(struct inode *inode,char *name, uint32_t inum);
 int dir_change_entry(struct inode *dir_inode, char *oldname, char *newname);
 int namecmp(const char*, const char*);
-struct inode* namei(char*);
-struct inode* nameiparent(char*, char*);
-int readi_unopt(struct inode*, uint8_t *, offset_t, uint32_t);
-int readi(struct inode*, uint8_t *, offset_t, uint32_t);
+struct inode* namei(const char*);
+struct inode* nameiparent(const char*, char*);
+ssize_t readi_unopt(struct inode*, uint8_t *dst, offset_t off, size_t io_size);
+ssize_t readi(struct inode*, uint8_t *dst, offset_t off, size_t io_size);
 void stati(struct inode*, struct stat *);
-int add_to_log(struct inode*, uint8_t*, offset_t, uint32_t);
+size_t add_to_log(struct inode*, uint8_t*, offset_t, size_t);
 int check_log_invalidation(struct fcache_block *_fcache_block);
 uint8_t *get_dirent_block(struct inode *dir_inode, offset_t offset);
 void show_libfs_stats(const char *title);
@@ -568,7 +844,7 @@ void dbg_dump_inode(uint8_t dev, uint32_t inum);
 void dbg_check_inode(void *data);
 void dbg_check_dir(void *data);
 void dbg_dir_dump(uint8_t dev, uint32_t inum);
-void dbg_path_walk(char *path);
+void dbg_path_walk(const char *path);
 
 // mempool slab for libfs
 extern ncx_slab_pool_t *mlfs_slab_pool;
@@ -576,21 +852,29 @@ extern ncx_slab_pool_t *mlfs_slab_pool;
 extern ncx_slab_pool_t *mlfs_slab_pool_shared;
 extern uint8_t shm_slab_index;
 
-extern pthread_rwlock_t *shm_slab_rwlock; 
-extern pthread_rwlock_t *shm_lru_rwlock; 
+extern pthread_rwlock_t *shm_slab_rwlock;
+extern pthread_rwlock_t *shm_lru_rwlock;
 
 extern uint64_t *bandwidth_consumption;
 
-// Inodes per block.
-#define IPB           (g_block_size_bytes / sizeof(struct dinode))
 
-// Block containing inode i
-/*
-#define IBLOCK(i, disk_sb)  ((i/IPB) + disk_sb.inode_start)
-*/
-static inline addr_t get_inode_block(uint8_t dev, uint32_t inum)
+static inline void irdlock(struct inode *ip)
 {
-	return (inum / IPB) + disk_sb[dev].inode_start;
+	pthread_rwlock_rdlock(&ip->i_rwlock);
+	// It seems that no one is using I_BUSY. comment it out
+	// ip->flags |= I_BUSY;
+}
+
+static inline void iwrlock(struct inode *ip)
+{
+	pthread_rwlock_wrlock(&ip->i_rwlock);
+}
+
+static inline void iunlock(struct inode *ip)
+{
+	pthread_rwlock_unlock(&ip->i_rwlock);
+	// It seems that no one is using I_BUSY. comment it out
+	// ip->flags &= ~I_BUSY;
 }
 
 // Bitmap bits per block

@@ -1,6 +1,8 @@
 #ifndef _UTIL_H_
 #define _UTIL_H_
 
+#include <stdint.h>
+
 #include "global/global.h"
 
 #define ARRAY_SIZE(x) (sizeof(x)/sizeof(x[0]))
@@ -121,9 +123,9 @@ static inline int collapse_name(const char *input, char *_output)
 //   get_next_name("a", name) = "", setting name = "a"
 //   get_next_name("", name) = get_next_name("////", name) = 0
 //
-static inline char* get_next_name(char *path, char *name)
+static inline const char* get_next_name(const char *path, char *name)
 {
-	char *s;
+	const char *s;
 	int len;
 
 	while (*path == '/')
@@ -146,10 +148,10 @@ static inline char* get_next_name(char *path, char *name)
 }
 
 /* /mlfs/aa/bb/c -> /mlfs/aa/bb (parent path) and c (name) */
-static inline char* get_parent_path(char *path, char *parent_path, char *name)
+static inline char* get_parent_path(const char *path, char *parent_path, char *name)
 {
 	int len = strlen(path);
-	char *_path = path;
+	const char *_path = path;
 
 	path += (len - 1);
 
@@ -183,5 +185,33 @@ static inline char* get_parent_path(char *path, char *parent_path, char *name)
 
 	return parent_path;
 }
+#define tri_ratio(tsc,nr) tsc, nr, (double)tsc/nr
+#define js_add_int64(obj, name, val) json_object_object_add(obj, name, json_object_new_int64(val));
+#define js_add_double(obj, name, val) json_object_object_add(obj, name, json_object_new_double(val));
+// statistics utils
+typedef struct {
+    uint64_t cnt;
+    uint64_t total;
+    uint64_t min;
+    uint64_t max;
+} stats_dist_t;
+static inline void reset_stats_dist(stats_dist_t *s) {
+    s->cnt = 0;
+    s->total = 0;
+    s->min = UINT64_MAX;
+    s->max = 0;
+}
+static inline void update_stats_dist(stats_dist_t *s, uint64_t newval) {
+    s->cnt++;
+    s->total += newval;
+    if (newval < s->min)
+        s->min = newval;
+    if (newval > s->max)
+        s->max = newval;
+}
+static inline void print_stats_dist(stats_dist_t *s, const char *name) {
+    printf("%s  : avg %.2f total %lu cnt %lu min %lu max %lu\n", name, (double)s->total/s->cnt, s->total, s->cnt, s->min, s->max);
+}
 
+void flush_llc(void);
 #endif

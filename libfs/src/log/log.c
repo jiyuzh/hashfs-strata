@@ -1,6 +1,8 @@
 #include <sys/epoll.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <fcntl.h>
+#include <sys/stat.h>
 
 #include "mlfs/mlfs_user.h"
 #include "log/log.h"
@@ -12,6 +14,9 @@
 #include "global/util.h"
 #include "mlfs/mlfs_interface.h"
 #include "storage/storage.h"
+
+#include "filesystem/inode_hash.h"
+#include "filesystem/cache_stats.h"
 
 /**
  A system call should call start_log_tx()/commit_log_tx() to mark
@@ -39,19 +44,20 @@
  serializes writing multiple log groups to log area.
  */
 
-struct fs_log *g_fs_log;
-struct log_superblock *g_log_sb;
+volatile struct fs_log *g_fs_log;
+volatile struct log_superblock *g_log_sb;
 
 // for communication with kernel fs.
 int g_sock_fd;
 static struct sockaddr_un g_srv_addr, g_addr;
 
-static void read_log_superblock(struct log_superblock *log_sb);
-static void write_log_superblock(struct log_superblock *log_sb);
+static void read_log_superblock(volatile struct log_superblock *log_sb);
+static void write_log_superblock(volatile struct log_superblock *log_sb);
 static void commit_log(void);
 static void digest_log(void);
 
 pthread_mutex_t *g_log_mutex_shared;
+static pthread_rwlock_t log_version_rwlock = PTHREAD_RWLOCK_INITIALIZER;
 
 //pthread_t is unsigned long
 static unsigned long digest_thread_id;
@@ -78,17 +84,17 @@ void init_log(int dev)
 	g_fs_log->dev = dev;
 	g_fs_log->nloghdr = 0;
 
-	ret = pipe(g_fs_log->digest_fd);
-	if (ret < 0) 
+	ret = pipe(((struct fs_log*)g_fs_log)->digest_fd);
+	if (ret < 0)
 		panic("cannot create pipe for digest\n");
 
 	read_log_superblock(g_log_sb);
 
-	g_fs_log->log_sb = g_log_sb;
+	g_fs_log->log_sb = (struct log_superblock*)g_log_sb;
 
 	// Assuming all logs are digested by recovery.
 	g_fs_log->next_avail_header = disk_sb[dev].log_start + 1; // +1: log superblock
-	g_fs_log->next_avail = g_fs_log->next_avail_header + 1; 
+	g_fs_log->next_avail = g_fs_log->next_avail_header + 1;
 	g_fs_log->start_blk = disk_sb[dev].log_start + 1;
 
 	mlfs_debug("end of the log %lx\n", g_fs_log->start_blk + g_fs_log->size);
@@ -103,7 +109,7 @@ void init_log(int dev)
 	g_fs_log->start_version = g_fs_log->avail_version = 0;
 
 	pthread_spin_init(&g_fs_log->log_lock, PTHREAD_PROCESS_SHARED);
-	
+
 	// g_log_mutex_shared is shared mutex between parent and child.
 	g_log_mutex_shared = (pthread_mutex_t *)mlfs_zalloc(sizeof(pthread_mutex_t));
 	pthread_mutexattr_init(&attr);
@@ -138,14 +144,15 @@ void shutdown_log(void)
 		m_barrier();
 		wait_on_digesting();
 	}
+	unlink(g_addr.sun_path);
 }
 
-static void read_log_superblock(struct log_superblock *log_sb)
+static void read_log_superblock(volatile struct log_superblock *log_sb)
 {
 	int ret;
 	struct buffer_head *bh;
 
-	bh = bh_get_sync_IO(g_fs_log->dev, g_fs_log->log_sb_blk, 
+	bh = bh_get_sync_IO(g_fs_log->dev, g_fs_log->log_sb_blk,
 			BH_NO_DATA_ALLOC);
 
 	bh->b_size = sizeof(struct log_superblock);
@@ -158,12 +165,12 @@ static void read_log_superblock(struct log_superblock *log_sb)
 	return;
 }
 
-static void write_log_superblock(struct log_superblock *log_sb)
+static void write_log_superblock(volatile struct log_superblock *log_sb)
 {
 	int ret;
 	struct buffer_head *bh;
 
-	bh = bh_get_sync_IO(g_fs_log->dev, g_fs_log->log_sb_blk, 
+	bh = bh_get_sync_IO(g_fs_log->dev, g_fs_log->log_sb_blk,
 			BH_NO_DATA_ALLOC);
 
 	bh->b_size = sizeof(struct log_superblock);
@@ -196,7 +203,7 @@ inline addr_t log_alloc(uint32_t nr_blocks)
 	int ret;
 
 	/* g_fs_log->start_blk : header
-	 * g_fs_log->next_avail : tail 
+	 * g_fs_log->next_avail : tail
 	 *
 	 * There are two cases:
 	 *
@@ -215,7 +222,7 @@ inline addr_t log_alloc(uint32_t nr_blocks)
 		addr_t nr_used_blk = 0;
 		if (g_fs_log->avail_version == g_fs_log->start_version) {
 			mlfs_assert(g_fs_log->next_avail >= g_fs_log->start_blk);
-			nr_used_blk = g_fs_log->next_avail - g_fs_log->start_blk; 
+			nr_used_blk = g_fs_log->next_avail - g_fs_log->start_blk;
 		} else {
 			nr_used_blk = (g_fs_log->size - g_fs_log->start_blk);
 			nr_used_blk += (g_fs_log->next_avail - g_fs_log->log_sb_blk);
@@ -226,22 +233,25 @@ inline addr_t log_alloc(uint32_t nr_blocks)
 		if (nr_used_blk > ((30 * g_fs_log->size) / 100)) {
 
 			// digest 90% of log.
-			while(make_digest_request_async(100) != -EBUSY)
-			mlfs_info("%s", "[L] log is getting full. asynchronous digest!\n");
+			make_digest_request_async(100);
+			mlfs_debug("[L] log is getting full. asynchronous digest! av(%u)sv(%u)na(%lu)sb(%lu)nr(%lu)\n",
+                    g_fs_log->avail_version, g_fs_log->start_version, g_fs_log->next_avail, g_fs_log->start_blk, nr_used_blk);
 		}
 	}
 
-	// next_avail reaches the end of log. 
+	// next_avail reaches the end of log.
 	//if (g_fs_log->next_avail + nr_blocks > g_fs_log->log_sb_blk + g_fs_log->size) {
 	if (g_fs_log->next_avail + nr_blocks > g_fs_log->size) {
+		pthread_rwlock_wrlock(&log_version_rwlock);
 		g_fs_log->next_avail = g_fs_log->log_sb_blk + 1;
 
 		atomic_add(&g_fs_log->avail_version, 1);
+		pthread_rwlock_unlock(&log_version_rwlock);
 
 		mlfs_debug("-- log tail is rotated: new start %lu\n", g_fs_log->next_avail);
 	}
 
-	addr_t next_log_blk = 
+	addr_t next_log_blk =
 		__sync_fetch_and_add(&g_fs_log->next_avail, nr_blocks);
 
 	// This has many policy questions.
@@ -260,20 +270,21 @@ retry:
 	}
 
 	if (g_fs_log->avail_version > g_fs_log->start_version) {
-		if (g_fs_log->next_avail > g_fs_log->start_blk) 
+		if (g_fs_log->next_avail > g_fs_log->start_blk)
 			goto retry;
 	}
 
 	if (0) {
 		int i;
 		for (i = 0; i < nr_blocks; i++) {
-			mlfs_info("alloc %lu\n", next_log_blk + i);
+			mlfs_debug("alloc %lu\n", next_log_blk + i);
 		}
 	}
 
 	return next_log_blk;
 }
 
+#if 0
 // allocate logheader meta and attach logheader.
 static inline struct logheader_meta *loghd_alloc(struct logheader *lh)
 {
@@ -291,6 +302,7 @@ static inline struct logheader_meta *loghd_alloc(struct logheader *lh)
 
 	return loghdr_meta;
 }
+#endif
 
 // Write in-memory log header to disk.
 // This is the true point at which the
@@ -298,7 +310,7 @@ static inline struct logheader_meta *loghd_alloc(struct logheader *lh)
 static void persist_log_header(struct logheader_meta *loghdr_meta,
 		addr_t hdr_blkno)
 {
-	struct logheader *loghdr = loghdr_meta->loghdr;
+	struct logheader *loghdr = &(loghdr_meta->loghdr);
 	struct buffer_head *io_bh;
 	int i;
 	uint64_t start_tsc;
@@ -320,9 +332,9 @@ static void persist_log_header(struct logheader_meta *loghdr_meta,
 
 	mlfs_write(io_bh);
 
-	mlfs_debug("pid %u [log header] inuse %d blkno %lu next_hdr_blockno %lu\n", 
+	mlfs_debug("pid %u [log header] inuse %d blkno %lu next_hdr_blockno %lu\n",
 			getpid(),
-			loghdr->inuse, io_bh->b_blocknr, 
+			loghdr->inuse, io_bh->b_blocknr,
 			loghdr->next_loghdr_blkno);
 
 	if (loghdr_meta->ext_used) {
@@ -353,8 +365,9 @@ void start_log_tx(void)
 	loghdr_meta = get_loghdr_meta();
 	memset(loghdr_meta, 0, sizeof(struct logheader_meta));
 
-	if (!loghdr_meta)
+	if (!loghdr_meta) {
 		panic("cannot locate logheader_meta\n");
+    }
 
 	loghdr_meta->hdr_blkno = 0;
 	INIT_LIST_HEAD(&loghdr_meta->link);
@@ -373,8 +386,10 @@ void abort_log_tx(void)
 
 	loghdr_meta = get_loghdr_meta();
 
-	if (loghdr_meta->is_hdr_allocated)
-		mlfs_free(loghdr_meta->loghdr);
+	if (loghdr_meta->is_hdr_allocated) {
+        //	mlfs_free(loghdr_meta->loghdr);
+        memset(&(loghdr_meta->loghdr), 0, sizeof(loghdr_meta->loghdr));
+    }
 
 #ifndef CONCURRENT
 	pthread_mutex_unlock(g_log_mutex_shared);
@@ -411,9 +426,11 @@ void commit_log_tx(void)
 
 		loghdr_meta = get_loghdr_meta();
 
-		if (loghdr_meta->is_hdr_allocated)
-			mlfs_free(loghdr_meta->loghdr);
-		
+		if (loghdr_meta->is_hdr_allocated) {
+            //	mlfs_free(loghdr_meta->loghdr);
+            memset(&(loghdr_meta->loghdr), 0, sizeof(loghdr_meta->loghdr));
+        }
+
 #ifndef CONCURRENT
 		g_fs_log->outstanding--;
 		pthread_mutex_unlock(g_log_mutex_shared);
@@ -434,7 +451,7 @@ static int persist_log_inode(struct logheader_meta *loghdr_meta, uint32_t idx)
 	addr_t logblk_no;
 	uint32_t nr_logblocks = 0;
 	struct buffer_head *log_bh;
-	struct logheader *loghdr = loghdr_meta->loghdr;
+	struct logheader *loghdr = &(loghdr_meta->loghdr);
 	uint64_t start_tsc;
 
 	logblk_no = loghdr_meta->log_blocks + loghdr_meta->pos;
@@ -465,7 +482,8 @@ static int persist_log_inode(struct logheader_meta *loghdr_meta, uint32_t idx)
 		// icache_del(ip);
 		// ideleted_add(ip);
 		ip->flags &= ~I_VALID;
-		bitmap_clear(sb[ip->dev]->s_inode_bitmap, ip->inum, 1);
+		// iangneal
+    //bitmap_clear(sb[ip->dev]->s_inode_bitmap, ip->inum, 1);
 	}
 
 	nr_logblocks = 1;
@@ -492,7 +510,7 @@ static int persist_log_directory_unopt(struct logheader_meta *loghdr_meta, uint3
 	addr_t logblk_no;
 	uint32_t nr_logblocks = 0;
 	struct buffer_head *log_bh;
-	struct logheader *loghdr = loghdr_meta->loghdr;
+	struct logheader *loghdr = &(loghdr_meta->loghdr);
 
 	logblk_no = log_alloc(1);
 	loghdr->blocks[idx] = logblk_no;
@@ -519,7 +537,7 @@ static int persist_log_directory_unopt(struct logheader_meta *loghdr_meta, uint3
 				loghdr->inode_no[idx], loghdr->data[idx], logblk_no);
 
 	// write data to log synchronously
-	mlfs_write(log_bh);  
+	mlfs_write(log_bh);
 
 	bh_release(log_bh);
 
@@ -530,9 +548,174 @@ static int persist_log_directory_unopt(struct logheader_meta *loghdr_meta, uint3
 	return 0;
 }
 
+/*
+ * Here enumerate all possible circumstances could happen for log invalidation
+ * notation:
+ *  `vd' is version_diff, version gap between cached fcache and latest log
+ *  `dig' 0 means not digesting, 1 means is digesting
+ *  `RO' marks the read-only log range, logs there shouldn't be coalesced with
+ *      new writes, otherwise those new writes may never be digested by kernfs
+ *  `RW' marks the read-write log range, logs there can be coalesced with new writes
+ *  `OV' marks the overwritten log range, logs there should always be invalidated
+ *  `ERR' means impossible situation, following code assumes such situation never happen
+ *  `h' means the head of the log, aka g_fs_log->start_blk
+ *  `t' means the tail of the log, aka g_fs_log->next_avail
+ *  `h(d)' means the head of the log when request last digest,
+ *      only valid when digesting, aka g_log_sb->start_digest,
+ *      when digesting, `h(d)' always equals `h'
+ *  `t(d)' means the tail of the log when request last digest,
+ *      only valid when digesting, aka g_log_sb->next_avail_digest,
+ *      when digesting, new log allocation only updates `t'
+ *
+ *  enumeration:
+ *  (1) vd = 0, dig = 0, no rotation
+ *  +--------------------------+
+ *  |        h         t       |
+ *  |        |         |       |
+ *  | '------+---------+------'|
+ *  | '  RO  '   RW    ' ERR  '|
+ *  +--------------------------+
+ *  (2) vd = 0, dig = 0, rotated
+ *  +--------------------------+
+ *  |        t         h       |
+ *  |        |         |       |
+ *  | '------+---------+------'|
+ *  | '  RW  '   ERR   ' ERR  '|
+ *  +--------------------------+
+ *  (3) vd = 1, dig = 0, no rotation
+ *  +--------------------------+
+ *  |        h         t       |
+ *  |        |         |       |
+ *  | '------+---------+------'|
+ *  | '  OV  '   OV    '  RO  '|
+ *  +--------------------------+
+ *  (4) vd = 1, dig = 0, rotated
+ *  +--------------------------+
+ *  |        t         h       |
+ *  |        |         |       |
+ *  | '------+---------+------'|
+ *  | '  OV  '   RO    '  RW  '|
+ *  +--------------------------+
+ *  (5) vd > 1, dig = 0 or 1, rotated or not
+ *  +--------------------------+
+ *  |                          |
+ *  | '-----------------------'|
+ *  | '           OV          '|
+ *  +--------------------------+
+ *  (6) vd = 0, dig = 1, no rotation, t not rotated either
+ *  +--------------------------+
+ *  |      h(d)  t(d)   t      |
+ *  |       |     |     |      |
+ *  | '-----+-----+-----+-----'|
+ *  | ' RO  ' RO  ' RW  ' ERR '|
+ *  +--------------------------+
+ *  (7) vd = 0, dig = 1, no rotation, t rotated
+ *  +--------------------------+
+ *  |       t    h(d)  t(d)    |
+ *  |       |     |     |      |
+ *  | '-----+-----+-----+-----'|
+ *  | ' RW  ' ERR ' ERR ' ERR '|
+ *  +--------------------------+
+ *  (8) vd = 0, dig = 1, rotated
+ *  +--------------------------+
+ *  |      t(d)   t    h(d)    |
+ *  |       |     |     |      |
+ *  | '-----+-----+-----+-----'|
+ *  | ' RO  ' RW  ' ERR ' ERR '|
+ *  +--------------------------+
+ *  (9) vd = 1, dig = 1, no rotation, t not rotated either
+ *  +--------------------------+
+ *  |      h(d)  t(d)   t      |
+ *  |       |     |     |      |
+ *  | '-----+-----+-----+-----'|
+ *  | ' OV  ' OV  ' OV  ' RO  '|
+ *  +--------------------------+
+ *  (10) vd = 1, dig = 1, no rotation, t rotated
+ *  +--------------------------+
+ *  |       t    h(d)  t(d)    |
+ *  |       |     |     |      |
+ *  | '-----+-----+-----+-----'|
+ *  | ' OV  ' RO  ' RO  ' RW  '|
+ *  +--------------------------+
+ *  (11) vd = 1, dig = 1, rotated
+ *  +--------------------------+
+ *  |      t(d)   t    h(d)    |
+ *  |       |     |     |      |
+ *  | '-----+-----+-----+-----'|
+ *  | ' OV  ' OV  ' RO  ' RO  '|
+ *  +--------------------------+
+ *
+ *  insight: when digesting (dig = 1), if consider t(d) as a new h when not
+ *  digesting, situation (6).. (11) can be colaesced with situation (1) .. (4),
+ *  thus simplify invalidation logic
+ */
+/**
+ * FIXME: determine a proper value for `READ_LOG_INVALIDATION_GUARD', current value is ad-hoc.
+ * This guard is necessary because:
+ *     1. do_(un)aligned_read might determine if a fcache block is valid `a long time` before actually read the data from log block. e.g. store valid fcache log block (valid when actually check invalidation) in an io_list, and only read data from log block when every serving 4k block is ready.
+ *     2. At the same time, other threads may concurrently `start_log_tx' and `commit_log'. Those threads will overwrite some log blocks, which may have already been remembered as `valid' fcache log.
+ */
+#define READ_LOG_INVALIDATION_GUARD 40
+int check_read_log_invalidation(struct fcache_block *_fcache_block)
+{
+	int ret = 0;
+
+	mlfs_assert(!_fcache_block->is_data_cached && "This code doesn't consider cached data, only for non-cachable NVM read");
+
+	//mlfs_assert(!(version_diff == 0 && _fcache_block->log_version >= g_fs_log->next_avail) && "impossible scenario happened");
+
+	// FIXME: remove unused invalidate_rwlock
+	pthread_rwlock_wrlock(&log_version_rwlock);
+	int version_diff = g_fs_log->avail_version - _fcache_block->log_version;
+	mlfs_assert(version_diff >= 0);
+	if ((version_diff > 1) ||
+			(version_diff == 1 &&
+	   _fcache_block->log_addr < g_fs_log->next_avail + READ_LOG_INVALIDATION_GUARD)) {
+		mlfs_debug("invalidate: inum %u offset_key %lu -> addr %lu, start_offset %lu, version %d[%d](%d), start_blk %lu next_avail %lu\n",
+				_fcache_block->inum, _fcache_block->key, _fcache_block->log_addr, _fcache_block->start_offset, _fcache_block->log_version, _fcache_block->log_version_should_be, g_fs_log->avail_version, g_fs_log->start_blk, g_fs_log->next_avail);
+		ret = 1;
+	}
+	pthread_rwlock_unlock(&log_version_rwlock);
+
+	return ret;
+}
+
+int check_write_log_invalidation(struct fcache_block *_fcache_block)
+{
+	int ret = 0;
+	pthread_rwlock_wrlock(&log_version_rwlock);
+	int version_diff = g_fs_log->avail_version - _fcache_block->log_version;
+	addr_t head;
+	addr_t tail = g_fs_log->next_avail;
+	if (g_fs_log->digesting) {
+		head = g_log_sb->next_avail_digest;
+	}
+	else {
+		head = g_fs_log->start_blk;
+	}
+	mlfs_assert(!_fcache_block->is_data_cached && "This code doesn't consider cached data, only for non-cachable NVM read");
+	//mlfs_assert(!(version_diff == 0 && head < tail && _fcache_block->log_addr >= tail) && "impossible scenario happened");
+	//mlfs_assert(!(version_diff == 0 && tail <= head && _fcache_block->log_addr >= tail) && "impossible scenario happened");
+
+	if ((version_diff > 1) ||
+		(version_diff == 1 && (head < tail || (tail <= head && _fcache_block->log_addr < head))) ||
+		(version_diff == 0 && _fcache_block->log_addr < head && head < tail)
+	   ) {
+		mlfs_debug("invalidate: inum %u offset_key %lu -> addr %lu, start_offset %lu, version %d[%d](%d), start_blk %lu next_avail %lu, digesting %u, next_avail_digest %lu\n",
+        _fcache_block->inum, _fcache_block->key, _fcache_block->log_addr, _fcache_block->start_offset,_fcache_block->log_version, _fcache_block->log_version_should_be, g_fs_log->avail_version, g_fs_log->start_blk, g_fs_log->next_avail, g_fs_log->digesting, g_log_sb->next_avail_digest);
+		ret = 1;
+	}
+	else {
+		ret = 0;
+	}
+	pthread_rwlock_unlock(&log_version_rwlock);
+
+	return ret;
+}
+
 /* This is a critical path for write performance.
  * Stay optimized and need to be careful when modifying it */
-static int persist_log_file(struct logheader_meta *loghdr_meta, 
+static int persist_log_file(struct logheader_meta *loghdr_meta,
 		uint32_t idx, uint8_t n_iovec)
 {
 	uint32_t k, l, size;
@@ -541,12 +724,11 @@ static int persist_log_file(struct logheader_meta *loghdr_meta,
 	addr_t logblk_no;
 	uint32_t nr_logblocks = 0;
 	struct buffer_head *log_bh;
-	struct logheader *loghdr = loghdr_meta->loghdr;
+	struct logheader *loghdr = &(loghdr_meta->loghdr);
 	uint32_t io_size;
 	struct inode *inode;
 	lru_key_t lru_entry;
-	uint64_t start_tsc, start_tsc_tmp;
-	int ret;
+	uint64_t start_tsc;
 
 	inode = icache_find(g_root_dev, loghdr->inode_no[idx]);
 
@@ -563,9 +745,17 @@ static int persist_log_file(struct logheader_meta *loghdr_meta,
 		// 3. if fc_block is not valid, then skip coalescing and update fc_block.
 
 		uint32_t offset_in_block;
+		int write_log_invalid;
+        uint64_t unaligned_tsc;
+
+        if (enable_perf_stats) {
+            unaligned_tsc = asm_rdtscp();
+        }
 
 		key = (loghdr->data[idx] >> g_block_size_shift);
 		offset_in_block = (loghdr->data[idx] % g_block_size_bytes);
+		logblk_no = loghdr_meta->log_blocks + loghdr_meta->pos;
+		loghdr_meta->pos++;
 
 		if (enable_perf_stats)
 			start_tsc = asm_rdtscp();
@@ -576,34 +766,14 @@ static int persist_log_file(struct logheader_meta *loghdr_meta,
 			g_perf_stats.l0_search_tsc += (asm_rdtscp() - start_tsc);
 			g_perf_stats.l0_search_nr++;
 		}
-
-		logblk_no = loghdr_meta->log_blocks + loghdr_meta->pos;
-		loghdr_meta->pos++;
-
 		if (fc_block) {
-			ret = check_log_invalidation(fc_block);
-			// fc_block is invalid. update it
-			if (ret) {
-				fc_block->log_version = g_fs_log->avail_version;
-				fc_block->log_addr = logblk_no;
-			}
-			// fc_block is valid
-			else {
-				if (fc_block->log_addr)  {
-					logblk_no = fc_block->log_addr;
-					fc_block->log_version = g_fs_log->avail_version;
-					mlfs_debug("write is coalesced %lu @ %lu\n", loghdr->data[idx], logblk_no);
-				}
+			write_log_invalid = check_write_log_invalidation(fc_block);
+			if (!write_log_invalid) { // fc_block is write valid, coalesce current write
+				logblk_no = fc_block->log_addr;
 			}
 		}
 
-		if (!fc_block) {
-			mlfs_assert(loghdr_meta->pos <= loghdr_meta->nr_log_blocks);
-
-			fc_block = fcache_alloc_add(inode, key, logblk_no);
-			fc_block->log_version = g_fs_log->avail_version;
-		} 
-		
+		// now write to log before update any fcache structure
 		if (enable_perf_stats)
 			start_tsc = asm_rdtscp();
 
@@ -614,15 +784,16 @@ static int persist_log_file(struct logheader_meta *loghdr_meta,
 			g_perf_stats.bcache_search_nr++;
 		}
 
-		// the logblk_no could be either a new block or existing one (patching case).
+		// the logblk_no could be either a new block or existing one (coalescing case).
 		loghdr->blocks[idx] = logblk_no;
 
 		// case 1. the IO fits into one block.
-		if (offset_in_block + size <= g_block_size_bytes)
+		if (offset_in_block + size <= g_block_size_bytes) {
 			io_size = size;
-		// case 2. the IO incurs two blocks write (unaligned).
-		else 
+			// case 2. the IO incurs two blocks write (unaligned).
+		} else {
 			panic("do not support this case yet\n");
+		}
 
 		log_bh->b_data = loghdr_meta->io_vec[n_iovec].base;
 		log_bh->b_size = io_size;
@@ -633,16 +804,68 @@ static int persist_log_file(struct logheader_meta *loghdr_meta,
 		mlfs_debug("inum %u offset %lu @ blockno %lx (partial io_size=%u)\n",
 				loghdr->inode_no[idx], loghdr->data[idx], logblk_no, io_size);
 
-		mlfs_write(log_bh); 
+		mlfs_write(log_bh);
 
 		bh_release(log_bh);
-	} 
-	// Handling large (possibly multi-block) write.
-	else {
-		offset_t cur_offset;
 
-		if (enable_perf_stats)
-			start_tsc_tmp = asm_rdtscp();
+		// after finish writing to log, let's update fcache structure
+		if (fc_block) {
+			if (write_log_invalid) { // fc_block is write invalid. need update
+				//FIXME: what if async digest happens after checking log invalidation but before finish using log value
+				if (!check_read_log_invalidation(fc_block) && fc_block->start_offset < offset_in_block) { 
+                    // fc_block is read valid, can patch data from Read Only log area to current partially new log block
+					uint8_t buffer[g_block_size_bytes];
+
+					log_bh = bh_get_sync_IO(g_log_dev, fc_block->log_addr, BH_NO_DATA_ALLOC);
+					log_bh->b_offset = fc_block->start_offset;
+					log_bh->b_data = buffer;
+					log_bh->b_size = offset_in_block - fc_block->start_offset;
+					bh_submit_read_sync_IO(log_bh);
+					bh_release(log_bh);
+
+					log_bh = bh_get_sync_IO(g_log_dev, logblk_no, BH_NO_DATA_ALLOC);
+					log_bh->b_offset = fc_block->start_offset;
+					log_bh->b_data = buffer;
+					log_bh->b_size = offset_in_block - fc_block->start_offset;
+					mlfs_write(log_bh);
+					bh_release(log_bh);
+
+					mlfs_debug("patch partial write log %lu, from %lu, offset from %lu to %lu\n", 
+                            logblk_no, fc_block->log_addr, fc_block->start_offset, offset_in_block);
+				} else { // fc_block is read invalid, can't patch data, keep the current valid offset in block as it is
+					fc_block->start_offset = offset_in_block;
+				}
+				// here we actually update fcache structure
+				fc_block->log_version = g_fs_log->avail_version;
+				fc_block->log_addr = logblk_no;
+			} else { // fc_block is write valid, new write has already been coalesced
+				if (fc_block->log_addr)  {
+					mlfs_debug("write is coalesced %lu @ %lu\n", loghdr->data[idx], logblk_no);
+				}
+			}
+		}
+
+		// if there is no fcache before, let's add this new cache after write has been logged
+		if (!fc_block) {
+			mlfs_assert(loghdr_meta->pos <= loghdr_meta->nr_log_blocks);
+
+			fc_block = fcache_alloc_add(inode, key, logblk_no, offset_in_block);
+			fc_block->log_version = g_fs_log->avail_version;
+		}
+
+        if (enable_perf_stats) {
+            g_perf_stats.log_write_data_unaligned_tsc += (asm_rdtscp() - unaligned_tsc);
+            g_perf_stats.log_write_data_unaligned_nr++;
+        }
+
+	} else {
+        // Handling large (possibly multi-block) write.
+		offset_t cur_offset;
+        uint64_t aligned_tsc;
+
+        if (enable_perf_stats) {
+            aligned_tsc = asm_rdtscp();
+        }
 
 		cur_offset = loghdr->data[idx];
 
@@ -651,7 +874,7 @@ static int persist_log_file(struct logheader_meta *loghdr_meta,
 		mlfs_assert((loghdr->data[idx] % g_block_size_bytes) == 0);
 		mlfs_assert((size % g_block_size_bytes) == 0);
 
-		nr_logblocks = size >> g_block_size_shift; 
+		nr_logblocks = size >> g_block_size_shift;
 
 		mlfs_assert(nr_logblocks > 0);
 
@@ -659,6 +882,11 @@ static int persist_log_file(struct logheader_meta *loghdr_meta,
 		loghdr_meta->pos += nr_logblocks;
 
 		mlfs_assert(loghdr_meta->pos <= loghdr_meta->nr_log_blocks);
+
+#if 0
+        if (enable_perf_stats) {
+            start_tsc = asm_rdtscp();
+        }
 
 		log_bh = bh_get_sync_IO(g_fs_log->dev, logblk_no, BH_NO_DATA_ALLOC);
 
@@ -668,42 +896,96 @@ static int persist_log_file(struct logheader_meta *loghdr_meta,
 
 		loghdr->blocks[idx] = logblk_no;
 
+        if (enable_perf_stats) {
+            g_perf_stats.log_aligned_bh_tsc += (asm_rdtscp() - start_tsc);
+            g_perf_stats.log_aligned_bh_nr++;
+        }
+
+        if (enable_perf_stats) {
+            start_tsc = asm_rdtscp();
+        }
+
+		mlfs_write(log_bh);
+
+        // (iangneal): this is as slow as the write!!
+		bh_release(log_bh);
+
+        if (enable_perf_stats) {
+            g_perf_stats.log_aligned_wronly_tsc += (asm_rdtscp() - start_tsc);
+            g_perf_stats.log_aligned_wronly_nr++;
+        }
+
+#else
+        if (enable_perf_stats) {
+            start_tsc = asm_rdtscp();
+        }
+		loghdr->blocks[idx] = logblk_no;
+
+        ssize_t ret = g_bdev[g_fs_log->dev]->storage_engine->write(
+                g_fs_log->dev, loghdr_meta->io_vec[n_iovec].base, logblk_no, size);
+
+        if (enable_perf_stats) {
+            g_perf_stats.log_aligned_wronly_tsc += (asm_rdtscp() - start_tsc);
+            g_perf_stats.log_aligned_wronly_nr++;
+        }
+
+#endif
+
+        uint64_t hash_tsc;
+        if (enable_perf_stats) {
+            hash_tsc = asm_rdtscp();
+        }
+
 		// Update log address hash table.
 		// This is performance bottleneck of sequential write.
 		for (k = 0, l = 0; l < size; l += g_block_size_bytes, k++) {
+            uint64_t tsc;
 			key = (cur_offset + l) >> g_block_size_shift;
 
 			mlfs_assert(logblk_no);
 
-			if (enable_perf_stats)
-				start_tsc = asm_rdtscp();
+			if (enable_perf_stats) {
+				tsc = asm_rdtscp();
+            }
 
+            //start_cache_stats();
 			fc_block = fcache_find(inode, key);
+            //end_cache_stats(&(g_perf_stats.cache_stats));
 
 			if (enable_perf_stats) {
-				g_perf_stats.l0_search_tsc += (asm_rdtscp() - start_tsc);
+				g_perf_stats.l0_search_tsc += (asm_rdtscp() - tsc);
+				//printf("l0: %lu\n", asm_rdtscp() - tsc);
 				g_perf_stats.l0_search_nr++;
 			}
 
 			if (!fc_block) {
-				fc_block = fcache_alloc_add(inode, key, logblk_no + k);
+                if (enable_perf_stats)
+                    tsc = asm_rdtscp();
+
+				fc_block = fcache_alloc_add(inode, key, logblk_no + k, 0);
 				fc_block->log_version = g_fs_log->avail_version;
+
+                if (enable_perf_stats) {
+                    g_perf_stats.log_hash_fc_add_tsc += (asm_rdtscp() - tsc);
+                    g_perf_stats.log_hash_fc_add_nr++;
+                }
 			} else {
 				fc_block->log_version = g_fs_log->avail_version;
 				fc_block->log_addr = logblk_no + k;
+				fc_block->start_offset = 0;
 			}
 		}
 
 		mlfs_debug("inum %u offset %lu size %u @ blockno %lx (aligned)\n",
 				loghdr->inode_no[idx], cur_offset, size, logblk_no);
 
-		mlfs_write(log_bh);
+        if (enable_perf_stats) {
+            g_perf_stats.log_hash_update_tsc += (asm_rdtscp() - hash_tsc);
+            g_perf_stats.log_hash_update_nr++;
 
-		bh_release(log_bh);
-
-		if (enable_perf_stats) {
-			g_perf_stats.tmp_tsc += (asm_rdtscp() - start_tsc_tmp);
-		}
+            g_perf_stats.log_write_data_aligned_tsc += (asm_rdtscp() - aligned_tsc);
+            g_perf_stats.log_write_data_aligned_nr++;
+        }
 	}
 
 	return 0;
@@ -711,8 +993,8 @@ static int persist_log_file(struct logheader_meta *loghdr_meta,
 
 static uint32_t compute_log_blocks(struct logheader_meta *loghdr_meta)
 {
-	struct logheader *loghdr = loghdr_meta->loghdr; 
-	uint8_t type, n_iovec; 
+	struct logheader *loghdr = &(loghdr_meta->loghdr);
+	uint8_t type, n_iovec;
 	uint32_t nr_log_blocks = 0;
 	int i;
 
@@ -725,7 +1007,7 @@ static uint32_t compute_log_blocks(struct logheader_meta *loghdr_meta)
 			case L_TYPE_INODE_UPDATE: {
 				nr_log_blocks++;
 				break;
-			} 
+			}
 			case L_TYPE_DIR_ADD: {
 				break;
 			}
@@ -742,7 +1024,7 @@ static uint32_t compute_log_blocks(struct logheader_meta *loghdr_meta)
 				if (size < g_block_size_bytes)
 					nr_log_blocks++;
 				else
-					nr_log_blocks += 
+					nr_log_blocks +=
 						(size >> g_block_size_shift);
 				n_iovec++;
 				break;
@@ -759,11 +1041,12 @@ static uint32_t compute_log_blocks(struct logheader_meta *loghdr_meta)
 
 // Copy modified blocks from cache to log.
 static void persist_log_blocks(struct logheader_meta *loghdr_meta)
-{ 
-	struct logheader *loghdr = loghdr_meta->loghdr; 
-	uint32_t i, nr_logblocks = 0; 
-	uint8_t type, n_iovec; 
-	addr_t logblk_no; 
+{
+	struct logheader *loghdr = &(loghdr_meta->loghdr);
+	uint32_t i, nr_logblocks = 0;
+	uint8_t type, n_iovec;
+	addr_t logblk_no;
+    uint64_t tsc_begin;
 
 	//mlfs_assert(hdr_blkno >= g_fs_log->start);
 
@@ -774,10 +1057,18 @@ static void persist_log_blocks(struct logheader_meta *loghdr_meta)
 			case L_TYPE_UNLINK:
 			case L_TYPE_INODE_CREATE:
 			case L_TYPE_INODE_UPDATE: {
+                if (enable_perf_stats)
+                    tsc_begin = asm_rdtscp();
+
 				persist_log_inode(loghdr_meta, i);
+
+                if (enable_perf_stats) {
+                    g_perf_stats.log_write_inode_tsc += (asm_rdtscp() - tsc_begin);
+                    g_perf_stats.log_write_inode_nr++;
+                }
 				break;
-			} 
-				/* Directory information is piggy-backed in 
+			}
+				/* Directory information is piggy-backed in
 				 * log header */
 			case L_TYPE_DIR_ADD: {
 				break;
@@ -789,7 +1080,15 @@ static void persist_log_blocks(struct logheader_meta *loghdr_meta)
 				break;
 			}
 			case L_TYPE_FILE: {
+                if (enable_perf_stats)
+                    tsc_begin = asm_rdtscp();
+
 				persist_log_file(loghdr_meta, i, n_iovec);
+
+                if (enable_perf_stats) {
+                    g_perf_stats.log_write_data_tsc += (asm_rdtscp() - tsc_begin);
+                    g_perf_stats.log_write_data_nr++;
+                }
 				n_iovec++;
 				break;
 			}
@@ -812,11 +1111,12 @@ static void commit_log(void)
 	mlfs_assert(loghdr_meta);
 
 	/* There was no log update during transaction */
-	if (!loghdr_meta->is_hdr_allocated)
+	if (!loghdr_meta->is_hdr_allocated) {
 		return;
+    }
 
-	mlfs_assert(loghdr_meta->loghdr);
-	loghdr = loghdr_meta->loghdr;
+	//mlfs_assert(loghdr_meta->loghdr);
+	loghdr = &(loghdr_meta->loghdr);
 
 	if (loghdr->n <= 0)
 		panic("empty log header\n");
@@ -831,13 +1131,27 @@ static void commit_log(void)
 		pthread_mutex_lock(g_fs_log->shared_log_lock);
 
 		// atomic log allocation.
+		if (enable_perf_stats)
+			tsc_begin = asm_rdtscp();
+		// g_fs_log->next_avail += nr_log_blocks atomically here
 		loghdr_meta->log_blocks = log_alloc(nr_log_blocks);
 		loghdr_meta->nr_log_blocks = nr_log_blocks;
 		// loghdr_meta->pos = 0 is used for log header block.
 		loghdr_meta->pos = 1;
 
+		if (enable_perf_stats) {
+			tsc_end = asm_rdtscp();
+			g_perf_stats.log_alloc_tsc += (tsc_end - tsc_begin);
+            g_perf_stats.log_alloc_nr++;
+		}
+
+		// Here holds:
+		//     loghdr_meta->log_blocks == loghdr_meta->hdr_blkno + 1
+		// There should always be:
+		//     g_fs_log->next_avail == g_fs_log->next_avail_header + 1
 		loghdr_meta->hdr_blkno = g_fs_log->next_avail_header;
 		g_fs_log->next_avail_header = loghdr_meta->log_blocks + loghdr_meta->nr_log_blocks;
+		g_fs_log->next_avail++;
 
 		loghdr->next_loghdr_blkno = g_fs_log->next_avail_header;
 		loghdr->inuse = LH_COMMIT_MAGIC;
@@ -846,7 +1160,7 @@ static void commit_log(void)
 
 		mlfs_debug("pid %u [commit] log block %lu nr_log_blocks %u\n",
 				getpid(), loghdr_meta->log_blocks, loghdr_meta->nr_log_blocks);
-		mlfs_debug("pid %u [commit] current header %lu next header %lu\n", 
+		mlfs_debug("pid %u [commit] current header %lu next header %lu\n",
 				getpid(), loghdr_meta->hdr_blkno, g_fs_log->next_avail_header);
 
 		if (enable_perf_stats)
@@ -859,6 +1173,7 @@ static void commit_log(void)
 		if (enable_perf_stats) {
 			tsc_end = asm_rdtscp();
 			g_perf_stats.log_write_tsc += (tsc_end - tsc_begin);
+            g_perf_stats.log_write_nr++;
 		}
 
 #if 0
@@ -878,16 +1193,17 @@ static void commit_log(void)
 		if (enable_perf_stats) {
 			tsc_end = asm_rdtscp();
 			g_perf_stats.loghdr_write_tsc += (tsc_end - tsc_begin);
+			g_perf_stats.loghdr_write_nr++;
 		}
 
 		atomic_fetch_add(&g_log_sb->n_digest, 1);
 
-		mlfs_assert(loghdr_meta->loghdr->next_loghdr_blkno
+		mlfs_assert(loghdr_meta->loghdr.next_loghdr_blkno
 				>= g_fs_log->log_sb_blk);
 	}
 }
 
-void add_to_loghdr(uint8_t type, struct inode *inode, offset_t data, 
+void add_to_loghdr(uint8_t type, struct inode *inode, offset_t data,
 		uint32_t length, void *extra, uint16_t extra_len)
 {
 	uint32_t i;
@@ -899,13 +1215,13 @@ void add_to_loghdr(uint8_t type, struct inode *inode, offset_t data,
 	mlfs_assert(loghdr_meta);
 
 	if (!loghdr_meta->is_hdr_allocated) {
-		loghdr = (struct logheader *)mlfs_zalloc(sizeof(*loghdr));
+		//loghdr = (struct logheader *)mlfs_zalloc(sizeof(*loghdr));
 
-		loghdr_meta->loghdr = loghdr;
+		//loghdr_meta->loghdr = loghdr;
 		loghdr_meta->is_hdr_allocated = 1;
 	}
 
-	loghdr = loghdr_meta->loghdr;
+	loghdr = &(loghdr_meta->loghdr);
 
 	if (loghdr->n >= g_fs_log->size)
 		panic("too big a transaction for log");
@@ -923,16 +1239,17 @@ void add_to_loghdr(uint8_t type, struct inode *inode, offset_t data,
 	loghdr->type[i] = type;
 	loghdr->inode_no[i] = inode->inum;
 
-	if (type == L_TYPE_FILE) 
+	if (type == L_TYPE_FILE) {
 		// offset in file.
 		loghdr->data[i] = (offset_t)data;
-	else if (type == L_TYPE_DIR_ADD ||
+    } else if (type == L_TYPE_DIR_ADD ||
 			type == L_TYPE_DIR_RENAME ||
 			type == L_TYPE_DIR_DEL) {
 		// dirent inode number.
 		loghdr->data[i] = (uint32_t)data;
-	} else
+	} else {
 		loghdr->data[i] = 0;
+    }
 
 	loghdr->length[i] = length;
 	loghdr->n++;
@@ -965,10 +1282,31 @@ void add_to_loghdr(uint8_t type, struct inode *inode, offset_t data,
 void wait_on_digesting()
 {
 	uint64_t tsc_begin, tsc_end;
-	if (enable_perf_stats) 
+	if (enable_perf_stats)
 		tsc_begin = asm_rdtsc();
 
 	while(g_fs_log->digesting)
+		cpu_relax();
+
+	if (enable_perf_stats) {
+		tsc_end = asm_rdtsc();
+		g_perf_stats.digest_wait_tsc += (tsc_end - tsc_begin);
+		g_perf_stats.digest_wait_nr++;
+	}
+}
+
+/**
+ * I think that sometimes when I explicitly wait on digesting, the digesting
+ * flag hasn't been set yet. So, let's make sure it's set before I wait for
+ * it to complete.
+ */
+void wait_on_not_digesting()
+{
+	uint64_t tsc_begin, tsc_end;
+	if (enable_perf_stats)
+		tsc_begin = asm_rdtsc();
+
+	while(!g_fs_log->digesting)
 		cpu_relax();
 
 	if (enable_perf_stats) {
@@ -986,14 +1324,17 @@ int make_digest_request_async(int percent)
 	sprintf(cmd_buf, "|digest |%d|", percent);
 
 	if (!g_fs_log->digesting && atomic_load(&g_log_sb->n_digest) > 0) {
-		set_digesting();
 		mlfs_debug("Send digest command: %s\n", cmd_buf);
 		ret = write(g_fs_log->digest_fd[1], cmd_buf, MAX_CMD_BUF);
 		return 0;
-	} else
+	} else {
 		return -EBUSY;
+    }
 }
 
+/**
+ * Don't call this outside of strata.
+ */
 uint32_t make_digest_request_sync(int percent)
 {
 	int ret, i;
@@ -1003,7 +1344,10 @@ uint32_t make_digest_request_sync(int percent)
 	addr_t loghdr_blkno = g_fs_log->start_blk;
 	struct inode *ip;
 
+	// FIXME: should protect digesting and next_avail_digest and start_blk with rwlock?
+	set_digesting();
 	g_log_sb->start_digest = g_fs_log->start_blk;
+	g_log_sb->next_avail_digest = g_fs_log->next_avail;
 	write_log_superblock(g_log_sb);
 
 	n_digest = atomic_load(&g_log_sb->n_digest);
@@ -1013,10 +1357,10 @@ uint32_t make_digest_request_sync(int percent)
 	sprintf(cmd, "|digest |%d|%u|%lu|%lu|",
 			g_fs_log->dev, g_fs_log->n_digest_req, g_log_sb->start_digest, 0UL);
 
-	mlfs_info("%s\n", cmd);
+	mlfs_debug("%s\n", cmd);
 
 	// send digest command
-	ret = sendto(g_sock_fd, cmd, MAX_SOCK_BUF, 0, 
+	ret = sendto(g_sock_fd, cmd, MAX_SOCK_BUF, 0,
 			(struct sockaddr *)&g_srv_addr, len);
 
 	return n_digest;
@@ -1045,12 +1389,14 @@ void handle_digest_response(char *ack_cmd)
 	int n_digested, rotated, lru_updated;
 	struct inode *inode, *tmp;
 
-	sscanf(ack_cmd, "|%s |%d|%lu|%d|%d|", ack, &n_digested, 
+    printf("digest response, %s\n", ack_cmd);
+
+	sscanf(ack_cmd, "|%s |%d|%lu|%d|%d|", ack, &n_digested,
 			&next_hdr_of_digested_hdr, &rotated, &lru_updated);
 
 	if (g_fs_log->n_digest_req == n_digested)  {
-		mlfs_info("%s", "digest is done correctly\n");
-		mlfs_info("%s", "-----------------------------------\n");
+		mlfs_debug("%s", "digest is done correctly\n");
+		mlfs_debug("%s", "-----------------------------------\n");
 	} else {
 		mlfs_printf("[D] digest is done insufficiently: req %u | done %u\n",
 				g_fs_log->n_digest_req, n_digested);
@@ -1076,20 +1422,42 @@ void handle_digest_response(char *ack_cmd)
 
 	//cleanup_lru_list(lru_updated);
 
+	if (g_idx_cached && IDXAPI_IS_GLOBAL()) {
+        int api_err = mlfs_hash_cache_invalidate();
+        if (api_err) panic("couldn't invalidate cache!\n");
+    }
+
 	// TODO: optimize this. Now sync all inodes in the inode_hash.
 	// As the optimization, Kernfs sends inodes lists (via shared memory),
 	// and Libfs syncs inodes based on the list.
-	HASH_ITER(hash_handle, inode_hash[g_root_dev], inode, tmp) {
-		if (!(inode->flags & I_DELETING)) {
-			if (inode->itype == T_FILE) 
-				sync_inode_ext_tree(g_root_dev, inode);
-			else if(inode->itype == T_DIR)
-				;
-			else
-				panic("unsupported inode type\n");
-		}
-	}
-
+    HASH_ITER(hash_handle, inode_hash[g_root_dev], inode, tmp) {
+        if (!(inode->flags & I_DELETING)) {
+            if (inode->itype == T_FILE) {
+                sync_inode_ext_tree(g_root_dev, inode);
+            } else if(inode->itype == T_DIR) {
+                // do nothing?
+            } else if(inode->itype == T_DEV) {
+                panic("unsupported inode type\n");
+            }
+        } else {
+            inode->flags &= ~I_DELETING;
+            //bitmap_clear(sb[inode->dev]->s_inode_bitmap, inode->inum, 1);
+        }
+    }
+#ifdef EXTCACHE
+    // unset uptodate flag of all buffer heads
+    // all buffer heads should point to extent tree nodes
+    if (g_idx_choice == NONE) {
+        struct block_device *rootdev = g_bdev[g_root_dev];
+        pthread_mutex_lock(&rootdev->bd_bh_root_lock);
+        struct rb_root *root = &rootdev->bd_bh_root;
+        struct buffer_head *bh, *_bh;
+        rbtree_postorder_for_each_entry_safe(bh, _bh, root, b_rb_node) {
+            clear_buffer_uptodate(bh);
+        }
+        pthread_mutex_unlock(&rootdev->bd_bh_root_lock);
+    }
+#endif
 	// persist log superblock.
 	write_log_superblock(g_log_sb);
 
@@ -1100,7 +1468,7 @@ void handle_digest_response(char *ack_cmd)
 	//	show_libfs_stats("digest response");
 }
 
-#define EVENT_COUNT 2
+#define EVENT_COUNT 1
 void *digest_thread(void *arg)
 {
 	int epfd, kernfs_epfd, ret, n, flags;
@@ -1119,14 +1487,20 @@ void *digest_thread(void *arg)
 
 	memset(&g_addr, 0, sizeof(g_addr));
 	g_addr.sun_family = AF_UNIX;
-	snprintf(g_addr.sun_path, sizeof(g_addr.sun_path), 
+	snprintf(g_addr.sun_path, sizeof(g_addr.sun_path),
 			"/tmp/mlfs_cli.%ld", (long) getpid());
 
 	unlink(g_addr.sun_path);
 
-	if (bind(g_sock_fd, (struct sockaddr *)&g_addr, 
+	if (bind(g_sock_fd, (struct sockaddr *)&g_addr,
 				sizeof(struct sockaddr_un)) == -1)
 		panic("bind error\n");
+
+	ret = chmod(g_addr.sun_path, S_IRWXU | S_IRWXG | S_IRWXO);
+	if (ret < 0) {
+		perror("chmod failed");
+		panic("chmod failed");
+	}
 
 	flags = fcntl(g_sock_fd, F_GETFL, 0);
 	flags |= O_NONBLOCK;
@@ -1141,7 +1515,7 @@ void *digest_thread(void *arg)
 
 	kernfs_epev.data.fd = g_sock_fd;
 	kernfs_epev.events = EPOLLIN | EPOLLRDHUP | EPOLLHUP;
-	ret = epoll_ctl(kernfs_epfd, EPOLL_CTL_ADD, g_sock_fd, 
+	ret = epoll_ctl(kernfs_epfd, EPOLL_CTL_ADD, g_sock_fd,
 			&kernfs_epev);
 	if (ret < 0)
 		panic("fail to connect epoll fd\n");
@@ -1154,15 +1528,8 @@ void *digest_thread(void *arg)
 	// waiting for digest command
 	epev[0].data.fd = g_fs_log->digest_fd[0];
 	epev[0].events = EPOLLIN | EPOLLRDHUP | EPOLLHUP;
-	ret = epoll_ctl(epfd, EPOLL_CTL_ADD, 
+	ret = epoll_ctl(epfd, EPOLL_CTL_ADD,
 			g_fs_log->digest_fd[0], &epev[0]);
-	if (ret < 0)
-		panic("fail to connect epoll fd\n");
-
-	// waiting for kernfs message
-	epev[1].data.fd = g_sock_fd;
-	epev[1].events = EPOLLIN | EPOLLRDHUP | EPOLLHUP;
-	ret = epoll_ctl(epfd, EPOLL_CTL_ADD, g_sock_fd, &epev[1]);
 	if (ret < 0)
 		panic("fail to connect epoll fd\n");
 
@@ -1174,8 +1541,9 @@ void *digest_thread(void *arg)
 		int i;
 		n = epoll_wait(epfd, epev, EVENT_COUNT, -1);
 
-		if (n < 0 && errno != EINTR)
+		if (n < 0 && errno != EINTR) {
 			panic("epoll wait problem: digest completion\n");
+        }
 
 		for (i = 0; i < n; i++) {
 			int _fd = epev[i].data.fd;
@@ -1187,7 +1555,7 @@ void *digest_thread(void *arg)
 				if (ret == 0)
 					continue;
 
-				mlfs_info("[D] cmd: %s\n", cmd_buf);
+				mlfs_debug("[D] cmd: %s\n", cmd_buf);
 
 				// digest command
 				if (cmd_buf[1] == 'd') {
@@ -1246,25 +1614,19 @@ void *digest_thread(void *arg)
 					}
 #endif
 					// Waiting for ACK of digest from kernfs.
-					ret = epoll_wait(kernfs_epfd, &kernfs_epev, 1, -1); 
+					ret = epoll_wait(kernfs_epfd, &kernfs_epev, 1, -1);
 					if (ret >= 0) {
-						ret = recvfrom(g_sock_fd, buf, MAX_SOCK_BUF, 0, 
+						ret = recvfrom(g_sock_fd, buf, MAX_SOCK_BUF, 0,
 								(struct sockaddr *)&srv_addr, &len);
 
-						mlfs_info("received %s\n", buf);
+						mlfs_debug("received %s\n", buf);
 
 						handle_digest_response(buf);
-					} 
+					}
 				}
 			} else if (_fd == g_sock_fd) {
-				mlfs_debug("kernfs: event %d\n", epev[i].events);
-				ret = recvfrom(g_sock_fd, buf, MAX_SOCK_BUF, 0, 
-						(struct sockaddr *)&srv_addr, &len);
-				if (ret == 0)
-					continue;
-
-				mlfs_debug("kernfs cmd: %s\n", buf);
+				panic("should receive this _fd in kernfs");
 			}
-		} 
+		}
 	}
 }

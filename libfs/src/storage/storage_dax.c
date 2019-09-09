@@ -12,6 +12,7 @@
 #include "mlfs/mlfs_user.h"
 #include "storage/storage.h"
 
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -25,16 +26,21 @@ extern "C" {
 #define BANDWIDTH_MONITOR_NS 10000
 #define SEC_TO_NS(x) (x * 1000000000UL)
 
-#define ENABLE_PERF_MODEL
-#define ENABLE_BANDWIDTH_MODEL
 #ifdef STORAGE_PERF
-uint64_t storage_tsc;
+stats_dist_t storage_rtsc;
+stats_dist_t storage_rnr;
+stats_dist_t storage_wtsc;
+stats_dist_t storage_wnr;
+cache_stats_t dax_cache_stats;
 #endif
+// iangneal: because we're using real NVM!
+//#define ENABLE_PERF_MODEL
+//#define ENABLE_BANDWIDTH_MODEL
 
 // performance parameters
 /* SCM read extra latency than DRAM */
 uint32_t SCM_EXTRA_READ_LATENCY_NS = 150;
-// We assume WBARRIER LATENCY is 0 since write back queue can hide this even in 
+// We assume WBARRIER LATENCY is 0 since write back queue can hide this even in
 // power failure.
 // https://software.intel.com/en-us/blogs/2016/09/12/deprecate-pcommit-instruction
 uint32_t SCM_WBARRIER_LATENCY_NS = 0;
@@ -56,7 +62,7 @@ static inline void PERSISTENT_BARRIER(void)
 
 ///////////////////////////////////////////////////////
 
-static uint8_t *dax_addr[g_n_devices + 1];
+uint8_t *dax_addr[g_n_devices + 1];
 static size_t mapped_len[g_n_devices + 1];
 
 static inline void emulate_latency_ns(int ns)
@@ -78,36 +84,7 @@ static inline void emulate_latency_ns(int ns)
 	} while (stop - start < cycles);
 }
 
-#if 0 //Aerie.
-static void perfmodel_add_delay(int read, size_t size)
-{
-#ifdef ENABLE_PERF_MODEL
-    uint32_t extra_latency;
-#endif
-
-#ifdef ENABLE_PERF_MODEL
-	if (read) {
-		extra_latency = SCM_EXTRA_READ_LATENCY_NS;
-	} else {
-#ifdef ENABLE_BANDWIDTH_MODEL
-		// Due to the writeback cache, write does not have latency
-		// but it has bandwidth limit.
-		// The following is emulated delay when bandwidth is full
-		extra_latency = (int)size * 
-			(1 - (float)(((float) SCM_BANDWIDTH_MB)/1000) /
-			 (((float)DRAM_BANDWIDTH_MB)/1000)) / (((float)SCM_BANDWIDTH_MB)/1000);
-#else
-		//No write delay.
-		extra_latency = 0;
-#endif
-	}
-
-    emulate_latency_ns(extra_latency);
-#endif
-
-    return;
-}
-#else // based on https://engineering.purdue.edu/~yiying/nvmmstudy-msst15.pdf
+// based on https://engineering.purdue.edu/~yiying/nvmmstudy-msst15.pdf
 static void perfmodel_add_delay(int read, size_t size)
 {
 	static int warning = 0;
@@ -131,7 +108,7 @@ static void perfmodel_add_delay(int read, size_t size)
 		monitor_start = now;
 		monitor_end = monitor_start + NS2CYCLE(BANDWIDTH_MONITOR_NS);
 		*bandwidth_consumption = 0;
-	} 
+	}
 
 	if (__sync_add_and_fetch(bandwidth_consumption, size) >=
 			((SCM_BANDWIDTH_MB << 20) / (SEC_TO_NS(1UL) / BANDWIDTH_MONITOR_NS)))
@@ -159,9 +136,18 @@ static void perfmodel_add_delay(int read, size_t size)
 		emulate_latency_ns(extra_latency);
 
 #endif
+
+#if 1
+    char *val = getenv("MLFS_LATENCY");
+    if (val) {
+        struct timespec spec;
+        spec.tv_sec = 0;
+        spec.tv_nsec = atoi(val) * 1000;
+        (void)nanosleep(&spec, NULL);
+    }
+#endif
 	return;
 }
-#endif
 
 uint8_t *dax_init(uint8_t dev, char *dev_path)
 {
@@ -179,8 +165,8 @@ uint8_t *dax_init(uint8_t dev, char *dev_path)
 		exit(-1);
 	}
 
-	dax_addr[dev] = (uint8_t *)mmap(NULL, dev_size[dev], PROT_READ | PROT_WRITE, 
-			MAP_SHARED| MAP_POPULATE, fd, 0);
+	dax_addr[dev] = (uint8_t *)mmap(NULL, dev_size[dev], PROT_READ | PROT_WRITE,
+			MAP_SHARED | MAP_POPULATE, fd, 0);
 
 	if (dax_addr[dev] == MAP_FAILED) {
 		perror("cannot map file system file");
@@ -191,7 +177,7 @@ uint8_t *dax_init(uint8_t dev, char *dev_path)
 	// up to the max dev_size (last 550 MB is not accessible).
 	dev_size[dev] -= (550 << 20);
 
-	printf("dev-dax engine is initialized: dev_path %s size %lu MB\n", 
+	printf("dev-dax engine is initialized: dev_path %s size %lu MB\n",
 			dev_path, dev_size[dev] >> 20);
 
 	return dax_addr[dev];
@@ -201,36 +187,43 @@ int dax_read(uint8_t dev, uint8_t *buf, addr_t blockno, uint32_t io_size)
 {
 #ifdef STORAGE_PERF
     uint64_t tsc_begin = asm_rdtscp();
+    start_cache_stats();
 #endif
+    //printf("dax_read: %llu @ %llu\n", blockno, io_size);
 	memmove(buf, dax_addr[dev] + (blockno * g_block_size_bytes), io_size);
 
 	perfmodel_add_delay(1, io_size);
 
 	//mlfs_debug("read block number %d\n", blockno);
 #ifdef STORAGE_PERF
-    storage_tsc += asm_rdtscp() - tsc_begin;
+    update_stats_dist(&storage_rtsc, asm_rdtscp() - tsc_begin);
+    update_stats_dist(&storage_rnr, io_size);
+    end_cache_stats(&dax_cache_stats);
 #endif
 	return io_size;
 }
 
-int dax_read_unaligned(uint8_t dev, uint8_t *buf, addr_t blockno, uint32_t offset, 
+int dax_read_unaligned(uint8_t dev, uint8_t *buf, addr_t blockno, uint32_t offset,
 		uint32_t io_size)
 {
 #ifdef STORAGE_PERF
     uint64_t tsc_begin = asm_rdtscp();
+    start_cache_stats();
 #endif
 	//copy and flush data to pmem.
-	memmove(buf, dax_addr[dev] + (blockno * g_block_size_bytes) + offset, 
+	memmove(buf, dax_addr[dev] + (blockno * g_block_size_bytes) + offset,
 			io_size);
 
 	perfmodel_add_delay(1, io_size);
-	
+
 	/*
-	mlfs_debug("read block number %lu, address %lu size %u\n", 
+	mlfs_debug("read block number %lu, address %lu size %u\n",
 			blockno, (blockno * g_block_size_bytes) + offset, io_size);
 	*/
 #ifdef STORAGE_PERF
-    storage_tsc += asm_rdtscp() - tsc_begin;
+    update_stats_dist(&storage_rtsc, asm_rdtscp() - tsc_begin);
+    update_stats_dist(&storage_rnr, io_size);
+    end_cache_stats(&dax_cache_stats);
 #endif
 	return io_size;
 }
@@ -252,15 +245,16 @@ int dax_write(uint8_t dev, uint8_t *buf, addr_t blockno, uint32_t io_size)
 	//memmove(dax_addr[dev] + (blockno * g_block_size_bytes), buf, io_size);
 	perfmodel_add_delay(0, io_size);
 
-	mlfs_muffled("write block number %lu, address %lu size %u\n", 
+	mlfs_muffled("write block number %lu, address %lu size %u\n",
 			blockno, (blockno * g_block_size_bytes), io_size);
 #ifdef STORAGE_PERF
-    storage_tsc += asm_rdtscp() - tsc_begin;
+    update_stats_dist(&storage_wtsc, asm_rdtscp() - tsc_begin);
+    update_stats_dist(&storage_wnr, io_size);
 #endif
 	return io_size;
 }
 
-int dax_write_unaligned(uint8_t dev, uint8_t *buf, addr_t blockno, uint32_t offset, 
+int dax_write_unaligned(uint8_t dev, uint8_t *buf, addr_t blockno, uint32_t offset,
 		uint32_t io_size)
 {
 #ifdef STORAGE_PERF
@@ -275,10 +269,11 @@ int dax_write_unaligned(uint8_t dev, uint8_t *buf, addr_t blockno, uint32_t offs
 	//memmove(dax_addr[dev] + (blockno * g_block_size_bytes) + offset, buf, io_size);
 	perfmodel_add_delay(0, io_size);
 
-	mlfs_muffled("write block number %lu, address %lu size %u\n", 
+	mlfs_muffled("write block number %lu, address %lu size %u\n",
 			blockno, (blockno * g_block_size_bytes) + offset, io_size);
 #ifdef STORAGE_PERF
-    storage_tsc += asm_rdtscp() - tsc_begin;
+    update_stats_dist(&storage_wtsc, asm_rdtscp() - tsc_begin);
+    update_stats_dist(&storage_wnr, io_size);
 #endif
 	return io_size;
 }
@@ -297,7 +292,8 @@ int dax_erase(uint8_t dev, addr_t blockno, uint32_t io_size)
 
 	perfmodel_add_delay(0, io_size);
 #ifdef STORAGE_PERF
-    storage_tsc += asm_rdtscp() - tsc_begin;
+    update_stats_dist(&storage_wtsc, asm_rdtscp() - tsc_begin);
+    update_stats_dist(&storage_wnr, io_size);
 #endif
 }
 

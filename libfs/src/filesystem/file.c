@@ -20,27 +20,6 @@ void mlfs_file_init(void)
 	pthread_spin_init(&g_fd_table.lock, PTHREAD_PROCESS_SHARED); 
 }
 
-static addr_t mlfs_update_get_fcache(struct inode *inode, 
-		offset_t offset, addr_t log_addr)
-{
-	offset_t key;
-	struct fcache_block *fc_block;
-
-	key = (offset >> g_block_size_shift);
-
-	fc_block = fcache_find(inode, key);
-
-	if (fc_block) 
-		return fc_block->log_addr;
-	
-	fc_block = fcache_alloc_add(inode, key, log_addr);
-
-	if (!fc_block)
-		return 0;
-
-	return fc_block->log_addr;
-}
-
 // Allocate a file structure.
 /* FIXME: the ftable implementation is too naive. need to
  * improve way to allocate struct file */
@@ -119,7 +98,7 @@ int mlfs_file_close(struct file *f)
 int mlfs_file_stat(struct file *f, struct stat *st)
 {
 	if(f->type == FD_INODE){
-		ilock(f->ip);
+		irdlock(f->ip);
 		stati(f->ip, st);
 		iunlock(f->ip);
 		return 0;
@@ -131,12 +110,11 @@ int mlfs_file_stat(struct file *f, struct stat *st)
 ssize_t mlfs_file_read(struct file *f, uint8_t *buf, size_t n)
 {
 	ssize_t r = 0;
-
 	if (f->readable == 0) 
 		return -EPERM;
 
 	if (f->type == FD_INODE) {
-		ilock(f->ip);
+		irdlock(f->ip);
 
 		if (f->off >= f->ip->size) {
 			iunlock(f->ip);
@@ -159,17 +137,17 @@ ssize_t mlfs_file_read(struct file *f, uint8_t *buf, size_t n)
 	return -1;
 }
 
-int mlfs_file_read_offset(struct file *f, uint8_t *buf, size_t n, offset_t off)
+ssize_t mlfs_file_read_offset(struct file *f, uint8_t *buf, size_t n, offset_t off)
 {
-	int r;
+	ssize_t r;
 
 	if (f->readable == 0)
 		return -EPERM;
 
 	if (f->type == FD_INODE) {
-		ilock(f->ip);
+		irdlock(f->ip);
 
-		if (f->off >= f->ip->size) {
+		if (off >= f->ip->size) {
 			iunlock(f->ip);
 			return 0;
 		}
@@ -188,10 +166,12 @@ int mlfs_file_read_offset(struct file *f, uint8_t *buf, size_t n, offset_t off)
 	return -1;
 }
 
-// Write to file f.
-int mlfs_file_write(struct file *f, uint8_t *buf, size_t n)
+// Write `n' bytes from buffer `buf' start at `offset' to file `f'.
+// return value: the bytes wrote to file or -1 if error occurs
+// NOTE: This function will NOT update f->off
+ssize_t mlfs_file_write(struct file *f, uint8_t *buf, offset_t offset, size_t n)
 {
-	int r;
+	size_t r;
 	uint32_t max_io_size = (128 << 20);
 	offset_t i = 0, file_size;
 	uint32_t io_size = 0;
@@ -222,11 +202,17 @@ int mlfs_file_write(struct file *f, uint8_t *buf, size_t n)
 		 */
 
 		mlfs_debug("%s\n", "+++ start transaction");
+		while (offset > f->ip->size) {
+			mlfs_debug("sparse write to inum %u, offset %lu, len %lu, file size %lu, force fallocate\n",
+					f->ip->inum, offset, n, f->ip->size);
+			mlfs_file_fallocate(f, f->ip->size, offset - f->ip->size);
+		}
 
 		start_log_tx();
+		iwrlock(f->ip);
 
-		offset_start = f->off;
-		offset_end = f->off + n;
+		offset_start = offset;
+		offset_end = offset + n;
 
 		offset_aligned = ALIGN(offset_start, g_block_size_bytes);
 
@@ -251,25 +237,21 @@ int mlfs_file_write(struct file *f, uint8_t *buf, size_t n)
 
 			size_aligned = n - size_prepended - size_appended; 
 		}
-
 		// add preprended portion to log
 		if (size_prepended > 0) {
-			ilock(f->ip);
 
-			r = add_to_log(f->ip, buf, f->off, size_prepended);
-
-			iunlock(f->ip);
+			r = add_to_log(f->ip, buf, offset, size_prepended);
 
 			mlfs_assert(r > 0);
 
-			f->off += r;
+			offset += r;
 
 			i += r;
 		}
 
 		// add aligned portion to log
 		while(i < n - size_appended) {
-			mlfs_assert((f->off % g_block_size_bytes) == 0);
+			mlfs_assert((offset % g_block_size_bytes) == 0);
 			
 			io_size = n - size_appended - i;
 			
@@ -277,15 +259,12 @@ int mlfs_file_write(struct file *f, uint8_t *buf, size_t n)
 				io_size = max_io_size;
 
 			/* add_to_log updates inode block pointers */
-			ilock(f->ip);
 
 			/* do not copy user buffer to page cache */
 			
 			/* add buffer to log header */
-			if ((r = add_to_log(f->ip, buf + i, f->off, io_size)) > 0)
-				f->off += r;
-
-			iunlock(f->ip);
+			if ((r = add_to_log(f->ip, buf + i, offset, io_size)) > 0)
+				offset += r;
 
 			if(r < 0)
 				break;
@@ -298,15 +277,11 @@ int mlfs_file_write(struct file *f, uint8_t *buf, size_t n)
 
 		// add appended portion to log
 		if (size_appended > 0) {
-			ilock(f->ip);
-
-			r = add_to_log(f->ip, buf + i, f->off, size_appended);
-
-			iunlock(f->ip);
+			r = add_to_log(f->ip, buf + i, offset, size_appended);
 
 			mlfs_assert(r > 0);
 
-			f->off += r;
+			offset += r;
 
 			i += r;
 		}
@@ -316,6 +291,7 @@ int mlfs_file_write(struct file *f, uint8_t *buf, size_t n)
 		 * by looking up offset in a logheader and also mtime in a logheader */
 		// iupdate(f->ip);
 		
+		iunlock(f->ip);
 		commit_log_tx();
 
 		mlfs_debug("%s\n", "--- end transaction");
@@ -327,9 +303,52 @@ int mlfs_file_write(struct file *f, uint8_t *buf, size_t n)
 
 	return -1;
 }
+/*!
+ * Allocate zero to change file size
+ */
+#define ALLOC_IO_SIZE (64UL << 10)
+#define _min(a, b) ({\
+		__typeof__(a) _a = a;\
+		__typeof__(b) _b = b;\
+		_a < _b ? _a : _b; })
+
+int mlfs_file_fallocate(struct file *f, offset_t offset, size_t len)
+{
+	struct inode *ip = f->ip;
+	char falloc_buf[ALLOC_IO_SIZE];
+
+	mlfs_assert(ip);
+	memset(falloc_buf, 0, ALLOC_IO_SIZE);
+	if (offset > ip->size) {
+		panic("doesn't support sparse file\n");
+	}
+	if (offset + len > ip->size) {
+		// only append 0 at the end of the file when
+		// offset <= file size && offset + len > file_size
+		// First, make sure offset and len start from the end of the file
+		len -= ip->size - offset;
+		offset = ip->size;
+
+		for (size_t i = 0; i < len; i += ALLOC_IO_SIZE) {
+			size_t io_size = _min(len - i, ALLOC_IO_SIZE);
+
+			int ret = mlfs_file_write(f, (uint8_t *)falloc_buf, offset, io_size);
+			// keep accumulating offset, here should hold `ret == io_size'
+			offset += ret;
+			if (ret < 0) {
+				panic("fail to do fallocate\n");
+				return ret;
+			}
+		}
+	}
+	return 0;
+}
 
 //supporting type : T_FILE, T_DIR
-struct inode *mlfs_object_create(char *path, unsigned short type)
+// output value: exist == 0 if newly created, exist == 1 if already exists
+//               only make sense when return value is non-null
+// return value: non-null if created successfully, null if part of the path doesn't exist
+struct inode *mlfs_object_create(const char *path, unsigned short type, uint8_t *exist)
 {
 	offset_t offset;
 	struct inode *inode = NULL, *parent_inode = NULL;
@@ -340,9 +359,11 @@ struct inode *mlfs_object_create(char *path, unsigned short type)
 	if ((parent_inode = nameiparent(path, name)) == 0)
 		return NULL;
 
-	ilock(parent_inode);
+	iwrlock(parent_inode);
 
-	if (dir_check_entry_fast(parent_inode)) {
+	// FIXME: reimplementation of getdirent breaks check_entry_fast
+	// Here as a workaround, we just disable it.
+	//if (dir_check_entry_fast(parent_inode)) {
 		inode = dir_lookup(parent_inode, name, &offset);
 
 		if (inode) {
@@ -353,10 +374,10 @@ struct inode *mlfs_object_create(char *path, unsigned short type)
 
 			mlfs_get_time(&inode->ctime);
 			inode->atime = inode->mtime = inode->ctime;
-
+			*exist = 1;
 			return inode;
 		}
-	}
+	//}
 
 	if (enable_perf_stats) 
 		tsc_begin = asm_rdtscp();
@@ -386,13 +407,11 @@ struct inode *mlfs_object_create(char *path, unsigned short type)
 		// To avoid cyclic ref count, do not bump link for "."
 		parent_inode->nlink++;
 
-#if 0
 		if (dir_add_entry(inode, ".", inode->inum) < 0)
 			panic("cannot add . entry");
 
 		if (dir_add_entry(inode, "..", parent_inode->inum) < 0)
 			panic("cannot add .. entry");
-#endif
 
 		iupdate(parent_inode);
 	}
@@ -404,6 +423,6 @@ struct inode *mlfs_object_create(char *path, unsigned short type)
 
 	if (!dlookup_find(g_root_dev, path))
 		dlookup_alloc_add(g_root_dev, inode, path);
-
+	*exist = 0;
 	return inode;
 }

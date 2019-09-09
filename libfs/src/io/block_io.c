@@ -33,7 +33,7 @@ struct buffer_head *bh_hash[g_n_devices + 1];
 pthread_rwlock_t *bcache_rwlock;
 
 static void reclaim_buffer(struct buffer_head *bh);
-struct buffer_head *buffer_alloc(struct block_device *bdev, 
+struct buffer_head *buffer_alloc(struct block_device *bdev,
 		addr_t block_nr, int page_size);
 
 void device_init(void)
@@ -42,9 +42,10 @@ void device_init(void)
 	pthread_rwlockattr_t rwlattr;
 
 	// dev_id = 1 - NVMM
-	// dev_id = 2 - SSD 
+	// dev_id = 2 - SSD
 	// dev_id = 3 - HDD
-	// dev_id > 4 - Per-application log
+	// dev_id = 4 - Per-application log
+    // dev_id = 5 - KernFS undo log
 	// ...
 	for (i = 1; i < g_n_devices + 1; i++) {
 		mlfs_debug("dev id %d\n", i);
@@ -59,7 +60,7 @@ void device_init(void)
 		if (i == g_root_dev) {
 			g_bdev[i] = bdev_alloc(i, 12);
 			g_bdev[i]->storage_engine = &storage_dax;
-			g_bdev[i]->map_base_addr = 
+			g_bdev[i]->map_base_addr =
 				g_bdev[i]->storage_engine->init(i, g_dev_path[i]);
 		} else if (i == g_ssd_dev) {
 			g_bdev[i] = bdev_alloc(i, 12);
@@ -70,7 +71,7 @@ void device_init(void)
 #else
 			// for testing.
 			g_bdev[i]->storage_engine = &storage_dax;
-			g_bdev[i]->map_base_addr = 
+			g_bdev[i]->map_base_addr =
 				g_bdev[i]->storage_engine->init(i, g_dev_path[i]);
 #endif
 		} else if (i == g_hdd_dev) {
@@ -78,12 +79,12 @@ void device_init(void)
 			g_bdev[i]->storage_engine = &storage_hdd;
 			g_bdev[i]->map_base_addr = NULL;
 			g_bdev[i]->storage_engine->init(i, g_dev_path[i]);
-		} 
+		}
 		// libfs logs starting from devid 4
 		else {
 			g_bdev[i] = bdev_alloc_fast(i, 12);
 			g_bdev[i]->storage_engine = &storage_dax;
-			g_bdev[i]->map_base_addr = 
+			g_bdev[i]->map_base_addr =
 				g_bdev[i]->storage_engine->init(i, g_dev_path[i]);
 		}
 
@@ -100,9 +101,11 @@ void device_init(void)
 void device_shutdown(void)
 {
 	int i;
-	for (i = 1; i < g_n_devices + 1; i++)
-        if (g_bdev[i])
+	for (i = 1; i < g_n_devices + 1; i++) {
+        if (g_bdev[i]) {
 		    bdev_free(g_bdev[i]);
+        }
+    }
 
 	return;
 }
@@ -145,13 +148,23 @@ static struct buffer_head *buffer_alloc_fast(struct block_device *bdev,
 	bh->b_size = 0;
 	bh->b_offset = 0;
 
+#if 1
+    if (IDXAPI_IS_GLOBAL()) {
+        bh->b_cacheline_size = 256; // units of 64 bytes
+        bh->b_bitmap_size = (g_block_size_bytes / bh->b_cacheline_size);
+        bh->b_dirty_bitmap = (uint64_t*)mlfs_alloc(bh->b_bitmap_size / sizeof(uint8_t));
+        bh->b_use_bitmap = 0;
+        bitmap_zero(bh->b_dirty_bitmap, bh->b_bitmap_size);
+    }
+#endif
+
 	INIT_LIST_HEAD(&bh->b_io_list);
 
 	//pthread_spin_init(&bh->b_spinlock, PTHREAD_PROCESS_SHARED);
 
 	return bh;
 }
-
+#if 0
 static inline struct buffer_head *bh_alloc_add(uint8_t dev,
 		addr_t block_nr, uint32_t size, uint8_t mode)
 {
@@ -172,11 +185,12 @@ static inline struct buffer_head *bh_alloc_add(uint8_t dev,
 	pthread_rwlock_wrlock(bcache_rwlock);
 
 	HASH_ADD(hash_handle, bh_hash[dev], b_blocknr, sizeof(addr_t), bh);
-			
+
 	pthread_rwlock_unlock(bcache_rwlock);
 
 	return bh;
 }
+#endif
 
 struct buffer_head *bh_get_sync_IO(uint8_t dev, addr_t block_nr, uint8_t mode)
 {
@@ -208,13 +222,13 @@ struct buffer_head *get_bh_from_cache(block_key_t key, uint8_t mode)
 	if (bh) {
 		// clean up previous buffer_head used for a different-sized IO.
 		if (bh->b_size != size) {
-			int refcount; 
+			int refcount;
 			refcount = put_bh_and_read(bh);
 
 			//mlfs_assert(refcount == 0);
 			bh_del(bh);
 
-			if (!buffer_data_ref(bh)) 
+			if (!buffer_data_ref(bh))
 				mlfs_free(bh->b_data);
 
 			goto alloc;
@@ -246,10 +260,10 @@ int bh_submit_read_sync_IO(struct buffer_head *bh)
 		// unaligned IO is only allowed in NVM.
 		// mlfs_assert(bh->b_dev != g_ssd_dev);
 		// mlfs_assert(bh->b_dev != g_hdd_dev);
-		ret = storage_engine->read_unaligned(bh->b_dev, bh->b_data, 
+		ret = storage_engine->read_unaligned(bh->b_dev, bh->b_data,
 				bh->b_blocknr, bh->b_offset, bh->b_size);
 	} else {
-		ret = storage_engine->read(bh->b_dev, bh->b_data, 
+		ret = storage_engine->read(bh->b_dev, bh->b_data,
 				bh->b_blocknr, bh->b_size);
 	}
 
@@ -270,7 +284,7 @@ struct buffer_head *mlfs_read_sync_IO(uint8_t dev, addr_t block_nr,
 
 	assert(size == g_block_size_bytes);
 	//mlfs_assert(blockno <= disk_sb[dev].size);
-	
+
 	b = get_bh_sync_IO(dev, block_nr, BUF_CACHE_ALLOC);
 
 	//pthread_spin_lock(&b->b_spinlock);
@@ -309,18 +323,78 @@ int mlfs_write(struct buffer_head *b)
 
 	mlfs_assert(b->b_size > 0);
 
-	//mlfs_assert(b->b_blocknr + (b->b_size >> g_block_size_shift) <= disk_sb[b->b_dev].size);
+    if (IDXAPI_IS_GLOBAL()) {
+        storage_engine = g_bdev[b->b_dev]->storage_engine;
+        // (iangneal): Support bitmap for byte-addressable storage.
+        if (b->b_offset || b->b_use_bitmap) {
+        //printf("byte addressable\n");
+        if (b->b_use_bitmap) {
+          //printf("bitmap write (size of bitmap: %lu)\n", b->b_bitmap_size);
+          //printf("(size of cacheline: %lu)\n", b->b_cacheline_size);
+          //printf("(size of block: %lu)\n", g_block_size_bytes);
+          mlfs_assert(b->b_dirty_bitmap);
+          size_t total = 0;
+          // iangneal: find dirty regions, write them back one snippet at a time.
+          for (int i = 0; i < b->b_bitmap_size;) {
+            size_t region_size = 0;
+            uint32_t start = find_next_bit(b->b_dirty_bitmap, b->b_bitmap_size, i);
+            uint32_t next = 0;
 
-	storage_engine = g_bdev[b->b_dev]->storage_engine;
-	if (b->b_offset)
-		ret = storage_engine->write_unaligned(b->b_dev, b->b_data, 
-				b->b_blocknr, b->b_offset, b->b_size);
-	else
-		ret = storage_engine->write(b->b_dev, b->b_data, b->b_blocknr, b->b_size);
+            if (start == b->b_bitmap_size) {
+              break;
+            } else {
+              i = start;
+            }
 
-	if (ret != b->b_size)
-		panic("fail to write storage\n");
+            do {
+              __clear_bit(i, b->b_dirty_bitmap);
+              region_size++;
+              i++;
+              next = find_next_bit(b->b_dirty_bitmap, b->b_bitmap_size, i);
+            } while (next == start + region_size && next < b->b_bitmap_size);
 
+            size_t byte_off = start * b->b_cacheline_size;
+
+            ret = storage_engine->write_unaligned(
+                b->b_dev,
+                b->b_data + byte_off, /* need this because b_data is a whole page */
+                b->b_blocknr,
+                byte_off,
+                region_size * b->b_cacheline_size);
+
+            if (ret != region_size * b->b_cacheline_size) {
+              fprintf(stderr, "%d (ret) != %lu\n", ret,
+                  region_size * b->b_cacheline_size);
+              panic("failed to write dirty bitmap range");
+            } else {
+              total += region_size;
+            }
+          }
+
+          ret = total;
+        } else {
+          ret = storage_engine->write_unaligned(b->b_dev, b->b_data,
+              b->b_blocknr, b->b_offset, b->b_size);
+        }
+      } else {
+            ret = storage_engine->write(b->b_dev, b->b_data, b->b_blocknr, b->b_size);
+      }
+
+        if (ret != b->b_size) {
+        fprintf(stderr, "ret = %d, size = %u\n", ret, b->b_size);
+            panic("failed to write storage\n");
+      }
+    } else {
+        storage_engine = g_bdev[b->b_dev]->storage_engine;
+        if (b->b_offset)
+            ret = storage_engine->write_unaligned(b->b_dev, b->b_data,
+                    b->b_blocknr, b->b_offset, b->b_size);
+        else
+            ret = storage_engine->write(b->b_dev, b->b_data, b->b_blocknr, b->b_size);
+
+        if (ret != b->b_size)
+            panic("fail to write storage\n");
+    }
 	set_buffer_uptodate(b);
 
 	ret = 0;
@@ -392,7 +466,7 @@ static int device_read(uint8_t dev, addr_t blocknr, int count, int blk_size,
 {
 	int ret;
 	struct storage_operations *storage_engine;
-	
+
 	mlfs_assert(blk_size == g_block_size_bytes);
 	mlfs_assert(count == 1);
 
@@ -410,10 +484,10 @@ static int device_write(uint8_t dev, addr_t blocknr, int count, int blk_size,
 {
 	int ret;
 	struct storage_operations *storage_engine;
-	
+
 	mlfs_assert(blk_size == g_block_size_bytes);
 	mlfs_assert(count == 1);
-	
+
 	storage_engine = g_bdev[dev]->storage_engine;
 	ret = storage_engine->write(dev, (uint8_t *)buf, blocknr, g_block_size_bytes);
 
@@ -535,7 +609,7 @@ struct block_device *bdev_alloc(uint8_t dev_id, int blocksize_bits)
 
 static void bdev_writeback_thread_notify(struct block_device *bdev)
 {
-	int ret; 
+	int ret;
 	signed char test_byte = 1;
 	ret = write(bdev->bd_bh_writeback_wakeup_fd[1], &test_byte, sizeof(test_byte));
 }
@@ -584,7 +658,6 @@ static signed char bdev_io_thread_read_notify(struct block_device *bdev)
 	return test_byte;
 }
 
-static int sync_dirty_buffer(struct buffer_head *bh);
 static void detach_bh_from_freelist(struct buffer_head *bh);
 static void buffer_free(struct buffer_head *bh);
 
@@ -599,7 +672,7 @@ void bdev_free(struct block_device *bdev)
 	bdev_io_thread_notify_exit(bdev);
 	pthread_join(bdev->bd_bh_io_thread, NULL);
 #endif
-	
+
 	pthread_mutex_lock(&bdev->bd_bh_root_lock);
 	while ((node = rb_first(&bdev->bd_bh_root))) {
 		struct buffer_head *bh = rb_entry(
@@ -636,7 +709,7 @@ void sync_writeback_buffers(struct block_device *bdev)
 		bdev_writeback_thread_notify(bdev);
 }
 
-struct buffer_head *buffer_alloc(struct block_device *bdev, 
+struct buffer_head *buffer_alloc(struct block_device *bdev,
 		addr_t block_nr, int page_size)
 {
 	int ret;
@@ -650,10 +723,18 @@ struct buffer_head *buffer_alloc(struct block_device *bdev,
 	bh->b_bdev = bdev;
 	bh->b_dev = bdev->b_devid;
 	bh->b_data = (uint8_t *)(bh + 1);
-	bh->b_size = page_size; 
+	bh->b_size = page_size;
 	bh->b_offset = 0;
 	bh->b_blocknr = block_nr;
 	bh->b_count = 0;
+
+  //bh->b_cacheline_size = 64; // units of 64 bytes
+  bh->b_cacheline_size = 256; // units of 64 bytes
+  bh->b_bitmap_size = (g_block_size_bytes / bh->b_cacheline_size);
+  // printf("--- hello? %lu %lu\n", bh->b_cacheline_size, bh->b_bitmap_size);
+  bh->b_dirty_bitmap = (uint64_t*)mlfs_alloc(bh->b_bitmap_size / sizeof(uint8_t));
+  bh->b_use_bitmap = 0;
+  bitmap_zero(bh->b_dirty_bitmap, bh->b_bitmap_size);
 
 	//pthread_spin_init(&bh->b_spinlock, PTHREAD_PROCESS_SHARED);
 	pthread_mutex_init(&bh->b_lock, NULL);
@@ -676,6 +757,7 @@ static void buffer_free(struct buffer_head *bh)
 	if (bh->b_count != 0)
 		fprintf(stderr, "bh: %p b_count != 0, my pid: %d", bh, getpid());
 
+  mlfs_free(bh->b_dirty_bitmap);
 	mlfs_free(bh);
 }
 
@@ -722,15 +804,15 @@ static void remove_first_bh_from_freelist(struct block_device *bdev)
 	buffer_free(bh);
 }
 
-static void move_buffer_to_writeback(struct buffer_head *bh)
+void move_buffer_to_writeback(struct buffer_head *bh)
 {
-	struct block_device *bdev = bh->b_bdev;
-	pthread_mutex_lock(&bdev->bd_bh_dirty_lock);
-	if (list_empty(&bh->b_dirty_list)) {
-		list_add_tail(&bh->b_dirty_list, &bh->b_bdev->bd_bh_dirty);
-		buffer_dirty_count++;
-	}
-	pthread_mutex_unlock(&bdev->bd_bh_dirty_lock);
+    struct block_device *bdev = bh->b_bdev;
+    if (list_empty(&bh->b_dirty_list)) {
+        pthread_mutex_lock(&bdev->bd_bh_dirty_lock);
+        list_add_tail(&bh->b_dirty_list, &bh->b_bdev->bd_bh_dirty);
+        buffer_dirty_count++;
+        pthread_mutex_unlock(&bdev->bd_bh_dirty_lock);
+    }
 }
 
 static struct buffer_head *
@@ -809,7 +891,7 @@ void wait_on_buffer(struct buffer_head *bh, int isread)
 	int ret;
 
 	m_barrier();
-	
+
 	pthread_mutex_lock(&bh->b_wait_mutex);
 	pthread_mutex_unlock(&bh->b_wait_mutex);
 
@@ -851,7 +933,7 @@ int submit_bh(int is_write, struct buffer_head *bh)
 
 	add_buffer_to_ioqueue(bh);
 	bdev_io_thread_notify(bh->b_bdev);
-	
+
 	return 0;
 }
 
@@ -867,7 +949,7 @@ void after_buffer_sync(struct buffer_head *bh, int uptodate)
 	unlock_buffer(bh);
 
 	m_barrier();
-	
+
 	pthread_mutex_unlock(&bh->b_wait_mutex);
 }
 
@@ -919,36 +1001,32 @@ int bh_submit_read(struct buffer_head *bh)
 	return ret;
 }
 
-static int sync_dirty_buffer(struct buffer_head *bh)
+/*
+ * return: 0 means synced and no longer dirty
+ *         1 means still has refcount and shouldn't be delete from dirty_list
+ */
+int sync_dirty_buffer(struct buffer_head *bh)
 {
-	int ret = 0;
-
 	if (!trylock_buffer(bh))
-		return ret;
+		return 1;
 
-	if (bh->b_count < 1 && buffer_dirty(bh)) {
-		/*
-		get_bh(bh);
-		bh->b_end_io = after_buffer_sync;
-
-		pthread_mutex_lock(&bh->b_wait_mutex);
-		ret = submit_bh(WRITE, bh);
-		*/
-		get_bh(bh);
+	if (buffer_dirty(bh)) {
+		int ret = 1;
 		mlfs_write(bh);
-
-		set_buffer_uptodate(bh);
-
-		put_bh(bh);
-		//remove_buffer_from_writeback(bh);
-
-		clear_buffer_dirty(bh);
-		attach_bh_to_freelist(bh);
+		if (bh->b_count == 0) {
+			set_buffer_uptodate(bh);
+			clear_buffer_dirty(bh);
+			attach_bh_to_freelist(bh);
+			ret = 0;
+		}
+		// shouldn't remove again since outer side will handle deletion
+		// remove_buffer_from_writeback(bh);
 		unlock_buffer(bh);
+		return ret;
 	} else {
 		unlock_buffer(bh);
+		return 0;
 	}
-	return ret;
 }
 
 /* Direct write without using the writeback thread */
@@ -979,7 +1057,8 @@ struct buffer_head *__getblk(struct block_device *bdev, uint64_t block,
 	bh = buffer_search(bdev, block);
 	if (bh) {
 		detach_bh_from_freelist(bh);
-		remove_buffer_from_writeback(bh);
+		// comment out on purpose, otherwise dirty buffer still won't be written back
+		//remove_buffer_from_writeback(bh);
 		get_bh(bh);
 		return bh;
 	}
@@ -1016,7 +1095,7 @@ void brelse(struct buffer_head *bh)
 
 	if (!buffer_dirty(bh))
 		reclaim_buffer(bh);
-	else 
+	else
 		move_buffer_to_writeback(bh);
 out:
 	return;
@@ -1045,22 +1124,47 @@ static void try_to_sync_buffers(struct block_device *bdev)
 void sync_all_buffers(struct block_device *bdev)
 {
 	uint32_t i = 0;
-	while (1) {
-		struct buffer_head *cur;
-		cur = remove_first_buffer_from_writeback(bdev);
-		if (cur) {
-			sync_dirty_buffer(cur);
-			mlfs_debug("[dev %d], block %lu synced\n", 
+	struct buffer_head *cur;
+	struct buffer_head *next;
+	pthread_mutex_lock(&bdev->bd_bh_dirty_lock);
+	list_for_each_entry_safe(cur, next, &bdev->bd_bh_dirty, b_dirty_list) {
+		if (!sync_dirty_buffer(cur)) {
+			list_del_init(&cur->b_dirty_list);
+			buffer_dirty_count--;
+			mlfs_debug("[dev %d], block %lu synced\n",
 					cur->b_dev, cur->b_blocknr);
-		} else
-			break;
-		i++;
+			++i;
+		}
 	}
+	pthread_mutex_unlock(&bdev->bd_bh_dirty_lock);
 
 	if (bdev->b_devid == g_ssd_dev)
 		mlfs_io_wait(g_ssd_dev, 0);
 
 	mlfs_debug("%lu blocks are synced\n", i);
+}
+
+void ensure_block_is_clear(struct block_device *bdev, mlfs_fsblk_t blk)
+{
+	uint32_t i = 0;
+	struct buffer_head *cur;
+	struct buffer_head *next;
+	pthread_mutex_lock(&bdev->bd_bh_dirty_lock);
+	list_for_each_entry_safe(cur, next, &bdev->bd_bh_dirty, b_dirty_list) {
+		if (buffer_dirty(cur) && cur->b_blocknr == blk) {
+            clear_buffer_dirty(cur);
+			list_del_init(&cur->b_dirty_list);
+			buffer_dirty_count--;
+			mlfs_debug("[dev %d], block %lu cleaned due to alloc\n",
+					cur->b_dev, cur->b_blocknr);
+			++i;
+		}
+	}
+	pthread_mutex_unlock(&bdev->bd_bh_dirty_lock);
+
+	if (bdev->b_devid == g_ssd_dev) {
+		mlfs_io_wait(g_ssd_dev, 0);
+    }
 }
 
 static void *buffer_writeback_thread(void *arg)
@@ -1084,7 +1188,7 @@ static void *buffer_writeback_thread(void *arg)
 			try_to_sync_buffers(bdev);
 			if (bdev_is_notify_exiting(command))
 				break;
-			
+
 			continue;
 		}
 		if (ret == 0) {

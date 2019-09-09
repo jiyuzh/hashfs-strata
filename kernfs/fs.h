@@ -5,15 +5,22 @@
 #include "global/types.h"
 #include "global/defs.h"
 #include "global/mem.h"
+#include "global/util.h"
 #include "global/ncx_slab.h"
 #include "ds/uthash.h"
 #include "ds/rbtree.h"
 #include "shared.h"
+#include "cache_stats.h"
 #include "concurrency/synchronization.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+// iangneal: for API init
+extern mem_man_fns_t strata_mem_man;
+extern callback_fns_t strata_callbacks;
+extern idx_spec_t strata_idx_spec;
 
 // libmlfs Disk layout:
 // [ boot block | sb block | inode blocks | free bitmap | data blocks | log blocks ]
@@ -22,9 +29,12 @@ extern "C" {
 // Block group expension is not implemented yet.
 
 typedef struct mlfs_kernfs_stats {
-	uint64_t digest_time_tsc; 
+	uint64_t digest_time_tsc;
 	uint64_t path_search_tsc;
-    uint64_t path_storage_tsc;
+    uint64_t path_search_size;
+	uint64_t path_search_nr;
+	uint64_t path_storage_nr;
+	uint64_t path_storage_tsc;
 	uint64_t replay_time_tsc;
 	uint64_t apply_time_tsc;
 	uint64_t digest_dir_tsc;
@@ -33,12 +43,26 @@ typedef struct mlfs_kernfs_stats {
 	uint64_t n_digest;
 	uint64_t n_digest_skipped;
 	uint64_t total_migrated_mb;
+    // block allocator
+    uint64_t balloc_tsc;
+    uint64_t balloc_nblk;
+    uint64_t balloc_nr;
+    // undo log
+    uint64_t undo_tsc;
+    uint64_t undo_nr;
+
+	stats_dist_t read_per_index;
+    // Indexing cache rates
+    cache_stats_t cache_stats;
 } kernfs_stats_t;
 
 extern struct disk_superblock disk_sb[g_n_devices];
 extern struct super_block *sb[g_n_devices];
 extern kernfs_stats_t g_perf_stats;
 extern uint8_t enable_perf_stats;
+
+
+extern uint16_t *inode_version_table;
 
 // Inodes per block.
 #define IPB           (g_block_size_bytes / sizeof(struct dinode))
@@ -53,7 +77,7 @@ struct dirent_data {
 
 /* A bug note. UThash has a weird bug that
  * if offset is uint64_t type, it cannot find data
- * It is OK to use 32 bit because the offset does not 
+ * It is OK to use 32 bit because the offset does not
  * overflow 32 bit */
 typedef struct dcache_key {
 	uint32_t inum;
@@ -62,7 +86,7 @@ typedef struct dcache_key {
 
 // dirent array block (4KB) cache
 struct dirent_block {
-	dcache_key_t key; 
+	dcache_key_t key;
 	mlfs_hash_t hash_handle;
 	struct rb_node dblk_rb_node;
 	uint8_t dirent_array[g_block_size_bytes];
@@ -93,6 +117,66 @@ static inline struct inode *icache_find(uint8_t dev, uint32_t inum)
 	return inode;
 }
 
+// Block containing inode i
+static inline addr_t get_inode_block(uint8_t dev, uint32_t inum)
+{
+	return (inum / IPB) + disk_sb[dev].inode_start;
+}
+
+static inline void init_api_idx_struct(uint8_t dev, struct inode *inode) {
+    // iangneal: indexing API init.
+    if (IDXAPI_IS_PER_FILE() && inode->itype == T_FILE) {
+        static bool notify = false;
+
+        if (!notify) {
+            printf("Init API extent trees!!!\n");
+            notify = true;
+        }
+
+        paddr_range_t direct_extents = {
+            .pr_start      = get_inode_block(dev, inode->inum),
+            .pr_blk_offset = (sizeof(struct dinode) * (inode->inum % IPB)) + 64,
+            .pr_nbytes     = 64
+        };
+
+        idx_struct_t *tmp = (idx_struct_t*)mlfs_zalloc(sizeof(*inode->ext_idx));
+        int init_err;
+
+        switch(g_idx_choice) {
+            case EXTENT_TREES:
+                init_err = extent_tree_fns.im_init_prealloc(&strata_idx_spec,
+                                                            &direct_extents,
+                                                            tmp);
+                break;
+            case LEVEL_HASH_TABLES:
+                init_err = levelhash_fns.im_init_prealloc(&strata_idx_spec,
+                                                          &direct_extents,
+                                                          tmp);
+                break;
+            case RADIX_TREES:
+                init_err = radixtree_fns.im_init_prealloc(&strata_idx_spec,
+                                                          &direct_extents,
+                                                          tmp);
+                break;
+            default:
+                panic("Invalid choice!!!\n");
+        }
+
+        FN(tmp, im_set_caching, tmp, g_idx_cached);
+
+        if (init_err) {
+            fprintf(stderr, "Error in extent tree API init: %d\n", init_err);
+            panic("Could not initialize API per-inode structure!\n");
+        }
+
+        if (tmp->idx_fns->im_set_stats) {
+            FN(tmp, im_set_stats, tmp, enable_perf_stats);
+        }
+
+        inode->ext_idx = tmp;
+    }
+}
+
 static inline struct inode *icache_alloc_add(uint8_t dev, uint32_t inum)
 {
 	struct inode *inode;
@@ -118,12 +202,13 @@ static inline struct inode *icache_alloc_add(uint8_t dev, uint32_t inum)
 
 	pthread_spin_init(&inode->de_cache_spinlock, PTHREAD_PROCESS_SHARED);
 	inode->de_cache = NULL;
+	inode->i_sb = sb;
 
 	//pthread_spin_init(&inode->i_spinlock, PTHREAD_PROCESS_SHARED);
-	pthread_mutex_init(&inode->i_mutex, NULL);
+	pthread_rwlock_init(&inode->i_rwlock, NULL);
 
 	INIT_LIST_HEAD(&inode->i_slru_head);
-	
+
 	pthread_spin_lock(&icache_spinlock);
 
 	HASH_ADD(hash_handle, inode_hash[dev], inum,
@@ -138,8 +223,8 @@ static inline struct inode *icache_add(struct inode *inode)
 {
 	uint32_t inum = inode->inum;
 
-	pthread_mutex_init(&inode->i_mutex, NULL);
-	
+	pthread_rwlock_init(&inode->i_rwlock, NULL);
+
 	pthread_spin_lock(&icache_spinlock);
 
 	HASH_ADD(hash_handle, inode_hash[inode->dev], inum,
@@ -161,15 +246,15 @@ static inline int icache_del(struct inode *ip)
 	return 0;
 }
 
-static inline 
+static inline
 __attribute__((optimize("-Ofast")))
-struct dirent_block *dcache_find(uint8_t dev, 
+struct dirent_block *dcache_find(uint8_t dev,
 		uint32_t inum, offset_t _offset)
 {
 	struct dirent_block *dir_block;
 	dcache_key_t key = {
 		.inum = inum,
-		.offset = (_offset >> g_block_size_shift),
+		.offset = (uint32_t)(_offset >> g_block_size_shift),
 	};
 
 	pthread_spin_lock(&dcache_spinlock);
@@ -182,9 +267,9 @@ struct dirent_block *dcache_find(uint8_t dev,
 	return dir_block;
 }
 
-static inline 
+static inline
 __attribute__((optimize("-Ofast")))
-struct dirent_block *dcache_alloc_add(uint8_t dev, 
+struct dirent_block *dcache_alloc_add(uint8_t dev,
 		uint32_t inum, offset_t offset, uint8_t *data)
 {
 	struct dirent_block *dir_block;
@@ -211,7 +296,7 @@ struct dirent_block *dcache_alloc_add(uint8_t dev,
 	return dir_block;
 }
 
-static inline struct inode *de_cache_find(struct inode *dir_inode, 
+static inline struct inode *de_cache_find(struct inode *dir_inode,
 		const char *name, offset_t *offset)
 {
 	struct dirent_data *dirent_data;
@@ -228,7 +313,7 @@ static inline struct inode *de_cache_find(struct inode *dir_inode,
 	}
 }
 
-static inline struct inode *de_cache_alloc_add(struct inode *dir_inode, 
+static inline struct inode *de_cache_alloc_add(struct inode *dir_inode,
 		const char *name, struct inode *inode, offset_t _offset)
 {
 	struct dirent_data *_dirent_data;
@@ -279,7 +364,7 @@ void read_root_inode(uint8_t dev);
 int read_ondisk_inode(uint8_t dev, uint32_t inum, struct dinode *dip);
 int write_ondisk_inode(uint8_t dev, struct inode *ip);
 int dir_add_entry(struct inode*, char*, uint32_t);
-int dir_change_entry(struct inode *dir_inode, char *oldname, 
+int dir_change_entry(struct inode *dir_inode, char *oldname,
 		char *newname, uint32_t new_inum);
 int dir_remove_entry(struct inode *dir_inode, char *name, uint32_t inum);
 uint8_t *get_dirent_block(struct inode *dir_inode, offset_t offset);
@@ -293,7 +378,7 @@ void iunlock(struct inode*);
 void iunlockput(struct inode*);
 void iupdate(struct inode*);
 int  namecmp(const char*, const char*);
-struct inode* namei(char*);
+struct inode* namei(const char*);
 struct inode* nameiparent(char*, char*);
 addr_t readi(struct inode*, char*, offset_t, addr_t);
 void stati(struct inode*, struct fs_stat*);
@@ -303,7 +388,7 @@ struct inode* iget(uint8_t dev, uint32_t inum);
 int mlfs_mark_inode_dirty(struct inode *inode);
 int persist_dirty_dirent_block(struct inode *inode);
 int persist_dirty_object(void);
-int digest_file(uint8_t from_dev, uint8_t to_dev, uint32_t file_inum, 
+int digest_file(uint8_t from_dev, uint8_t to_dev, uint32_t file_inum,
 		offset_t offset, uint32_t length, addr_t blknr);
 void show_storage_stats(void);
 
@@ -314,17 +399,15 @@ void dbg_check_inode(void *data);
 void dbg_check_dir(void *data);
 struct inode* dbg_dir_lookup(struct inode *dir_inode,
 		char *name, uint32_t *poff);
-void dbg_path_walk(char *path);
+void dbg_path_walk(const char *path);
 
 extern uint8_t g_ssd_dev;
 extern uint8_t g_log_dev;
 extern uint8_t g_hdd_dev;
 
-// Block containing inode i
-static inline addr_t get_inode_block(uint8_t dev, uint32_t inum)
-{
-	return (inum / IPB) + disk_sb[dev].inode_start;
-}
+
+void init_device_lru_list(void);
+void shared_memory_init(void);
 
 // Bitmap bits per block
 #define BPB           (g_block_size_bytes*8)

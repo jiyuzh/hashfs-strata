@@ -18,9 +18,10 @@ struct buffer_head *fs_bread(uint8_t dev, mlfs_fsblk_t block,
 	bh = sb_getblk(dev, block);
 	if (!bh)
 		return NULL;
-
-	if (buffer_uptodate(bh)) 
+#if !defined(LIBFS) || defined(EXTCACHE)
+	if (buffer_uptodate(bh))
 		goto out;
+#endif
 
 	err = bh_submit_read_sync_IO(bh);
 	if (bh->b_dev == g_ssd_dev)
@@ -38,6 +39,9 @@ out:
 struct buffer_head *fs_get_bh(uint8_t dev, mlfs_fsblk_t block,
 		int *ret)
 {
+#if !defined(EXTCACHE)
+    return fs_bread(dev, block, ret);
+#endif
 	int err = 0;
 	struct buffer_head *bh;
 	bh = sb_getblk(dev, block);
@@ -58,6 +62,8 @@ void fs_brelse(struct buffer_head *bh)
 
 void fs_mark_buffer_dirty(struct buffer_head *bh)
 {
+	mlfs_debug("buffer %lu is dirty\n", bh->b_blocknr);
+	move_buffer_to_writeback(bh);
 	set_buffer_uptodate(bh);
 	set_buffer_dirty(bh);
 }

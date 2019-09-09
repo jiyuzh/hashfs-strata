@@ -1,23 +1,29 @@
-CC = gcc -std=c99
+CC = gcc9.2 -std=c99
 #CC = c99
-EXE = iotest file_basic small_io falloc_test ftrunc_test lock_test lock_perf \
+#EXE = iotest file_basic small_io falloc_test ftrunc_test lock_test lock_perf \
+#	  simple_spdk_test dir_test many_files_test fork_io readdir_test \
+#	  append_test fwrite_fread partial_update_test \
+#	  deepqueue multithread age
+EXE = file_basic small_io falloc_test ftrunc_test lock_test lock_perf \
 	  simple_spdk_test dir_test many_files_test fork_io readdir_test \
 	  append_test fwrite_fread partial_update_test \
-	  deepqueue multithread
+	  deepqueue multithread age
 
 #$(info $(EXE))
 
 CUR_DIR = $(shell pwd)
 GLIBC_DIR = $(CUR_DIR)/../../shim/glibc-build/
 LIBFS_DIR = $(CUR_DIR)/../build/
-NVML_DIR = $(LIBFS_DIR)/../lib/nvml/src/nondebug/
+#NVML_DIR = $(LIBFS_DIR)/../lib/nvml/src/nondebug/
+NVML_DIR = 
 CUCKOO_DIR = $(LIBFS_DIR)/../lib/cuckoofilter
 LIBFS=$(LIBFS_DIR)/libmlfs.a
 LIBSPDK_DIR =../src/storage/spdk/
 LIBSPDK=../src/storage/spdk/libspdk.so
 LIBSPDK_INC=../src/storage/spdk/
 
-INCLUDES= $(LIBFS_DIR)/../src -I$(CUR_DIR)/../lib/nvml/src/include
+#INCLUDES= $(LIBFS_DIR)/../src -I$(CUR_DIR)/../lib/nvml/src/include
+INCLUDES= $(LIBFS_DIR)/../src -I$(realpath $(LIBFS_DIR)/../../kernfs)
 DAX_OBJ = ../build/storage/storage_dax.o
 
 DPDK_VER := 16.07.2
@@ -29,7 +35,7 @@ SPDK_LIBS += $(SPDK_ROOT_DIR)/build/lib/libspdk_nvme.a \
 			 $(SPDK_ROOT_DIR)/build/lib/libspdk_log.a \
 			 $(ENV_LIBS)
 
-CFLAGS=-I $(LIBSPDK_INC) -I $(DPDK_DIR)/include -I$(INCLUDES) \
+CFLAGS = -I $(LIBSPDK_INC) -I $(DPDK_DIR)/include -I$(INCLUDES) \
 	   -I$(SPDK_ROOT_DIR)/include
 
 LDFLAGS = -Wl,-rpath=$(abspath $(GLIBC_DIR)) \
@@ -40,8 +46,9 @@ LDFLAGS = -Wl,-rpath=$(abspath $(GLIBC_DIR)) \
 		  -Wl,-rpath=/usr/local/lib \
 		  -Wl,-rpath=/usr/lib/x86_64-linux-gnu/ \
 		  -Wl,-rpath=/lib/x86_64-linux-gnu/ \
+		  -Wl,-rpath=/lib64 \
 		  -Wl,-dynamic-linker=$(abspath $(GLIBC_DIR))/ld-linux-x86-64.so.2 \
-		  -lpthread -lrt -lm -lssl -lcrypto
+		  -lpthread -lrt -lm -lpmem
 
 all: $(EXE)
 
@@ -112,6 +119,24 @@ deepqueue: deepqueue.c
 
 multithread: multithread.c
 	$(CC) $(CFLAGS) -g -Ofast -o $@ $^  -I$(INCLUDES) -L$(LIBFS_DIR) -lmlfs -L$(LIBSPDK_DIR) -lspdk -DMLFS $(CFLAGS) $(LDFLAGS)
+
+age: age.c
+	$(CC) -g -o $@ $^ -I$(INCLUDES) -L$(LIBFS_DIR) -lmlfs $(LDFLAGS)
+
+MTCC: MTCC.c
+	$(CC) -g -o $@ $^  -I$(INCLUDES) -L$(LIBFS_DIR) -lmlfs -L$(LIBSPDK_DIR) -lspdk -DMLFS $(CFLAGS) $(LDFLAGS)
+MTCCcorrect: MTCCcorrect.c
+	$(CC) -g -o $@ $^  -I$(INCLUDES) -L$(LIBFS_DIR) -lmlfs -L$(LIBSPDK_DIR) -lspdk -DMLFS $(CFLAGS) $(LDFLAGS)
+readfile: readfile.c
+	$(CC) -g -o $@ $^  -I$(INCLUDES) -L$(LIBFS_DIR) -lmlfs -L$(LIBSPDK_DIR) -lspdk -DMLFS $(CFLAGS) $(LDFLAGS)
+cp: cp.c
+	$(CC) -g -o $@ $^  -I$(INCLUDES) -L$(LIBFS_DIR) -lmlfs -L$(LIBSPDK_DIR) -lspdk -DMLFS $(CFLAGS) $(LDFLAGS)
+ls: ls.c
+	$(CC) -g -o $@ $^  -I$(INCLUDES) -L$(LIBFS_DIR) -lmlfs -L$(LIBSPDK_DIR) -lspdk -DMLFS $(CFLAGS) $(LDFLAGS)
+recursive_read: recursive_read.c
+	$(CC) -g -o $@ $^  -I$(INCLUDES) -L$(LIBFS_DIR) -lmlfs -L$(LIBSPDK_DIR) -lspdk -DMLFS $(CFLAGS) $(LDFLAGS)
+corruption_test: corruption_test.c
+	$(CC) -g -o $@ $^  -I$(INCLUDES) -L$(LIBFS_DIR) -lmlfs -L$(LIBSPDK_DIR) -lspdk -DMLFS $(CFLAGS) $(LDFLAGS)
 
 clean:
 	rm -rf *.o *.normal $(EXE)

@@ -8,7 +8,7 @@
 #CC=clang-3.8
 #CC=gcc
 CXX=g++ --std=c++11
-CC=gcc
+CC=gcc9.2 --std=gnu99
 
 ########
 #  List of all modules' directories
@@ -23,41 +23,63 @@ MODULES   := io concurrency config filesystem global ds log mkfs \
 ########
 #  All modules' directories in src and build
 ########
+PREFIX ?= ebuild
 SRC_DIR   := $(addprefix src/,$(MODULES))
-BUILD_DIR := $(addprefix build/,$(MODULES))
+BUILD_DIR := $(addprefix $(PREFIX)/,$(MODULES))
 
 ########
 #  Source and Object files in their  module directories
 ########
 SRC       := $(foreach sdir,$(SRC_DIR),$(wildcard $(sdir)/*.c))
-OBJ       := $(patsubst src/%.c,build/%.o,$(SRC))
+OBJ       := $(patsubst src/%.c,$(PREFIX)/%.o,$(SRC))
 
 ########
 #  Lib directories
 ########
-NVML_DIR := $(abspath $(CURDIR)/lib/nvml/src)
+#NVML_DIR := $(abspath $(CURDIR)/lib/nvml/src)
+NVML_DIR :=
 SPDK_DIR := $(abspath $(CURDIR)/lib/spdk)
 LIBSPDK_DIR := $(abspath $(CURDIR)/src/storage/spdk/)
 JEMALLOC_DIR := $(abspath $(CURDIR)/lib/jemalloc-4.5.0)
+C_LIBCUCKOO_DIR := $(abspath $(CURDIR)/lib/libcuckoo-c/src)
+API_DIR := $(abspath ../../nvm-file-indexing/api)
 
-INCLUDES  := $(addprefix -I,src/ $(LIBSPDK_DIR) $(NVML_DIR)/include)
+INCLUDES := $(addprefix -I,src/ $(LIBSPDK_DIR) $(NVML_DIR)/include $(C_LIBCUCKOO_DIR) $(API_DIR))
 
-LD_FLAGS = -lpthread -lm -L$(NVML_DIR)/nondebug/ -lpmem -lrt #-Wl,-fuse-ld=gold
+LD_FLAGS = -lpthread -lm -L$(NVML_DIR)/nondebug/ -lpmem -lrt \
+	-Wl,-rpath=$(abspath $(API_DIR)/build) -L$(abspath $(API_DIR)/build) -lNVMIndexingAPI
+
+#-Wl,-fuse-ld=gold
 
 #MLFS_FLAGS = -DUSE_SLAB -DLIBFS -DMLFS_INFO
 #MLFS_FLAGS = -DLIBFS
-MLFS_FLAGS = -DLIBFS -DMLFS_INFO
+MLFS_FLAGS = -DLIBFS -DMLFS_INFO -DSTORAGE_PERF
 #MLFS_FLAGS += -DCONCURRENT
 #MLFS_FLAGS += -DINVALIDATION
 MLFS_FLAGS += -DKLIB_HASH
 #MLFS_FLAGS += -DUSE_SSD
 #MLFS_FLAGS += -DUSE_HDD
 #MLFS_FLAGS += -DMLFS_LOG
+ifeq ($(PREFIX), hbuild)
+    MLFS_FLAGS += -DHASHTABLE -DINDEX_NAME=\"hash\"
+else
+ifneq ($(PREFIX), ebuild)
+    $(error "prefix must be ebuild or hbuild")
+endif
+	MLFS_FLAGS += -DINDEX_NAME=\"ext\ \"
+endif
 
-#DEBUG = -g3 -O0
-#DEBUG = -O0 -gdwarf-2 -g3 -rdynamic
-#DEBUG = -g -Ofast
-DEBUG = -O3
+OPT_ARGS ?= -g -O3 
+AVX_FLAGS = -march=skylake-avx512 -mavx -mavx512f -mavx512vl -mavx512cd -mavx512bw -mavx512dq
+#######
+# Optimization definitions
+#######
+MLFS_FLAGS += -DREUSE_PREVIOUS_PATH  # optimization for extent trees
+
+########
+# Testing definitions
+########
+MLFS_FLAGS += -DSIMULATE_FRAGMENTATION
 
 ########
 #  vpath and compile function for each file
@@ -66,7 +88,7 @@ vpath %.c $(SRC_DIR)
 
 define make-goal
 $1/%.o: %.c
-	$(CC) $(INCLUDES) $(MLFS_FLAGS) $(DEBUG) -fPIC -c $$< -o $$@ -DLIBFS
+	$(CC) $(INCLUDES) $(MLFS_FLAGS) $(OPT_ARGS) $(AVX_FLAGS) -fPIC -c $$< -o $$@ -DLIBFS
 endef
 
 ########
@@ -79,8 +101,8 @@ checkdirs: $(BUILD_DIR)
 	@mkdir -p bin
 
 clean:
-	@rm -rf $(BUILD_DIR)
-	make -C src/storage/spdk/ clean
+	rm -rf $(PREFIX)
+	make -C src/storage/spdk/ clean PREFIX="$(PREFIX)"
 
 ########
 #  Create dirs recursively
@@ -93,15 +115,15 @@ $(BUILD_DIR):
 ########
 #build/libmlfs.a: $(OBJ)
 libmlfs: $(OBJ) spdk
-	ar cr build/libmlfs.a $(OBJ)
-	$(CC) -shared $(DEBUG) -o build/libmlfs.so $(OBJ) $(LD_FLAGS) -DLIBFS $(MLFS_FLAGS) -L$(LIBSPDK_DIR) -lspdk -L$(JEMALLOC_DIR)/lib -Wl,-rpath=$(abspath $(JEMALLOC_DIR)/lib) -ljemalloc
+	ar cr $(PREFIX)/libmlfs.a $(OBJ)
+	$(CC) -shared $(OPT_ARGS) -o $(PREFIX)/libmlfs.so $(OBJ) $(LD_FLAGS) -DLIBFS $(MLFS_FLAGS) -L$(LIBSPDK_DIR) -lspdk -L$(JEMALLOC_DIR)/lib -Wl,-rpath=$(abspath $(JEMALLOC_DIR)/lib) -ljemalloc -ljson-c
 
 spdk: $(OBJ)
-	make -C src/storage/spdk/ MLFS_FLAGS="$(MLFS_FLAGS)"
+	make -C src/storage/spdk/ MLFS_FLAGS="$(MLFS_FLAGS)" PREFIX="$(PREFIX)"
 
 mkfs: $(OBJ) libmlfs
-	$(CC) -o build/mkfs.o -c src/mkfs/mkfs.c $(INCLUDES) $(MLFS_FLAGS)
-	$(CC) -g -o bin/mkfs.mlfs  build/libmlfs.a $(INCLUDES) -L$(LIBSPDK_DIR) -lspdk $(LD_FLAGS) -DLIBFS -Wl,-rpath=$(abspath $(LIBSPDK_DIR)) -Wl,-rpath=$(abspath $(NVML_DIR)/nondebug)
+	$(CC) $(OPT_ARGS) -o $(PREFIX)/mkfs.o -c src/mkfs/mkfs.c $(INCLUDES) $(MLFS_FLAGS)
+	$(CC) $(OPT_ARGS) -o bin/mkfs.mlfs  $(PREFIX)/libmlfs.a $(INCLUDES) -L$(LIBSPDK_DIR) -lspdk $(LD_FLAGS) -DLIBFS -Wl,-rpath=$(abspath $(LIBSPDK_DIR)) -Wl,-rpath=$(abspath $(NVML_DIR)/nondebug) -ljson-c
 
 
 ########

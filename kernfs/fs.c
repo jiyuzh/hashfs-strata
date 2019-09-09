@@ -4,6 +4,7 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <unistd.h>
+#include <json-c/json.h>
 
 #include "mlfs/mlfs_user.h"
 #include "global/global.h"
@@ -20,6 +21,10 @@
 #include "migrate.h"
 #include "thpool.h"
 
+#include "inode_hash.h"
+#include "lpmem_ghash.h"
+#include "undo_log.h"
+
 #define _min(a, b) ({\
 		__typeof__(a) _a = a;\
 		__typeof__(b) _b = b;\
@@ -29,6 +34,10 @@
 #define CREATE 1
 
 extern int max_kernfs_io_queues;
+
+json_object *kernfs_stats_json;
+
+struct list_head *lru_heads;
 
 int shm_fd = 0;
 uint8_t *shm_base;
@@ -47,12 +56,13 @@ struct super_block *sb[g_n_devices];
 ncx_slab_pool_t *mlfs_slab_pool;
 ncx_slab_pool_t *mlfs_slab_pool_shared;
 
-uint8_t g_log_dev = 0;
-uint8_t g_ssd_dev = 0;
-uint8_t g_hdd_dev = 0;
+uint8_t g_ssd_dev = 2;
+uint8_t g_hdd_dev = 3;
+uint8_t g_log_dev = 4;
 
 kernfs_stats_t g_perf_stats;
 uint8_t enable_perf_stats;
+int prof_fd;
 
 uint16_t *inode_version_table;
 threadpool thread_pool;
@@ -159,21 +169,71 @@ struct f_digest_worker_arg {
 
 void reset_kernfs_stats(void)
 {
+#ifdef STORAGE_PERF
+    reset_stats_dist(&storage_rtsc);
+    reset_stats_dist(&storage_rnr);
+    reset_stats_dist(&storage_wtsc);
+    reset_stats_dist(&storage_wnr);
+#endif
 	memset(&g_perf_stats, 0, sizeof(kernfs_stats_t));
+    cache_stats_init();
+	kernfs_stats_json = json_object_new_array();	
+	
+    flush_llc();
 }
+
 void show_kernfs_stats(void)
 {
+    // Construct JSON object
+	json_object *root = json_object_new_object();
+    js_add_int64(root, "digest", g_perf_stats.digest_time_tsc);
+    js_add_int64(root, "path_search", g_perf_stats.path_search_tsc);
+    js_add_int64(root, "path_storage", g_perf_stats.path_storage_tsc);
+    json_object *storage = json_object_new_object(); {
+        js_add_int64(storage, "rtsc", storage_rtsc.total);
+        js_add_int64(storage, "rnr" , storage_rnr.total);
+        js_add_int64(storage, "wtsc", storage_wtsc.total);
+        js_add_int64(storage, "wnr" , storage_wnr.total);
+        json_object_object_add(root, "storage", storage);
+    }
+    json_object *search = json_object_new_object(); {
+        js_add_int64(search, "total_time", g_perf_stats.path_search_tsc);
+        js_add_int64(search, "total_blocks", g_perf_stats.path_search_size);
+        js_add_int64(search, "nr_search", g_perf_stats.path_search_nr);
+        json_object_object_add(root, "search", search);
+    }
+    add_cache_stats_to_json(root, "idx_cache", &(g_perf_stats.cache_stats)); 
+
+    if (USE_IDXAPI()) {
+        json_object *indexing = json_object_new_object();
+        add_idx_stats_to_json(enable_perf_stats, indexing);
+        json_object_object_add(root, "idx_stats", indexing);
+    }
+
+	json_object_array_add(kernfs_stats_json, root);
+
+    // Convert JSON to a string
+	const char *js_str = json_object_get_string(kernfs_stats_json);
+    // Write the JSON string to a file.
+	if (enable_perf_stats) {
+		ftruncate(prof_fd, 0);
+		lseek(prof_fd, 0, SEEK_SET);
+		write(prof_fd, js_str, strlen(js_str));
+	}
+
+	json_object_put(root);
+
 	//float clock_speed_mhz = get_cpu_clock_speed();
 	uint64_t n_digest = g_perf_stats.n_digest == 0 ? 1 : g_perf_stats.n_digest;
 
 	printf("\n");
 	//printf("CPU clock : %.3f MHz\n", clock_speed_mhz);
-	printf("----------------------- kernfs statistics\n");
-	printf("digest       : %lu\n",
+	printf("-----%s ---------------- kernfs statistics\n", INDEX_NAME);
+	printf("digest          : %lu\n",
 			g_perf_stats.digest_time_tsc);
-	printf("- replay     : %lu\n",
+	printf("- replay        : %lu\n",
 			g_perf_stats.replay_time_tsc);
-	printf("- apply      : %lu\n",
+	printf("- apply         : %lu\n",
 			g_perf_stats.apply_time_tsc);
 	printf("-- inode digest : %lu\n",
 			g_perf_stats.digest_inode_tsc);
@@ -185,13 +245,36 @@ void show_kernfs_stats(void)
 	printf("n_digest_skipped: %lu (%.1f %%)\n",
 			g_perf_stats.n_digest_skipped,
 			((float)g_perf_stats.n_digest_skipped * 100.0) / (float)n_digest);
-	printf("path search    : %lu\n",
-			g_perf_stats.path_search_tsc);
-	printf("total migrated : %lu MB\n", g_perf_stats.total_migrated_mb);
+	printf("path search     : %lu / %lu (%.1f tsc/op)\n",
+			g_perf_stats.path_search_tsc, g_perf_stats.path_search_nr,
+            (float)g_perf_stats.path_search_tsc / (float)g_perf_stats.path_search_nr);
+	printf("-- blocks indexed: %lu blocks / %lu ops (%.1f tsc/blk)\n",
+			g_perf_stats.path_search_size, g_perf_stats.path_search_nr,
+            (float)g_perf_stats.path_search_tsc / (float)g_perf_stats.path_search_size);
+    printf("-- balloc: \n");
+    printf("---- time per op : %lu / %lu (%.1f) tsc/op\n",
+            g_perf_stats.balloc_tsc, g_perf_stats.balloc_nr, 
+            (float)g_perf_stats.balloc_tsc / (float)g_perf_stats.balloc_nr);
+    printf("---- time per blk: %lu / %lu (%.1f) tsc/blk\n",
+            g_perf_stats.balloc_tsc, g_perf_stats.balloc_nblk, 
+            (float)g_perf_stats.balloc_tsc / (float)g_perf_stats.balloc_nblk);
+    printf("UNDO: %lu / %lu (%.1f) tsc/op\n",
+            g_perf_stats.undo_tsc, g_perf_stats.undo_nr,
+            (float)g_perf_stats.undo_tsc / (float)g_perf_stats.undo_nr);
+    printf("---- blk per op  : %lu / %lu (%.1f) blk/op\n",
+            g_perf_stats.balloc_nblk, g_perf_stats.balloc_nr, 
+            (float)g_perf_stats.balloc_nblk / (float)g_perf_stats.balloc_nr);
+    printf("  LLC miss latency : %lu \n", calculate_llc_latency(&(g_perf_stats.cache_stats)));
+	printf("total migrated  : %lu MB\n", g_perf_stats.total_migrated_mb);
 	printf("--------------------------------------\n");
 #ifdef STORAGE_PERF
-    printf("storage_dax: %lu\n", storage_tsc);
-    printf("path storage: %lu\n", g_perf_stats.path_storage_tsc);
+  printf("storage(read nr/ts)   : %lu/%lu(%.2f)\n", tri_ratio(storage_rnr.total,storage_rtsc.total));
+  print_stats_dist(&storage_rtsc, "storage read tsc");
+  print_stats_dist(&storage_rnr, "storage read nr");
+  printf("storage(write nr/ts)  : %lu/%lu(%.2f)\n", tri_ratio(storage_wnr.total,storage_wtsc.total));
+  print_stats_dist(&storage_wtsc, "storage write tsc");
+  print_stats_dist(&storage_wnr, "storage write nr");
+  printf("path storage          : %lu\n", g_perf_stats.path_storage_tsc);
     /*
      * *------------------------------*
      * |   digest (D)                 |
@@ -215,16 +298,22 @@ void show_kernfs_stats(void)
      * ------------------------------------
      * metrics:
      * path/digest: (E+SE)/(D+E+SE+SD) == $1/$4
-     * path/digest(without storage): E/D == ($1-$2)/($4-($1-$2)-$3)
+     * path/digest(without storage): E/(D+E) == ($1-$2)/($4-$3)
      */
+    uint64_t storage_tsc = storage_rtsc.total + storage_wtsc.total;
     double E = (g_perf_stats.path_search_tsc - g_perf_stats.path_storage_tsc);
     printf("path/digest(without storage) is %f\n",
-            E/(g_perf_stats.digest_time_tsc - E - storage_tsc));
+            E/(g_perf_stats.digest_time_tsc - storage_tsc));
 #endif
     printf("path/digest is %f\n", (double)g_perf_stats.path_search_tsc/g_perf_stats.digest_time_tsc);
     printf("");
 	printf("--------------------------------------\n");
     show_storage_stats();
+	printf("--------------------------------------\n");
+    print_global_idx_stats(enable_perf_stats);
+	printf("--------------------------------------\n");
+    //undo_log_sanity_check(true);
+	//printf("--------------------------------------\n");
 }
 
 void show_storage_stats(void)
@@ -277,7 +366,7 @@ loghdr_meta_t *read_log_header(uint8_t from_dev, addr_t hdr_addr)
 	_loghdr = (loghdr_t *)(g_bdev[from_dev]->map_base_addr +
 		(hdr_addr << g_block_size_shift));
 
-	loghdr_meta->loghdr = _loghdr;
+	loghdr_meta->loghdr_p = _loghdr;
 	loghdr_meta->hdr_blkno = hdr_addr;
 	loghdr_meta->is_hdr_allocated = 1;
 
@@ -366,9 +455,16 @@ int digest_inode(uint8_t from_dev, uint8_t to_dev,
 			handle_t handle;
 			handle.dev = src_dinode->dev;
 
-			ret = mlfs_ext_truncate(&handle, inode,
-					(src_dinode->size) >> g_block_size_shift,
-					((inode->size) >> g_block_size_shift) - 1);
+            // iangneal: fix truncate segmentation fault by bad end block calculation
+            mlfs_lblk_t start_blk = (src_dinode->size >> g_block_size_shift) +
+                                    ((src_dinode->size & g_block_size_mask) != 0);
+            mlfs_lblk_t end_blk   = (inode->size >> g_block_size_shift);
+
+            if ((inode->size & g_block_size_mask) == 0) {
+                end_blk--;
+            }
+
+			ret = mlfs_ext_truncate(&handle, inode, start_blk, end_blk);
 
 			mlfs_assert(!ret);
 		}
@@ -495,13 +591,14 @@ int digest_file(uint8_t from_dev, uint8_t to_dev, uint32_t file_inum,
 	uint8_t *data;
 	struct mlfs_ext_path *path = NULL;
 	struct mlfs_map_blocks map;
+	struct mlfs_map_blocks_arr map_arr;
 	uint32_t nr_blocks = 0, nr_digested_blocks = 0;
 	offset_t cur_offset;
 	handle_t handle = {.dev = to_dev};
 
 	mlfs_debug("[FILE] (%d->%d) inum %d offset %lu(0x%lx) length %u\n",
 			from_dev, to_dev, file_inum, offset, offset, length);
-
+	//calculate number of blocks to address
 	if (length < g_block_size_bytes)
 		nr_blocks = 1;
 	else {
@@ -530,12 +627,11 @@ int digest_file(uint8_t from_dev, uint8_t to_dev, uint32_t file_inum,
 
 		sync_inode_from_dinode(file_inode, &dip);
 
-		file_inode->i_sb = sb;
-
 		mlfs_assert(dip.dev != 0);
 	}
 
 	mlfs_assert(file_inode->dev != 0);
+	mlfs_assert(!(file_inode->flags & I_DELETING));
 
 	// update file inode length and mtime.
 	if (file_inode->size < offset + length) {
@@ -555,17 +651,31 @@ int digest_file(uint8_t from_dev, uint8_t to_dev, uint32_t file_inum,
 	if ((length < g_block_size_bytes) || offset_in_block != 0) {
 		int _len = _min(length, (uint32_t)g_block_size_bytes - offset_in_block);
 
-		map.m_lblk = (cur_offset >> g_block_size_shift);
-		map.m_pblk = 0;
-		map.m_len = 1;
-		map.m_flags = 0;
-
-		ret = mlfs_ext_get_blocks(&handle, file_inode, &map,
+		
+		if(IDXAPI_IS_HASHFS()) {
+			map_arr.m_lblk = (cur_offset >> g_block_size_shift);
+			map_arr.m_len = 1;
+			map_arr.m_flags = 0;
+			ret = mlfs_hashfs_get_blocks(&handle, file_inode, &map_arr,
 				MLFS_GET_BLOCKS_CREATE);
 
-		mlfs_assert(ret == 1);
+			mlfs_assert(ret == 1);
 
-		bh_data = bh_get_sync_IO(to_dev, map.m_pblk, BH_NO_DATA_ALLOC);
+			bh_data = bh_get_sync_IO(to_dev, map_arr.m_pblk[0], BH_NO_DATA_ALLOC);
+		}
+		else {
+			map.m_pblk = 0;
+			map.m_lblk = (cur_offset >> g_block_size_shift);
+			map.m_len = 1;
+			map.m_flags = 0;
+			ret = mlfs_ext_get_blocks(&handle, file_inode, &map,
+				MLFS_GET_BLOCKS_CREATE);
+
+			mlfs_assert(ret == 1);
+
+			bh_data = bh_get_sync_IO(to_dev, map.m_pblk, BH_NO_DATA_ALLOC);
+		}
+		
 
 		mlfs_assert(bh_data);
 
@@ -593,7 +703,7 @@ int digest_file(uint8_t from_dev, uint8_t to_dev, uint32_t file_inum,
 
 		mlfs_debug("inum %d, offset %lu len %u (dev %d:%lu) -> (dev %d:%lu)\n",
 				file_inode->inum, cur_offset, _len,
-				from_dev, blknr, to_dev, map.m_pblk);
+				from_dev, blknr, to_dev, IDXAPI_IS_HASHFS() ? map_arr.m_plbk[0] : map.m_pblk);
 
 		nr_digested_blocks++;
 		cur_offset += _len;
@@ -608,24 +718,40 @@ int digest_file(uint8_t from_dev, uint8_t to_dev, uint32_t file_inum,
 		int nr_block_get = 0, i;
 
 		mlfs_assert((cur_offset % g_block_size_bytes) == 0);
-
-		map.m_lblk = (cur_offset >> g_block_size_shift);
-		map.m_pblk = 0;
-		map.m_len = nr_blocks - nr_digested_blocks;
-		map.m_flags = 0;
-
-		// find block address of offset and update extent tree
-		if (to_dev == g_ssd_dev || to_dev == g_hdd_dev) {
-			//make kernelFS do log-structured update.
-			//map.m_flags |= MLFS_MAP_LOG_ALLOC;
-			nr_block_get = mlfs_ext_get_blocks(&handle, file_inode, &map,
-					MLFS_GET_BLOCKS_CREATE_DATA);
-		} else {
-			nr_block_get = mlfs_ext_get_blocks(&handle, file_inode, &map,
-					MLFS_GET_BLOCKS_CREATE_DATA);
+		if(IDXAPI_IS_HASHFS()) {
+			map_arr.m_lblk = (cur_offset >> g_block_size_shift);
+		// map.m_pblk = 0;
+			map_arr.m_len = min(MAX_GET_BLOCKS_RETURN, nr_blocks - nr_digested_blocks);
+			map_arr.m_flags = 0;
+			// find block address of offset and update extent tree
+			if (to_dev == g_ssd_dev || to_dev == g_hdd_dev) {
+				//make kernelFS do log-structured update.
+				//map.m_flags |= MLFS_MAP_LOG_ALLOC;
+				nr_block_get = mlfs_hashfs_get_blocks(&handle, file_inode, &map_arr,
+						MLFS_GET_BLOCKS_CREATE_DATA);
+			} else {
+				nr_block_get = mlfs_hashfs_get_blocks(&handle, file_inode, &map_arr,
+						MLFS_GET_BLOCKS_CREATE_DATA);
+			}
+		}	
+		else {
+			map.m_lblk = (cur_offset >> g_block_size_shift);
+			map.m_pblk = 0;
+			map.m_len = nr_blocks - nr_digested_blocks;
+			map.m_flags = 0;
+			// find block address of offset and update extent tree
+			if (to_dev == g_ssd_dev || to_dev == g_hdd_dev) {
+				//make kernelFS do log-structured update.
+				//map.m_flags |= MLFS_MAP_LOG_ALLOC;
+				nr_block_get = mlfs_ext_get_blocks(&handle, file_inode, &map,
+						MLFS_GET_BLOCKS_CREATE_DATA);
+			} else {
+				nr_block_get = mlfs_ext_get_blocks(&handle, file_inode, &map,
+						MLFS_GET_BLOCKS_CREATE_DATA);
+			}
 		}
-
-		mlfs_assert(map.m_pblk != 0);
+		
+		// mlfs_assert(map.m_pblk != 0);
 
 		mlfs_assert(nr_block_get <= (nr_blocks - nr_digested_blocks));
 		mlfs_assert(nr_block_get > 0);
@@ -633,11 +759,13 @@ int digest_file(uint8_t from_dev, uint8_t to_dev, uint32_t file_inum,
 		nr_digested_blocks += nr_block_get;
 
 		// update data block
-		bh_data = bh_get_sync_IO(to_dev, map.m_pblk, BH_NO_DATA_ALLOC);
-
-		bh_data->b_data = data;
-		bh_data->b_size = nr_block_get * g_block_size_bytes;
-		bh_data->b_offset = 0;
+		if(IDXAPI_IS_HASHFS()) {
+			for(size_t j = 0; j < map_arr.m_len; ++j) { // ??
+				bh_data = bh_get_sync_IO(to_dev, map_arr.m_pblk[j], BH_NO_DATA_ALLOC);
+			
+				bh_data->b_data = data + (j * g_block_size_bytes);
+				bh_data->b_size = g_block_size_bytes;
+				bh_data->b_offset = 0;
 
 #ifdef MIGRATION
 		for (i = 0; i < nr_block_get; i++) {
@@ -653,12 +781,42 @@ int digest_file(uint8_t from_dev, uint8_t to_dev, uint32_t file_inum,
 		}
 #endif
 
+			//mlfs_debug("File data : %s\n", bh_data->b_data);
+
+				ret = mlfs_write(bh_data);
+				mlfs_assert(!ret);
+				clear_buffer_uptodate(bh_data);
+				bh_release(bh_data);
+			}
+		}
+		else {
+			bh_data = bh_get_sync_IO(to_dev, map.m_pblk, BH_NO_DATA_ALLOC);
+			
+			bh_data->b_data = data;
+			bh_data->b_size = nr_block_get * g_block_size_bytes;
+			bh_data->b_offset = 0;
+
+#ifdef MIGRATION
+	for (i = 0; i < nr_block_get; i++) {
+		lru_key_t k = {
+			.dev = to_dev,
+			.block = map.m_pblk + i,
+		};
+		lru_val_t v = {
+			.inum = file_inum,
+			.lblock = map.m_lblk + i,
+		};
+		update_slru_list_from_digest(to_dev, k, v);
+	}
+#endif
+
 		//mlfs_debug("File data : %s\n", bh_data->b_data);
 
-		ret = mlfs_write(bh_data);
-		mlfs_assert(!ret);
-		clear_buffer_uptodate(bh_data);
-		bh_release(bh_data);
+			ret = mlfs_write(bh_data);
+			mlfs_assert(!ret);
+			clear_buffer_uptodate(bh_data);
+			bh_release(bh_data);
+		}
 
 		if (0) {
 			struct buffer_head *bh;
@@ -677,8 +835,7 @@ int digest_file(uint8_t from_dev, uint8_t to_dev, uint32_t file_inum,
 
 		mlfs_debug("inum %d, offset %lu len %u (dev %d:%lu) -> (dev %d:%lu)\n",
 				file_inode->inum, cur_offset, bh_data->b_size,
-				from_dev, blknr, to_dev, map.m_pblk);
-
+				from_dev, blknr, to_dev, IDXAPI_IS_HASHFS() ? map_arr.m_pblk[0] : map.m_pblk);
 		cur_offset += nr_block_get * g_block_size_bytes;
 		data += nr_block_get * g_block_size_bytes;
 	}
@@ -737,9 +894,6 @@ int digest_file_iovec(uint8_t from_dev, uint8_t to_dev,
 		mlfs_assert(dip.dev != 0);
 
 		sync_inode_from_dinode(file_inode, &dip);
-
-		file_inode->i_sb = sb;
-
 	}
 
 	mlfs_assert(file_inode->dev != 0);
@@ -760,8 +914,6 @@ int digest_file_iovec(uint8_t from_dev, uint8_t to_dev,
 
 			mlfs_assert(dip.itype != 0);
 			sync_inode_from_dinode(sync_file_inode, &dip);
-
-			file_inode->i_sb = sb;
 		}
 
 		file_inode->size = offset + length;
@@ -926,7 +1078,14 @@ int digest_unlink(uint8_t from_dev, uint8_t to_dev, uint32_t inum)
 	mlfs_debug("[UNLINK] (%d->%d) inum %d\n", from_dev, to_dev, inum);
 
 	inode = icache_find(to_dev, inum);
-	mlfs_assert(inode);
+	if (!inode) {
+		struct dinode dip;
+		inode = icache_alloc_add(g_root_dev, inum);
+		read_ondisk_inode(g_root_dev, inum, &dip);
+		mlfs_assert(dip.itype != 0);
+		sync_inode_from_dinode(inode, &dip);
+		mlfs_assert(dip.dev !=0);
+	}
 
 	mlfs_assert(!(inode->flags & I_DELETING));
 
@@ -935,7 +1094,11 @@ int digest_unlink(uint8_t from_dev, uint8_t to_dev, uint32_t inum)
 			handle_t handle = {.dev = to_dev};
 			mlfs_lblk_t end = (inode->size) >> g_block_size_shift;
 
-			ret = mlfs_ext_truncate(&handle, inode, 0, end == 0 ? end : end - 1);
+            if ((inode->size & g_block_size_mask) == 0) {
+                end--;
+            }
+			//ret = mlfs_ext_truncate(&handle, inode, 0, end == 0 ? end : end - 1);
+	    		ret = mlfs_ext_truncate(&handle, inode, 0, end);
 			mlfs_assert(!ret);
 		}
 	} else if (inode->itype == T_DIR) {
@@ -964,8 +1127,8 @@ static void digest_each_log_entries(uint8_t from_dev, loghdr_meta_t *loghdr_meta
 	uint16_t nr_entries;
 	uint64_t tsc_begin;
 
-	nr_entries = loghdr_meta->loghdr->n;
-	loghdr = loghdr_meta->loghdr;
+	nr_entries = loghdr_meta->loghdr_p->n;
+	loghdr = loghdr_meta->loghdr_p;
 
 	for (i = 0; i < nr_entries; i++) {
 		if (enable_perf_stats)
@@ -1065,8 +1228,8 @@ static void digest_replay_and_optimize(uint8_t from_dev,
 	loghdr_t *loghdr;
 	uint16_t nr_entries;
 
-	nr_entries = loghdr_meta->loghdr->n;
-	loghdr = loghdr_meta->loghdr;
+	nr_entries = loghdr_meta->loghdr_p->n;
+	loghdr = loghdr_meta->loghdr_p;
 
 	for (i = 0; i < nr_entries; i++) {
 		switch(loghdr->type[i]) {
@@ -1611,18 +1774,33 @@ static int persist_dirty_objects_nvm(void)
 	// flush extent tree changes
 	sync_all_buffers(g_bdev[g_root_dev]);
 
+	struct super_block *root_sb = sb[g_root_dev];
 	// save dirty inodes
-	for (node = rb_first(&sb[g_root_dev]->s_dirty_root);
+	for (node = rb_first(&(root_sb->s_dirty_root));
 			node; node = rb_next(node)) {
 		struct inode *ip = rb_entry(node, struct inode, i_rb_node);
 		mlfs_debug("[dev %d] write dirty inode %d size %lu\n",
 				ip->dev, ip->inum, ip->size);
 		rb_erase(&ip->i_rb_node, &get_inode_sb(g_root_dev, ip)->s_dirty_root);
+
+        if (g_idx_cached && ip->ext_idx) {
+            int api_err = FN(ip->ext_idx, im_persist, ip->ext_idx);
+            if (api_err) return api_err;
+        }
+
 		write_ondisk_inode(g_root_dev, ip);
+		ip->i_data_dirty = 0;
 
 		if (ip->itype == T_DIR)
 			persist_dirty_dirent_block(ip);
+
+		mlfs_debug("[dev %d] write dirty inode complete\n", ip->dev);
 	}
+
+    if (g_idx_cached && IDXAPI_IS_GLOBAL()) {
+        int api_err = mlfs_hash_persist();
+        if (api_err) return api_err;
+    }
 
 	// save block allocation bitmap
 	store_all_bitmap(g_root_dev, sb[g_root_dev]->s_blk_bitmap);
@@ -1674,8 +1852,8 @@ static int digest_logs(uint8_t from_dev, int n_hdrs,
 	for (i = 0 ; i < n_hdrs; i++) {
 		loghdr_meta = read_log_header(from_dev, *loghdr_to_digest);
 
-		if (loghdr_meta->loghdr->inuse != LH_COMMIT_MAGIC) {
-			mlfs_assert(loghdr_meta->loghdr->inuse == 0);
+		if (loghdr_meta->loghdr_p->inuse != LH_COMMIT_MAGIC) {
+			mlfs_assert(loghdr_meta->loghdr_p->inuse == 0);
 			mlfs_free(loghdr_meta);
 			break;
 		}
@@ -1693,13 +1871,13 @@ static int digest_logs(uint8_t from_dev, int n_hdrs,
 		// rotated when next_loghdr_blkno jumps to beginning of the log.
 		// FIXME: instead of this condition, it would be better if
 		// *loghdr_to_digest > the lost block of application log.
-		if (*loghdr_to_digest > loghdr_meta->loghdr->next_loghdr_blkno) {
+		if (*loghdr_to_digest > loghdr_meta->loghdr_p->next_loghdr_blkno) {
 			mlfs_debug("loghdr_to_digest %lu, next header %lu\n",
-					*loghdr_to_digest, loghdr_meta->loghdr->next_loghdr_blkno);
+					*loghdr_to_digest, loghdr_meta->loghdr_p->next_loghdr_blkno);
 			*rotated = 1;
 		}
 
-		*loghdr_to_digest = loghdr_meta->loghdr->next_loghdr_blkno;
+		*loghdr_to_digest = loghdr_meta->loghdr_p->next_loghdr_blkno;
 
 		previous_loghdr_blk = loghdr_meta->hdr_blkno;
 
@@ -1766,11 +1944,9 @@ static void handle_digest_request(void *arg)
 			//g_perf_stats.n_digest = 0;
 		}
 
-		digest_count = digest_logs(dev_id, digest_count, &digest_blkno, &rotated);
+        undo_log_start_tx();
 
-		if (enable_perf_stats)
-			g_perf_stats.digest_time_tsc +=
-				(asm_rdtscp() - tsc_begin);
+		digest_count = digest_logs(dev_id, digest_count, &digest_blkno, &rotated);
 
 		mlfs_debug("-- Total used block %d\n",
 				bitmap_weight((uint64_t *)sb[g_root_dev].s_blk_bitmap->bitmap,
@@ -1782,6 +1958,10 @@ static void handle_digest_request(void *arg)
 		mlfs_info("Write %s to libfs\n", response);
 
 		persist_dirty_objects_nvm();
+		if (enable_perf_stats) {
+			g_perf_stats.digest_time_tsc +=
+				(asm_rdtscp() - tsc_begin);
+        }
 #ifdef USE_SSD
 		persist_dirty_objects_ssd();
 #endif
@@ -1789,8 +1969,17 @@ static void handle_digest_request(void *arg)
 		persist_dirty_objects_hdd();
 #endif
 
-		sendto(sock_fd, response, MAX_SOCK_BUF, 0,
+        // MUST commit before sending the ACK.
+        undo_log_commit_tx();
+
+		ssize_t err = sendto(sock_fd, response, MAX_SOCK_BUF, 0,
 				(struct sockaddr *)&digest_arg->cli_addr, sizeof(struct sockaddr_un));
+
+        if (err < 0) {
+            fprintf(stderr, "Bad response to libfs: %d (%s)\n", errno,
+                    strerror(errno));
+        }
+
 
 		/*show_storage_stats();
 
@@ -1832,8 +2021,16 @@ static void wait_for_event(void)
 
 	unlink(SRV_SOCK_PATH);
 
-	if (bind(sock_fd, (struct sockaddr*)&addr, sizeof(addr)) < 0)
+	if (bind(sock_fd, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
+		perror("bind error");
 		panic("bind error");
+	}
+
+	ret = chmod(addr.sun_path, S_IRWXU | S_IRWXG | S_IRWXO);
+	if (ret < 0) {
+		perror("chmod failed");
+		panic("chmod failed");
+	}
 
 	// make it non-blocking
 	flags = fcntl(sock_fd, F_GETFL, 0);
@@ -1930,8 +2127,17 @@ static void wait_for_event(void)
 
 void shutdown_fs(void)
 {
-	printf("Finalize FS\n");
+	if(IDXAPI_IS_HASHFS()) {
+		pmem_nvm_hash_table_close();
+	}
+	if (enable_perf_stats) {
+		show_kernfs_stats();
+		close(prof_fd);
+	}
 
+    shutdown_undo_log();
+
+	unlink(SRV_SOCK_PATH);
 	device_shutdown();
 	return ;
 }
@@ -1959,27 +2165,32 @@ void mlfs_slab_init(uint64_t pool_size)
 }
 #endif
 
-static void shared_memory_init(void)
+void shared_memory_init(void)
 {
 	int ret;
 
 	shm_fd = shm_open(SHM_NAME, O_CREAT | O_RDWR, 0666);
-	if (shm_fd == -1)
+	if (shm_fd == -1) {
 		panic("cannot create shared memory\n");
+  }
 
 	ret = ftruncate(shm_fd, SHM_SIZE);
 	if (ret == -1)
 		panic("cannot ftruncate shared memory\n");
 
-	shm_base = (uint8_t *)mmap(SHM_START_ADDR,
+  //shm_base = (uint8_t *)mmap(SHM_START_ADDR,
+	shm_base = (uint8_t *)mmap(NULL,
 			SHM_SIZE + 4096,
-			PROT_READ| PROT_WRITE,
-			MAP_SHARED | MAP_POPULATE | MAP_FIXED,
+			PROT_READ | PROT_WRITE,
+			//MAP_SHARED | MAP_POPULATE | MAP_FIXED,
+			MAP_SHARED | MAP_POPULATE,
 			shm_fd, 0);
 
 	printf("shm mmap base %p\n", shm_base);
-	if (shm_base == MAP_FAILED)
+	if (shm_base == MAP_FAILED) {
+    perror("mmap(SHM_START_ADDR)");
 		panic("cannot map shared memory\n");
+  }
 
 	// the first 4 KB is reserved.
     mlfs_slab_pool_shared = (ncx_slab_pool_t *)(shm_base + 4096);
@@ -2018,10 +2229,14 @@ void locks_init(void)
 	pthread_mutex_init(&block_bitmap_mutex, &attr);
 }
 
-void init_fs(void)
+void init_fs_callback(void (*callback_fn)(void)) 
 {
 	int i;
 	const char *perf_profile;
+	printf("getchar()\n");
+	// getchar();
+    g_idx_choice = get_indexing_choice();
+    g_idx_cached = get_indexing_is_cached();
 
 	g_ssd_dev = 2;
 	g_hdd_dev = 3;
@@ -2035,7 +2250,7 @@ void init_fs(void)
 
 	init_device_lru_list();
 
-	shared_memory_init();
+	//shared_memory_init();
 	cache_init(g_root_dev);
 
 	locks_init();
@@ -2055,8 +2270,12 @@ void init_fs(void)
 	read_superblock(g_hdd_dev);
 	balloc_init(g_hdd_dev, sb[g_hdd_dev]);
 #endif
-
-	memset(&g_perf_stats, 0, sizeof(kernfs_stats_t));
+	if(IDXAPI_IS_HASHFS()) {
+		struct super_block *sblk = sb[g_root_dev];
+		pmem_nvm_hash_table_new(sblk->ondisk, NULL);
+		
+		
+	}
 
 	inode_version_table =
 		(uint16_t *)mlfs_zalloc(sizeof(uint16_t) * NINODES);
@@ -2065,26 +2284,49 @@ void init_fs(void)
 
 	if (perf_profile) {
 		enable_perf_stats = 1;
-    }
-	else
+	} else {
 		enable_perf_stats = 0;
+	}
+
+    init_undo_log();
+
+    if (IDXAPI_IS_GLOBAL()) {
+        init_hash(sb[g_root_dev], enable_perf_stats);
+    }
+
+	// initialize profiling
+	char prof_fn[256];
+	sprintf(prof_fn, "/tmp/kernfs_prof.%d", getpid());
+	if (enable_perf_stats) {
+		assert((prof_fd = open(prof_fn, O_CREAT | O_TRUNC | O_WRONLY, 0666)) != -1);
+    }
+	reset_kernfs_stats();
 
 	mlfs_debug("%s\n", "LIBFS is initialized");
 
-  // iangneal: change to make our max number.
-  thread_pool = thpool_init(1);
-  //thread_pool = thpool_init(max_kernfs_io_queues);
+	// iangneal: change to make our max number.
+	thread_pool = thpool_init(1);
+	//thread_pool = thpool_init(max_kernfs_io_queues);
 	// A fixed thread for using SPDK.
 	thread_pool_ssd = thpool_init(max_kernfs_io_queues);
 	//thread_pool_ssd = thpool_init(1);
 
-  printf("Initialized thread pool with %d threads.\n", max_kernfs_io_queues);
+	printf("Initialized thread pool with %d threads.\n", max_kernfs_io_queues);
 
 #ifdef FCONCURRENT
 	file_digest_thread_pool = thpool_init(8);
 #endif
 
+    callback_fn();
+
 	wait_for_event();
+}
+
+static void nothing(void) {}
+
+void init_fs(void)
+{
+    init_fs_callback(nothing);
 }
 
 void cache_init(uint8_t dev)
@@ -2120,12 +2362,13 @@ void read_superblock(uint8_t dev)
 	memmove(&disk_sb[dev], bh->b_data, sizeof(struct disk_superblock));
 
 	mlfs_info("superblock: size %lu nblocks %lu ninodes %u\n"
-			"[inode start %lu bmap start %lu datablock start %lu log start %lu]\n",
+			"[inode start %lu bmap start %lu APIBLOCK %lu datablock start %lu log start %lu]\n",
 			disk_sb[dev].size,
 			disk_sb[dev].ndatablocks,
 			disk_sb[dev].ninodes,
 			disk_sb[dev].inode_start,
 			disk_sb[dev].bmap_start,
+            disk_sb[dev].api_metadata_block,
 			disk_sb[dev].datablock_start,
 			disk_sb[dev].log_start);
 
@@ -2136,10 +2379,15 @@ void read_superblock(uint8_t dev)
 
 	// The partition is GC unit (1 GB) in SSD.
 	// disk_sb[dev].size : total # of blocks
-	sb[dev]->n_partition = disk_sb[dev].size >> 18;
+#if 0
+#define shift_size 19
+	sb[dev]->n_partition = disk_sb[dev].size >> shift_size;
 
-	if (disk_sb[dev].size % (1 << 18))
+	if (disk_sb[dev].size % (1 << shift_size))
 		sb[dev]->n_partition++;
+#else
+  sb[dev]->n_partition = 1;
+#endif
 
 	//single partitioned allocation, used for debugging.
 	mlfs_info("dev %u: # of segment %u\n", dev, sb[dev]->n_partition);

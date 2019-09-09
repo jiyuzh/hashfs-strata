@@ -4,16 +4,17 @@ include $(SPDK_ROOT_DIR)/mk/spdk.common.mk
 
 # (iangneal): override in libfs/Makefile
 MLFS_FLAGS +=
-
+ifndef PREFIX
+    $(error 'must pass in $$(PREFIX)')
+endif
 C_SRCS := common.c sync.c async.c
 OBJS=$(C_SRCS:.c=.o)
-MLFS_DEP_OBJS = $(MLFS_DIR)/../build/global/util.o
+#MLFS_DEP_OBJS = $(MLFS_DIR)/../$(PREFIX)/global/util.o
 
-OBJS += $(MLFS_DEP_OBJS)
+#OBJS += $(MLFS_DEP_OBJS)
 
 CFLAGS += $(MLFS_FLAGS) -I. -I $(MLFS_DIR) $(ENV_CFLAGS) -I $(SPDK_ROOT_DIR)/include
-#DEBUG := -O0 -g
-DEBUG := -O3
+OPT_ARGS=-g -O3
 
 SPDK_LIBS += $(SPDK_ROOT_DIR)/build/lib/libspdk_nvme.a \
 			 $(SPDK_ROOT_DIR)/build/lib/libspdk_util.a \
@@ -29,15 +30,15 @@ verify:
 
 libspdk.so: $(OBJS) $(ENV_LIBS)
 	@echo "build shared library"
-	gcc -shared -fPIC $(DEBUG) -o libspdk.so -Wl,--whole-archive $(SPDK_LIBS) \
-	-Wl,--no-whole-archive $(MLFS_FLAGS) $^ -ldl -lrt -lm
+	$(CC) -shared -fPIC -o libspdk.so -Wl,--whole-archive $(SPDK_LIBS) \
+	-Wl,--no-whole-archive $^ -ldl -lrt -lm $(OPT_ARGS)
 
 clean :
 	$(CLEAN_C)
 	@rm -f libspdk.so
 
 %.o: %.c
-	$(CC) -o $@ $(DEBUG) $(DEPFLAGS) $(CFLAGS) $(CPPFLAGS) $(SPDK_LIBS) $(SYS_LIBS)  \
-	-fPIC -I $(SPDK_ROOT_DIR)/include -c $< -DMLFS_INFO $(MLFS_FLAGS)
+	$(CC) -o $@ $(OPT_ARGS) $(DEPFLAGS) $(CFLAGS) $(CPPFLAGS) $(SPDK_LIBS) $(SYS_LIBS)  \
+	-fPIC -I $(SPDK_ROOT_DIR)/include -I $(API_DIR) -c $< -DMLFS_INFO $(MLFS_FLAGS)
 
 include $(SPDK_ROOT_DIR)/mk/spdk.deps.mk

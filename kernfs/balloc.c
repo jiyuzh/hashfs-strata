@@ -17,14 +17,14 @@ int blocks_of_bitmap(uint8_t dev, mlfs_fsblk_t nrblocks)
 		((bitmapsz % g_bdev[dev]->bd_blocksize) ? 1 : 0);
 }
 
-struct block_bitmap *read_all_bitmap(uint8_t dev, 
+struct block_bitmap *read_all_bitmap(uint8_t dev,
 		mlfs_fsblk_t nrblocks, mlfs_fsblk_t bitmap_block)
 {
 	int i, err = 0;
 	int bitmap_nrblocks = blocks_of_bitmap(dev, nrblocks);
 	uint8_t *bitmap = NULL;
 	struct block_bitmap_desc *desc = NULL;
-	struct block_bitmap *b_bitmap = 
+	struct block_bitmap *b_bitmap =
 		(struct block_bitmap *)mlfs_zalloc(sizeof(struct block_bitmap));
 	if (!b_bitmap)
 		return NULL;
@@ -40,7 +40,7 @@ struct block_bitmap *read_all_bitmap(uint8_t dev,
 
 	b_bitmap->nr_bits = nrblocks;
 
-	mlfs_muffled("bitmap size %u KB\n", 
+	mlfs_muffled("bitmap size %u KB\n",
 			(bitmap_nrblocks << g_bdev[dev]->bd_blocksize_bits) >> 10);
 
 	desc = (struct block_bitmap_desc *)mlfs_zalloc(
@@ -137,12 +137,12 @@ void bitmap_bits_set(struct block_bitmap *b_bitmap, mlfs_fsblk_t bit)
 	//mlfs_info("bitmap block %u is dirty, bit %lu\n", bitmap_block, bit);
 }
 
-void bitmap_bits_set_range(struct block_bitmap *b_bitmap, mlfs_fsblk_t bit, 
-		uint32_t length) 
+void bitmap_bits_set_range(struct block_bitmap *b_bitmap, mlfs_fsblk_t bit,
+		uint32_t length)
 {
 	uint64_t *bitmap = (uint64_t *)b_bitmap->bitmap;
 	int start_bitmap_block, end_bitmap_block, i;
-	
+
 	bitmap_set(bitmap, bit, length);
 
 	start_bitmap_block = bit / (g_block_size_bytes << 3);
@@ -187,7 +187,7 @@ static inline bool bitmap_is_bit_clr(uint8_t *bitmap, mlfs_fsblk_t bit)
 	return !bitmap_is_bit_set(bitmap, bit);
 }
 
-void bitmap_bits_free(struct block_bitmap *b_bitmap, 
+void bitmap_bits_free(struct block_bitmap *b_bitmap,
 		mlfs_fsblk_t bit, uint32_t bcnt)
 {
 	mlfs_fsblk_t i = bit;
@@ -232,7 +232,7 @@ void bitmap_bits_free(struct block_bitmap *b_bitmap,
 	}
 }
 
-int bitmap_find_next_clr(struct block_bitmap *b_bitmap, mlfs_fsblk_t start_bit, 
+int bitmap_find_next_clr(struct block_bitmap *b_bitmap, mlfs_fsblk_t start_bit,
 		mlfs_fsblk_t ebit, mlfs_fsblk_t *bit_id)
 {
 	uint64_t *bitmap = (uint64_t *)b_bitmap->bitmap;
@@ -247,8 +247,8 @@ int bitmap_find_next_clr(struct block_bitmap *b_bitmap, mlfs_fsblk_t start_bit,
 	return 0;
 }
 
-int bitmap_find_next_contiguous_clr(struct block_bitmap *b_bitmap, 
-		mlfs_fsblk_t start_bit, mlfs_fsblk_t end_bit, 
+int bitmap_find_next_contiguous_clr(struct block_bitmap *b_bitmap,
+		mlfs_fsblk_t start_bit, mlfs_fsblk_t end_bit,
 		uint32_t length, mlfs_fsblk_t *bit_id)
 {
 	uint64_t *bitmap = (uint64_t *)b_bitmap->bitmap;
@@ -264,7 +264,7 @@ int bitmap_find_next_contiguous_clr(struct block_bitmap *b_bitmap,
 	return 0;
 }
 
-int bitmap_find_bits_clr(struct block_bitmap *b_bitmap, mlfs_fsblk_t bit, 
+int bitmap_find_bits_clr(struct block_bitmap *b_bitmap, mlfs_fsblk_t bit,
 		mlfs_fsblk_t ebit, mlfs_fsblk_t *bit_id)
 {
 	mlfs_fsblk_t i;
@@ -342,7 +342,7 @@ void balloc_init(uint8_t dev, struct super_block *_sb)
   _sb->used_blocks = bitmap_weight((uint64_t *)_sb->s_blk_bitmap->bitmap,
       _sb->ondisk->ndatablocks);
 
-  mlfs_info("[dev %u] used blocks %lu\n", dev, _sb->used_blocks);
+  mlfs_debug("[dev %u] used blocks %lu\n", dev, _sb->used_blocks);
 #if 0
   {
     mlfs_fsblk_t a;
@@ -505,7 +505,7 @@ void mlfs_init_blockmap(struct super_block *sb, int initialize)
 	/* Divide the block range among per-partition free lists */
 	per_list_blocks = sb->num_blocks / sb->n_partition;
 
-	mlfs_debug("blocks in each segment %lu (%lu MB)\n", 
+	mlfs_debug("blocks in each segment %lu (%lu MB)\n",
 			per_list_blocks, per_list_blocks >> 8);
 
 	sb->per_list_blocks = per_list_blocks;
@@ -553,7 +553,7 @@ void mlfs_init_blockmap(struct super_block *sb, int initialize)
 		sb->shared_free_list.block_start = free_list->block_end + 1;
 		sb->shared_free_list.block_end = sb->num_blocks - 1;
 		mlfs_debug("initialize shared free list : %lu ~ %lu\n",
-				sb->shared_free_list.block_start, 
+				sb->shared_free_list.block_start,
 				sb->shared_free_list.block_end);
 	}
 }
@@ -645,6 +645,11 @@ int mlfs_free_blocks_node(struct super_block *sb, unsigned long blocknr,
 	int id;
 	int new_node_used = 0;
 	int ret;
+
+#ifdef NEVER_REUSE_BLOCKS
+    return 0;
+#endif
+
 
 	if (num <= 0) {
 		mlfs_info("ERROR: free %d\n", num);
@@ -755,6 +760,8 @@ static unsigned long mlfs_alloc_blocks_in_free_list(struct super_block *sb,
 		curr = container_of(temp, struct mlfs_range_node, node);
 
 		curr_blocks = curr->range_high - curr->range_low + 1;
+        mlfs_debug("low = %llu, high = %llu, num = %llu\n", curr->range_low,
+                curr->range_high, curr_blocks);
 
 		if (num_blocks >= curr_blocks) {
 			if (btype > 0 && num_blocks > curr_blocks) {
@@ -790,13 +797,30 @@ static unsigned long mlfs_alloc_blocks_in_free_list(struct super_block *sb,
 
 	free_list->num_free_blocks -= num_blocks;
 
+
 	if (found == 0)
 		return -ENOSPC;
+
+#ifdef NEVER_REUSE_BLOCKS
+    static unsigned long last_blk_num = 0;
+    last_blk_num = max(last_blk_num, *new_blocknr);
+    *new_blocknr = last_blk_num;
+
+    last_blk_num += num_blocks;
+#endif
+
+    if (IDXAPI_IS_PER_FILE()) {
+        for (unsigned long i = 0; i < num_blocks; ++i) {
+            ensure_block_is_clear(sb->s_bdev, (*new_blocknr) + i);
+        }
+    } else {
+        sync_all_buffers(sb->s_bdev);
+    }
 
 	return num_blocks;
 }
 
-static int mlfs_find_free_list(struct super_block *sb, 
+static int mlfs_find_free_list(struct super_block *sb,
 		unsigned int num, enum alloc_type a_type)
 {
 	struct free_list *free_list;
@@ -857,13 +881,14 @@ int mlfs_new_blocks(struct super_block *sb, unsigned long *blocknr,
 
 	// FIXME: A known bug
 	// When the TREE partition is full,
-	
+#if 0
 	if (atype == TREE) {
 		id = sb->n_partition - 2;
 
 		if (id == -1)
 			id = mlfs_find_free_list(sb, num, atype);
-	} else 
+	} else
+#endif
 		id = mlfs_find_free_list(sb, num, atype);
 
 	if (id == -1)
@@ -874,7 +899,7 @@ retry:
 	pthread_mutex_lock(&free_list->mutex);
 
 	if (free_list->num_free_blocks < num_blocks || !free_list->first_node) {
-		mlfs_debug("id %d, free_blocks %lu, required %lu, blocknode %lu\n", 
+		mlfs_debug("id %d, free_blocks %lu, required %lu, blocknode %lu\n",
 				id, free_list->num_free_blocks, num_blocks,
 				free_list->num_blocknode);
 		if (free_list->num_free_blocks >= num_blocks) {
@@ -902,10 +927,62 @@ retry:
 		}
 	}
 
+#if defined(SIMULATE_FRAGMENTATION)
+  static int layout_score_percent = 0;
+  static bool init_layout_score = false;
+  if (!init_layout_score) {
+    const char *mlfs_layout_score = getenv("MLFS_LAYOUT_SCORE");
+    if (NULL != mlfs_layout_score) {
+      layout_score_percent = atoi(mlfs_layout_score);
+    } else {
+      layout_score_percent = 100;
+    }
+    init_layout_score = true;
+    printf("Simulating fragmentation: '%s' => layout score of %f\n",
+        mlfs_layout_score, layout_score_percent / 100.0);
+
+  }
+
+  ret_blocks = 0;
+  bool set = false;
+
+  if (atype == DATA) {
+      for(size_t blk = 0; blk < num_blocks; ) {
+        int rnd = rand() % 100;
+        if (rnd < layout_score_percent) {
+          unsigned long dummy_block;
+          int real_block = mlfs_alloc_blocks_in_free_list(sb, free_list, btype,
+              1, &dummy_block);
+
+          if (!set) {
+            new_blocknr = dummy_block;
+            set = true;
+          }
+
+          if(set && dummy_block != new_blocknr + ret_blocks) break;
+          ret_blocks += real_block;
+          blk += real_block;
+
+        } else {
+          unsigned long dummy_block;
+          int junk_block = mlfs_alloc_blocks_in_free_list(sb, free_list, btype,
+              1, &dummy_block);
+
+          if (set) break;
+        }
+      }
+  } else {
 	ret_blocks = mlfs_alloc_blocks_in_free_list(sb, free_list, btype,
 			num_blocks, &new_blocknr);
+  }
 
-	mlfs_debug("Alloc %lu blocks from freelist %d: %lu ~ %lu\n", 
+#else
+	ret_blocks = mlfs_alloc_blocks_in_free_list(sb, free_list, btype,
+			num_blocks, &new_blocknr);
+#endif
+
+
+	mlfs_debug("Alloc %lu blocks from freelist %d: %lu ~ %lu\n",
 			ret_blocks, free_list->id, new_blocknr, new_blocknr + ret_blocks - 1);
 	if (atype == TREE) {
 		free_list->alloc_log_count++;
@@ -927,7 +1004,7 @@ retry:
 	*blocknr = new_blocknr;
 
 	//return ret_blocks / mlfs_get_numblocks(btype);
-	return ret_blocks;
+  return ret_blocks;
 }
 
 unsigned long mlfs_count_free_blocks(struct super_block *sb)
@@ -979,7 +1056,7 @@ static int mlfs_insert_blocknode_map(struct super_block *sb,
 		free_list->first_node = blknode;
 	free_list->num_blocknode++;
 	free_list->num_free_blocks += num_blocks;
-	
+
 	mlfs_debug("insert block tree - id %u # of free blocks %lu\n",
 			free_list->id, free_list->num_free_blocks);
 out:

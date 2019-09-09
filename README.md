@@ -18,6 +18,13 @@ your test. I recommend to use more than 8 GB at least).
 ### Building Strata ###
 Assume current directory is a project root directory.
 
+Make sure to initialize the repository and sub-repositories first:
+```
+    git clone https://github.com/ut-osa/strata.git
+    git submodule init
+    git submodule update
+```
+
 ##### 1. Change memory configuration
 ~~~
 ./utils/change_dev_size.py [dax0.0] [SSD] [HDD] [dax1.0]
@@ -34,11 +41,13 @@ This script does the following:
 
 ##### 2. Build kernel
 ~~~
+sudo apt install libssl-dev || sudo yum install openssl-devel
 cd kernel/kbuild
 make -f Makefile.setup .config
 make -f Makefile.setup
-make -j
+make -j$(nproc)
 sudo make modules_install ; sudo make install
+sudo update-grub2 || sudo grub2-mkconfig -o /boot/grub2/grub.cfg
 ~~~
 
 This step requires reboot your machine after installing the new kernel.
@@ -227,11 +236,12 @@ Here are some common issues and how we were able to resolve them.
 4. mmap is not supported yet.
 5. Benchmarks are not fully tested in all configurations. Working
    configurations are described in our paper.
-6. There are known bugs in fork.
+6. Can only rename inside the same directory.
+7. There are known bugs in fork.
 
 ### Future Documentation ###
 
-For documentation on current work or for more detailed documentation 
+For documentation on current work or for more detailed documentation
 about a particular feature, please check the [docs][docs] directory.
 
 Available topics:

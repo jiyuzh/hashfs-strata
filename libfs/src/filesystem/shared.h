@@ -8,8 +8,11 @@
 #include "ds/bitmap.h"
 #include "ds/khash.h"
 
+#include "file_indexing.h"
+
 #ifdef __cplusplus
 extern "C" {
+#define _Static_assert static_assert
 #endif
 
 #define RANGENODE_PER_PAGE  254
@@ -77,6 +80,8 @@ struct disk_superblock {
 	addr_t bmap_start;		// Block number of first free map block
 	addr_t datablock_start;	// Block number of first data block
 	addr_t log_start;		// Block number of first log block
+    // For hash tables/indexing API: where is the metadata block?
+    addr_t api_metadata_block; // for indexing api
 };
 
 #define L_TYPE_DIR_ADD         1
@@ -110,7 +115,7 @@ typedef struct logheader {
 	// inode, unlink: no used.
 	offset_t data[g_max_blocks_per_operation];
 	uint32_t length[g_max_blocks_per_operation];
-	// block number of on-disk log data blocks. 
+	// block number of on-disk log data blocks.
 	addr_t blocks[g_max_blocks_per_operation];
 	// block number of next logheader. 0 if no next log.
 	addr_t next_loghdr_blkno;
@@ -127,9 +132,11 @@ typedef struct io_vec {
 typedef struct logheader_meta {
 	struct list_head link;
 	// addr_t blocks[g_max_blocks_per_operation];
-	struct logheader *loghdr;
+    // (iangneal): reduce calls to malloc.
+	struct logheader loghdr;
+	struct logheader *loghdr_p;
 	// flag whether io_buf is allocated or not
-	uint8_t is_hdr_allocated;
+	uint8_t is_hdr_allocated; // iangneal: just use this to see if we need to memset
 	// block number of on-disk logheader.
 	addr_t hdr_blkno;
 
@@ -153,6 +160,7 @@ struct dinode {
 	uint8_t dev;		// Device id for multi-level storage
 	uint8_t itype;		// File type
 	uint8_t nlink;		// Number of links to inode in file system
+    uint8_t _padding[5];
 	uint64_t size;		// Size of file (bytes)
 
 	mlfs_time_t atime;
@@ -160,8 +168,8 @@ struct dinode {
 	mlfs_time_t mtime;
 
 	addr_t l1_addrs[NDIRECT+1];	//direct block addresses: 64 B
-	addr_t l2_addrs[NDIRECT+1];	
-	addr_t l3_addrs[NDIRECT+1];	
+	addr_t l2_addrs[NDIRECT+1];
+	addr_t l3_addrs[NDIRECT+1];
 }; // 256 bytes.
 
 #define setup_ondisk_inode(dip, dev, type) \
@@ -209,7 +217,7 @@ struct inode {
 
 	union {
 		/* the first 12 bytes of i_data is root extent_header */
-		uint32_t i_data[15]; 
+		uint32_t i_data[15];
 		uint32_t i_block[15];
 
 		addr_t addrs[NDIRECT+1];    // Data block addresses
@@ -217,7 +225,7 @@ struct inode {
 
 	union {
 		/* the first 12 bytes of i_data is root extent_header */
-		uint32_t i_data[15]; 
+		uint32_t i_data[15];
 		uint32_t i_block[15];
 
 		addr_t addrs[NDIRECT+1];    // Data block addresses
@@ -225,7 +233,7 @@ struct inode {
 
 	union {
 		/* the first 12 bytes of i_data is root extent_header */
-		uint32_t i_data[15]; 
+		uint32_t i_data[15];
 		uint32_t i_block[15];
 
 		addr_t addrs[NDIRECT+1];    // Data block addresses
@@ -252,7 +260,7 @@ struct inode {
 
 	mlfs_hash_t hash_handle;
 
-	pthread_mutex_t i_mutex;
+	pthread_rwlock_t i_rwlock;
 
 	// For extent tree search optimization.
 	struct mlfs_ext_path *previous_path;
@@ -266,6 +274,9 @@ struct inode {
 	struct dirent_data *de_cache;
 	uint32_t n_de_cache_entry;
 
+    /* for file indexing API */
+    idx_struct_t *ext_idx;
+
 	// kernfs only
 	struct rb_node i_rb_node;      // rb node link for s_dirty_root.
 	struct rb_root i_dirty_dblock; // rb root for dirty directory block.
@@ -275,19 +286,26 @@ struct inode {
 
 	// libfs only
 	pthread_rwlock_t fcache_rwlock;
+    // -- for UT hash
 	struct fcache_block *fcache;
 #ifdef KLIB_HASH
 	khash_t(fcache) *fcache_hash;
 #endif
+    struct fcache_block *fcache_block_pool;
+    size_t npool_blocks;
+    int pool_pointer;
 	uint32_t n_fcache_entries;
 	///////////////////////////////////////////////////////////////////
 
 	///////////////////////////////////////////////////////////////////
 	/* for testing */
-	struct db_handle *i_db; 
+	struct db_handle *i_db;
 	int (*i_writeback)(struct inode *inode);
 	///////////////////////////////////////////////////////////////////
+
 };
+
+typedef struct inode inode_t;
 
 static inline struct super_block* get_inode_sb(uint8_t dev, struct inode *inode)
 {
@@ -300,7 +318,7 @@ static inline struct super_block* get_inode_sb(uint8_t dev, struct inode *inode)
 	memmove(__inode->_dinode, __dinode, sizeof(struct dinode)); \
 	__inode->dinode_flags |= DI_VALID; \
 
-#define SRV_SOCK_PATH "/tmp/digest_socket\0"
+#define SRV_SOCK_PATH "/tmp/digest_socket_ian\0"
 
 #define MAX_SOCK_BUF 128
 #define MAX_CMD_BUF 128
@@ -312,14 +330,14 @@ struct mlfs_dirent {
 
 extern uint8_t *shm_base;
 #define LRU_HEADS (sizeof(struct list_head)) * 5
-#define BLOOM_HEAD 
+#define BLOOM_HEAD
 
 /* shared memory layout (bytes) for reserved region (the first 4 KB)
  *  0~ LRU_HEADS           : lru_heads region
  *  LRU_HEADS ~ BLOOM_HEAD : bloom filter for lsm tree search
- *  BLOOM_HEAD ~           : unused	
- */ 
-struct list_head *lru_heads;
+ *  BLOOM_HEAD ~           : unused
+ */
+extern struct list_head *lru_heads;
 
 typedef struct lru_key {
 	uint8_t dev;

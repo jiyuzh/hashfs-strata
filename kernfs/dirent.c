@@ -32,16 +32,26 @@ uint8_t *get_dirent_block(struct inode *dir_inode, offset_t offset)
 		mlfs_lblk_t count = 1;
 
 		handle.dev = dir_inode->dev;
-		mlfs_ext_alloc_blocks(&handle, dir_inode, 0, 
-				MLFS_GET_BLOCKS_CREATE_META, &blk_no, &count);
-
-		dir_inode->l1.addrs[offset >> g_block_size_shift] = blk_no;
+		if(IDXAPI_IS_HASHFS()) {
+			struct mlfs_map_blocks_arr map_arr;
+			map_arr.m_lblk = offset;
+			map_arr.m_len = 1;
+			mlfs_hashfs_get_blocks(&handle, &dir_inode, &map_arr, MLFS_GET_BLOCKS_CREATE_META);
+			dir_inode->l1.addrs[offset >> g_block_size_shift] = map_arr.m_pblk[0];
+			mlfs_debug("Allocate a new directory block %lx\n", map_arr.m_pblk[0]);
+		} else {
+			mlfs_ext_alloc_blocks(&handle, dir_inode, 0, 
+					MLFS_GET_BLOCKS_CREATE_META, &blk_no, &count);
+			dir_inode->l1.addrs[offset >> g_block_size_shift] = blk_no;
+			mlfs_debug("Allocate a new directory block %lx\n", blk_no);
+		}
+		
 		
 		// Must zero-out the new directory block.
 		d_block = dcache_alloc_add(dir_inode->dev,
 				dir_inode->inum, offset, NULL);
 
-		mlfs_debug("Allocate a new directory block %lx\n", blk_no);
+		
 	} 
 	// Read from storage.
 	else {
@@ -370,7 +380,7 @@ empty_found:
 // If parent != 0, return the inode for the parent and copy the final
 // path element into name, which must have room for DIRSIZ bytes.
 // Must be called inside a transaction since it calls iput().
-static struct inode* namex(char *path, int nameiparent, char *name)
+static struct inode* namex(const char *path, int nameiparent, char *name)
 {
 	struct inode *ip, *next;
 
@@ -408,7 +418,7 @@ static struct inode* namex(char *path, int nameiparent, char *name)
 	return ip;
 }
 
-struct inode* namei(char *path)
+struct inode* namei(const char *path)
 {
 	char name[DIRSIZ];
 	return namex(path, 0, name);
@@ -490,7 +500,7 @@ void dbg_dump_dir(uint8_t dev, uint32_t inum)
 }
 
 // Walking through to path and snapshoting dentry and inode.
-void dbg_path_walk(char *path)
+void dbg_path_walk(const char *path)
 {
 	struct inode *inode, *next_inode;
 	char name[DIRSIZ];

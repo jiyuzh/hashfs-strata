@@ -79,15 +79,19 @@ int write_ondisk_inode(uint8_t dev, struct inode *ip)
 		bh->b_offset = sizeof(struct dinode) * (ip->inum % IPB);
 		ret = mlfs_write(bh);
 		mlfs_io_wait(dev, 0);
+
+        if (g_idx_choice == EXTENT_TREES && ip->ext_idx) {
+            //FN(ip->ext_idx, im_print_stats, ip->ext_idx);
+        }
 	} else {
 		bh->b_size = g_block_size_bytes;
 		bh->b_data = mlfs_zalloc(g_block_size_bytes);
 
-		// read-modify-write of inode block 
+		// read-modify-write of inode block
 		bh_submit_read_sync_IO(bh);
 		mlfs_io_wait(dev, 1);
 
-		memmove((struct dinode*)bh->b_data + (ip->inum % IPB), 
+		memmove((struct dinode*)bh->b_data + (ip->inum % IPB),
 				dip, sizeof(struct dinode));
 
 		ret = mlfs_write(bh);
@@ -107,11 +111,11 @@ void iupdate(struct inode *ip)
 // A free inode has a type of zero.
 struct inode* ialloc(uint8_t dev, uint8_t type, uint32_t inode_nr)
 {
-    uint32_t inum;
-	int ret;
-    struct buffer_head *bp;
-    struct dinode dip;
-    struct inode *ip;
+  uint32_t inum;
+  int ret;
+  struct buffer_head *bp;
+  struct dinode dip;
+  struct inode *ip;
 
 	// allocate with empty inode number
 	if (inode_nr == 0) {
@@ -133,8 +137,8 @@ struct inode* ialloc(uint8_t dev, uint8_t type, uint32_t inode_nr)
 				ip->i_generation = 0;
 				ip->i_data_dirty = 0;
 				ip->nlink = 1;
-
-				return ip;
+                // iangneal: memory leak
+                //ip->ext_idx = NULL;
 			}
 
 		}
@@ -143,7 +147,7 @@ struct inode* ialloc(uint8_t dev, uint8_t type, uint32_t inode_nr)
 
 		if (!ip)
 			ip = iget(dev, inode_nr);
-		else 
+		else
 			ip->i_ref++;
 
 		ip->_dinode = (struct dinode *)ip;
@@ -165,13 +169,13 @@ struct inode* ialloc(uint8_t dev, uint8_t type, uint32_t inode_nr)
 		ip->i_generation = 0;
 		ip->i_data_dirty = 0;
 		ip->nlink = 1;
-
-		return ip;
+        // iangneal: memory leak
+        //ip->ext_idx = NULL;
 	}
 
-    panic("ialloc: no inodes");
+  if (!ip) panic("ialloc: no inodes");
 
-    return NULL;
+  return ip;
 }
 
 // Find the inode with number inum on device dev
@@ -212,8 +216,8 @@ void iunlock(struct inode *ip)
 {
 }
 
-/* iput does not deallocate inode. it just drops reference count. 
- * An inode is explicitly deallocated by ideallc() 
+/* iput does not deallocate inode. it just drops reference count.
+ * An inode is explicitly deallocated by ideallc()
  */
 void iput(struct inode *ip)
 {
@@ -227,8 +231,8 @@ int idealloc(struct inode *inode)
 	mlfs_assert(inode->i_ref < 2);
 	mlfs_assert(inode->flags & I_DELETING);
 
-	if (inode->i_ref == 1 && 
-			(inode->flags & I_VALID) && 
+	if (inode->i_ref == 1 &&
+			(inode->flags & I_VALID) &&
 			inode->nlink == 0) {
 		if (inode->flags & I_BUSY)
 			panic("Inode must not be busy!");

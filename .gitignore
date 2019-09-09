@@ -1,3 +1,5 @@
+.vscode/
+
 # Build directories.
 kernel/kbuild
 !kernel/kbuild/Makefile.setup
@@ -17,3 +19,104 @@ libfs/lib/jemalloc-4.5.0
 
 # Benchmark data.
 libfs/tests/*.json
+
+# Build/configure files.
+autom4te.cache/
+
+shim/libshim/*.o
+shim/libshim/*.so
+shim/glibc/build
+shim/glibc-build-all
+shim/glibc-build-opt
+
+# Test files.
+kernfs/tests/extent_test
+kernfs/tests/fifo_cli
+kernfs/tests/*.o
+kernfs/tests/*.txt
+kernfs/tests/*.log
+kernfs/tests/*.out
+kernfs/tests/kernfs
+kernfs/tests/concurrency_test
+kernfs/tests/nvram_versus_dram
+
+ebuild/
+hbuild/
+
+libfs/tests/*.o
+libfs/tests/MTCC
+libfs/tests/a.out
+libfs/tests/age
+libfs/tests/append_test
+libfs/tests/core
+libfs/tests/deepqueue
+libfs/tests/dir_test
+libfs/tests/falloc_test
+libfs/tests/file_basic
+libfs/tests/fork_io
+libfs/tests/ftrunc_test
+libfs/tests/fwrite_fread
+libfs/tests/iotest
+libfs/tests/iotest.normal
+libfs/tests/lock_perf
+libfs/tests/lock_test
+libfs/tests/many_files_test
+libfs/tests/multithread
+libfs/tests/partial_update_test
+libfs/tests/readdir_test
+libfs/tests/simple_spdk_test
+libfs/tests/small_io
+libfs/tests/MTCCcorrect
+libfs/tests/write_bench
+libfs/tests/read_bench
+
+# Bench files.
+bench/hash_bench/hash_bench
+bench/hash_bench/hash_bench.o
+bench/hash_bench/time_stat.o
+bench/hash_bench/xxhash.o
+
+bench/filebench/INSTALL
+bench/filebench/compile
+bench/filebench/config.guess
+bench/filebench/config.h.in
+bench/filebench/config.sub
+bench/filebench/cvars/
+bench/filebench/depcomp
+bench/filebench/filebench
+bench/filebench/install-sh
+bench/filebench/missing
+bench/filebench/ylwrap
+bench/filebench/install
+bench/filebench/Makefile
+bench/filebench/Makefile.in
+bench/filebench/aclocal.m4
+bench/filebench/config.h
+bench/filebench/config.log
+bench/filebench/config.status
+bench/filebench/configure
+bench/filebench/hello
+bench/filebench/hello.c
+bench/filebench/libtool
+bench/filebench/parser_gram.c
+bench/filebench/parser_gram.h
+bench/filebench/parser_lex.c
+bench/filebench/thing.txt
+bench/filebench/workloads/Makefile
+bench/filebench/workloads/Makefile.in
+
+
+
+
+bench/benchout
+
+# Graphs.
+*.pdf
+__pycache__
+
+# CTags/CScope
+tags
+cscope*
+
+# working files
+*.orig

@@ -16,7 +16,7 @@
 #define BUF_COUNT 2UL
 #define FILE_NAME "/mlfs/ftrunc"
 
-int main(int argc, char ** argv)
+int main(int argc, char **argv)
 {
 	int fd1, fd2;
 	int bytes, ret, i;
@@ -24,6 +24,9 @@ int main(int argc, char ** argv)
 	int write_count;
 	unsigned long file_size;
 	struct stat statbuf;
+
+  printf("getchar to continue\n");
+  (void)getchar();
 
 	init_fs();
 
@@ -40,7 +43,7 @@ int main(int argc, char ** argv)
 	printf("%d\n", ret);
 
 	// TODO: -ENOENT is not currently returned
-	// libshim returns -ENOENT correctly. glibc problem? 
+	// libshim returns -ENOENT correctly. glibc problem?
 	if (ret == -1) {
 		printf("File does not exist. create a new file\n");
 
@@ -67,7 +70,7 @@ int main(int argc, char ** argv)
 
 	close(fd1);
 
-	printf("--- ftruncte\n");
+	printf("--- ftruncate\n");
 	fd2 = open(FILE_NAME, O_RDWR, 0600);
 	printf("fd2 %d\n", fd2);
 
@@ -87,6 +90,7 @@ int main(int argc, char ** argv)
 	// Make zero-length file.
 	// FIXME: this cause a bug.
 	ftruncate(fd2, 0);
+  close(fd2);
 
 	make_digest_request_async(100);
 	wait_on_digesting();
@@ -99,6 +103,18 @@ int main(int argc, char ** argv)
 	}
 
 	unlink(FILE_NAME);
+
+	make_digest_request_async(100);
+	wait_on_digesting();
+
+	printf("--- Unlink digest for %s (should no longer exist)\n");
+
+  int fd3 = open(FILE_NAME, O_RDONLY);
+  if (fd3 >= 0 || errno != ENOENT) {
+    printf("%d %d %d\n", fd3, errno, ENOENT);
+    perror("file still exists!");
+    exit(-1);
+  }
 
 	shutdown_fs();
 

@@ -29,6 +29,7 @@ extern "C" {
 
 // TODO: Create macro to generate the declarations
 // for system call interpose macro
+long __shim_chdir(long __arg1);
 long __shim_open(long __arg1, long __arg2, long __arg3);
 long __shim_openat(long __arg1, long __arg2, long __arg3, long __arg4);
 long __shim_creat(long __arg1, long __arg2);
@@ -59,19 +60,23 @@ long __shim_mmap(long __arg1, long __arg2, long __arg3, long __arg4,
 long __shim_munmap(long __arg1, long __arg2);
 long __shim_getdents(long __arg1, long __arg2, long __arg3);
 long __shim_getdents64(long __arg1, long __arg2, long __arg3);
+long __shim_chmod(long __arg1, long __arg2);
+long __shim_fchmod(long __arg1, long __arg2);
+long __shim_getcwd(long __arg1, long __arg2);
 
 // Actual system call handlers.
+int shim_do_chdir(const char *pathname);
 int shim_do_open(const char * file, int flags, mode_t mode);
 int shim_do_openat(int dfd, const char *filename, int flags, mode_t mode);
 int shim_do_creat(const char * file, mode_t mode);
-size_t shim_do_read(int fd, void *buf, size_t count);
-size_t shim_do_pread64(int fd, void *buf, size_t count, loff_t pos);
-size_t shim_do_write(int fd, const void *buf, size_t count);
-size_t shim_do_pwrite64(int fd, const void *buf, size_t count, loff_t pos);
+ssize_t shim_do_read(int fd, void *buf, size_t count);
+ssize_t shim_do_pread64(int fd, void *buf, size_t count, loff_t pos);
+ssize_t shim_do_write(int fd, const void *buf, size_t count);
+ssize_t shim_do_pwrite64(int fd, const void *buf, size_t count, loff_t pos);
 int shim_do_mkdir(void *buf, mode_t count);
 int shim_do_rmdir(const char *pathname);
 int shim_do_rename(char *oldname, char *newname);
-int shim_do_lseek(int fd, off_t offset, int origin);
+off_t shim_do_lseek(int fd, off_t offset, int origin);
 int shim_do_close(int fd);
 int shim_do_fallocate(int fd, int mode, off_t offset, off_t len);
 int shim_do_posix_fallocate(int fd, off_t offset, off_t len);
@@ -90,8 +95,11 @@ int shim_do_fdatasync(int fd);
 int shim_do_fcntl(int fd, int cmd, void *arg);
 void *shim_do_mmap(void *addr, size_t length, int prot, int flags, int fd, off_t offset);
 int shim_do_munmap(void *addr, size_t length);
-size_t shim_do_getdents(int fd, struct linux_dirent *buf, size_t count);
-size_t shim_do_getdents64(int fd, struct linux_dirent64 *buf, size_t count);
+int shim_do_getdents(int fd, struct linux_dirent *buf, unsigned int count);
+int shim_do_getdents64(int fd, struct linux_dirent64 *buf, unsigned int count);
+int shim_do_chmod(const char *pathname, mode_t mode);
+int shim_do_fchmod(int fd, mode_t mode);
+int shim_do_getcwd(char *buf, size_t size);
 
 #ifdef __cplusplus
 }

@@ -9,7 +9,7 @@
 #include "global/types.h"
 #include "global/util.h"
 #include "ds/list.h"
-#include "ds/stdatomic.h"
+#include <stdatomic.h>
 
 #include <pthread.h>
 
@@ -17,6 +17,8 @@
 struct log_superblock {
 	// block number of the first undigested logheader.
 	addr_t start_digest;
+	// next_avail (log tail) when request digest
+	addr_t next_avail_digest;
 	// # of loghdr to digest
 	atomic_uint n_digest;
 	
@@ -64,7 +66,7 @@ struct fs_log {
 //forward declaration
 struct inode;
 
-extern struct fs_log *g_fs_log;
+extern volatile struct fs_log *g_fs_log;
 
 void init_log(int dev);
 void add_to_loghdr(uint8_t type, struct inode *inode, offset_t data, 
@@ -72,6 +74,8 @@ void add_to_loghdr(uint8_t type, struct inode *inode, offset_t data,
 void start_log_tx(void);
 void abort_log_tx(void);
 void commit_log_tx(void);
+int check_read_log_invalidation(struct fcache_block*);
+int check_write_log_invalidation(struct fcache_block*);
 
 static inline void set_digesting(void)
 {
@@ -79,20 +83,26 @@ static inline void set_digesting(void)
 		//if (!xchg_8(&g_fs_log->digesting, 1)) 
 		if (!cmpxchg(&g_fs_log->digesting, 0, 1)) 
 			return;
-
 		while (g_fs_log->digesting) 
 			cpu_relax();
+
 	}
 }
 
 static inline void clear_digesting(void)
 {
+	if (cmpxchg(&g_fs_log->digesting, 1, 0)) {
+		return;
+	}
+	else {
+		panic("clear digesting twice");
+	}
 	while (1) {
 		//if (!xchg_8(&g_fs_log->digesting, 1)) 
 		if (cmpxchg(&g_fs_log->digesting, 1, 0)) 
 			return;
 
-		while (g_fs_log->digesting) 
+		while (!(g_fs_log->digesting))
 			cpu_relax();
 	}
 }

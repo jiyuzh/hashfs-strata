@@ -112,6 +112,7 @@ int do_migrate_blocks(uint8_t from_dev, uint8_t to_dev, uint32_t file_inum,
 	uint8_t *data;
 	struct mlfs_ext_path *path = NULL;
 	struct mlfs_map_blocks map;
+	struct mlfs_map_blocks_arr map_arr;
 	uint32_t nr_blocks = 0, nr_digested_blocks = 0;
 	offset_t cur_offset;
 
@@ -161,38 +162,70 @@ int do_migrate_blocks(uint8_t from_dev, uint8_t to_dev, uint32_t file_inum,
 		handle_t handle = {.dev = to_dev};
 
 		mlfs_assert((cur_offset % g_block_size_bytes) == 0);
+		if(IDXAPI_IS_HASHFS()) {
+			map_arr.m_lblk = (cur_offset >> g_block_size_shift);
+			// map_arr.m_pblk = 0;
+			map_arr.m_len = min(MAX_GET_BLOCKS_RETURN, nr_blocks - nr_digested_blocks);
+			map_arr.m_flags = 0;
+			nr_block_get = mlfs_hashfs_get_blocks(&handle, file_inode, &map_arr, 
+					MLFS_GET_BLOCKS_CREATE);
+			mlfs_assert(map_arr.m_pblk[0] != 0);
+			mlfs_assert(nr_block_get <= (nr_blocks - nr_digested_blocks));
+			mlfs_assert(nr_block_get > 0);
 
-		map.m_lblk = (cur_offset >> g_block_size_shift);
-		map.m_pblk = 0;
-		map.m_len = nr_blocks - nr_digested_blocks;
-		map.m_flags = 0;
+			nr_digested_blocks += nr_block_get;
+
+			mlfs_debug("[migrate] inum %d, offset %lu len %u (dev %d:%lu) -> (dev %d:%lu)\n", 
+					file_inode->inum, cur_offset, nr_block_get << g_block_size_shift, 
+					from_dev, blknr, to_dev, map_arr.m_pblk[0]);
+			for(size_t j = 0; j < map_arr.m_len; ++j) {
+				bh_data = bh_get_sync_IO(to_dev, map_arr.m_pblk[j], BH_NO_DATA_ALLOC);
+
+				bh_data->b_data = data + (g_block_size_bytes * j);
+				bh_data->b_blocknr = map_arr.m_pblk[j];
+				bh_data->b_size = g_block_size_bytes;
+				bh_data->b_offset = 0;
+
+				ret = mlfs_write(bh_data);
+				mlfs_assert(!ret);
+				clear_buffer_uptodate(bh_data);
+				bh_release(bh_data);
+			}
+
+		}
+		else {
+			map.m_lblk = (cur_offset >> g_block_size_shift);
+			map.m_pblk = 0;
+			map.m_len = nr_blocks - nr_digested_blocks;
+			map.m_flags = 0;
+			nr_block_get = mlfs_ext_get_blocks(&handle, file_inode, &map, 
+					MLFS_GET_BLOCKS_CREATE);
+
+			mlfs_assert(map.m_pblk != 0);
+			mlfs_assert(nr_block_get <= (nr_blocks - nr_digested_blocks));
+			mlfs_assert(nr_block_get > 0);
+
+			nr_digested_blocks += nr_block_get;
+
+			mlfs_debug("[migrate] inum %d, offset %lu len %u (dev %d:%lu) -> (dev %d:%lu)\n", 
+					file_inode->inum, cur_offset, nr_block_get << g_block_size_shift, 
+					from_dev, blknr, to_dev, map.m_pblk);
+			
+			bh_data = bh_get_sync_IO(to_dev, map.m_pblk, BH_NO_DATA_ALLOC);
+
+			bh_data->b_data = data;
+			bh_data->b_blocknr = map.m_pblk;
+			bh_data->b_size = nr_block_get * g_block_size_bytes;
+			bh_data->b_offset = 0;
+
+			ret = mlfs_write(bh_data);
+			mlfs_assert(!ret);
+			clear_buffer_uptodate(bh_data);
+			bh_release(bh_data);
+		}
+		
 
 		// find block address of offset and update extent tree
-		nr_block_get = mlfs_ext_get_blocks(&handle, file_inode, &map, 
-				MLFS_GET_BLOCKS_CREATE);
-
-		mlfs_assert(map.m_pblk != 0);
-
-		mlfs_assert(nr_block_get <= (nr_blocks - nr_digested_blocks));
-		mlfs_assert(nr_block_get > 0);
-
-		nr_digested_blocks += nr_block_get;
-
-		mlfs_debug("[migrate] inum %d, offset %lu len %u (dev %d:%lu) -> (dev %d:%lu)\n", 
-				file_inode->inum, cur_offset, nr_block_get << g_block_size_shift, 
-				from_dev, blknr, to_dev, map.m_pblk);
-
-		bh_data = bh_get_sync_IO(to_dev, map.m_pblk, BH_NO_DATA_ALLOC);
-
-		bh_data->b_data = data;
-		bh_data->b_blocknr = map.m_pblk;
-		bh_data->b_size = nr_block_get * g_block_size_bytes;
-		bh_data->b_offset = 0;
-
-		ret = mlfs_write(bh_data);
-		mlfs_assert(!ret);
-		clear_buffer_uptodate(bh_data);
-		bh_release(bh_data);
 
 		cur_offset += nr_block_get * g_block_size_bytes;
 		data += nr_block_get * g_block_size_bytes;
@@ -320,6 +353,7 @@ int migrate_blocks(uint8_t from_dev, uint8_t to_dev, isolated_list_t *migrate_li
 	mlfs_fsblk_t blknr;
 	struct inode *file_inode;
 	struct mlfs_map_blocks map;
+	struct mlfs_map_blocks_arr map_arr;
 	offset_t cur_lblk;
 	uint32_t nr_blocks, nr_done = 0;
 	uint32_t migrated_success = 0;
@@ -353,11 +387,22 @@ int migrate_blocks(uint8_t from_dev, uint8_t to_dev, isolated_list_t *migrate_li
 		
 		nr_done = 0;
 again:
-		map.m_len = nr_blocks - nr_done;
-		map.m_lblk = cur_lblk;
-		map.m_flags = 0;
 
-		ret = mlfs_ext_get_blocks(&handle, file_inode, &map, 0);
+		if(IDXAPI_IS_HASHFS()) {
+			map_arr.m_len = min(MAX_GET_BLOCKS_RETURN, nr_blocks - nr_done);
+			map_arr.m_lblk = cur_lblk;
+			map_arr.m_flags = 0;
+			ret = mlfs_hashfs_get_blocks(&handle, file_inode, &map_arr, 0);
+		}
+		else {
+			map.m_len = nr_blocks - nr_done;
+			map.m_lblk = cur_lblk;
+			map.m_flags = 0;
+			ret = mlfs_ext_get_blocks(&handle, file_inode, &map, 0);
+		}
+	
+
+		
 
 		mlfs_assert(ret >= 0);
 		//FIXME: figure out when this condition does not meet.
@@ -383,13 +428,23 @@ again:
 				cur_lblk << g_block_size_shift, 
 				cur_lblk << g_block_size_shift);
 
-		do_migrate_blocks(from_dev, to_dev, 
+		if(IDXAPI_IS_HASHFS()) {
+			for(size_t j = 0; j < map_arr.m_len; ++j) {
+				do_migrate_blocks(from_dev, to_dev, 
+					l->val.inum, 
+					cur_lblk << g_block_size_shift, 
+					ret << g_block_size_shift, 
+					map_arr.m_pblk[j]);
+			}
+		}
+		else {
+			do_migrate_blocks(from_dev, to_dev, 
 				l->val.inum, 
 				cur_lblk << g_block_size_shift, 
 				ret << g_block_size_shift, 
 				map.m_pblk);
-
-
+		}
+		
 		if (nr_blocks > nr_done) {
 			cur_lblk += nr_done;
 			mlfs_debug("current extent is small than LRY_ENTRY_SIZE: block got %u\n",

@@ -1,0 +1,7 @@
+*.png
+*.pdf
+*.json
+.DS_Store
+._.DS_Store
+*.tex
+*.tar.gz

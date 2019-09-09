@@ -2,7 +2,14 @@
 #define _STORAGE_H_
 
 #include "global/global.h"
+#include "global/util.h"
 #include "spdk/sync.h"
+
+#ifndef KERNFS
+#include "filesystem/cache_stats.h"
+#else
+#include "cache_stats.h"
+#endif
 
 // iangneal: this is set in spdk/common.c
 // I feel like this is jank but I need it for the thread pool thing in kernfs.
@@ -40,7 +47,8 @@ extern "C" {
 */
 
 // device size in bytes
-static uint64_t dev_size[g_n_devices + 1] = {0UL, 17179869184UL, 21474836480UL, 0UL, 2147483648UL};
+static uint64_t dev_size[g_n_devices + 1] = 
+                {0UL, 21137195008UL, 0UL, 0UL, 2111832064UL, 2111832064UL};
 
 extern struct storage_operations storage_dax;
 extern struct storage_operations storage_spdk;
@@ -96,7 +104,11 @@ void hdd_exit(uint8_t dev);
 extern uint64_t *bandwidth_consumption;
 
 #ifdef STORAGE_PERF
-extern uint64_t storage_tsc;
+extern stats_dist_t storage_rtsc;
+extern stats_dist_t storage_rnr;
+extern stats_dist_t storage_wtsc;
+extern stats_dist_t storage_wnr;
+extern cache_stats_t dax_cache_stats;
 #endif
 #ifdef __cplusplus
 }

@@ -5,6 +5,7 @@
 #include "ds/uthash.h"
 
 #ifdef __cplusplus
+#define _Static_assert static_assert
 extern "C" {
 #endif
 
@@ -45,7 +46,7 @@ struct linux_dirent {
 	unsigned long       d_ino;      /* Inode number */
 	unsigned long       d_off;      /* Offset to next linux_dirent */
 	unsigned short int  d_reclen;   /* Length of this linux_dirent */
-	char                d_name[246];   /* File name (null-terminated) */
+	char                d_name[1];   /* File name (null-terminated) */
 };
 
 struct linux_dirent_tail {
