@@ -16,7 +16,6 @@ from subprocess import DEVNULL, PIPE, STDOUT, TimeoutExpired
 import time
 from warnings import warn
 
-from BenchmarkProcesses import KernFSThread
 from FileBenchProcess import FileBenchRunner
 from MTCCProcess import MTCCRunner
 from FragTestProcess import FragTestRunner

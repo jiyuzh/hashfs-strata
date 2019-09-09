@@ -20,7 +20,7 @@ import progressbar
 from progressbar import ProgressBar
 
 from Utils import *
-from BenchmarkProcesses import BenchRunner
+from BenchRunner import BenchRunner
 
 class MTCCRunner(BenchRunner):
 
