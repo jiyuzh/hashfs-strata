@@ -43,58 +43,67 @@ class IDXGrapher:
     def _plot_single_stat(self, gs, layout):
         grapher = Grapher(self.args)
 
-        dfs = self.data.data_by_benchmark()
-        options = layout['options']
+        df = self.data.get_dataframe()
+        # options = layout['options']
 
-        config_set = layout['config_set'] if 'config_set' in layout else 'default'
-        dfs = self.data.filter_configs(self.config_sets[config_set], dfs)
-        dfs = self.data.reorder_data_frames(dfs)
-        if 'stat' in layout:
-            dfs = self.data.filter_stats(layout['stat'], dfs)
-        elif 'stats' in layout:
-            dfs = self.data.filter_stats(layout['stats'], dfs)
-        if 'layout_score' in layout:
-            dfs = self.data.filter_layout_score(layout['layout_score'], dfs)
-        if 'benchmarks' in layout:
-            dfs = self.data.filter_benchmarks(layout['benchmarks'], dfs)
+        # config_set = layout['config_set'] if 'config_set' in layout else 'default'
+        # dfs = self.data.filter_configs(self.config_sets[config_set], dfs)
+        # dfs = self.data.reorder_data_frames(dfs)
+        # if 'stat' in layout:
+        #     dfs = self.data.filter_stats(layout['stat'], dfs)
+        # elif 'stats' in layout:
+        #     dfs = self.data.filter_stats(layout['stats'], dfs)
+        # if 'layout_score' in layout:
+        #     dfs = self.data.filter_layout_score(layout['layout_score'], dfs)
+        # if 'benchmarks' in layout:
+        #     dfs = self.data.filter_benchmarks(layout['benchmarks'], dfs)
 
-        print(dfs)
+        config = layout['data_config']
+        for col, val in config['filter'].items():
+            df = df[df[col] == val]
 
-        means_df = None
-        ci_df = None
+        new_index = [config['axis'], config['groups']]
+
+        df = df.set_index(new_index)
+        
+        series = df[config['plot']]
+        means_df = series.unstack()
+        ci_df = df[f'{config["plot"]}_ci'].unstack()
+        # embed()
         flush = True
-        if 'average' in options and options['average']:
-            dfs = self.data.average_stats(dfs)
-            flush = True
-            means_df = pd.DataFrame({'Average': dfs.T['mean']}).T
-            ci_df = pd.DataFrame({'Average': dfs.T['ci']}).T
-        else:
-            means_df = dfs
-            means_df = means_df.iloc[::-1]
-            #ci_df = self.data.filter_stat_field('ci', dfs)
-            ci_df = copy.deepcopy(dfs)
-            ci_df[:] = 0
+        # if 'average' in options and options['average']:
+        #     dfs = self.data.average_stats(dfs)
+        #     flush = True
+        #     means_df = pd.DataFrame({'Average': dfs.T['mean']}).T
+        #     ci_df = pd.DataFrame({'Average': dfs.T['ci']}).T
+        # else:
+        #     means_df = dfs
+        #     means_df = means_df.iloc[::-1]
+        #     #ci_df = self.data.filter_stat_field('ci', dfs)
+        #     ci_df = copy.deepcopy(dfs)
+        #     ci_df[:] = 0
 
-            if 'benchmarks' in layout and 'Average' in layout['benchmarks']:
-                # Also add an average bar:
-                dfs = self.data.data_by_benchmark()
-                dfs = self.data.filter_configs(self.config_sets[config_set], dfs)
-                dfs = self.data.reorder_data_frames(dfs)
-                dfs = self.data.filter_stats(layout['stat'], dfs)
-                avg_dfs = self.data.average_stats(dfs)
-                avg_mean = avg_dfs.T['mean']
-                ci_zero = avg_mean.copy()
-                ci_zero[:] = 0
-                means_df = means_df.append(pd.DataFrame({'Average': avg_mean}).T)
-                ci_df = ci_df.append(pd.DataFrame({'Average': ci_zero}).T)
-                flush = True
+        #     if 'benchmarks' in layout and 'Average' in layout['benchmarks']:
+        #         # Also add an average bar:
+        #         dfs = self.data.data_by_benchmark()
+        #         dfs = self.data.filter_configs(self.config_sets[config_set], dfs)
+        #         dfs = self.data.reorder_data_frames(dfs)
+        #         dfs = self.data.filter_stats(layout['stat'], dfs)
+        #         avg_dfs = self.data.average_stats(dfs)
+        #         avg_mean = avg_dfs.T['mean']
+        #         ci_zero = avg_mean.copy()
+        #         ci_zero[:] = 0
+        #         means_df = means_df.append(pd.DataFrame({'Average': avg_mean}).T)
+        #         ci_df = ci_df.append(pd.DataFrame({'Average': ci_zero}).T)
+        #         flush = True
 
         #if 'benchmarks' in layout:
         #    means_df = means_df.reindex(layout['benchmarks'])
         #    ci_df = ci_df.reindex(layout['benchmarks'])
 
+        # By this point, means_df should be two dimensional
         return grapher.graph_single_stat(means_df, ci_df, gs,
-                                         flush=flush, **options)
+                                         flush=flush, **layout['options'])
 
     def _plot_mtcc(self, gs, layout):
         grapher = Grapher(self.args)

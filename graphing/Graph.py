@@ -159,20 +159,27 @@ class Grapher:
 
     def graph_single_stat(self, means_df, ci_df, axis, **kwargs):
         all_means = self._rename_configs(self._reorder_configs(means_df))
-        all_error = self._rename_configs(self._reorder_configs(ci_df))
+        all_error = self._rename_configs(self._reorder_configs(ci_df)) if ci_df is not None else None
         all_perct = None
         labels = all_means.index.tolist()
 
         if self._kwargs_bool(kwargs, 'error_bars'):
-            threshold = 0.05
-            print('Setting error bar minimum to +/- {} for visibility'.format(threshold))
+            cutoff = self._kwargs_default(kwargs, 'cutoff', all_means.max().max())
+            threshold = 0.01 * cutoff
             #print(all_error)
-            all_error = all_error.clip(lower=threshold)
+            all_error_clipped = all_error.clip(lower=threshold)
+            are_equal = (all_error_clipped == all_error).all().all()
+            if not are_equal:
+                print('Setting error bar minimum to +/- {} for visibility'.format(threshold))
+                all_error = all_error_clipped
             if 'Average' in all_error.index:
                 all_error.loc['Average'][:] = 0.0
             #print(all_error)
-        else:
+        elif all_error is not None:
             all_error[:] = 0
+        else:
+            all_error = all_means.copy()
+            all_error[:] = 0.0
 
         num_configs = len(all_means.columns)
         width = num_configs / (num_configs + 2)
@@ -223,6 +230,8 @@ class Grapher:
             axis.set_ylim(min_y_pos, max_y_pos)
 
         artist = []
+
+        
         #labels = self._clean_benchmark_names(labels)
 
         ax.invert_yaxis()
@@ -252,6 +261,7 @@ class Grapher:
             #bar.set_hatch(hatch)
             bar.set_color(color)
             bar.set_edgecolor('black')
+        
 
         scale = self._kwargs_default(kwargs, 'scale', 1.0)
         if scale < 1.0:
@@ -263,6 +273,8 @@ class Grapher:
 
         plt.sca(axis)
         self.__class__._do_grid_lines()
+
+        
 
         plt.xlabel(self._kwargs_default(kwargs, 'label', ''))
         plt.xscale(self._kwargs_default(kwargs, 'xscale', 'linear'))
@@ -282,10 +294,17 @@ class Grapher:
         if self._kwargs_has(kwargs, 'tick_format'):
             ax.xaxis.set_major_formatter(FormatStrFormatter(kwargs['tick_format']))
 
+        if self._kwargs_has(kwargs, 'legend'):
+            legend = plt.legend(**kwargs['legend'])
+            artist += [legend]
+        else:
+            plt.legend().set_visible(False)
+
+
         if self._kwargs_bool(kwargs, 'exclude_tick_labels'):
             plt.yticks(ticks=range(len(labels)), labels=['']*len(labels))
         else:
-            plt.yticks(ticks=range(len(labels)), labels=labels, ha='right')
+            # plt.yticks(ticks=range(len(labels)), labels=labels, ha='right')
 
             minor_ticks = []
             if self._kwargs_has(kwargs, 'per_tick_label'):
@@ -309,13 +328,6 @@ class Grapher:
                 axis.tick_params(which='minor', axis='y', length=0, width=0)
                 plt.grid(which='minor', color='k', linestyle='-', axis='y',
                         zorder=5.0, linewidth=2)
-
-
-        if self._kwargs_has(kwargs, 'legend'):
-            legend = plt.legend(**kwargs['legend'])
-            artist += [legend]
-        else:
-            plt.legend().set_visible(False)
 
         return artist, ybounds
 

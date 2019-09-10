@@ -22,6 +22,7 @@ static void sig_handler(int signum) {
             reset_kernfs_stats();
             break;
         case SIGQUIT:
+            show_kernfs_stats();
             safe_exit();
         default:
             ;
@@ -58,13 +59,14 @@ static void write_pid(char *path) {
     fclose(f);
 }
 
+static void write_pid_callback(void) { write_pid(KERNFSPIDPATH); }
+
 int main(void)
 {
     regist_sighandler();
-    write_pid(KERNFSPIDPATH);
 	printf("initialize file system\n");
 
-	init_fs();
+	init_fs_callback(write_pid_callback);
 
     safe_exit();
 }

@@ -160,6 +160,7 @@ struct dinode {
 	uint8_t dev;		// Device id for multi-level storage
 	uint8_t itype;		// File type
 	uint8_t nlink;		// Number of links to inode in file system
+    uint8_t _padding[5];
 	uint64_t size;		// Size of file (bytes)
 
 	mlfs_time_t atime;
@@ -317,7 +318,7 @@ static inline struct super_block* get_inode_sb(uint8_t dev, struct inode *inode)
 	memmove(__inode->_dinode, __dinode, sizeof(struct dinode)); \
 	__inode->dinode_flags |= DI_VALID; \
 
-#define SRV_SOCK_PATH "/tmp/digest_socket\0"
+#define SRV_SOCK_PATH "/tmp/digest_socket_ian\0"
 
 #define MAX_SOCK_BUF 128
 #define MAX_CMD_BUF 128

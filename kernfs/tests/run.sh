@@ -12,5 +12,6 @@ PATH=$PATH:.
 #LD_LIBRARY_PATH=../build:../../libfs/lib/libspdk/libspdk/:../../libfs/lib/nvml/src/nondebug/ LD_PRELOAD=../../libfs/lib/jemalloc-4.5.0/lib/libjemalloc.so.2 taskset -c 8,15 $@
 #LD_LIBRARY_PATH=../build:../../libfs/lib/libspdk/libspdk/:../../libfs/lib/nvml/src/nondebug/ LD_PRELOAD=../../libfs/lib/jemalloc-4.5.0/lib/libjemalloc.so.2 taskset -c 8,15 $@
 LD_LIBRARY_PATH=../build:../../libfs/lib/libspdk/libspdk/:../../libfs/lib/nvml/src/nondebug/ LD_PRELOAD=../../libfs/lib/jemalloc-4.5.0/lib/libjemalloc.so.2 KERNFS=1 $@
+#LD_LIBRARY_PATH=../build:../../libfs/lib/libspdk/libspdk/:../../libfs/lib/nvml/src/nondebug/  KERNFS=1 $@
 #LD_LIBRARY_PATH=../build:../../libfs/lib/libspdk/libspdk/:../../libfs/lib/nvml/src/nondebug/ LD_PRELOAD=../../libfs/lib/jemalloc-4.5.0/lib/libjemalloc.so.2 MLFS_PROFILE=1 $@
 #LD_LIBRARY_PATH=../build:../../libfs/lib/libspdk/libspdk/:../../libfs/lib/nvml/src/nondebug/ LD_PRELOAD=../../libfs/lib/jemalloc-4.5.0/lib/libjemalloc.so.2 MLFS_PROFILE=1 taskset -c 0,7 $@

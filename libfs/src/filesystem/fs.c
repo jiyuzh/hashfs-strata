@@ -80,6 +80,8 @@ void reset_libfs_stats(void)
     reset_stats_dist(&(g_perf_stats.read_data_bytes));
     cache_stats_init();
     libfs_stats_json = json_object_new_array();
+
+    flush_llc();
 }
 void show_libfs_stats(const char *title)
 {
@@ -147,8 +149,17 @@ void show_libfs_stats(const char *title)
     json_object_object_add(root, "storage", storage);
   }
 
-	json_object_array_add(libfs_stats_json, root);
+  add_cache_stats_to_json(root, "idx_cache", &(g_perf_stats.cache_stats)); 
+
+    if (USE_IDXAPI()) {
+        json_object *indexing = json_object_new_object();
+        add_idx_stats_to_json(enable_perf_stats, indexing);
+        json_object_object_add(root, "idx_stats", indexing);
+    }
+
+  json_object_array_add(libfs_stats_json, root);
   const char *js_str = json_object_get_string(libfs_stats_json);
+
   if (enable_perf_stats) {
     ftruncate(prof_fd, 0);
     lseek(prof_fd, 0, SEEK_SET);
@@ -207,6 +218,7 @@ void show_libfs_stats(const char *title)
   printf("storage(read nr/ts)     : %lu / %lu(%.2f)\n", tri_ratio(storage_rnr.total, storage_rtsc.total));
   print_stats_dist(&storage_rtsc, "storage read tsc");
   print_stats_dist(&storage_rnr, "storage read nr");
+  printf("  LLC miss latency : %lu \n", calculate_llc_latency(&dax_cache_stats));
   printf("storage(write nr/ts)    : %lu / %lu(%.2f)\n", tri_ratio(storage_wnr.total, storage_wtsc.total));
   print_stats_dist(&storage_wtsc, "storage write tsc");
   print_stats_dist(&storage_wnr, "storage write nr");
@@ -218,9 +230,16 @@ void show_libfs_stats(const char *title)
   printf("read data blocks (nr) : %lu \n", g_perf_stats.read_data_nr);
   printf("directory search hit  (nr) : %lu \n", g_perf_stats.dir_search_nr_hit);
   printf("directory search miss (nr) : %lu \n", g_perf_stats.dir_search_nr_miss);
+#ifndef KERNFS
+#include "filesystem/cache_stats.h"
+#else
+#include "cache_stats.h"
+#endif
   printf("directory search notfound (nr) : %lu \n", g_perf_stats.dir_search_nr_notfound);
 #endif
-  printf("--------------------------------------\n");
+      printf("--------------------------------------\n");
+    print_global_idx_stats(enable_perf_stats);
+	printf("--------------------------------------\n");
 }
 
 void shutdown_fs(void)
@@ -317,8 +336,9 @@ void shared_slab_init(uint8_t _shm_slab_index)
 static void shared_memory_init(void)
 {
   shm_fd = shm_open(SHM_NAME, O_RDWR, 0666);
-  if (shm_fd == -1)
-    panic("cannot open shared memory\n");
+  if (shm_fd == -1) {
+    panic("(%d) (%s) cannot open shared memory\n", errno, strerror(errno));
+  }
 
   // the first 4096 is reserved for lru_head array.
   //shm_base = (uint8_t *)mmap(SHM_START_ADDR,
@@ -328,8 +348,9 @@ static void shared_memory_init(void)
       //MAP_SHARED | MAP_FIXED,
       MAP_SHARED,
       shm_fd, 0);
-  if (shm_base == MAP_FAILED)
-    panic("cannot map shared memory\n");
+  if (shm_base == MAP_FAILED) {
+    panic("(%d) (%s) cannot map shared memory\n", errno, strerror(errno));
+  }
 
   shm_slab_index = 0;
   shared_slab_init(shm_slab_index);
@@ -427,7 +448,7 @@ void init_fs(void)
 
     cache_init();
 
-    shared_memory_init();
+    //shared_memory_init();
 
     locks_init();
 
@@ -905,6 +926,7 @@ int bmap(struct inode *ip, struct bmap_request *bmap_req)
 
     // L1 search
     handle.dev = g_root_dev;
+
     ret = mlfs_ext_get_blocks(&handle, ip, &map, 0);
 
     // all blocks are found in the L1 tree

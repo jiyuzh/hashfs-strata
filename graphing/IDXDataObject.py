@@ -43,6 +43,10 @@ class IDXDataObject:
         if 'bench' in data_obj and data_obj['bench'] == 'db_bench':
             return self._parse_db_bench(data_obj)
 
+        labels = ['struct', 'layout', 'start size', 'io size', 'repetitions',
+                  'num files', 'test', 'trial num']
+        parsed = {l: data_obj[l] for l in labels}
+
         if 'read_data' in data_obj:
             parsed['read_data_bytes_per_cycle'] = data_obj['read_data']['bytes'] / max(data_obj['read_data']['tsc'], 1.0)
         if 'threads' in data_obj and data_obj['threads'] != 'T1':
@@ -53,35 +57,40 @@ class IDXDataObject:
             parsed['throughput'] = data_obj['throughput']
         if 'total_time' in data_obj:
             parsed['total_time'] = data_obj['total_time']
+        if 'idx_stats' in data_obj:
+            parsed['idx_compute_per_op'] = data_obj['idx_stats']['compute_tsc'] / max(data_obj['idx_stats']['compute_nr'], 1.0)
         if 'cache' in data_obj:
-            parsed['cache_accesses'] = data_obj['cache']['l1_accesses']
-            #parsed['cache_misses'] = data_obj['cache']['l1_misses']
-            #parsed['llc_misses'] = data_obj['cache']['l3_misses'] / max(data_obj['cache']['l3_accesses'], 1.0)
-            parsed['llc_misses'] = data_obj['cache']['l3_misses']
-            parsed['llc_accesses'] = data_obj['cache']['l3_accesses']
-            parsed['tlb_misses'] = data_obj['cache']['tlb_misses']
+            cache_obj = data_obj['cache']
+            parsed['cache_accesses'] = cache_obj['l1']['accesses']
+            parsed['l1_hits'] = cache_obj['l1']['hits'] / max(cache_obj['l1']['accesses'], 1.0)
+            parsed['l1_cache_misses'] = cache_obj['l1']['misses']
+            parsed['l2_hits'] = cache_obj['l2']['hits'] / max(cache_obj['l2']['accesses'], 1.0)
+            parsed['llc_misses'] = cache_obj['l3']['misses']
+            parsed['llc_accesses'] = cache_obj['l3']['accesses']
 
-            if 'cache' in data_obj['cache']['kernfs']:
-                kern_cache = data_obj['cache']['kernfs']['cache']
-                parsed['kernfs_cache_accesses'] = kern_cache['l1_accesses']
+            if 'cache' in cache_obj['kernfs']:
+                kern_cache = cache_obj['kernfs']
+                parsed['kernfs_cache_accesses'] = kern_cache['l1']['accesses']
                 #parsed['kernfs_cache_misses'] = kern_cache['l1_misses']
                 #parsed['kernfs_llc_misses'] = kern_cache['l3_misses'] / max(kern_cache['l3_accesses'], 1.0)
-                parsed['kernfs_llc_misses'] = kern_cache['l3_misses']
-                parsed['kernfs_llc_accesses'] = kern_cache['l3_accesses']
-                parsed['kernfs_tlb_misses'] = kern_cache['tlb_misses']
+                parsed['kernfs_llc_misses'] = kern_cache['l3']['misses']
+                parsed['kernfs_llc_accesses'] = kern_cache['l3']['accesses']
         if 'lsm' in data_obj:
             if data_obj['lsm']['nr'] > 0:
                 parsed['indexing'] = data_obj['lsm']['tsc']
+                parsed['nops'] = data_obj['lsm']['nr']
                 parsed['read_data'] = data_obj['l0']['tsc'] + data_obj['read_data']['tsc']
             else:
                 parsed['indexing'] = data_obj['kernfs']['path_search']
                 parsed['read_data'] = data_obj['kernfs']['digest'] - parsed['indexing']
 
             total = parsed['indexing'] + parsed['read_data']
-            scale = parsed['throughput'] if 'throughput' in parsed else parsed['total_time']
-            parsed['indexing'] /= total
+            parsed['total_breakdown'] = total
+
+            #scale = parsed['throughput'] if 'throughput' in parsed else parsed['total_time']
+            #parsed['indexing'] /= total
             #parsed['indexing'] *= scale
-            parsed['read_data'] /= total
+            #parsed['read_data'] /= total
             #parsed['read_data'] *= scale
 
         return parsed
@@ -118,51 +127,69 @@ class IDXDataObject:
 
     def _parse_results(self, results_dir):
         from scipy.stats.mstats import gmean
-        data = defaultdict(lambda: defaultdict(dict))
+        data = defaultdict(list)
         files = [f for f in results_dir.iterdir() if f.is_file() and 'summary' not in f.name]
         for fp in files:
             with fp.open() as f:
                 objs = json.load(f)
                 for obj in objs:
-                    bench = obj['workload'] if 'workload' in obj else obj['bench']
-                    config = obj['struct']
-                    layout = obj['layout']
-                    if layout not in data[bench][config]:
-                        data[bench][config][layout] = []
-
                     parsed_data = self._parse_relevant_fields(obj)
                     if parsed_data is not None:
-                        data[bench][config][layout] += [parsed_data]
+                        data[parsed_data['trial num']] += [parsed_data]
 
-        dfs = defaultdict(lambda: defaultdict(dict))
-        geofields = ['indexing', 'read_data']
-        for bench, bench_data in data.items():
-            for config, config_data in bench_data.items():
-                for layout in sorted(config_data.keys()):
-                    layout_data = config_data[layout]
-                    series = [pd.Series(x) for x in layout_data]
-                    df = pd.DataFrame(series)
-                    s = df.mean()
-                    s['count'] = len(df)
-                    dfs[bench][config][layout] = s
+        df_list = []
+        for trial, d in data.items():
+            df_list += [pd.DataFrame(d)]
 
-            self._normalize_fields(dfs[bench])
+        df_combined = pd.concat(df_list)
+        dfg = df_combined.groupby(df_combined.index)
+        df_mean = dfg.mean()
+        ntrials = len(data)
+        df_ci = ((1.96 * dfg.std(ddof=0)) / np.sqrt(ntrials))
 
-        self.dfs = dfs
+        pprint(df_ci)
+        pprint(df_mean)
+        pprint(df_ci / df_mean)
+        
+        df_mean = df_mean[df_mean.indexing != 0]
+        df_mean = df_mean[df_mean.indexing.notna()]
+
+        df_ci = df_ci[df_ci.indexing != 0]
+        df_ci = df_ci[df_ci.indexing.notna()]
+
+        ci_columns = { c: f'{c}_ci' for c in df_ci.columns }
+
+        df_ci = df_ci.rename(columns=ci_columns)
+
+        # df_mean['indexing'] /= df_mean['indexing'].min()
+        # df_mean['read_data'] /= df_mean['read_data'].min()
+        # df_mean['total_breakdown'] /= df_mean['total_breakdown'].min()
+
+        df_mean['read_data_raw'] = df_mean['read_data']
+        df_ci['read_data_raw_ci'] = df_ci['read_data_ci']
+
+        df_mean['indexing_per_op'] = df_mean['indexing'] / df_mean['nops']
+        df_ci['indexing_per_op_ci'] = df_ci['indexing_ci'] / df_mean['nops']
+
+        df_mean['indexing_raw'] = df_mean['indexing'] / df_mean['indexing'].min()
+        df_ci['indexing_raw_ci'] = df_ci['indexing_ci'] / df_mean['indexing'].min()
+
+        df_mean['indexing'] /= df_mean['total_breakdown']
+        df_mean['read_data'] /= df_mean['total_breakdown']
+        df_ci['indexing_ci'] /= df_mean['total_breakdown']
+        df_ci['read_data_ci'] /= df_mean['total_breakdown']
+
+        df_ci['total_breakdown_ci'] /= df_mean['total_breakdown']
+        df_mean['total_breakdown'] /= df_mean['total_breakdown']
+        
+        self.df = df_list[0].reindex(df_mean.index) # to preserve string fields
+        self.df[df_mean.columns] = df_mean
+        self.df = pd.concat([self.df, df_ci], axis=1)
+
 
     def _load_results_file(self, file_path):
         with file_path.open() as f:
-            results_data = json.load(f)
-
-            self.dfs = defaultdict(dict)
-            for benchmark, config_data in results_data.items():
-                for config_name, raw_df in config_data.items():
-                    df = None
-                    try:
-                        df = pd.DataFrame(raw_df)
-                    except:
-                        df = pd.Series(raw_df)
-                    self.dfs[benchmark][config_name.lower()] = df
+            self.df = pd.DataFrame(json.load(f))
 
     def __init__(self, results_dir=None, file_path=None):
         assert results_dir is not None or file_path is not None
@@ -173,14 +200,8 @@ class IDXDataObject:
             self._parse_results(Path(results_dir))
 
     def save_to_file(self, file_path):
-        json_obj = defaultdict(lambda: defaultdict(dict))
-        for bench, bench_data in self.dfs.items():
-            for config, config_data in bench_data.items():
-                for layout, layout_data in config_data.items():
-                    json_obj[bench][config][layout] = layout_data.to_dict()
-
         with file_path.open('w') as f:
-            json.dump(json_obj, f, indent=4)
+            json.dump(self.df.to_dict(), f, indent=4)
 
     def _reorder_data_frames(self):
         new_dict = defaultdict(dict)
@@ -198,8 +219,11 @@ class IDXDataObject:
 
         return new_dict
 
+    def get_dataframe(self):
+        return self.df
+
     def data_by_benchmark(self):
-        return self.dfs
+        return self.df.groupby('test')
 
     def data_by_config(self):
         return self._reorder_data_frames()

@@ -88,8 +88,8 @@ MLFS_FLAGS += -DSIMULATE_FRAGMENTATION
 vpath %.c $(SRC_DIR)
 
 #CC = clang-3.8
-CC = gcc9.2 --std=gnu99
-CXX = g++ -std=c++11
+CC = gcc9.2 --std=gnu99 -mrtm
+CXX = g++ -std=c++11 -mrtm
 
 define make-goal
 $1/%.o: %.c

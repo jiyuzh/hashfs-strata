@@ -17,6 +17,11 @@
 extern "C" {
 #endif
 
+// iangneal: for API init
+extern mem_man_fns_t strata_mem_man;
+extern callback_fns_t strata_callbacks;
+extern idx_spec_t strata_idx_spec;
+
 // libmlfs Disk layout:
 // [ boot block | sb block | inode blocks | free bitmap | data blocks | log blocks ]
 // [ inode block | free bitmap | data blocks | log blocks ] is a block group.
@@ -38,6 +43,14 @@ typedef struct mlfs_kernfs_stats {
 	uint64_t n_digest;
 	uint64_t n_digest_skipped;
 	uint64_t total_migrated_mb;
+    // block allocator
+    uint64_t balloc_tsc;
+    uint64_t balloc_nblk;
+    uint64_t balloc_nr;
+    // undo log
+    uint64_t undo_tsc;
+    uint64_t undo_nr;
+
 	stats_dist_t read_per_index;
     // Indexing cache rates
     cache_stats_t cache_stats;
@@ -102,6 +115,66 @@ static inline struct inode *icache_find(uint8_t dev, uint32_t inum)
 	pthread_spin_unlock(&icache_spinlock);
 
 	return inode;
+}
+
+// Block containing inode i
+static inline addr_t get_inode_block(uint8_t dev, uint32_t inum)
+{
+	return (inum / IPB) + disk_sb[dev].inode_start;
+}
+
+static inline void init_api_idx_struct(uint8_t dev, struct inode *inode) {
+    // iangneal: indexing API init.
+    if (IDXAPI_IS_PER_FILE() && inode->itype == T_FILE) {
+        static bool notify = false;
+
+        if (!notify) {
+            printf("Init API extent trees!!!\n");
+            notify = true;
+        }
+
+        paddr_range_t direct_extents = {
+            .pr_start      = get_inode_block(dev, inode->inum),
+            .pr_blk_offset = (sizeof(struct dinode) * (inode->inum % IPB)) + 64,
+            .pr_nbytes     = 64
+        };
+
+        idx_struct_t *tmp = (idx_struct_t*)mlfs_zalloc(sizeof(*inode->ext_idx));
+        int init_err;
+
+        switch(g_idx_choice) {
+            case EXTENT_TREES:
+                init_err = extent_tree_fns.im_init_prealloc(&strata_idx_spec,
+                                                            &direct_extents,
+                                                            tmp);
+                break;
+            case LEVEL_HASH_TABLES:
+                init_err = levelhash_fns.im_init_prealloc(&strata_idx_spec,
+                                                          &direct_extents,
+                                                          tmp);
+                break;
+            case RADIX_TREES:
+                init_err = radixtree_fns.im_init_prealloc(&strata_idx_spec,
+                                                          &direct_extents,
+                                                          tmp);
+                break;
+            default:
+                panic("Invalid choice!!!\n");
+        }
+
+        FN(tmp, im_set_caching, tmp, g_idx_cached);
+
+        if (init_err) {
+            fprintf(stderr, "Error in extent tree API init: %d\n", init_err);
+            panic("Could not initialize API per-inode structure!\n");
+        }
+
+        if (tmp->idx_fns->im_set_stats) {
+            FN(tmp, im_set_stats, tmp, enable_perf_stats);
+        }
+
+        inode->ext_idx = tmp;
+    }
 }
 
 static inline struct inode *icache_alloc_add(uint8_t dev, uint32_t inum)
@@ -332,11 +405,6 @@ extern uint8_t g_ssd_dev;
 extern uint8_t g_log_dev;
 extern uint8_t g_hdd_dev;
 
-// Block containing inode i
-static inline addr_t get_inode_block(uint8_t dev, uint32_t inum)
-{
-	return (inum / IPB) + disk_sb[dev].inode_start;
-}
 
 void init_device_lru_list(void);
 void shared_memory_init(void);

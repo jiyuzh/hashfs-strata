@@ -13,6 +13,42 @@
 #include "global/global.h"
 #include "global/defs.h"
 
+void flush_llc(void) {
+    return;
+    size_t repeats = 1;
+    size_t mult = 16;
+    size_t allocation_size = mult * 32 * 1024 * 1024;
+
+    void *buf = malloc(allocation_size);
+    if (!buf) panic("OOM!");
+
+    const size_t cache_line = 64;
+    register char *cp = (char *)buf;
+    register size_t i = 0;
+
+    //memset(buf, 42, allocation_size);
+
+    asm volatile("sfence\n\t"
+                 :
+                 :
+                 : "memory"); 
+
+    for (i = 0; i < allocation_size; i += cache_line) {
+        asm volatile("clflush (%0)\n\t"
+                     : 
+                     : "r"(&cp[i])
+                     : "memory");
+    }
+
+    asm volatile("sfence\n\t"
+                 :
+                 :
+                 : "memory"); 
+
+    printf("\t-- LLC flushed\n");
+    free(buf);
+}
+
 void pipeclose(struct pipe *p, int writable)
 {
 	return;
