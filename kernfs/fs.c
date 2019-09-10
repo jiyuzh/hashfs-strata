@@ -788,7 +788,7 @@ int digest_file(uint8_t from_dev, uint8_t to_dev, uint32_t file_inum,
 	for(uint32_t i = 0; i < to_lookup.size; ++i) {
 		mlfs_fsblk_t curr_pblk = to_lookup.dyn ? to_lookup.m_pblk_dyn[i] : to_lookup.m_pblk[i];
 		bh_data = bh_get_sync_IO(to_dev, curr_pblk, BH_NO_DATA_ALLOC);
-		uint32_t curr_len = to_lookup.dyn ? to_lookup.m_lens_dyn[i] : to_lookup.m_lens[i]
+		uint32_t curr_len = to_lookup.dyn ? to_lookup.m_lens_dyn[i] : to_lookup.m_lens[i];
 		bh_data->b_data = data;
 		bh_data->b_size = curr_len * g_block_size_bytes;
 		bh_data->b_offset = 0;
