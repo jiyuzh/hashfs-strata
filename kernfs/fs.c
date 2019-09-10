@@ -591,7 +591,7 @@ int digest_file(uint8_t from_dev, uint8_t to_dev, uint32_t file_inum,
 	uint8_t *data;
 	struct mlfs_ext_path *path = NULL;
 	struct mlfs_pblks to_lookup;
-	to_lookup.size = 0;
+	to_lookup.size = 0; to_lookup.dyn = 0;
 	struct mlfs_map_blocks map;
 	struct mlfs_map_blocks_arr map_arr;
 	uint32_t nr_blocks = 0, nr_digested_blocks = 0;
@@ -715,8 +715,9 @@ int digest_file(uint8_t from_dev, uint8_t to_dev, uint32_t file_inum,
 	// an extent is split at the hole. Kernfs should call mlfs_ext_get_blocks()
 	// with setting m_lblk to the offset having a the hole to fill it.
 	if(nr_blocks > MAX_NUM_BLOCKS_LOOKUP) {
-		to_lookup.m_pblk = (mlfs_fsblk_t*)malloc(nr_blocks * sizeof(mlfs_fsblk_t));
-		to_lookup.m_lens = (uint32_t*)malloc(nr_blocks * sizeof(uint32_t));
+		to_lookup.dyn = 1;
+		to_lookup.m_pblk_dyn = (mlfs_fsblk_t*)malloc(nr_blocks * sizeof(mlfs_fsblk_t));
+		to_lookup.m_lens_dyn = (uint32_t*)malloc(nr_blocks * sizeof(uint32_t));
 	}
 
 	while (nr_digested_blocks < nr_blocks) {
@@ -739,8 +740,13 @@ int digest_file(uint8_t from_dev, uint8_t to_dev, uint32_t file_inum,
 						MLFS_GET_BLOCKS_CREATE_DATA);
 			}
 			for(uint32_t i = 0; i < nr_block_get; ++i) {
-				to_lookup.m_pblk[to_lookup.size] = map_arr.m_pblk[i];
-				to_lookup.m_lens[to_lookup.size] = 1;
+				if(to_lookup.dyn) {
+					to_lookup.m_pblk_dyn[to_lookup.size] = map_arr.m_pblk[i];
+					to_lookup.m_lens_dyn[to_lookup.size] = 1;
+				} else {
+					to_lookup.m_pblk[to_lookup.size] = map_arr.m_pblk[i];
+					to_lookup.m_lens[to_lookup.size] = 1;
+				}
 				++to_lookup.size;
 			}
 		}	
@@ -759,8 +765,14 @@ int digest_file(uint8_t from_dev, uint8_t to_dev, uint32_t file_inum,
 				nr_block_get = mlfs_ext_get_blocks(&handle, file_inode, &map,
 						MLFS_GET_BLOCKS_CREATE_DATA);
 			}
-			to_lookup.m_pblk[to_lookup.size] = map.m_pblk;
-			to_lookup.m_lens[to_lookup.size] = map.m_len;
+
+			if(to_lookup.dyn) {
+				to_lookup.m_pblk_dyn[to_lookup.size] = map.m_pblk;
+				to_lookup.m_lens_dyn[to_lookup.size] = map.m_len;
+			} else {
+				to_lookup.m_pblk[to_lookup.size] = map.m_pblk;
+				to_lookup.m_lens[to_lookup.size] = map.m_len;
+			}
 			++to_lookup.size;
 		}
 		
@@ -774,21 +786,22 @@ int digest_file(uint8_t from_dev, uint8_t to_dev, uint32_t file_inum,
 	}
 
 	for(uint32_t i = 0; i < to_lookup.size; ++i) {
-		bh_data = bh_get_sync_IO(to_dev, to_lookup.m_pblk[i], BH_NO_DATA_ALLOC);
-
+		mlfs_fsblk_t curr_pblk = to_lookup.dyn ? to_lookup.m_pblk_dyn[i] : to_lookup.m_pblk[i];
+		bh_data = bh_get_sync_IO(to_dev, curr_pblk, BH_NO_DATA_ALLOC);
+		uint32_t curr_len = to_lookup.dyn ? to_lookup.m_lens_dyn[i] : to_lookup.m_lens[i]
 		bh_data->b_data = data;
-		bh_data->b_size = to_lookup.m_lens[i] * g_block_size_bytes;
+		bh_data->b_size = curr_len * g_block_size_bytes;
 		bh_data->b_offset = 0;
 		ret = mlfs_write(bh_data);
 		mlfs_assert(!ret);
 		clear_buffer_uptodate(bh_data);
 		bh_release(bh_data);
-		data += to_lookup.m_lens[i] * g_block_size_bytes;
+		data += curr_len * g_block_size_bytes;
 	}
 
-	if(nr_blocks > MAX_NUM_BLOCKS_LOOKUP) {
-		free(to_lookup.m_pblk);
-		free(to_lookup.m_lens);
+	if(to_lookup.dyn) {
+		free(to_lookup.m_pblk_dyn);
+		free(to_lookup.m_lens_dyn);
 	}
 
 	mlfs_assert(nr_blocks == nr_digested_blocks);

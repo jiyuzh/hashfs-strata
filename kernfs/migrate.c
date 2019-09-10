@@ -114,7 +114,7 @@ int do_migrate_blocks(uint8_t from_dev, uint8_t to_dev, uint32_t file_inum,
 	struct mlfs_map_blocks map;
 	struct mlfs_map_blocks_arr map_arr;
 	struct mlfs_pblks to_lookup;
-	to_lookup.size = 0;
+	to_lookup.size = 0; to_lookup.dyn = 0;
 	uint32_t nr_blocks = 0, nr_digested_blocks = 0;
 	offset_t cur_offset;
 
@@ -161,8 +161,9 @@ int do_migrate_blocks(uint8_t from_dev, uint8_t to_dev, uint32_t file_inum,
 	// with setting m_lblk to the offset having a the hole to fill it.
 
 	if(nr_blocks > MAX_NUM_BLOCKS_LOOKUP) {
-		to_lookup.m_pblk = (mlfs_fsblk_t*)malloc(nr_blocks * sizeof(mlfs_fsblk_t));
-		to_lookup.m_lens = (uint32_t*)malloc(nr_blocks * sizeof(uint32_t));
+		to_lookup.dyn = 1;
+		to_lookup.m_pblk_dyn = (mlfs_fsblk_t*)malloc(nr_blocks * sizeof(mlfs_fsblk_t));
+		to_lookup.m_lens_dyn = (uint32_t*)malloc(nr_blocks * sizeof(uint32_t));
 	}
 
 	while (nr_digested_blocks < nr_blocks) {
@@ -182,8 +183,13 @@ int do_migrate_blocks(uint8_t from_dev, uint8_t to_dev, uint32_t file_inum,
 			mlfs_assert(nr_block_get > 0);
 
 			for(uint32_t i = 0; i < nr_block_get; ++i) {
-				to_lookup.m_pblk[to_lookup.size] = map_arr.m_pblk[i];
-				to_lookup.m_lens[to_lookup.size] = 1;
+				if(to_lookup.dyn) {
+					to_lookup.m_pblk_dyn[to_lookup.size] = map_arr.m_pblk[i];
+					to_lookup.m_lens_dyn[to_lookup.size] = 1;
+				} else {
+					to_lookup.m_pblk[to_lookup.size] = map_arr.m_pblk[i];
+					to_lookup.m_lens[to_lookup.size] = 1;
+				}
 				++to_lookup.size;
 			}
 
@@ -206,8 +212,13 @@ int do_migrate_blocks(uint8_t from_dev, uint8_t to_dev, uint32_t file_inum,
 			mlfs_assert(nr_block_get <= (nr_blocks - nr_digested_blocks));
 			mlfs_assert(nr_block_get > 0);
 
-			to_lookup.m_pblk[to_lookup.size] = map.m_pblk;
-			to_lookup.m_lens[to_lookup.size] = map.m_len;
+			if(to_lookup.dyn) {
+				to_lookup.m_pblk_dyn[to_lookup.size] = map.m_pblk;
+				to_lookup.m_lens_dyn[to_lookup.size] = map.m_len;
+			} else {
+				to_lookup.m_pblk[to_lookup.size] = map.m_pblk;
+				to_lookup.m_lens[to_lookup.size] = map.m_len;
+			}
 			++to_lookup.size;
 
 			nr_digested_blocks += nr_block_get;
@@ -240,9 +251,9 @@ int do_migrate_blocks(uint8_t from_dev, uint8_t to_dev, uint32_t file_inum,
 		data += to_lookup.m_lens[i] * g_block_size_bytes;
 	}
 
-	if(nr_blocks > MAX_NUM_BLOCKS_LOOKUP) {
-		free(to_lookup.m_pblk);
-		free(to_lookup.m_lens);
+	if(to_lookup.dyn) {
+		free(to_lookup.m_pblk_dyn);
+		free(to_lookup.m_lens_dyn);
 	}
 
 

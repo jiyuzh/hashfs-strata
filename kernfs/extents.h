@@ -208,8 +208,11 @@ struct mlfs_map_blocks_arr {
 struct mlfs_pblks {
 	mlfs_fsblk_t m_pblk[MAX_NUM_BLOCKS_LOOKUP];
 	uint32_t m_lens[MAX_NUM_BLOCKS_LOOKUP];
-	uint32_t size;`
-}
+	mlfs_fsblk_t *m_pblk_dyn;
+	uint32_t *m_lens_dyn;
+	uint8_t dyn;
+	uint32_t size;
+};
 
 /*
  * structure for external API
