@@ -159,6 +159,12 @@ int do_migrate_blocks(uint8_t from_dev, uint8_t to_dev, uint32_t file_inum,
 	// when extent tree has holes in a certain offset (due to data migration),
 	// an extent is split at the hole. Kernfs should call mlfs_ext_get_blocks()
 	// with setting m_lblk to the offset having a the hole to fill it.
+
+	if(nr_blocks > MAX_NUM_BLOCKS_LOOKUP) {
+		to_lookup.m_pblk = (mlfs_fsblk_t*)malloc(nr_blocks * sizeof(mlfs_fsblk_t));
+		to_lookup.m_lens = (uint32_t*)malloc(nr_blocks * sizeof(uint32_t));
+	}
+
 	while (nr_digested_blocks < nr_blocks) {
 		int nr_block_get = 0;
 		handle_t handle = {.dev = to_dev};
@@ -233,6 +239,12 @@ int do_migrate_blocks(uint8_t from_dev, uint8_t to_dev, uint32_t file_inum,
 
 		data += to_lookup.m_lens[i] * g_block_size_bytes;
 	}
+
+	if(nr_blocks > MAX_NUM_BLOCKS_LOOKUP) {
+		free(to_lookup.m_pblk);
+		free(to_lookup.m_lens);
+	}
+
 
 	mlfs_assert(nr_blocks == nr_digested_blocks);
 
