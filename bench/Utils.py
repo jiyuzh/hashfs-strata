@@ -1,3 +1,4 @@
+import psutil
 
 def resolve_unit(s):
     ''' Converts human readable representations of bytes to their fully expanded
@@ -22,6 +23,19 @@ def resolve_units(l):
 
 def do_nothing(*_, **__):
     ''' Literally does nothing. '''
+
+def find_pid_in_file(pid, pid_file):
+    ''' 
+        Checks if the given PID (or any of the process's children PIDs) is in a
+        given PID file (a file which only contains a single PID). 
+    '''
+
+    with pid_file.open() as f:
+        pid_from_file = int(f.read())
+        child_pids = [x.pid for x in psutil.Process(pid).children(recursive=True)]
+        if pid_from_file in child_pids:
+            return True
+        return False
 
 # For benchmarking stability:
 # https://easyperf.net/blog/2019/08/02/Perf-measurement-environment-on-Linux#1-disable-turboboost

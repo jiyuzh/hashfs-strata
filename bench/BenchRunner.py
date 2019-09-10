@@ -53,6 +53,11 @@ class BenchRunner:
         self.env = copy.deepcopy(os.environ)
         self.env['MLFS_PROFILE'] = '1'
 
+        # The same instance is used, but the managed subprocess will change.
+        self.kernfs = KernFSThread(self.root_path, self.env, 
+                                   gather_stats=True,
+                                   verbose=self.args.verbose)
+
 
     def __del__(self):
         if self.kernfs is not None and self.kernfs.is_running():
@@ -63,9 +68,6 @@ class BenchRunner:
         if self.kernfs is not None and self.kernfs.is_running():
             warn('Starting new trial without proper completion of previous.',
                  UserWarning)
-        self.kernfs = KernFSThread(self.root_path, self.env, 
-                                   gather_stats=True,
-                                   verbose=self.args.verbose)
         self.kernfs.start()
 
     def _finish_trial(self):
@@ -85,7 +87,6 @@ class BenchRunner:
         kill_args = [ 'sudo', 'kill', '-3', '--', '-'+str(pgid) ]
         subprocess.run(kill_args, check=True)
         proc.wait(timeout=10)
-
 
     def _write_bench_output(self, json_obj, name):
         if not self.outdir.exists():
@@ -201,26 +202,4 @@ class BenchRunner:
                             help='Where to output the results.')
         parser.add_argument('--verbose', '-v', action='store_true',
                             help='Output stdout/stderr of subprocesses.')
-   
-    @classmethod
-    def add_arguments(cls, parser):
-        subparsers = parser.add_subparsers()
-
-        all_cmds = []
-        filebench = subparsers.add_parser('filebench')
-        filebench.set_defaults(fn=cls._run_filebench)
-        filebench.add_argument('workloads', type=str, nargs='+',
-                               help=('Workload filters on what workloads to '
-                                     'run. Will run all that match.'))
-        all_cmds += [filebench]
-
-        leveldb = subparsers.add_parser('leveldb')
-        leveldb.set_defaults(fn=cls._run_leveldb)
-        leveldb.add_argument('--db_size', type=int, default=300000,
-                             help='number of KV pairs in final DB.')
-        leveldb.add_argument('values_sizes', type=int, nargs='+',
-                             help='What value sizes to use')
-        all_cmds += [leveldb]
-
-        for sub in all_cmds:
-            cls._add_common_arguments(sub)
+  

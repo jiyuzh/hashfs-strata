@@ -17,6 +17,8 @@ from multiprocessing import Process
 import time
 from warnings import warn
 
+from Utils import *
+
 class KernFSThread:
 
     def __init__(self, root_path, env, gather_stats=False, verbose=False):
@@ -38,6 +40,7 @@ class KernFSThread:
             self.stop()
         assert self.proc is None or self.proc.returncode is not None
 
+
     def _clear_stats(self):
         'Reset the stats after init.'
         # kill whole process group
@@ -45,17 +48,27 @@ class KernFSThread:
         kill_args = shlex.split(f'kill -{signal.SIGUSR2.value} -- -{pgid}')
         subprocess.run(kill_args, check=True, stdout=DEVNULL, stderr=DEVNULL)
 
+
+    def mkfs(self):
+        ''' 
+            Reset all the DAX devices. Only should be necessary when we change
+            indexing structures. Avoid using this often since it's really slow.
+        '''
+        warn('Running mlfs.mkfs!', UserWarning, stacklevel=2)
+        mkfs_args = shlex.split(f'{str(self.kernfs_path / "mkfs.sh")}')
+        proc = subprocess.run(mkfs_args, cwd=self.kernfs_path, check=True, env=self.env,
+                              stdout=DEVNULL, stderr=DEVNULL)
+        assert proc.returncode == 0
+
     def start(self):
-        'First we run mkfs, then start up the kernfs process.'
+        ''' 
+            Start up KernFS without running mkfs. That has to be done separately. 
+        '''
 
         # Make sure there are no stats files from prior runs.
         stats_files = [Path(x) for x in glob.glob('/tmp/kernfs_prof.*')]
         for s in stats_files:
             s.unlink()
-
-        mkfs_args = [ 'sudo', '-E', str(self.kernfs_path / 'mkfs.sh') ]
-        proc = subprocess.run(mkfs_args, cwd=self.kernfs_path, check=True, env=self.env,
-                              stdout=DEVNULL, stderr=DEVNULL)
        
         kernfs_arg_str = '{0}/run.sh taskset -c 0 numactl -N {1} -m {1} {0}/kernfs'.format(
                                   str(self.kernfs_path), '0')
@@ -76,24 +89,16 @@ class KernFSThread:
         start_time = time.time()
         while (time.time() - start_time) < 5*60:
             pid_files = [Path(x) for x in glob.glob('/tmp/kernfs*.pid')]
-
-            def find_in_pid_file(p):
-                with p.open() as f:
-                    pid = int(f.read())
-                    child_pids = [x.pid for x in psutil.Process(self.proc.pid
-                                    ).children(recursive=True)]
-                    if pid in child_pids:
-                        return True
-                    return False
-
-            res = [find_in_pid_file(p) for p in pid_files]
+            res = [find_pid_in_file(self.proc.pid, p) for p in pid_files]
             if True in res:
                 break
-
         else:
+            # 'else' occurs when the while condition is false, but not if the
+            # loop is broken.
             raise Exception('Timed out waiting for kernfs!')
 
         self._clear_stats()
+
 
     def _parse_kernfs_stats(self):
         stat_objs = []
@@ -125,12 +130,10 @@ class KernFSThread:
             subprocess.run(shlex.split('sudo rm -f {}'.format(
                 str(stat_file))), check=True)
 
-
     def stop(self):
         'Kill the kernfs process and potentially gather stats.'
-        # kill whole process group
         pgid = os.getpgid(self.proc.pid)
-        kill_args = [ 'kill', '-3', '--', '-'+str(pgid) ]
+        kill_args = shlex.split(f'kill -{signal.SIGQUIT.value} -- -{str(pgid)}')
         subprocess.run(kill_args, check=True, stdout=DEVNULL, stderr=DEVNULL)
         self.proc.wait(timeout=10)
         assert self.proc.returncode is not None

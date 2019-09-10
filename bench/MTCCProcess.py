@@ -35,6 +35,7 @@ class MTCCRunner(BenchRunner):
             self.update_bar_proc.join()
             assert self.update_bar_proc is not None
 
+
     def _parse_readfile_time(self, stdout):
         lines = stdout.decode().splitlines()
         for line in lines:
@@ -46,6 +47,7 @@ class MTCCRunner(BenchRunner):
         pprint(lines)
         raise Exception('Could not find throughput numbers!')
 
+
     def _parse_trial_stat_files(self, time_elapsed, labels):
         stat_objs = []
 
@@ -54,10 +56,15 @@ class MTCCRunner(BenchRunner):
         
         for stat_file in stats_files:
             with stat_file.open() as f:
-                file_data = f.read()
                 stats_arr = []
-                stats_arr = json.loads(file_data)
-                # data_objs = [ x.strip() for x in file_data.split(os.linesep) ]
+                try:
+                    stats_arr = json.load(f)
+                    assert isinstance(stats_arr, list)
+                except json.decoder.JSONDecodeError as e:
+                    print(e)
+                    print(f'Could not decode {str(stat_file)} ({f.read()})!')
+                    raise
+
                 for obj in stats_arr:
                     # if len(data) < 2:
                     #     continue
@@ -82,6 +89,7 @@ class MTCCRunner(BenchRunner):
                 str(stat_file))), check=True)
 
         return stat_objs[0]
+
 
     def _parse_trial_stat_files_cache(self, workload_name, layout, struct):
         stat_objs = []
@@ -207,12 +215,17 @@ class MTCCRunner(BenchRunner):
 
             stat_objs = []
             current = ''
+            prev_idx = None
             try:
                 for workload in workloads:
                     try:
 
                         idx_struct, layout_score, start_size, io_size, reps, \
                                 nfiles, trial_num = workload
+
+                        if prev_idx is None or prev_idx != idx_struct:
+                            assert self.kernfs is not None
+                            self.kernfs.mkfs()
 
                         self.env['MLFS_IDX_STRUCT'] = idx_struct
                         self.env['MLFS_LAYOUT_SCORE'] = layout_score
@@ -240,7 +253,7 @@ class MTCCRunner(BenchRunner):
                             f'''taskset -c 0
                                 numactl -N {numa_node} -m {numa_node} {dir_str}/run.sh
                                 {dir_str}/MTCC -b {setup_size} -s 1 -j 1 -n {nfiles}
-                                -M {start_size} -w {setup_size} -r 0'''
+                                -M {start_size} -w {start_size} -r 0 -S 0'''
 
                         mtcc_seq_arg_str = \
                             f'''taskset -c 0

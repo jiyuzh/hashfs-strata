@@ -20,6 +20,8 @@ from FileBenchProcess import FileBenchRunner
 from MTCCProcess import MTCCRunner
 from FragTestProcess import FragTestRunner
 
+from Utils import *
+
 
 ################################################################################
 # Main execution.
