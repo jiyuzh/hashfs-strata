@@ -115,11 +115,10 @@ int balloc_undo_log(paddr_t start_block, uint32_t nblk, char orig_val);
 
 typedef struct mlfs_idx_struct_undo_ent {
     mlfs_undo_meta_type_t mb_type;
-    uint16_t idx_nbytes;
-    uint64_t idx_start_byte_offset;
+    size_t idx_nbytes;
 } mlfs_idx_undo_ent_t;
 
-_Static_assert(sizeof(mlfs_idx_undo_ent_t) < 64, "must be smaller than cache line!");
+_Static_assert(sizeof(mlfs_idx_undo_ent_t) <= 64, "must be smaller than cache line!");
 _Static_assert(sizeof(mlfs_idx_undo_ent_t) % 2 == 0, "must be a power of 2!");
 
 int idx_undo_log(uint64_t dev_byte_offset, size_t nbytes, void *nvm_ptr);

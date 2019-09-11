@@ -189,7 +189,7 @@ int get_dev_info(device_info_t* di) {
 }
 
 int log_change(inum_t inum, void *nvm_addr, size_t nbytes) {
-
+    
 }
 
 callback_fns_t strata_callbacks = {

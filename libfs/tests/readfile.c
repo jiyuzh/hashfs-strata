@@ -45,6 +45,7 @@ static void *worker_thread_rand(void *);
 void print_help(char **argv) {
     printf("usage: %s -b block_size -j n_threads -s seq_ratio -n num_files -r read_total -x (means full random)\n", argv[0]);
 }
+
 uint32_t get_unit(char c) {
     switch (c) {
         case 'k':
@@ -60,6 +61,7 @@ uint32_t get_unit(char c) {
             return 1;
     }
 }
+
 int main(int argc, char **argv) {
     int c;
     srand(time(NULL));
@@ -171,9 +173,13 @@ static void *worker_thread(void *arg) {
         int fd = fd_v[rand() % file_num];
         assert(fstat(fd, &file_stat) == 0 && "fstat failed");
         size_t size = file_stat.st_size;
+        assert(size > 0 && "can't read from a file of size 0!!");
         size_t block_num = size/block_size;
-        if (r->total_seq_read + r->total_rand_read >= read_total) // exceeds max file size
+        if (r->total_seq_read + r->total_rand_read >= read_total) {
+            // exceeds max file size
             break;
+        }
+
         if ((double)(rand())/RAND_MAX < seq_ratio) { // sequential read
             off_t offset = lseek(fd, 0, SEEK_CUR);
             assert(offset != -1 && "lseek failed");
@@ -181,12 +187,12 @@ static void *worker_thread(void *arg) {
 
             ssize_t rs = pread(fd, read_buf, block_size, offset);
             assert(rs != -1 && "sequential read failed");
+            assert(rs > 0 && "sequential read was 0!");
             r->total_seq_read += rs;
 
             offset = lseek(fd, offset + block_size, SEEK_SET);
             assert(offset != -1 && "post-seq read lseek failed");
-        }
-        else { // random read
+        } else { // random read
             int rand_offset = (rand()%(block_num)) * block_size;
             ssize_t rs = pread(fd, read_buf, block_size, rand_offset);
             assert(rs != -1 && "random read failed");

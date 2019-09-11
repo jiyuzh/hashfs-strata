@@ -18,7 +18,7 @@ from warnings import warn
 import progressbar
 from progressbar import ProgressBar
 
-from BenchmarkProcesses import BenchRunner
+from BenchRunner import BenchRunner
 from MTCCProcess import MTCCRunner
 
 class FragTestRunner(MTCCRunner):

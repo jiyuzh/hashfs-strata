@@ -74,15 +74,19 @@ int write_ondisk_inode(uint8_t dev, struct inode *ip)
 
 	if (dev == g_root_dev) {
 
+        if (USE_IDXAPI()) {
+            // Prevent ourselves from being screwed over.
+            struct dinode di;
+            (void)read_ondisk_inode(dev, ip->inum, &di);
+            memmove(ip->l1.addrs, di.l1_addrs, sizeof(addr_t) * (NDIRECT + 1));
+        }
+
 		bh->b_size = sizeof(struct dinode);
 		bh->b_data = (uint8_t *)dip;
 		bh->b_offset = sizeof(struct dinode) * (ip->inum % IPB);
 		ret = mlfs_write(bh);
 		mlfs_io_wait(dev, 0);
 
-        if (g_idx_choice == EXTENT_TREES && ip->ext_idx) {
-            //FN(ip->ext_idx, im_print_stats, ip->ext_idx);
-        }
 	} else {
 		bh->b_size = g_block_size_bytes;
 		bh->b_data = mlfs_zalloc(g_block_size_bytes);
