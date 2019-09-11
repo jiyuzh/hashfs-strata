@@ -94,7 +94,7 @@ typedef enum indexing_api_choice {
 extern indexing_choice_t g_idx_choice;
 extern bool g_idx_cached;
 
-#define USE_IDXAPI() (g_idx_choice != NONE)
+#define USE_IDXAPI() (g_idx_choice != NONE && g_idx_choice != HASHFS)
 
 #define IDXAPI_IS_PER_FILE() (g_idx_choice == EXTENT_TREES || g_idx_choice == LEVEL_HASH_TABLES \
         || g_idx_choice == RADIX_TREES)

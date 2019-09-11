@@ -437,7 +437,7 @@ int digest_inode(uint8_t from_dev, uint8_t to_dev,
 		ihdr = ext_inode_hdr(&handle, inode);
 
 		// The first creation of dinode of file
-		if (ihdr->eh_magic != MLFS_EXT_MAGIC) {
+		if (!USE_IDXAPI() && ihdr->eh_magic != MLFS_EXT_MAGIC) {
 			mlfs_ext_tree_init(&handle, inode);
 
 			// For testing purpose, those data are hard-coded.
@@ -1791,8 +1791,9 @@ static int persist_dirty_objects_nvm(void)
 		write_ondisk_inode(g_root_dev, ip);
 		ip->i_data_dirty = 0;
 
-		if (ip->itype == T_DIR)
+		if (ip->itype == T_DIR) {
 			persist_dirty_dirent_block(ip);
+        }
 
 		mlfs_debug("[dev %d] write dirty inode complete\n", ip->dev);
 	}
@@ -1934,14 +1935,6 @@ static void handle_digest_request(void *arg)
 
 		if (enable_perf_stats) {
 			tsc_begin = asm_rdtscp();
-			//g_perf_stats.path_search_tsc = 0;
-			//g_perf_stats.replay_time_tsc = 0;
-			//g_perf_stats.apply_time_tsc= 0;
-			//g_perf_stats.digest_dir_tsc = 0;
-			//g_perf_stats.digest_file_tsc = 0;
-			//g_perf_stats.digest_inode_tsc = 0;
-			//g_perf_stats.n_digest_skipped = 0;
-			//g_perf_stats.n_digest = 0;
 		}
 
         undo_log_start_tx();

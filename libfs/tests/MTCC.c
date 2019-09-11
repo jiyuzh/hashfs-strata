@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdbool.h>
 #include <pthread.h>
 #include <getopt.h>
 #include <stdlib.h>
@@ -47,12 +48,12 @@ static void *worker_thread(void *);
 #ifndef PREFIX
 #define PREFIX "/mlfs"
 #endif
-#define OPTSTRING "b:j:f:s:M:r:w:h:S:N:"
+#define OPTSTRING "b:j:n:s:M:r:w:h:S:"
 #define OPTNUM 7
 void print_help(char **argv) {
-    printf("usage: %s -b block_size -j n_threads -s seq_ratio -f num_file "
+    printf("usage: %s -b block_size -j n_threads -s seq_ratio -n num_file "
            "-M max_file_size -S start_file_size -w write_unit_size "
-           "-r read_unit_size -N n_trials\n", argv[0]);
+           "-r read_unit_size\n", argv[0]);
 }
 uint32_t get_unit(char c) {
     switch (c) {
@@ -93,7 +94,7 @@ int main(int argc, char **argv) {
                 assert(seq_ratio >= 0 && seq_ratio <= 1 && "seq ratio should in 0.0~1.0");
                 opt_num++;
                 break;
-            case 'f': // how many files are operated concurrently
+            case 'n': // how many files are operated concurrently
                 file_num = atoi(optarg);
                 if (file_num > MAX_FILE_NUM) {
                     panic("too many files");
@@ -140,8 +141,9 @@ int main(int argc, char **argv) {
         print_help(argv);
         panic("insufficient args\n");
     }
-    write_buf = (uint64_t*)malloc(write_unit);
-    for (int i=0; i < write_unit/sizeof(uint64_t); ++i) {
+
+    write_buf = (uint64_t*)malloc(block_size);
+    for (int i=0; i < block_size/sizeof(uint64_t); ++i) {
         write_buf[i] = i;
     }
 
@@ -149,40 +151,59 @@ int main(int argc, char **argv) {
     assert(init_unit);
     memset(init_unit, 42, 64*1024*1024);
 
+    bool can_digest = false;
+
     for (int i=0; i < file_num; ++i) {
         snprintf(filename_v[i], MAX_FILE_NAME_LEN, PREFIX "/MTCC-%d", i);
-        fd_v[i] = open(filename_v[i], O_RDWR | O_CREAT | O_TRUNC, 0666);
+        fd_v[i] = open(filename_v[i], O_RDWR | O_CREAT, 0666);
         if (fd_v[i] == -1) {
             perror("open failed");
             exit(-1);
         }
+
+        struct stat s;
+        int serr = fstat(fd_v[i], &s);
+        if (serr) {
+            perror("stat failed");
+            exit(-1);
+        }
+
+        if (s.st_size > start_file_size) {
+            int terr = ftruncate(fd_v[i], start_file_size);
+            if (terr) {
+                perror("truncate failed");
+                exit(-1);
+            }
+
+            can_digest = true;
+        }
+
         // init each file with read_unit data or start size, whichever is larger
         size_t sz = read_unit > start_file_size ? read_unit : start_file_size;
         // We don't need to make the write unit so small for init size
         size_t incr = start_file_size < 64 * 1024 * 1024 ? start_file_size 
                         : 64 * 1024 * 1024;
+
         for (size_t s = 0; s < sz; ) {
+            can_digest = true;
             size_t amount = sz - s > incr ? incr : sz - s;
             ssize_t ret = write(fd_v[i], init_unit, amount);
             assert(ret != -1);
             s += ret;
         }
-
-        close(fd_v[i]);
-        fd_v[i] = open(filename_v[i], O_RDWR | O_CREAT, 0666);
-        if (fd_v[i] == -1) {
-            perror("re-open failed");
-            exit(-1);
-        }
     }
 
-    // Force digest request
-    while(make_digest_request_async(100));
-    printf("Wait for digest to start...\n");
-    wait_on_not_digesting();
-    printf("\tDone\nWait for digest to stop...\n");
-    wait_on_digesting();
-    printf("\tDone.\n");
+    if (can_digest) {
+        printf("Force digest\n");
+        while(make_digest_request_async(100));
+        printf("Wait for digest to start...\n");
+        wait_on_not_digesting();
+        printf("\tDone\nWait for digest to stop...\n");
+        wait_on_digesting();
+        printf("\tDone.\n");
+    } else {
+        printf("Skipping initial digest, since there is no data to digest!\n");
+    }
 
     // Reset kernfs stats before we start
     FILE *f = fopen(KERNFSPIDPATH, "r");
@@ -242,8 +263,11 @@ static void *worker_thread(void *arg) {
         assert(fstat(fd, &file_stat) == 0 && "fstat failed");
         size_t size = file_stat.st_size;
         size_t block_num = size/block_size;
-        if (size >= max_file_size) // exceeds max file size
+        if (size >= max_file_size) {
+            // exceeds max file size
             break;
+        }
+
         if ((double)(rand())/RAND_MAX < seq_ratio) { // sequential read
             int start_offset = (rand()%(block_num - read_unit/block_size + 1)) * block_size;
             for (int i=start_offset; i < start_offset + read_unit; i += block_size) {
@@ -251,8 +275,7 @@ static void *worker_thread(void *arg) {
                 assert(rs != -1 && "sequential read failed");
                 r->total_seq_read += rs;
             }
-        }
-        else { // random read
+        } else { // random read
             for (int i=0; i < read_unit; i += block_size) {
                 int rand_offset = (rand()%(block_num)) * block_size;
                 ssize_t rs = pread(fd, read_buf, block_size, rand_offset);
@@ -260,9 +283,15 @@ static void *worker_thread(void *arg) {
                 r->total_rand_read += rs;
             }
         }
+
         lseek(fd, 0, SEEK_END);
-        assert(write(fd, write_buf, write_unit) != -1);
-        r->total_write += write_unit;
+        for (int i = 0; i < write_unit; i += block_size) {
+            ssize_t ws = write(fd, write_buf, block_size);
+            assert(ws != -1 && "append failed");
+            assert(ws == block_size && "append reported too few bytes");
+            r->total_write += ws;
+        }
     }
+
     return NULL;
 }
