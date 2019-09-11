@@ -38,8 +38,8 @@ static inline void* _get_next_aligned(size_t sz) {
     return next;
 }
 
-#define incr_curp() _incr_log_ptr((void*)curp, sizeof(*curp))
-#define set_next(v) v = (typeof(v))_get_next_aligned(sizeof(*v)); incr_curp()
+#define incr_curp(sz) _incr_log_ptr((void*)curp, sz)
+#define set_next(v) v = (typeof(v))_get_next_aligned(sizeof(*v)); incr_curp(sizeof(*v))
 
 static mlfs_undo_meta_t *startp = NULL;
 static mlfs_undo_meta_t *commitp = NULL;
@@ -229,5 +229,36 @@ int balloc_undo_log(paddr_t start_block, uint32_t nblk, char orig_val) {
 }
 
 int idx_undo_log(uint64_t dev_byte_offset, size_t nbytes, void *nvm_ptr) {
-    panic("not implemented");
+    mlfs_idx_undo_ent_t *ent;
+
+    uint64_t start_tsc = asm_rdtscp();
+
+    set_next(ent);
+    void *nvm_loc = curp;
+    incr_curp(nbytes);
+
+    unsigned status = 0;
+
+    if ((status = _xbegin ()) == _XBEGIN_STARTED) {
+        ent->mb_type     = LOG_IDX_ENTRY;
+        ent->idx_nbytes  = nbytes;
+        memcpy(nvm_loc, nvm_ptr, nbytes);
+
+        _xend ();
+        pmem_persist((void*)ent, sizeof(*ent) + nbytes);
+
+    } else {
+        pmem_memcpy_persist(nvm_loc, nvm_ptr, nbytes);
+
+        ent->mb_type     = LOG_IDX_ENTRY;
+        ent->idx_nbytes  = nbytes;
+        nvm_persist_struct_ptr(ent);
+    }
+
+    if (enable_perf_stats) {
+        g_perf_stats.undo_tsc += asm_rdtscp() - start_tsc;
+        g_perf_stats.undo_nr++;
+    }
+
+    return 0;
 }

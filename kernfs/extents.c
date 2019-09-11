@@ -3223,19 +3223,22 @@ int mlfs_ext_truncate(handle_t *handle, struct inode *inode,
 	if(IDXAPI_IS_HASHFS()) {
 		size_t rc = 0;
 		printf("Start: %ld, End: %ld\n", start, end);
-		int success = pmem_nvm_hash_table_remove_simd64(inode->inum, start, end - start);
-		return 0;
 		
 		for(size_t i = start; i <= end; ++i) {
-			paddr_t index;
-			int success = pmem_nvm_hash_table_remove(inode->inum, i, &index);
-			
-			if(!success) {
-			//	printf("block not found\n");
-			}
-			else {
-				++rc;
-			}
+            if (end - i + 1 >= 8) {
+                int success = pmem_nvm_hash_table_remove_simd64(inode->inum, i, 8);
+                if (success) {
+                    ++rc;
+                }
+                i += 8;
+            } else {
+                paddr_t index;
+                int success = pmem_nvm_hash_table_remove(inode->inum, i, &index);
+                if (success) {
+                    ++rc;
+                }
+                ++i;
+            }
 		}
 		printf("removed %ld blocks\n", rc);
 		return 0;
@@ -3245,6 +3248,10 @@ int mlfs_ext_truncate(handle_t *handle, struct inode *inode,
     static bool notify = false;
 
 	mlfs_assert(handle != NULL);
+    // iangneal: API init that doesn't affect timing.
+    if (unlikely(IDXAPI_IS_PER_FILE() && !inode->ext_idx)) {
+        init_api_idx_struct(handle->dev, inode);
+    }
 #if defined(STORAGE_PERF) && defined(KERNFS)
 	if (enable_perf_stats) {
 		tsc_start = asm_rdtscp();
@@ -3253,37 +3260,10 @@ int mlfs_ext_truncate(handle_t *handle, struct inode *inode,
 #endif
 
     if (IDXAPI_IS_PER_FILE()) {
-        if (!inode->ext_idx) {
-            if (!notify) {
-                printf("Init API in truncate!!!\n");
-                notify = true;
-            }
-
-            paddr_range_t direct_extents = {
-                .pr_start      = get_inode_block(handle->dev, inode->inum),
-                .pr_blk_offset = (sizeof(struct dinode) * (inode->inum % IPB)) + 59,
-                .pr_nbytes     = 64
-            };
-            inode->ext_idx = mlfs_zalloc(sizeof(*inode->ext_idx));
-            int init_err;
-            if (g_idx_choice == EXTENT_TREES) {
-                init_err = extent_tree_fns.im_init_prealloc(&strata_idx_spec,
-                                                            &direct_extents,
-                                                            inode->ext_idx);
-            } else {
-                init_err = levelhash_fns.im_init_prealloc(&strata_idx_spec,
-                                                          &direct_extents,
-                                                          inode->ext_idx);
-            }
-
-            if (init_err) {
-                fprintf(stderr, "Error in extent tree API init: %d\n", init_err);
-                panic("Could not initialize API extent trees!\n");
-            }
-        }
-
         ret = FN(inode->ext_idx, im_remove, inode->ext_idx, inode->inum, start, 
                  (end - start) + 1);
+
+        if_then_panic(ret != (end - start) + 1, "didn't remove enough blocks! only %d / %u\n", ret, (end - start) + 1);
 
         if (ret == (end - start + 1)) ret = 0;
     } else if (IDXAPI_IS_GLOBAL()) {

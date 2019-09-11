@@ -84,7 +84,7 @@ class BenchRunner:
     def _kill_process(self, proc):
         ' Make sure to start this process with a new session. '
         pgid = os.getpgid(proc.pid)
-        kill_args = [ 'sudo', 'kill', '-3', '--', '-'+str(pgid) ]
+        kill_args = shlex.split(f'kill -{signal.SIGQUIT.value} -- -{str(pgid)}')
         subprocess.run(kill_args, check=True)
         proc.wait(timeout=10)
 
