@@ -47,6 +47,7 @@ typedef struct mlfs_kernfs_stats {
     uint64_t balloc_tsc;
     uint64_t balloc_nblk;
     uint64_t balloc_nr;
+    uint64_t balloc_meta_nr;
     // undo log
     uint64_t undo_tsc;
     uint64_t undo_nr;
