@@ -288,6 +288,7 @@ void mlfs_free_blocks(handle_t *handle, struct inode *inode,
 
 #ifdef BALLOC
     mlfs_debug("freeing %llu (%d)\n", block, count);
+    //printf("freeing %llu (%d) -- %llx\n", block, count, block);
 	ret = mlfs_free_blocks_node(get_inode_sb(handle->dev, inode),
 			block, count, 0, 0);
 	mlfs_assert(ret == 0);
@@ -580,7 +581,7 @@ static mlfs_fsblk_t mlfs_ext_new_meta_block(handle_t *handle,
 
 	//goal = mlfs_ext_find_goal(inode, path, le32_to_cpu(ex->ee_block));
 	mlfs_debug("meta: start offset %lx, len %lu\n", ex->ee_block, ex->ee_len);	
-	printf("meta: start offset %lx, len %lu\n", ex->ee_block, ex->ee_len);
+	//printf("meta: start offset %lx, len %lu\n", ex->ee_block, ex->ee_len);
 	flags |= MLFS_GET_BLOCKS_CREATE_META;
 	newblock = mlfs_new_meta_blocks(handle, inode, goal, flags, &count, err);
 
@@ -3228,7 +3229,7 @@ int mlfs_ext_truncate(handle_t *handle, struct inode *inode,
 
 	if(IDXAPI_IS_HASHFS()) {
 		size_t rc = 0;
-		printf("Start: %ld, End: %ld\n", start, end);
+		//printf("Start: %ld, End: %ld\n", start, end);
 		
 		for(size_t i = start; i <= end; ++i) {
             if (end - i + 1 >= 8) {
@@ -3246,7 +3247,8 @@ int mlfs_ext_truncate(handle_t *handle, struct inode *inode,
                 ++i;
             }
 		}
-		printf("removed %ld blocks\n", rc);
+
+		//printf("removed %ld blocks\n", rc);
 		return 0;
 	}
 	int ret;
