@@ -467,6 +467,7 @@ int mlfs_alloc_block_free_lists(struct super_block *sb)
 
 	pthread_mutexattr_init(&attr);
 	pthread_mutexattr_setpshared(&attr, PTHREAD_PROCESS_SHARED);
+	pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
 
 	sb->free_lists = mlfs_alloc(sb->n_partition * sizeof(struct free_list));
 
@@ -646,10 +647,6 @@ int mlfs_free_blocks_node(struct super_block *sb, unsigned long blocknr,
 	int new_node_used = 0;
 	int ret;
 
-#ifdef NEVER_REUSE_BLOCKS
-    return 0;
-#endif
-
 
 	if (num <= 0) {
 		mlfs_info("ERROR: free %d\n", num);
@@ -801,14 +798,6 @@ static unsigned long mlfs_alloc_blocks_in_free_list(struct super_block *sb,
 	if (found == 0)
 		return -ENOSPC;
 
-#ifdef NEVER_REUSE_BLOCKS
-    static unsigned long last_blk_num = 0;
-    last_blk_num = max(last_blk_num, *new_blocknr);
-    *new_blocknr = last_blk_num;
-
-    last_blk_num += num_blocks;
-#endif
-
     if (IDXAPI_IS_PER_FILE()) {
         for (unsigned long i = 0; i < num_blocks; ++i) {
             ensure_block_is_clear(sb->s_bdev, (*new_blocknr) + i);
@@ -947,31 +936,42 @@ retry:
   bool set = false;
 
   if (atype == DATA) {
+      static unsigned long old_dummy = 0;
+      unsigned long dummy_block = 0;
       for(size_t blk = 0; blk < num_blocks; ) {
-        int rnd = rand() % 100;
-        if (rnd < layout_score_percent) {
-          unsigned long dummy_block;
+        if ((rand() % 100) < layout_score_percent) {
+          unsigned long tmp_block;
           int real_block = mlfs_alloc_blocks_in_free_list(sb, free_list, btype,
-              1, &dummy_block);
+              1, &tmp_block);
 
           if (!set) {
-            new_blocknr = dummy_block;
+            new_blocknr = tmp_block;
             set = true;
           }
 
-          if(set && dummy_block != new_blocknr + ret_blocks) break;
+          if(set && tmp_block != new_blocknr + ret_blocks) break;
           ret_blocks += real_block;
           blk += real_block;
 
         } else {
-          unsigned long dummy_block;
           int junk_block = mlfs_alloc_blocks_in_free_list(sb, free_list, btype,
               1, &dummy_block);
+
+          if (old_dummy) {
+              // Still a slow leak.
+             int r = mlfs_free_blocks_node(sb, old_dummy, 1, 0, 0);
+             assert(0 == r);
+          }
+
+          old_dummy = dummy_block;
 
           if (set) break;
         }
       }
+
+
   } else {
+    // We don't fragment our metadata blocks
 	ret_blocks = mlfs_alloc_blocks_in_free_list(sb, free_list, btype,
 			num_blocks, &new_blocknr);
   }
