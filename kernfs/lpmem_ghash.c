@@ -338,7 +338,7 @@ static void mixHash_simd4(__m256i *c, __m128i *node_indices, __mmask8 searching)
   mixHash_simd4_helper(&b, c, &a, LEFT, 10, searching);
   mixHash_simd4_helper(c, &a, &b, RIGHT, 15, searching);
 
-  __m256i hash_values = _mm256_cvtepi64_epi32(*c); // direct hash with truncation to 32-bit
+  __m128i hash_values = _mm256_cvtepi64_epi32(*c); // direct hash with truncation to 32-bit
   pmem_mod_simd4(&hash_values, node_indices);
 }
 
@@ -436,7 +436,7 @@ void pmem_nvm_hash_table_lookup_node_simd4(__m256i *keys, __m128i *node_indices,
 #ifndef SEQ_STEP
     step++;
 #endif
-    __m256i step_vec = _mm_maskz_set1_epi32(oneMask, step);
+    __m128i step_vec = _mm_maskz_set1_epi32(oneMask, step);
     *node_indices = _mm_mask_add_epi32(*node_indices, searching, *node_indices, step_vec);
     pmem_mod_simd4(node_indices, node_indices);
     cur = _mm256_mmask_i32gather_epi64 (cur, searching, *node_indices, (void const*)(pmem_ht_vol->entries), 8);
@@ -665,9 +665,9 @@ int pmem_nvm_hash_table_lookup_simd(uint32_t inum, uint32_t lblk, uint32_t len, 
 	u256i_32 indices8;
   u128i_32 indices4;
   uint32_t meta_size = pmem_ht->meta_size;
-
+  int success = 0;
   if(entries4) {
-    int success = pmem_nvm_hash_table_lookup_internal_simd4(&(inum_vec4.vec), &(lblk_vec4.vec), &(indices4.vec), to_find);
+    success = pmem_nvm_hash_table_lookup_internal_simd4(&(inum_vec4.vec), &(lblk_vec4.vec), &(indices4.vec), to_find);
     if(!success) {
       return success;
     }
@@ -675,7 +675,7 @@ int pmem_nvm_hash_table_lookup_simd(uint32_t inum, uint32_t lblk, uint32_t len, 
       pblks[i] = ((uint64_t)indices4.arr[i]) + ((uint64_t)meta_size);
     }
   } else {
-    int success = pmem_nvm_hash_table_lookup_internal_simd8(&(inum_vec8.vec), &(lblk_vec8.vec), &(indices8.vec), to_find);
+    success = pmem_nvm_hash_table_lookup_internal_simd8(&(inum_vec8.vec), &(lblk_vec8.vec), &(indices8.vec), to_find);
     if(!success) {
       return success;
     }
@@ -955,7 +955,7 @@ static inline int pmem_nvm_hash_table_insert_internal_simd4(__m256i *inums, __m2
       pmem_find_next_invalid_entry_simd4(indices, duplicates_mask);
     }
   } while(duplicates_mask != 0);
-  _mm256_mmask_i32gather_epi64(pmem_ht_vol->entries, to_find, *indices, keys, 8);
+  _mm256_mask_i32scatter_epi64(pmem_ht_vol->entries, to_find, *indices, keys, 8);
 
   return true;
 
@@ -984,9 +984,9 @@ int pmem_nvm_hash_table_insert_simd(uint32_t inum, uint32_t lblk, uint32_t len, 
 	u256i_32 indices8;
   u128i_32 indices4;
   uint32_t meta_size = pmem_ht->meta_size;
-
+  int success = 0;
   if(entries4) {
-    int success = pmem_nvm_hash_table_insert_internal_simd4(&(inum_vec4.vec), &(lblk_vec4.vec), &(indices4.vec), to_find);
+    success = pmem_nvm_hash_table_insert_internal_simd4(&(inum_vec4.vec), &(lblk_vec4.vec), &(indices4.vec), to_find);
     if(!success) {
       return success;
     }
@@ -994,7 +994,7 @@ int pmem_nvm_hash_table_insert_simd(uint32_t inum, uint32_t lblk, uint32_t len, 
       pblks[i] = ((uint64_t)indices4.arr[i]) + ((uint64_t)meta_size);
     }
   } else {
-    int success = pmem_nvm_hash_table_insert_internal_simd8(&(inum_vec8.vec), &(lblk_vec8.vec), &(indices8.vec), to_find);
+    success = pmem_nvm_hash_table_insert_internal_simd8(&(inum_vec8.vec), &(lblk_vec8.vec), &(indices8.vec), to_find);
     if(!success) {
       return success;
     }
@@ -1079,7 +1079,7 @@ static inline
 int pmem_nvm_hash_table_remove_internal_simd4(__m256i *inums, __m256i *lblks, __mmask8 to_remove) {
   
   __mmask8 zeroMask = _cvtu32_mask8(0); //zeros
-  __mask8 oneMask = _cvtu32_mask8(~0);
+  __mmask8 oneMask = _cvtu32_mask8(~0);
   __mmask8 failure = _cvtu32_mask8(0);
   __m128i node_indices = _mm_maskz_set1_epi32(zeroMask, 0);
   __m256i keys;
@@ -1113,11 +1113,11 @@ int pmem_nvm_hash_table_remove_simd(uint32_t inum, uint32_t lblk, uint32_t len){
 	}
 
   __mmask8 to_find = _cvtu32_mask8(to_do);
-
+  int success = 0;
   if(entries4) {
-    int success = pmem_nvm_hash_table_remove_internal_simd4(&(inum_vec4.vec), &(lblk_vec4.vec), to_find);
+    success = pmem_nvm_hash_table_remove_internal_simd4(&(inum_vec4.vec), &(lblk_vec4.vec), to_find);
   } else {
-    int success = pmem_nvm_hash_table_remove_internal_simd8(&(inum_vec8.vec), &(lblk_vec8.vec), to_find);
+    success = pmem_nvm_hash_table_remove_internal_simd8(&(inum_vec8.vec), &(lblk_vec8.vec), to_find);
   }
 
   return success;
