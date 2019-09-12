@@ -122,8 +122,14 @@ int mlfs_ext_alloc_blocks(handle_t *handle, struct inode *inode,
 
 	if (flags & MLFS_GET_BLOCKS_CREATE_DATA_LOG)
 		a_type = DATA_LOG;
-	else if (flags & MLFS_GET_BLOCKS_CREATE_META)
+	else if (flags & MLFS_GET_BLOCKS_CREATE_META) {
+#if defined(STORAGE_PERF) && defined(KERNFS)
+        if (enable_perf_stats) {
+            g_perf_stats.balloc_meta_nr += *count;
+        }
+#endif
 		a_type = TREE;
+    }
 	else
 		a_type = DATA;
 

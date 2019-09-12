@@ -187,6 +187,7 @@ void show_kernfs_stats(void)
     // Construct JSON object
 	json_object *root = json_object_new_object();
     js_add_int64(root, "digest", g_perf_stats.digest_time_tsc);
+    js_add_int64(root, "metadata_blocks", g_perf_stats.balloc_meta_nr);
     js_add_int64(root, "path_search", g_perf_stats.path_search_tsc);
     js_add_int64(root, "path_storage", g_perf_stats.path_storage_tsc);
     json_object *storage = json_object_new_object(); {
@@ -268,6 +269,7 @@ void show_kernfs_stats(void)
 	printf("total migrated  : %lu MB\n", g_perf_stats.total_migrated_mb);
 	printf("--------------------------------------\n");
 #ifdef STORAGE_PERF
+    printf("meta alloc: %lu blocks\n", g_perf_stats.balloc_meta_nr);
   printf("storage(read nr/ts)   : %lu/%lu(%.2f)\n", tri_ratio(storage_rnr.total,storage_rtsc.total));
   print_stats_dist(&storage_rtsc, "storage read tsc");
   print_stats_dist(&storage_rnr, "storage read nr");
@@ -437,7 +439,7 @@ int digest_inode(uint8_t from_dev, uint8_t to_dev,
 		ihdr = ext_inode_hdr(&handle, inode);
 
 		// The first creation of dinode of file
-		if (!USE_IDXAPI() && ihdr->eh_magic != MLFS_EXT_MAGIC) {
+		if (ihdr->eh_magic != MLFS_EXT_MAGIC) {
 			mlfs_ext_tree_init(&handle, inode);
 
 			// For testing purpose, those data are hard-coded.
