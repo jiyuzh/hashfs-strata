@@ -274,6 +274,8 @@ static inline void init_api_idx_struct(uint8_t dev, struct inode *inode) {
         int init_err;
 
         switch(g_idx_choice) {
+            case EXTENT_TREES_TOP_CACHED:
+                g_idx_cached = true;
             case EXTENT_TREES:
                 init_err = extent_tree_fns.im_init_prealloc(&strata_idx_spec,
                                                             &direct_extents,

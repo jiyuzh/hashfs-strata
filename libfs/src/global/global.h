@@ -96,8 +96,10 @@ extern bool g_idx_cached;
 
 #define USE_IDXAPI() (g_idx_choice != NONE && g_idx_choice != HASHFS)
 
-#define IDXAPI_IS_PER_FILE() (g_idx_choice == EXTENT_TREES || g_idx_choice == LEVEL_HASH_TABLES \
-        || g_idx_choice == RADIX_TREES)
+#define IDXAPI_IS_PER_FILE() (g_idx_choice == EXTENT_TREES || \
+        g_idx_choice == LEVEL_HASH_TABLES || \
+        g_idx_choice == RADIX_TREES || \
+        g_idx_choice == EXTENT_TREES_TOP_CACHED)
 
 #define IDXAPI_IS_HASHFS() (g_idx_choice == HASHFS)
 #define IDXAPI_IS_GLOBAL() (g_idx_choice == GLOBAL_HASH_TABLE || g_idx_choice == GLOBAL_CUCKOO_HASH)
