@@ -2812,7 +2812,7 @@ int mlfs_hashfs_get_blocks(handle_t *handle, struct inode *inode,
 	int create_meta = flags & MLFS_GET_BLOCKS_CREATE_META;
 	int success = 0;
 	if(create_data || create_meta) {
-		success = pmem_nvm_hash_table_insert_simd64(inode->inum, map_arr->m_lblk, map_arr->m_len, map_arr->m_pblk);
+		success = pmem_nvm_hash_table_insert_simd(inode->inum, map_arr->m_lblk, map_arr->m_len, map_arr->m_pblk);
 #ifdef KERNFS
 		if (enable_perf_stats) {
 			g_perf_stats.path_search_tsc += (asm_rdtscp() - tsc_start);
@@ -2828,7 +2828,7 @@ int mlfs_hashfs_get_blocks(handle_t *handle, struct inode *inode,
 								g_perf_stats.path_storage_nr);
 			end_cache_stats(&(g_perf_stats.cache_stats));
         }
-		success = pmem_nvm_hash_table_lookup_simd64(inode->inum, map_arr->m_lblk, map_arr->m_len, map_arr->m_pblk);
+		success = pmem_nvm_hash_table_lookup_simd(inode->inum, map_arr->m_lblk, map_arr->m_len, map_arr->m_pblk);
 	}
 	return map_arr->m_len;
 	
@@ -3218,7 +3218,7 @@ int mlfs_ext_truncate(handle_t *handle, struct inode *inode,
 		
 		for(size_t i = start; i <= end; ++i) {
             if (end - i + 1 >= 8) {
-                int success = pmem_nvm_hash_table_remove_simd64(inode->inum, i, 8);
+                int success = pmem_nvm_hash_table_remove_simd(inode->inum, i, 8);
                 if (success) {
                     ++rc;
                 }
