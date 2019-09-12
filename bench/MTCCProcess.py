@@ -227,6 +227,8 @@ class MTCCRunner(BenchRunner):
                             assert self.kernfs is not None
                             self.kernfs.mkfs()
 
+                        prev_idx = idx_struct
+
                         self.env['MLFS_IDX_STRUCT'] = idx_struct
                         self.env['MLFS_LAYOUT_SCORE'] = layout_score
                         self.env['MLFS_CACHE_PERF'] = '0'
