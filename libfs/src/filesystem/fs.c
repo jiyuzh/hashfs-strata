@@ -1897,7 +1897,7 @@ do_global_search:
 
   for(uint32_t i = 0; i < to_lookup.size; ++i) {
 		addr_t curr_pblk = to_lookup.dyn ? to_lookup.m_pblk_dyn[i] : to_lookup.m_pblk[i];
-		bh = bh_get_sync_IO(to_dev, curr_pblk, BH_NO_DATA_ALLOC);
+		bh = bh_get_sync_IO(bmap_req.dev, curr_pblk, BH_NO_DATA_ALLOC);
 		uint32_t curr_len = to_lookup.dyn ? to_lookup.m_lens_dyn[i] : to_lookup.m_lens[i];
     offset_t curr_off = to_lookup.dyn ? to_lookup.m_offsets_dyn[i] : to_lookup.m_offsets[i];
 		bh->b_data = curr_off;
