@@ -128,7 +128,7 @@ typedef struct bmap_request {
 typedef struct pblk_lookup_arr {
 	addr_t m_pblk[MAX_NUM_BLOCKS_LOOKUP];
 	uint32_t m_lens[MAX_NUM_BLOCKS_LOOKUP];
-	offset_t m_offsets[MAX_NUM_BLOCKS_LOOKUP]
+	offset_t m_offsets[MAX_NUM_BLOCKS_LOOKUP];
 	addr_t *m_pblk_dyn;
 	uint32_t *m_lens_dyn;
 	offset_t *m_offsets_dyn;
