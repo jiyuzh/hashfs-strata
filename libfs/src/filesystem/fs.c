@@ -1735,8 +1735,8 @@ ssize_t do_aligned_read(struct inode *ip, uint8_t *dst, offset_t off, size_t io_
 
   if(io_size / g_block_size_bytes > MAX_NUM_BLOCKS_LOOKUP) {
 		to_lookup.dyn = 1;
-		to_lookup.m_pblk_dyn = (addr_t*)malloc(nr_blocks * sizeof(addr_t));
-		to_lookup.m_lens_dyn = (uint32_t*)malloc(nr_blocks * sizeof(uint32_t));
+		to_lookup.m_pblk_dyn = (addr_t*)malloc((io_size >> g_block_size_bytes) * sizeof(addr_t));
+		to_lookup.m_lens_dyn = (uint32_t*)malloc((io_size >> g_block_size_bytes) * sizeof(uint32_t));
 	}
 
 
@@ -1897,12 +1897,12 @@ do_global_search:
 
   for(uint32_t i = 0; i < to_lookup.size; ++i) {
 		addr_t curr_pblk = to_lookup.dyn ? to_lookup.m_pblk_dyn[i] : to_lookup.m_pblk[i];
-		bh_data = bh_get_sync_IO(to_dev, curr_pblk, BH_NO_DATA_ALLOC);
+		bh = bh_get_sync_IO(to_dev, curr_pblk, BH_NO_DATA_ALLOC);
 		uint32_t curr_len = to_lookup.dyn ? to_lookup.m_lens_dyn[i] : to_lookup.m_lens[i];
     offset_t curr_off = to_lookup.dyn ? to_lookup.m_offsets_dyn[i] : to_lookup.m_offsets[i];
-		bh_data->b_data = curr_off;
-		bh_data->b_size = min(curr_len << g_block_size_bytes, io_size);
-		bh_data->b_offset = 0;
+		bh->b_data = curr_off;
+		bh->b_size = min(curr_len << g_block_size_bytes, io_size);
+		bh->b_offset = 0;
 		list_add_tail(&bh->b_io_list, &io_list);
 	}
 
