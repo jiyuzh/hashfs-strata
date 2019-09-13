@@ -1258,7 +1258,9 @@ int itrunc(struct inode *ip, offset_t length)
      * If libfs only takes care of zero trucate case,
      * dropping entire hash table is OK.
      * It considers non-zero truncate */
-    for (size = ip->size; size > 0; size -= g_block_size_bytes) {
+    for (size = ((ip->size >> g_block_size_shift) << g_block_size_shift); 
+         size > 0; 
+         size -= g_block_size_bytes) {
       key = (size >> g_block_size_shift);
 
       fc_block = fcache_find(ip, key);
