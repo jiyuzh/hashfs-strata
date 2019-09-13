@@ -16,3 +16,6 @@
 [submodule "bench/tpcc-mysql"]
 	path = bench/tpcc-mysql
 	url = https://github.com/Percona-Lab/tpcc-mysql.git
+[submodule "bench/YCSB-C"]
+	path = bench/YCSB-C
+	url = https://github.com/efeslab/YCSB-C.git
