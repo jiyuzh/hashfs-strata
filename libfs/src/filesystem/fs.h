@@ -504,7 +504,7 @@ static inline struct fcache_block *fcache_alloc_add(struct inode *inode,
         start_tsc = asm_rdtscp();
 
 #define USE_FCACHE_POOL
-//#undef USE_FCACHE_POOL
+#undef USE_FCACHE_POOL
 #ifdef USE_FCACHE_POOL
     if (!inode->fcache_block_pool) {
         inode->fcache_block_pool = (struct fcache_block*) mmap(NULL, 1024 * 1024 * 1024, 
@@ -610,11 +610,10 @@ static inline int fcache_del_all(struct inode *inode)
 				list_del(&fc_block->l);
 				mlfs_free(fc_block->data);
 			} else if (fc_block) {
-				mlfs_free(fc_block);
-			}
 #ifndef USE_FCACHE_POOL
-			mlfs_free(fc_block);
+				mlfs_free(fc_block);
 #endif
+			}
 		}
 	}
 

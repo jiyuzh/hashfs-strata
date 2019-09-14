@@ -1268,7 +1268,7 @@ int itrunc(struct inode *ip, offset_t length)
         if (fc_block->is_data_cached)
           list_del(&fc_block->l);
         if (fcache_del(ip, key)) {
-            //mlfs_free(fc_block);
+            mlfs_free(fc_block);
         };
       }
     }
