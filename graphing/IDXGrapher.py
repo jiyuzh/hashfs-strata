@@ -69,7 +69,7 @@ class IDXGrapher:
         series = df[config['plot']]
         means_df = series.unstack()
         ci_df = df[f'{config["plot"]}_ci'].unstack()
-        # embed()
+        
         flush = True
         # if 'average' in options and options['average']:
         #     dfs = self.data.average_stats(dfs)

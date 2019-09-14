@@ -55,7 +55,9 @@ class Grapher:
                                  }
 
     def _get_config_name(self, config_name):
-        name = config_name.lower()
+        name = config_name
+        if isinstance(config_name, str):
+            name = config_name.lower()
         if name in self.config['display_options']['config_names']:
             return self.config['display_options']['config_names'][name]
         return config_name
@@ -101,7 +103,8 @@ class Grapher:
                 else []
         new_names = []
         for name in benchmark_names:
-            name = name.lower()
+            if isinstance(name, str):
+                name = name.lower()
             if name in bnames:
                 new_names += [bnames[name]]
             else:

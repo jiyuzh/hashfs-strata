@@ -53,6 +53,8 @@ class IDXDataObject:
         if len(parsed) != len(labels):
             return None
 
+        parsed['repetitions'] = str(int(parsed['repetitions']))
+
         if 'read_data' in data_obj:
             parsed['read_data_bytes_per_cycle'] = data_obj['read_data']['bytes'] / max(data_obj['read_data']['tsc'], 1.0)
         if 'threads' in data_obj and data_obj['threads'] != 'T1':

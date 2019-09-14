@@ -25,9 +25,10 @@ class BenchRunner:
                       'GLOBAL_HASH_TABLE', 'GLOBAL_CUCKOO_HASH',
                       'GLOBAL_HASH_TABLE_COMPACT',
                       'GLOBAL_CUCKOO_HASH_COMPACT',
-                      'LEVEL_HASH_TABLES', 'RADIX_TREES', 'NONE'
-                      'HASHFS' ]
-    IDX_DEFAULT   = IDX_STRUCTS
+                      'LEVEL_HASH_TABLES', 'RADIX_TREES', 'NONE', 'HASHFS' ]
+    IDX_DEFAULT   = [ 'EXTENT_TREES', 
+                      'GLOBAL_HASH_TABLE', 'GLOBAL_CUCKOO_HASH',
+                      'LEVEL_HASH_TABLES', 'RADIX_TREES', 'NONE' ]
     LAYOUT_SCORES = ['100', '90', '80', '70', '60']
 
     def __init__(self, args):

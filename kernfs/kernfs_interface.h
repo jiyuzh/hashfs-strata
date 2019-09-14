@@ -1,6 +1,6 @@
 #ifndef _KERN_FS_INTERFACE_
 #define _KERN_FS_INTERFACE_
-#define KERNFSPIDPATH "/tmp/kernfs_ian.pid"
+#define KERNFSPIDPATH "/tmp/kernfs_iangneal.pid"
 
 #ifdef __cplusplus
 extern "C" {

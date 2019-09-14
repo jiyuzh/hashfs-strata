@@ -2241,3 +2241,158 @@ schemes:
     print_size: [3.5, 2.5]
     file_name: filesize_manyfile.pdf
 
+  dram_copies_indexing_percent:
+    print_size: [7.0, 2.5]
+    file_name: dram_copies_indexing_percent.pdf
+    dimensions: [2, 3]
+    plots: [
+      {
+        pos: [0, 0],
+        size: [1, 1],
+        type: single_stat,
+        data_config: {
+          plot: indexing,
+          groups: struct,
+          axis: repetitions,
+          filter: {
+            'start size': 1048576,
+            'io size': 4096,
+            'layout': '50',
+            'num files': 1,
+            'test': 'Sequential Read',
+          }
+        },
+        options: {
+          label: 'Sequential Reads, 1MB File',
+          label_bars: False,
+          exclude_tick_labels: False,
+          cutoff: 1.0,
+          error_bars: True,
+        },
+      },
+      {
+        pos: [1, 0],
+        size: [1, 1],
+        type: single_stat,
+        data_config: {
+          plot: indexing,
+          groups: struct,
+          axis: repetitions,
+          filter: {
+            'start size': 1073741824,
+            'io size': 4096,
+            'layout': '50',
+            'num files': 1,
+            'test': 'Sequential Read',
+          }
+        },
+        options: {
+          label: 'Sequential Reads, 1GB File',
+          label_bars: False,
+          exclude_tick_labels: False,
+          cutoff: 1.0,
+          error_bars: True,
+          legend: {
+            prop: {size: 4.5,},
+            loc: lower right,
+            ncol: 1,
+          }
+        },
+      },
+
+      {
+        pos: [0, 1],
+        size: [1, 1],
+        type: single_stat,
+        data_config: {
+          plot: indexing,
+          groups: struct,
+          axis: repetitions,
+          filter: {
+            'start size': 1048576,
+            'io size': 4096,
+            'layout': '50',
+            'num files': 1,
+            'test': 'Random Read',
+          }
+        },
+        options: {
+          label: 'Random Reads, 1MB File',
+          label_bars: False,
+          exclude_tick_labels: False,
+          cutoff: 1.0,
+          error_bars: True,
+        },
+      },
+      {
+        pos: [1, 1],
+        size: [1, 1],
+        type: single_stat,
+        data_config: {
+          plot: indexing,
+          groups: struct,
+          axis: repetitions,
+          filter: {
+            'start size': 1073741824,
+            'io size': 4096,
+            'layout': '50',
+            'num files': 1,
+            'test': 'Random Read',
+          }
+        },
+        options: {
+          label: 'Random Reads, 1GB File',
+          label_bars: False,
+          exclude_tick_labels: False,
+          cutoff: 1.0,
+          error_bars: True,
+        },
+      },
+
+      {
+        pos: [0, 2],
+        size: [1, 1],
+        type: single_stat,
+        data_config: {
+          plot: indexing,
+          groups: struct,
+          axis: repetitions,
+          filter: {
+            'start size': 1048576,
+            'io size': 4096,
+            'layout': '50',
+            'num files': 1,
+            'test': 'Insert',
+          }
+        },
+        options: {
+          label: 'Appends, 1MB File (starting size)',
+          label_bars: False,
+          exclude_tick_labels: False,
+          cutoff: 1.0,
+        },
+      },
+      {
+        pos: [1, 2],
+        size: [1, 1],
+        type: single_stat,
+        data_config: {
+          plot: indexing,
+          groups: struct,
+          axis: repetitions,
+          filter: {
+            'start size': 1073741824,
+            'io size': 4096,
+            'layout': '50',
+            'num files': 1,
+            'test': 'Insert',
+          }
+        },
+        options: {
+          label: 'Appends, 1MB File (starting size)',
+          label_bars: False,
+          exclude_tick_labels: False,
+          cutoff: 1.0,
+        },
+      },
+    ]
