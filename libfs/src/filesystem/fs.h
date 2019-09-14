@@ -419,7 +419,7 @@ static struct fcache_block *fcache_find(struct inode *inode, offset_t key)
         start_tsc = asm_rdtscp();
 #endif
 
-	//pthread_rwlock_rdlock(&inode->fcache_rwlock);
+	pthread_rwlock_rdlock(&inode->fcache_rwlock);
     
 #ifdef fcache_stats
     if (enable_perf_stats) {
@@ -445,7 +445,7 @@ static struct fcache_block *fcache_find(struct inode *inode, offset_t key)
             start_tsc = asm_rdtscp();
 #endif
 	
-        //pthread_rwlock_unlock(&inode->fcache_rwlock);
+        pthread_rwlock_unlock(&inode->fcache_rwlock);
         
 #ifdef fcache_stats
         if (enable_perf_stats) {
@@ -537,7 +537,7 @@ static inline struct fcache_block *fcache_alloc_add(struct inode *inode,
 	INIT_LIST_HEAD(&fc_block->l);
     //end_cache_stats(&(g_perf_stats.cache_stats));
 
-	//pthread_rwlock_wrlock(&inode->fcache_rwlock);
+	pthread_rwlock_wrlock(&inode->fcache_rwlock);
 
 	if (inode->fcache_hash == NULL) {
 		inode->fcache_hash = kh_init(fcache);
@@ -556,7 +556,7 @@ static inline struct fcache_block *fcache_alloc_add(struct inode *inode,
 	kh_value(inode->fcache_hash, k) = fc_block;
 	//mlfs_info("add key %u @ inode %u\n", key, inode->inum);
 
-	//pthread_rwlock_unlock(&inode->fcache_rwlock);
+	pthread_rwlock_unlock(&inode->fcache_rwlock);
 
 	return fc_block;
 }
