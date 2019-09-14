@@ -608,6 +608,7 @@ int sync_inode_ext_tree(uint8_t dev, struct inode *inode)
   //if (inode->flags & I_RESYNC) {
     struct buffer_head *bh;
     struct dinode dinode;
+    int ret = 0;
 
     mlfs_assert(dev == g_root_dev);
 
@@ -619,8 +620,7 @@ int sync_inode_ext_tree(uint8_t dev, struct inode *inode)
         FN(inode->ext_idx, im_clear_metadata, inode->ext_idx);
         
         if (g_idx_cached) {
-            int api_err = FN(inode->ext_idx, im_invalidate, inode->ext_idx);
-            if (api_err) return api_err;
+            ret = FN(inode->ext_idx, im_invalidate, inode->ext_idx);
         }
     } else {
         memmove(inode->l1.addrs, dinode.l1_addrs, sizeof(addr_t) * (NDIRECT + 1));
@@ -644,7 +644,7 @@ int sync_inode_ext_tree(uint8_t dev, struct inode *inode)
   //}
 
   inode->flags &= ~I_RESYNC;
-  return 0;
+  return ret;
 }
 
 // Allocate "in-memory" inode.
