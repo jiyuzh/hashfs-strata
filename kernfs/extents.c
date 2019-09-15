@@ -243,7 +243,6 @@ mlfs_fsblk_t mlfs_new_meta_blocks(handle_t *handle,
 
 	flags |= MLFS_GET_BLOCKS_CREATE_META;
 	*errp = mlfs_ext_alloc_blocks(handle, inode, goal, flags, &block, count);
-	
 #ifdef ZERO_FREED_BLOCKS
     char zero_buf[g_block_size_bytes];
     memset(zero_buf, 0, g_block_size_bytes);
