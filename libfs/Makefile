@@ -70,7 +70,7 @@ endif
 endif
 
 OPT_ARGS ?= -g -O3 
-AVX_FLAGS = -march=skylake-avx512 -mavx -mavx512f -mavx512vl -mavx512cd -mavx512bw -mavx512dq
+AVX_FLAGS = -march=native -mstackrealign
 #######
 # Optimization definitions
 #######
