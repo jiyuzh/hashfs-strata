@@ -16,7 +16,7 @@ static GHashTable *ghash = NULL;
 // (iangneal): Second level hash table.
 static GHashTable *gsuper = NULL;
 
-static idx_struct_t hash_idx;
+idx_struct_t hash_idx;
 
 static pthread_mutex_t alloc_tex = PTHREAD_MUTEX_INITIALIZER;
 

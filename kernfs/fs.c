@@ -770,10 +770,10 @@ int digest_file(uint8_t from_dev, uint8_t to_dev, uint32_t file_inum,
 
 			if(to_lookup.dyn) {
 				to_lookup.m_pblk_dyn[to_lookup.size] = map.m_pblk;
-				to_lookup.m_lens_dyn[to_lookup.size] = map.m_len;
+				to_lookup.m_lens_dyn[to_lookup.size] = nr_block_get;
 			} else {
 				to_lookup.m_pblk[to_lookup.size] = map.m_pblk;
-				to_lookup.m_lens[to_lookup.size] = map.m_len;
+				to_lookup.m_lens[to_lookup.size] = nr_block_get;
 			}
 			++to_lookup.size;
 		}
@@ -787,6 +787,7 @@ int digest_file(uint8_t from_dev, uint8_t to_dev, uint32_t file_inum,
 		cur_offset += nr_block_get * g_block_size_bytes;
 	}
 
+    //size_t total_print = 0;
 	for(uint32_t i = 0; i < to_lookup.size; ++i) {
 		mlfs_fsblk_t curr_pblk = to_lookup.dyn ? to_lookup.m_pblk_dyn[i] : to_lookup.m_pblk[i];
 		bh_data = bh_get_sync_IO(to_dev, curr_pblk, BH_NO_DATA_ALLOC);
@@ -799,6 +800,9 @@ int digest_file(uint8_t from_dev, uint8_t to_dev, uint32_t file_inum,
 		clear_buffer_uptodate(bh_data);
 		bh_release(bh_data);
 		data += curr_len * g_block_size_bytes;
+        //total_print += curr_len;
+        //printf("%lu -> %lu | %lu / %lu\n", curr_pblk, curr_pblk + curr_len,
+        //        total_print, nr_blocks);
 	}
 
 	if(to_lookup.dyn) {
@@ -2195,6 +2199,7 @@ void init_fs_callback(void (*callback_fn)(void))
 	printf("getchar()\n");
     g_idx_choice = get_indexing_choice();
     g_idx_cached = get_indexing_is_cached();
+    g_idx_has_parallel_lookup = get_idx_has_parallel_lookup();
 
 	g_ssd_dev = 2;
 	g_hdd_dev = 3;

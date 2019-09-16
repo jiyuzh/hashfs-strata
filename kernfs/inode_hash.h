@@ -17,6 +17,8 @@
 extern idx_fns_t hash_fns;
 extern idx_fns_t radixtree_fns;
 
+extern idx_struct_t hash_idx;
+
 #ifdef __cplusplus
 extern "C" {
 #endif

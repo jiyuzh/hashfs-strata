@@ -2877,6 +2877,76 @@ int mlfs_hashfs_get_blocks(handle_t *handle, struct inode *inode,
  *
  */
 
+int mlfs_api_get_blocks(handle_t *handle, struct inode *inode, 
+			struct mlfs_map_blocks_arr *map_arr, int flags)
+{
+
+	struct mlfs_ext_path *path = NULL;
+	struct mlfs_extent newex, *ex;
+	int goal, err = 0, depth;
+	mlfs_lblk_t allocated = 0;
+	mlfs_fsblk_t next, newblock;
+	int create;
+	uint64_t tsc_start = 0;
+
+	mlfs_assert(handle != NULL);
+
+	create = flags & MLFS_GET_BLOCKS_CREATE_DATA;
+
+    mlfs_assert(!create);
+
+    // iangneal: API init that doesn't affect timing.
+    if (unlikely(IDXAPI_IS_PER_FILE() && !inode->ext_idx)) {
+        init_api_idx_struct(handle->dev, inode);
+    }
+
+#ifdef STORAGE_PERF
+    //g_perf_stats.path_storage_nr = 0;
+	if (enable_perf_stats) {
+		tsc_start = asm_rdtscp();
+        start_cache_stats();
+    }
+#endif
+
+    ssize_t nblk;
+
+    if (IDXAPI_IS_PER_FILE()) {
+        nblk = FN(inode->ext_idx, im_lookup,
+                  inode->ext_idx, inode->inum, map_arr->m_lblk, 
+                  map_arr->m_len, map_arr->m_pblk);
+    } else if (IDXAPI_IS_GLOBAL()) {
+        nblk = FN(&hash_idx, im_lookup_parallel,
+                  &hash_idx, inode->inum, map_arr->m_lblk, 
+                          map_arr->m_len, map_arr->m_pblk);
+    } else {
+        panic("undefined path!\n");
+    }
+
+    nblk = nblk > map_arr->m_len ? map_arr->m_len : nblk;
+
+    if (enable_perf_stats) {
+        update_stats_dist(&(g_perf_stats.read_per_index),
+                            g_perf_stats.path_storage_nr);
+        end_cache_stats(&(g_perf_stats.cache_stats));
+    }
+
+    return nblk;
+}
+
+/* Core interface API to get/allocate blocks of an inode
+ *
+ * return > 0, number of of blocks already mapped/allocated
+ *          if create == 0 and these are pre-allocated blocks
+ *          	buffer head is unmapped
+ *          otherwise blocks are mapped
+ *
+ * return = 0, if plain look up failed (blocks have not been allocated)
+ *          buffer head is unmapped
+ *
+ * return < 0, error case.
+ *
+ */
+
 int mlfs_ext_get_blocks(handle_t *handle, struct inode *inode,
 			struct mlfs_map_blocks *map, int flags)
 {

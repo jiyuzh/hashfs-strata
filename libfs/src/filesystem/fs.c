@@ -418,6 +418,7 @@ void init_fs(void)
     device_id = getenv("DEV_ID");
     g_idx_choice = get_indexing_choice();
     g_idx_cached = get_indexing_is_cached();
+    g_idx_has_parallel_lookup = get_idx_has_parallel_lookup();
 
     // TODO: range check.
     if (device_id)
@@ -1062,6 +1063,81 @@ L3_search:
  * return = -EAGAIN, if not all blocks are found.
  *
  */
+int bmap_api_parallel(struct inode *ip, struct bmap_request_arr *bmap_req_arr)
+{
+  int ret = 0;
+  handle_t handle;
+  offset_t offset = bmap_req_arr->start_offset;
+  if (ip->itype == T_DIR) {
+    bmap_req_arr->block_no[0] = ip->l1.addrs[(offset >> g_block_size_shift)];
+    bmap_req_arr->blk_count_found = 1;
+    bmap_req_arr->dev = ip->dev;
+
+    return 0;
+  } else if (ip->itype == T_FILE) {
+    struct mlfs_map_blocks_arr map_arr;
+
+    map_arr.m_lblk = (offset >> g_block_size_shift);
+    map_arr.m_len = min(bmap_req_arr->blk_count, 8);
+    map_arr.m_flags = 0;
+
+    // get block address from extent tree.
+    mlfs_assert(ip->dev == g_root_dev);
+
+    // L1 search
+    handle.dev = g_root_dev;
+    ret = mlfs_api_get_blocks(&handle, ip, &map_arr, 0);
+
+    // all blocks are found in the L1 tree
+    if (ret != 0) {
+      bmap_req_arr->blk_count_found = ret;
+      bmap_req_arr->dev = g_root_dev;
+      memcpy(bmap_req_arr->block_no, &(map_arr.m_pblk), bmap_req_arr->blk_count_found * sizeof(addr_t));
+      
+      mlfs_debug("physical block: %llu -> %llu\n", map_arr.m_lblk, map_arr.m_pblk[0]);
+
+      if (ret == bmap_req_arr->blk_count) {
+        mlfs_debug("[dev %d] Get all offset %lx: blockno %lx from NVM\n",
+            g_root_dev, offset, map.m_pblk[0]);
+        return 0;
+      } else {
+        mlfs_debug("[dev %d] Get partial offset %lx: blockno %lx from NVM\n",
+            g_root_dev, offset, map.m_pblk[0]);
+        return -EAGAIN;
+      }
+    }
+
+    // L2 search
+#ifdef USE_SSD
+    if (ret == 0) {
+        panic("lol");
+#ifndef USE_HDD
+      /* No blocks are found in all trees */
+      if (ret == 0)
+        return -EIO;
+#else
+      /* To L3 tree search */
+      if (ret == 0)
+        goto L3_search;
+#endif
+    }
+#endif
+    // L3 search
+#ifdef USE_HDD
+L3_search:
+    if (ret == 0) {
+        panic("lolol");
+#endif
+  }
+
+  return -EIO;
+}
+
+/* Get block addresses from extent trees.
+ * return = 0, if all requested offsets are found.
+ * return = -EAGAIN, if not all blocks are found.
+ *
+ */
 int bmap_hashfs(struct inode *ip, struct bmap_request_arr *bmap_req_arr)
 {
   int ret = 0;
@@ -1675,6 +1751,7 @@ ssize_t do_aligned_read(struct inode *ip, uint8_t *dst, offset_t off, size_t io_
             if (enable_perf_stats) {
                 start_tsc = asm_rdtscp();
             }
+
             if(IDXAPI_IS_HASHFS()) {
               ret = bmap_hashfs(ip, &bmap_req_arr);
             }
@@ -1768,10 +1845,11 @@ do_global_search:
   }
 
   // Get block address from shared area.
-  if(IDXAPI_IS_HASHFS()) {
+  if (IDXAPI_IS_HASHFS()) {
     ret = bmap_hashfs(ip, &bmap_req_arr);
-  }
-  else {
+  } else if (g_idx_has_parallel_lookup && bmap_req_arr.blk_count > 8) {
+    ret = bmap_api_parallel(ip, &bmap_req_arr);
+  } else {
     ret = bmap(ip, &bmap_req);
   }
 

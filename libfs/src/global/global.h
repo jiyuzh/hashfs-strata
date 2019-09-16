@@ -93,6 +93,7 @@ typedef enum indexing_api_choice {
 
 extern indexing_choice_t g_idx_choice;
 extern bool g_idx_cached;
+extern bool g_idx_has_parallel_lookup;
 
 #define USE_IDXAPI() (g_idx_choice != NONE && g_idx_choice != HASHFS)
 
