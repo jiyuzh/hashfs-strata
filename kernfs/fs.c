@@ -590,6 +590,8 @@ int digest_file(uint8_t from_dev, uint8_t to_dev, uint32_t file_inum,
 	struct buffer_head *bh_data, *bh;
 	uint8_t *data;
 	struct mlfs_ext_path *path = NULL;
+	struct mlfs_pblks to_lookup;
+	to_lookup.size = 0; to_lookup.dyn = 0;
 	struct mlfs_map_blocks map;
 	struct mlfs_map_blocks_arr map_arr;
 	uint32_t nr_blocks = 0, nr_digested_blocks = 0;
@@ -650,7 +652,6 @@ int digest_file(uint8_t from_dev, uint8_t to_dev, uint32_t file_inum,
 	// or a heading block of unaligned starting offset.
 	if ((length < g_block_size_bytes) || offset_in_block != 0) {
 		int _len = _min(length, (uint32_t)g_block_size_bytes - offset_in_block);
-
 		
 		if(IDXAPI_IS_HASHFS()) {
 			map_arr.m_lblk = (cur_offset >> g_block_size_shift);
@@ -661,7 +662,7 @@ int digest_file(uint8_t from_dev, uint8_t to_dev, uint32_t file_inum,
 
 			mlfs_assert(ret == 1);
 
-			bh_data = bh_get_sync_IO(to_dev, map_arr.m_pblk[0], BH_NO_DATA_ALLOC);
+			bh_data = bh_get_sync_IO(to_dev, map_arr.m_pblk[0], BH_NO_DATA_ALLOC); 
 		}
 		else {
 			map.m_pblk = 0;
@@ -675,13 +676,12 @@ int digest_file(uint8_t from_dev, uint8_t to_dev, uint32_t file_inum,
 
 			bh_data = bh_get_sync_IO(to_dev, map.m_pblk, BH_NO_DATA_ALLOC);
 		}
-		
 
 		mlfs_assert(bh_data);
 
-		bh_data->b_data = data + offset_in_block;
-		bh_data->b_size = _len;
-		bh_data->b_offset = offset_in_block;
+		bh_data->b_data = data + offset_in_block; 
+		bh_data->b_size = _len; 
+		bh_data->b_offset = offset_in_block; 
 
 #ifdef MIGRATION
 		lru_key_t k = {
@@ -696,10 +696,10 @@ int digest_file(uint8_t from_dev, uint8_t to_dev, uint32_t file_inum,
 #endif
 		//mlfs_debug("File data : %s\n", bh_data->b_data);
 
-		ret = mlfs_write(bh_data);
-		mlfs_assert(!ret);
+		ret = mlfs_write(bh_data); //rid1
+		mlfs_assert(!ret); //rid1
 
-		bh_release(bh_data);
+		bh_release(bh_data); //rid1
 
 		mlfs_debug("inum %d, offset %lu len %u (dev %d:%lu) -> (dev %d:%lu)\n",
 				file_inode->inum, cur_offset, _len,
@@ -714,6 +714,12 @@ int digest_file(uint8_t from_dev, uint8_t to_dev, uint32_t file_inum,
 	// when extent tree has holes in a certain offset (due to data migration),
 	// an extent is split at the hole. Kernfs should call mlfs_ext_get_blocks()
 	// with setting m_lblk to the offset having a the hole to fill it.
+	if(nr_blocks > MAX_NUM_BLOCKS_LOOKUP) {
+		to_lookup.dyn = 1;
+		to_lookup.m_pblk_dyn = (mlfs_fsblk_t*)malloc(nr_blocks * sizeof(mlfs_fsblk_t));
+		to_lookup.m_lens_dyn = (uint32_t*)malloc(nr_blocks * sizeof(uint32_t));
+	}
+
 	while (nr_digested_blocks < nr_blocks) {
 		int nr_block_get = 0, i;
 
@@ -733,6 +739,16 @@ int digest_file(uint8_t from_dev, uint8_t to_dev, uint32_t file_inum,
 				nr_block_get = mlfs_hashfs_get_blocks(&handle, file_inode, &map_arr,
 						MLFS_GET_BLOCKS_CREATE_DATA);
 			}
+			for(uint32_t i = 0; i < nr_block_get; ++i) {
+				if(to_lookup.dyn) {
+					to_lookup.m_pblk_dyn[to_lookup.size] = map_arr.m_pblk[i];
+					to_lookup.m_lens_dyn[to_lookup.size] = 1;
+				} else {
+					to_lookup.m_pblk[to_lookup.size] = map_arr.m_pblk[i];
+					to_lookup.m_lens[to_lookup.size] = 1;
+				}
+				++to_lookup.size;
+			}
 		}	
 		else {
 			map.m_lblk = (cur_offset >> g_block_size_shift);
@@ -749,6 +765,15 @@ int digest_file(uint8_t from_dev, uint8_t to_dev, uint32_t file_inum,
 				nr_block_get = mlfs_ext_get_blocks(&handle, file_inode, &map,
 						MLFS_GET_BLOCKS_CREATE_DATA);
 			}
+
+			if(to_lookup.dyn) {
+				to_lookup.m_pblk_dyn[to_lookup.size] = map.m_pblk;
+				to_lookup.m_lens_dyn[to_lookup.size] = map.m_len;
+			} else {
+				to_lookup.m_pblk[to_lookup.size] = map.m_pblk;
+				to_lookup.m_lens[to_lookup.size] = map.m_len;
+			}
+			++to_lookup.size;
 		}
 		
 		// mlfs_assert(map.m_pblk != 0);
@@ -757,87 +782,26 @@ int digest_file(uint8_t from_dev, uint8_t to_dev, uint32_t file_inum,
 		mlfs_assert(nr_block_get > 0);
 
 		nr_digested_blocks += nr_block_get;
-
-		// update data block
-		if(IDXAPI_IS_HASHFS()) {
-			for(size_t j = 0; j < map_arr.m_len; ++j) { // ??
-				bh_data = bh_get_sync_IO(to_dev, map_arr.m_pblk[j], BH_NO_DATA_ALLOC);
-			
-				bh_data->b_data = data + (j * g_block_size_bytes);
-				bh_data->b_size = g_block_size_bytes;
-				bh_data->b_offset = 0;
-
-#ifdef MIGRATION
-		for (i = 0; i < nr_block_get; i++) {
-			lru_key_t k = {
-				.dev = to_dev,
-				.block = map.m_pblk + i,
-			};
-			lru_val_t v = {
-				.inum = file_inum,
-				.lblock = map.m_lblk + i,
-			};
-			update_slru_list_from_digest(to_dev, k, v);
-		}
-#endif
-
-			//mlfs_debug("File data : %s\n", bh_data->b_data);
-
-				ret = mlfs_write(bh_data);
-				mlfs_assert(!ret);
-				clear_buffer_uptodate(bh_data);
-				bh_release(bh_data);
-			}
-		}
-		else {
-			bh_data = bh_get_sync_IO(to_dev, map.m_pblk, BH_NO_DATA_ALLOC);
-			
-			bh_data->b_data = data;
-			bh_data->b_size = nr_block_get * g_block_size_bytes;
-			bh_data->b_offset = 0;
-
-#ifdef MIGRATION
-	for (i = 0; i < nr_block_get; i++) {
-		lru_key_t k = {
-			.dev = to_dev,
-			.block = map.m_pblk + i,
-		};
-		lru_val_t v = {
-			.inum = file_inum,
-			.lblock = map.m_lblk + i,
-		};
-		update_slru_list_from_digest(to_dev, k, v);
-	}
-#endif
-
-		//mlfs_debug("File data : %s\n", bh_data->b_data);
-
-			ret = mlfs_write(bh_data);
-			mlfs_assert(!ret);
-			clear_buffer_uptodate(bh_data);
-			bh_release(bh_data);
-		}
-
-		if (0) {
-			struct buffer_head *bh;
-			uint8_t tmp_buf[4096];
-			bh = bh_get_sync_IO(to_dev, map.m_pblk, BH_NO_DATA_ALLOC);
-
-			bh->b_data = tmp_buf;
-			bh->b_size = g_block_size_bytes;
-			bh_submit_read_sync_IO(bh);
-			mlfs_io_wait(bh->b_dev, 1);
-
-			GDB_TRAP;
-
-			bh_release(bh);
-		}
-
-		mlfs_debug("inum %d, offset %lu len %u (dev %d:%lu) -> (dev %d:%lu)\n",
-				file_inode->inum, cur_offset, bh_data->b_size,
-				from_dev, blknr, to_dev, IDXAPI_IS_HASHFS() ? map_arr.m_pblk[0] : map.m_pblk);
 		cur_offset += nr_block_get * g_block_size_bytes;
-		data += nr_block_get * g_block_size_bytes;
+	}
+
+	for(uint32_t i = 0; i < to_lookup.size; ++i) {
+		mlfs_fsblk_t curr_pblk = to_lookup.dyn ? to_lookup.m_pblk_dyn[i] : to_lookup.m_pblk[i];
+		bh_data = bh_get_sync_IO(to_dev, curr_pblk, BH_NO_DATA_ALLOC);
+		uint32_t curr_len = to_lookup.dyn ? to_lookup.m_lens_dyn[i] : to_lookup.m_lens[i];
+		bh_data->b_data = data;
+		bh_data->b_size = curr_len * g_block_size_bytes;
+		bh_data->b_offset = 0;
+		ret = mlfs_write(bh_data);
+		mlfs_assert(!ret);
+		clear_buffer_uptodate(bh_data);
+		bh_release(bh_data);
+		data += curr_len * g_block_size_bytes;
+	}
+
+	if(to_lookup.dyn) {
+		free(to_lookup.m_pblk_dyn);
+		free(to_lookup.m_lens_dyn);
 	}
 
 	mlfs_assert(nr_blocks == nr_digested_blocks);
@@ -2227,7 +2191,6 @@ void init_fs_callback(void (*callback_fn)(void))
 	int i;
 	const char *perf_profile;
 	printf("getchar()\n");
-	// getchar();
     g_idx_choice = get_indexing_choice();
     g_idx_cached = get_indexing_is_cached();
 

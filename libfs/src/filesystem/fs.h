@@ -40,6 +40,7 @@ extern struct super_block *sb[g_n_devices + 1];
 // Block group expension is not implemented yet.
 #ifndef MAX_GET_BLOCKS_RETURN
 #define MAX_GET_BLOCKS_RETURN 8
+#define MAX_NUM_BLOCKS_LOOKUP 256
 #endif
 
 // directory entry cache
@@ -123,6 +124,17 @@ typedef struct bmap_request {
 	uint32_t blk_count_found;
 	uint8_t dev;
 } bmap_req_t;
+
+typedef struct pblk_lookup_arr {
+	addr_t m_pblk[MAX_NUM_BLOCKS_LOOKUP];
+	uint32_t m_lens[MAX_NUM_BLOCKS_LOOKUP];
+	offset_t m_offsets[MAX_NUM_BLOCKS_LOOKUP];
+	addr_t *m_pblk_dyn;
+	uint32_t *m_lens_dyn;
+	offset_t *m_offsets_dyn;
+	uint8_t dyn;
+	uint32_t size;
+} pblk_lookup_t;
 
 // statistics
 typedef struct mlfs_libfs_stats {

@@ -1730,6 +1730,17 @@ ssize_t do_aligned_read(struct inode *ip, uint8_t *dst, offset_t off, size_t io_
     return io_size;
   }
 
+  pblk_lookup_t to_lookup;
+  to_lookup.dyn = 0; to_lookup.size = 0;
+
+  if(io_size / g_block_size_bytes > MAX_NUM_BLOCKS_LOOKUP) {
+		to_lookup.dyn = 1;
+		to_lookup.m_pblk_dyn = (addr_t*)malloc((io_size >> g_block_size_bytes) * sizeof(addr_t));
+		to_lookup.m_lens_dyn = (uint32_t*)malloc((io_size >> g_block_size_bytes) * sizeof(uint32_t));
+	}
+
+
+
 do_global_search:
   _off = off + (find_first_bit(io_bitmap, bitmap_size) << g_block_size_shift);
   pos = find_first_bit(io_bitmap, bitmap_size) << g_block_size_shift;
@@ -1774,19 +1785,40 @@ do_global_search:
   if (which_dev == g_root_dev) {
     if(IDXAPI_IS_HASHFS()) {
       for(size_t j = 0; j < bmap_req_arr.blk_count_found; ++j) {
-        bh = bh_get_sync_IO(bmap_req_arr.dev, bmap_req_arr.block_no[j], BH_NO_DATA_ALLOC);
-        bh->b_offset = 0;
-        bh->b_data = dst + pos + (j * g_block_size_bytes);
-        bh->b_size = min(g_block_size_bytes, io_size);
-        list_add_tail(&bh->b_io_list, &io_list);
+        if(to_lookup.dyn) {
+          to_lookup.m_pblk_dyn[to_lookup.size] = bmap_req_arr.block_no;
+          to_lookup.m_lens_dyn[to_lookup.size] = 1;
+          to_lookup.m_offsets_dyn[to_lookup.size] = dst + pos + (j * g_block_size_bytes);
+        } else {
+          to_lookup.m_pblk[to_lookup.size] = bmap_req_arr.block_no;
+          to_lookup.m_lens[to_lookup.size] = 1;
+          to_lookup.m_offsets[to_lookup.size] = dst + pos + (j * g_block_size_bytes);
+        }
+        ++to_lookup.size;
+
+        // bh = bh_get_sync_IO(bmap_req_arr.dev, bmap_req_arr.block_no[j], BH_NO_DATA_ALLOC);
+        // bh->b_offset = 0;
+        // bh->b_data = dst + pos + (j * g_block_size_bytes);
+        // bh->b_size = min(g_block_size_bytes, io_size);
+        // list_add_tail(&bh->b_io_list, &io_list);
       }
     }
     else {
-      bh = bh_get_sync_IO(bmap_req.dev, bmap_req.block_no, BH_NO_DATA_ALLOC);
-      bh->b_offset = 0;
-      bh->b_data = dst + pos;
-      bh->b_size = min((bmap_req.blk_count_found << g_block_size_shift), io_size);
-      list_add_tail(&bh->b_io_list, &io_list);
+      if(to_lookup.dyn) {
+        to_lookup.m_pblk_dyn[to_lookup.size] = bmap_req.block_no;
+        to_lookup.m_lens_dyn[to_lookup.size] = bmap_req.blk_count_found;
+        to_lookup.m_offsets_dyn[to_lookup.size] = dst + pos;
+      } else {
+        to_lookup.m_pblk[to_lookup.size] = bmap_req.block_no;
+        to_lookup.m_lens[to_lookup.size] = bmap_req.blk_count_found;
+        to_lookup.m_offsets[to_lookup.size] = dst + pos;
+      }
+      ++to_lookup.size;
+      // bh = bh_get_sync_IO(bmap_req.dev, bmap_req.block_no, BH_NO_DATA_ALLOC);
+      // bh->b_offset = 0;
+      // bh->b_data = dst + pos;
+      // bh->b_size = min((bmap_req.blk_count_found << g_block_size_shift), io_size);
+      // list_add_tail(&bh->b_io_list, &io_list);
     }
     
   }
@@ -1862,6 +1894,17 @@ do_global_search:
     }
   }
   mlfs_assert(io_to_be_done == (io_size >> g_block_size_shift));
+
+  for(uint32_t i = 0; i < to_lookup.size; ++i) {
+		addr_t curr_pblk = to_lookup.dyn ? to_lookup.m_pblk_dyn[i] : to_lookup.m_pblk[i];
+		bh = bh_get_sync_IO(bmap_req.dev, curr_pblk, BH_NO_DATA_ALLOC);
+		uint32_t curr_len = to_lookup.dyn ? to_lookup.m_lens_dyn[i] : to_lookup.m_lens[i];
+    offset_t curr_off = to_lookup.dyn ? to_lookup.m_offsets_dyn[i] : to_lookup.m_offsets[i];
+		bh->b_data = curr_off;
+		bh->b_size = min(curr_len << g_block_size_bytes, io_size);
+		bh->b_offset = 0;
+		list_add_tail(&bh->b_io_list, &io_list);
+	}
 
 do_io_aligned:
   //mlfs_assert(bitmap_weight(io_bitmap, bitmap_size) == 0);

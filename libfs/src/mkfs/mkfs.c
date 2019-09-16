@@ -544,7 +544,7 @@ void iappend(uint8_t dev, uint32_t inum, void *xp, int n)
                 // sequential allocation for freeblock
 				if(IDXAPI_IS_HASHFS() && dev_id == g_root_dev) {
 					addr_t index;
-					pmem_nvm_hash_table_insert_simd64(inum, 0, 1, &index);
+					pmem_nvm_hash_table_insert_simd(inum, 0, 1, &index);
 					din.l1_addrs[fbn] = xint(index);
 				}
 				else {

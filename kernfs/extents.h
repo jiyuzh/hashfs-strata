@@ -189,6 +189,7 @@ struct mlfs_ext_path {
 #define MLFS_MAP_LOG_ALLOC  (1 << 1)
 #define MLFS_MAP_GC_ALLOC   (1 << 2)
 #define MAX_GET_BLOCKS_RETURN 8
+#define MAX_NUM_BLOCKS_LOOKUP 256
 
 struct mlfs_map_blocks {
 	mlfs_fsblk_t m_pblk;
@@ -202,6 +203,15 @@ struct mlfs_map_blocks_arr {
 	mlfs_lblk_t m_lblk;
 	uint32_t m_len;
 	uint32_t m_flags;
+};
+
+struct mlfs_pblks {
+	mlfs_fsblk_t m_pblk[MAX_NUM_BLOCKS_LOOKUP];
+	uint32_t m_lens[MAX_NUM_BLOCKS_LOOKUP];
+	mlfs_fsblk_t *m_pblk_dyn;
+	uint32_t *m_lens_dyn;
+	uint8_t dyn;
+	uint32_t size;
 };
 
 /*
