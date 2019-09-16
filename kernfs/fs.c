@@ -2191,7 +2191,6 @@ void init_fs_callback(void (*callback_fn)(void))
 	int i;
 	const char *perf_profile;
 	printf("getchar()\n");
-	// getchar();
     g_idx_choice = get_indexing_choice();
     g_idx_cached = get_indexing_is_cached();
 
