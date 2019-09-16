@@ -122,8 +122,8 @@ spdk: $(OBJ)
 	make -C src/storage/spdk/ MLFS_FLAGS="$(MLFS_FLAGS)" PREFIX="$(PREFIX)"
 
 mkfs: $(OBJ) libmlfs
-	$(CC) $(OPT_ARGS) -o $(PREFIX)/mkfs.o -c src/mkfs/mkfs.c $(INCLUDES) $(MLFS_FLAGS)
-	$(CC) $(OPT_ARGS) -o bin/mkfs.mlfs  $(PREFIX)/libmlfs.a $(INCLUDES) -L$(LIBSPDK_DIR) -lspdk $(LD_FLAGS) -DLIBFS -Wl,-rpath=$(abspath $(LIBSPDK_DIR)) -Wl,-rpath=$(abspath $(NVML_DIR)/nondebug) -ljson-c
+	$(CC) $(OPT_ARGS) $(AVX_FLAGS) -o $(PREFIX)/mkfs.o -c src/mkfs/mkfs.c $(INCLUDES) $(MLFS_FLAGS)
+	$(CC) $(OPT_ARGS) $(AVX_FLAGS) -o bin/mkfs.mlfs  $(PREFIX)/libmlfs.a $(INCLUDES) -L$(LIBSPDK_DIR) -lspdk $(LD_FLAGS) -DLIBFS -Wl,-rpath=$(abspath $(LIBSPDK_DIR)) -Wl,-rpath=$(abspath $(NVML_DIR)/nondebug) -ljson-c
 
 
 ########
