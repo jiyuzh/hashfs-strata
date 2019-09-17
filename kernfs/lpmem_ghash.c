@@ -935,6 +935,7 @@ static inline int pmem_nvm_hash_table_insert_internal_simd4(__m256i *inums, __m2
   __m256i keys;
   pmem_make_key_simd4(inums, lblks, &keys);
   pmem_nvm_hash_table_lookup_node_simd4(&keys, indices, &notFound, to_find);
+  
   to_find = _kand_mask8(to_find, notFound);
   uint32_t to_find_int = _cvtmask8_u32(to_find);
 
