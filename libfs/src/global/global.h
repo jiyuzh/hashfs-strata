@@ -109,6 +109,7 @@ indexing_choice_t get_indexing_choice(void);
 bool get_indexing_is_cached(void);
 void print_global_idx_stats(bool enable_perf_stats);
 void add_idx_stats_to_json(bool enable_perf_stats, json_object *root);
+bool get_idx_has_parallel_lookup(void);
 
 #ifdef __cplusplus
 }
