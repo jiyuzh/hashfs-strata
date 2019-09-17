@@ -143,7 +143,7 @@ int mlfs_posix_open(const char *input_path, int flags, uint16_t mode)
 	f = mlfs_file_alloc();
 
 	if (f == NULL) {
-		iunlockput(inode);
+		iput(inode);
 		abort_log_tx();
 		return -ENOMEM;
 	}
