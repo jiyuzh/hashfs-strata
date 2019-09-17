@@ -768,10 +768,10 @@ int digest_file(uint8_t from_dev, uint8_t to_dev, uint32_t file_inum,
 
 			if(to_lookup.dyn) {
 				to_lookup.m_pblk_dyn[to_lookup.size] = map.m_pblk;
-				to_lookup.m_lens_dyn[to_lookup.size] = map.m_len;
+				to_lookup.m_lens_dyn[to_lookup.size] = nr_block_get;
 			} else {
 				to_lookup.m_pblk[to_lookup.size] = map.m_pblk;
-				to_lookup.m_lens[to_lookup.size] = map.m_len;
+				to_lookup.m_lens[to_lookup.size] = nr_block_get;
 			}
 			++to_lookup.size;
 		}

@@ -680,7 +680,7 @@ int pmem_nvm_hash_table_lookup_simd(uint32_t inum, uint32_t lblk, uint32_t len, 
       return success;
     }
     for(size_t i = 0; i < len; ++i) {
-      pblks[i] = ((uint64_t)indices4.arr[i]) + ((uint64_t)meta_size);
+      pblks[i] = ((uint64_t)indices8.arr[i]) + ((uint64_t)meta_size);
     }
   }
   
@@ -999,7 +999,7 @@ int pmem_nvm_hash_table_insert_simd(uint32_t inum, uint32_t lblk, uint32_t len, 
       return success;
     }
     for(size_t i = 0; i < len; ++i) {
-      pblks[i] = ((uint64_t)indices4.arr[i]) + ((uint64_t)meta_size);
+      pblks[i] = ((uint64_t)indices8.arr[i]) + ((uint64_t)meta_size);
     }
   }
   
