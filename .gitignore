@@ -111,6 +111,8 @@ bench/filebench/workloads/Makefile.in
 
 bench/benchout
 
+graphing/graph_schemes.yaml
+
 # Graphs.
 *.pdf
 __pycache__
