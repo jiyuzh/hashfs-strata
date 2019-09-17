@@ -1093,41 +1093,15 @@ int bmap_api_parallel(struct inode *ip, struct bmap_request_arr *bmap_req_arr)
       bmap_req_arr->blk_count_found = ret;
       bmap_req_arr->dev = g_root_dev;
       memcpy(bmap_req_arr->block_no, &(map_arr.m_pblk), bmap_req_arr->blk_count_found * sizeof(addr_t));
-      
-      mlfs_debug("physical block: %llu -> %llu\n", map_arr.m_lblk, map_arr.m_pblk[0]);
 
       if (ret == bmap_req_arr->blk_count) {
-        mlfs_debug("[dev %d] Get all offset %lx: blockno %lx from NVM\n",
-            g_root_dev, offset, map.m_pblk[0]);
         return 0;
       } else {
-        mlfs_debug("[dev %d] Get partial offset %lx: blockno %lx from NVM\n",
-            g_root_dev, offset, map.m_pblk[0]);
         return -EAGAIN;
       }
     }
-
-    // L2 search
-#ifdef USE_SSD
-    if (ret == 0) {
-        panic("lol");
-#ifndef USE_HDD
-      /* No blocks are found in all trees */
-      if (ret == 0)
-        return -EIO;
-#else
-      /* To L3 tree search */
-      if (ret == 0)
-        goto L3_search;
-#endif
-    }
-#endif
-    // L3 search
-#ifdef USE_HDD
-L3_search:
-    if (ret == 0) {
-        panic("lolol");
-#endif
+  } else {
+      panic("bad path");
   }
 
   return -EIO;
@@ -1844,10 +1818,13 @@ do_global_search:
     start_tsc = asm_rdtscp();
   }
 
+  bool use_req_arr = false;
   // Get block address from shared area.
   if (IDXAPI_IS_HASHFS()) {
+      use_req_arr = true;
     ret = bmap_hashfs(ip, &bmap_req_arr);
-  } else if (g_idx_has_parallel_lookup && bmap_req_arr.blk_count > 8) {
+  } else if (g_idx_has_parallel_lookup && bmap_req_arr.blk_count >= 8) {
+      use_req_arr = true;
     ret = bmap_api_parallel(ip, &bmap_req_arr);
   } else {
     ret = bmap(ip, &bmap_req);
@@ -1858,19 +1835,21 @@ do_global_search:
     g_perf_stats.tree_search_nr++;
   }
 
+  if (use_req_arr) bmap_req.dev = bmap_req_arr.dev;
+
   mlfs_assert(ret != -EIO);
 
   // NVM case: no read caching.
-  int which_dev = IDXAPI_IS_HASHFS() ? bmap_req_arr.dev : bmap_req.dev;
+  int which_dev = use_req_arr ? bmap_req_arr.dev : bmap_req.dev;
   if (which_dev == g_root_dev) {
-    if(IDXAPI_IS_HASHFS()) {
+    if(use_req_arr) {
       for(size_t j = 0; j < bmap_req_arr.blk_count_found; ++j) {
         if(to_lookup.dyn) {
-          to_lookup.m_pblk_dyn[to_lookup.size] = bmap_req_arr.block_no;
+          to_lookup.m_pblk_dyn[to_lookup.size] = bmap_req_arr.block_no[to_lookup.size];
           to_lookup.m_lens_dyn[to_lookup.size] = 1;
           to_lookup.m_offsets_dyn[to_lookup.size] = dst + pos + (j * g_block_size_bytes);
         } else {
-          to_lookup.m_pblk[to_lookup.size] = bmap_req_arr.block_no;
+          to_lookup.m_pblk[to_lookup.size] = bmap_req_arr.block_no[to_lookup.size];
           to_lookup.m_lens[to_lookup.size] = 1;
           to_lookup.m_offsets[to_lookup.size] = dst + pos + (j * g_block_size_bytes);
         }
@@ -1882,8 +1861,7 @@ do_global_search:
         // bh->b_size = min(g_block_size_bytes, io_size);
         // list_add_tail(&bh->b_io_list, &io_list);
       }
-    }
-    else {
+    } else {
       if(to_lookup.dyn) {
         to_lookup.m_pblk_dyn[to_lookup.size] = bmap_req.block_no;
         to_lookup.m_lens_dyn[to_lookup.size] = bmap_req.blk_count_found;
@@ -1949,7 +1927,7 @@ do_global_search:
    * subsequent bmap call starts finding blocks in other lsm tree.
    */
   if (ret == -EAGAIN) {
-    if(IDXAPI_IS_HASHFS()) {
+    if(use_req_arr) {
       bitmap_clear(io_bitmap, bitmap_pos, bmap_req_arr.blk_count_found);
       io_to_be_done += bmap_req_arr.blk_count_found;
     } else {
@@ -1960,7 +1938,7 @@ do_global_search:
 
     goto do_global_search;
   } else {
-    if(IDXAPI_IS_HASHFS()) {
+    if(use_req_arr) {
       bitmap_clear(io_bitmap, bitmap_pos, bmap_req_arr.blk_count_found);
       io_to_be_done += bmap_req_arr.blk_count_found;
     } else {
