@@ -902,6 +902,9 @@ static inline int pmem_nvm_hash_table_insert_internal_simd8(__m512i *inums, __m5
   if(_cvtmask8_u32(_kxor_mask8(to_find, notFound)) != 0) {
     return false;
   }
+  to_find = _kand_mask8(to_find, notFound);
+  uint32_t to_find_int = _cvtmask8_u32(to_find);
+
   u256i_32 *node_indices = (u256i_32*) indices;
   uint32_t pOfTwo[8] = {1, 2, 4, 8, 16, 32, 64, 128};
   
@@ -910,12 +913,13 @@ static inline int pmem_nvm_hash_table_insert_internal_simd8(__m512i *inums, __m5
     duplicates_mask = 0;
     for(uint32_t i = 0; i < 8; ++i) {
       for(uint32_t j = i; j < 8; ++j) {
-        if(i != j && node_indices->arr[i] == node_indices->arr[j]) {
+        if(i != j && node_indices->arr[i] == node_indices->arr[j] && pOfTwo[i] & to_find_int != 0 && pOfTwo[j] & to_find_int != 0) {
           duplicates_mask |= pOfTwo[j];
+	  duplicates_mask |= pOfTwo[i];
         }
       }
     }
-    duplicates_mask &= to_find;
+    duplicates_mask &= to_find_int;
     if(duplicates_mask != 0) {
       pmem_find_next_invalid_entry_simd8(indices, duplicates_mask);
     }
@@ -934,9 +938,12 @@ static inline int pmem_nvm_hash_table_insert_internal_simd4(__m256i *inums, __m2
   __m256i keys;
   pmem_make_key_simd4(inums, lblks, &keys);
   pmem_nvm_hash_table_lookup_node_simd4(&keys, indices, &notFound, to_find);
-  if(_cvtmask8_u32(_kxor_mask8(to_find, notFound)) != 0) {
-    return false;
-  }
+  //if(_cvtmask8_u32(_kxor_mask8(to_find, notFound)) != 0) {
+  //  return false;
+  //}
+  to_find = _kand_mask8(to_find, notFound);
+  uint32_t to_find_int = _cvtmask8_u32(to_find);
+
   u128i_32 *node_indices = (u128i_32*) indices;
   uint32_t pOfTwo[8] = {1, 2, 4, 8, 16, 32, 64, 128};
   
@@ -945,12 +952,13 @@ static inline int pmem_nvm_hash_table_insert_internal_simd4(__m256i *inums, __m2
     duplicates_mask = 0;
     for(uint32_t i = 0; i < 4; ++i) {
       for(uint32_t j = i; j < 4; ++j) {
-        if(i != j && node_indices->arr[i] == node_indices->arr[j]) {
+        if(i != j && node_indices->arr[i] == node_indices->arr[j] && pOfTwo[i] & to_find_int != 0 && pOfTwo[j] & to_find_int != 0) {
           duplicates_mask |= pOfTwo[j];
+	  duplicates_mask |= pOfTwo[i];
         }
       }
     }
-    duplicates_mask &= to_find;
+    duplicates_mask &= to_find_int;
     if(duplicates_mask != 0) {
       pmem_find_next_invalid_entry_simd4(indices, duplicates_mask);
     }
@@ -987,17 +995,11 @@ int pmem_nvm_hash_table_insert_simd(uint32_t inum, uint32_t lblk, uint32_t len, 
   int success = 0;
   if(entries4) {
     success = pmem_nvm_hash_table_insert_internal_simd4(&(inum_vec4.vec), &(lblk_vec4.vec), &(indices4.vec), to_find);
-    if(!success) {
-      return success;
-    }
     for(size_t i = 0; i < len; ++i) {
       pblks[i] = ((uint64_t)indices4.arr[i]) + ((uint64_t)meta_size);
     }
   } else {
     success = pmem_nvm_hash_table_insert_internal_simd8(&(inum_vec8.vec), &(lblk_vec8.vec), &(indices8.vec), to_find);
-    if(!success) {
-      return success;
-    }
     for(size_t i = 0; i < len; ++i) {
       pblks[i] = ((uint64_t)indices8.arr[i]) + ((uint64_t)meta_size);
     }
