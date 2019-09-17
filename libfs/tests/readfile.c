@@ -14,7 +14,8 @@
 #include <string.h>
 #include "mlfs/mlfs_interface.h"
 #include "global/util.h"
-#define MAX_FILE_NUM 1024
+#include "nested_dir.h"
+#define MAX_FILE_NUM 16384
 #define MAX_FILE_NAME_LEN 1024
 #define MAX_THREADS 1024
 static size_t block_size;
@@ -24,7 +25,6 @@ static size_t read_total;
 static int opt_num;
 static uint32_t file_num;
 static int fd_v[MAX_FILE_NUM];
-static char filename_v[MAX_FILE_NUM][MAX_FILE_NAME_LEN];
 static pthread_t threads[MAX_THREADS];
 static bool full_random = false;
 typedef struct {
@@ -64,6 +64,7 @@ uint32_t get_unit(char c) {
 
 int main(int argc, char **argv) {
     int c;
+
     srand(time(NULL));
     while ((c = getopt(argc, argv, OPTSTRING)) != -1) {
         switch (c) {
@@ -120,14 +121,7 @@ int main(int argc, char **argv) {
     reset_libfs_stats();
     //uint64_t tsc_begin = asm_rdtscp();
 
-    for (int i=0; i < file_num; ++i) {
-        snprintf(filename_v[i], MAX_FILE_NAME_LEN, PREFIX "/MTCC-%d", i);
-        fd_v[i] = open(filename_v[i], O_RDWR);
-        if (fd_v[i] == -1) {
-            perror("readfile open failed");
-            exit(-1);
-        }
-    }
+    open_many_files(fd_v, NULL, file_num, PREFIX, O_RDWR);
 
     struct timeval start, end;
     int terr = gettimeofday(&start, NULL);
