@@ -28,8 +28,9 @@ class BenchRunner:
                       'LEVEL_HASH_TABLES', 'RADIX_TREES', 'NONE', 'HASHFS' ]
     IDX_DEFAULT   = [ 'EXTENT_TREES', 
                       'GLOBAL_HASH_TABLE', 'GLOBAL_CUCKOO_HASH',
-                      'LEVEL_HASH_TABLES', 'RADIX_TREES', 'NONE' ]
-    LAYOUT_SCORES = ['100', '90', '80', '70', '60']
+                      'RADIX_TREES', 'NONE', 'LEVEL_HASH_TABLES' ]
+    #LAYOUT_SCORES = ['100', '90', '80', '70', '60']
+    LAYOUT_SCORES = ['100', '90', '80', '70']
 
     def __init__(self, args):
         assert isinstance(args, Namespace)

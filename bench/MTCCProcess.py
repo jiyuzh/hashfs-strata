@@ -53,12 +53,15 @@ class MTCCRunner(BenchRunner):
 
         stats_files = [Path(x) for x in glob.glob('/tmp/libfs_prof.*')]
         assert stats_files
-        
+
         for stat_file in stats_files:
             with stat_file.open() as f:
+                file_data = f.read()
+                if not file_data:
+                    continue
                 stats_arr = []
                 try:
-                    stats_arr = json.load(f)
+                    stats_arr = json.loads(file_data)
                     assert isinstance(stats_arr, list)
                 except json.decoder.JSONDecodeError as e:
                     print(e)
@@ -66,8 +69,6 @@ class MTCCRunner(BenchRunner):
                     raise
 
                 for obj in stats_arr:
-                    # if len(data) < 2:
-                    #     continue
                     if 'lsm' not in obj or 'nr' not in obj['lsm']:
                         continue
                     obj['bench'] = 'MTCC (readfile)'
@@ -101,12 +102,14 @@ class MTCCRunner(BenchRunner):
             with stat_file.open() as f:
                 file_data = f.read()
                 stats_arr = []
-                stats_arr = json.loads(file_data)
-                # data_objs = [ x.strip() for x in file_data.split(os.linesep) ]
+                try:
+                    stats_arr = json.loads(file_data)
+                    assert isinstance(stats_arr, list)
+                except json.decoder.JSONDecodeError as e:
+                    print(e)
+                    print(f'Could not decode {str(stat_file)} ({f.read()})!')
+
                 for obj in stats_arr:
-                    # data = data.strip('\x00')
-                    # if len(data) < 2:
-                    #     continue
                     if 'lsm' not in obj or 'nr' not in obj['lsm'] or obj['lsm']['nr'] <= 0:
                         continue
                     obj['bench'] = 'MTCC (readfile)'
@@ -119,7 +122,6 @@ class MTCCRunner(BenchRunner):
             subprocess.run(shlex.split('sudo rm -f {}'.format(
                 str(stat_file))), check=True)
 
-        pprint(stat_objs)
         assert len(stat_objs) == 1
         return stat_objs[0]
 
@@ -180,8 +182,7 @@ class MTCCRunner(BenchRunner):
 
         old_stats_files = [Path(x) for x in glob.glob('/tmp/libfs_prof.*')]
         for old_file in old_stats_files:
-            rm_args = shlex.split('sudo rm -f {}'.format(str(old_file)))
-            subprocess.run(rm_args, check=True)
+            old_file.unlink()
 
         widgets = [
                     progressbar.Percentage(),
