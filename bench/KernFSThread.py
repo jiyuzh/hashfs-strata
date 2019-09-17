@@ -56,7 +56,8 @@ class KernFSThread:
         '''
         mkfs_args = shlex.split(f'{str(self.kernfs_path / "mkfs.sh")}')
         proc = subprocess.run(mkfs_args, cwd=self.kernfs_path, check=True,
-                              env=self.env, stdout=DEVNULL, stderr=DEVNULL)
+                              start_new_session=True, env=self.env,
+                              stdout=DEVNULL, stderr=DEVNULL)
         assert proc.returncode == 0
 
     def start(self):

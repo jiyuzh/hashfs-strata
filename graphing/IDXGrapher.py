@@ -30,8 +30,10 @@ class IDXGrapher:
         self.args = args
         self.data = IDXDataObject(file_path=Path(args.input_file))
         self.output_dir = Path(args.output_dir)
-        self.schema_file = Path(args.schema_file)
-        assert self.schema_file.exists() and self.output_dir.exists()
+        assert self.output_dir.exists()
+
+        self._handle_schema_file(args)
+        
         with self.schema_file.open() as f:
             self.schema_config = yaml.safe_load(f)
             self.schemas = self.schema_config['schemes']
@@ -39,6 +41,29 @@ class IDXGrapher:
             self.schema = self.schemas[args.schema_name]
             self.schema_name = args.schema_name
             self.config_sets = self.schema_config['config_sets']
+
+    def _handle_schema_file(self, args):
+        if 'schema_file' in args and args.schema_file is not None:
+            self.schema_file = Path(args.schema_file)
+        elif 'schema_template' in args and args.schema_template is not None:
+            from jinja2 import Template
+            tmpl_file = Path(args.schema_template)
+            assert tmpl_file.exists()
+
+            self.schema_file = Path(args.schema_template.replace('.tmpl', ''))
+            assert self.schema_file != tmpl_file
+
+            with tmpl_file.open() as f:
+                tmpl = Template(f.read())
+                schema_raw = tmpl.render()
+
+                with self.schema_file.open('w') as f:
+                    f.write(schema_raw)
+            
+        else:
+            raise Exception('Bad path!')
+        
+        assert self.schema_file.exists()
 
     def _plot_single_stat(self, gs, layout):
         grapher = Grapher(self.args)
@@ -222,8 +247,14 @@ class IDXGrapher:
         parser.add_argument('--config', '-c', default='graph_config.yaml',
                             help='What file to use for this dataset.')
 
-        parser.add_argument('--schema-file', default='graph_schemes.yaml',
+        schema_group = parser.add_mutually_exclusive_group()
+
+        schema_group.add_argument('--schema-file',
                             help='File containing relevant schemas.')
+        schema_group.add_argument('--schema-template', 
+                                  default='graph_schemes.yaml.tmpl',
+                                  help='File containing schema in jinja2 template.')
+
         parser.add_argument('--filter', '-f', default=None, nargs='+',
                             help='what benchmarks to filter, all if None')
         parser.add_argument('schema_name', help='Name of the schema to use.')

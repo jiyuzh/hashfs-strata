@@ -1,0 +1,59 @@
+config_sets:
+  default:
+    - global_hash_table
+    - radix_trees
+    - extent_trees
+    - level_hash_tables
+    - hashfs
+  
+schemes:
+
+  {% set dram_copies_stats = ['indexing', 'l1_hits'] %}
+  {% for stat in dram_copies_stats %}
+  dram_copies_{{ stat }}:
+    print_size: [7.0, 2.5]
+    file_name: dram_copies_{{ stat }}.pdf
+    {% set width = 3 %}
+    {% set height = 2 %}
+    {% set tests = ['Sequential Read', 'Random Read', 'Insert'] %}
+    {% set raw_size = [1048576, 1073741824] %}
+    {% set human_size = ['1MB File', '1GB File'] %}
+    dimensions: [ {{ height }}, {{ width }} ]
+    plots: [
+    {% for r in range(height) %}
+      {% for c in range(width) %}
+        {
+          pos: [ {{ r }}, {{ c }} ],
+          size: [1, 1],
+          type: single_stat,
+          data_config: {
+            plot: {{ stat }},
+            groups: struct,
+            axis: repetitions,
+            filter: {
+              'start size': {{ raw_size[r] }},
+              'io size': 4096,
+              'layout': '50',
+              'num files': 1,
+              'test': {{ tests[c] }},
+            }
+          },
+          options: {
+            label: '{{ tests[c] }}s, {{ human_size[r] }}',
+            label_bars: False,
+            exclude_tick_labels: {{ False if c == 0 else True }},
+            cutoff: 1.0,
+            error_bars: True,
+            {% if r == 1 and c == 0 %}
+            legend: {
+              prop: {size: 5,},
+              loc: lower right,
+              ncol: 1,
+            },
+            {% endif %}
+          },
+        },
+        {% endfor %}
+      {% endfor %}
+    ]
+  {% endfor %}

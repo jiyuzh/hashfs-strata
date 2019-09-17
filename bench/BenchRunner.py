@@ -28,8 +28,9 @@ class BenchRunner:
                       'LEVEL_HASH_TABLES', 'RADIX_TREES', 'NONE', 'HASHFS' ]
     IDX_DEFAULT   = [ 'EXTENT_TREES', 
                       'GLOBAL_HASH_TABLE', 'GLOBAL_CUCKOO_HASH',
-                      'LEVEL_HASH_TABLES', 'RADIX_TREES', 'NONE' ]
-    LAYOUT_SCORES = ['100', '90', '80', '70', '60']
+                      'RADIX_TREES', 'NONE', 'LEVEL_HASH_TABLES' ]
+    #LAYOUT_SCORES = ['100', '90', '80', '70', '60']
+    LAYOUT_SCORES = ['100', '70']
 
     def __init__(self, args):
         assert isinstance(args, Namespace)
@@ -98,7 +99,7 @@ class BenchRunner:
             with filepath.open('w') as f:
                 json.dump(json_obj, f, indent=4)
 
-    def _run_trial(self, bench_args, bench_cwd, processing_fn, timeout=(2*60),
+    def _run_trial(self, bench_args, bench_cwd, processing_fn, timeout=(5*60),
             no_warn=False):
         self._start_trial()
 
@@ -127,7 +128,7 @@ class BenchRunner:
         
         return None 
 
-    def _run_trial_continue(self, bench_args, bench_cwd, processing_fn, timeout=(2*60),
+    def _run_trial_continue(self, bench_args, bench_cwd, processing_fn, timeout=(5*60),
             no_warn=False):
         self._start_trial()
 
@@ -154,7 +155,7 @@ class BenchRunner:
         
         return None 
 
-    def _run_trial_end(self, bench_args, bench_cwd, processing_fn, timeout=(2*60),
+    def _run_trial_end(self, bench_args, bench_cwd, processing_fn, timeout=(5*60),
             no_warn=False):
 
         proc = None
@@ -181,6 +182,47 @@ class BenchRunner:
             self._finish_trial()
         
         return None 
+
+    def _parse_trial_stat_files(self, time_elapsed, labels):
+        stat_objs = []
+
+        stats_files = [Path(x) for x in glob.glob('/tmp/libfs_prof.*')]
+        assert stats_files
+
+        for stat_file in stats_files:
+            with stat_file.open() as f:
+                file_data = f.read()
+                if not file_data:
+                    continue
+                stats_arr = []
+                try:
+                    stats_arr = json.loads(file_data)
+                    assert isinstance(stats_arr, list)
+                except json.decoder.JSONDecodeError as e:
+                    print(e)
+                    print(f'Could not decode {str(stat_file)} ({f.read()})!')
+                    raise
+
+                for obj in stats_arr:
+                    if 'lsm' not in obj or 'nr' not in obj['lsm']:
+                        continue
+                    obj['total_time'] = time_elapsed
+                    obj.update(labels)
+                    stat_objs += [obj]
+
+        if len(stat_objs) > 1:
+            stat_objs = [s for s in stat_objs if s['lsm']['nr'] > 0]
+
+        if not stat_objs:
+            pprint(stat_objs)
+            print(time_elapsed)
+            pprint(labels)
+            raise Exception('No valid statistics from trial run!')
+
+        for stat_file in stats_files:
+            stat_file.unlink()
+
+        return stat_objs[0]
 
     def run(self):
         self.args.fn(self)

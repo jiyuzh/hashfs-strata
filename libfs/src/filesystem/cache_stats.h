@@ -1,7 +1,10 @@
 #ifndef __CACHE_STATS_H__
 #define __CACHE_STATS_H__
 
-#define _GNU_SOURCE // has to be before any headers
+#ifndef _DEFAULT_SOURCE
+#define _DEFAULT_SOURCE // has to be before any headers
+#endif
+
 #include <stdio.h>
 #include <sched.h>
 #include <errno.h>

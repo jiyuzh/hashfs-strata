@@ -136,7 +136,7 @@ static inline void init_api_idx_struct(uint8_t dev, struct inode *inode) {
 
         paddr_range_t direct_extents = {
             .pr_start      = get_inode_block(dev, inode->inum),
-            .pr_blk_offset = (sizeof(struct dinode) * (inode->inum % IPB)) + 64,
+            .pr_blk_offset = (off_t)((sizeof(struct dinode) * (inode->inum % IPB)) + 64),
             .pr_nbytes     = 64
         };
 

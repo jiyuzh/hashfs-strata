@@ -122,8 +122,13 @@ uint64_t blocks;
 
 #define HASH_TABLE_MIN_SHIFT 3  /* 1 << 3 == 8 buckets */
 
+#ifndef TRUE
 #define TRUE 1
+#endif
+
+#ifndef FALSE
 #define FALSE 0
+#endif
 
 /* Each table size has an associated prime modulo (the first prime
  * lower than the table size) used to find the initial bucket. Probing

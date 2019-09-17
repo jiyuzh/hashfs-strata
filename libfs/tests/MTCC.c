@@ -15,8 +15,9 @@
 #include <signal.h>
 #include "kernfs_interface.h"
 #include <mlfs/mlfs_interface.h>
+#include "nested_dir.h"
 
-#define MAX_FILE_NUM 1024
+#define MAX_FILE_NUM 16384
 #define MAX_FILE_NAME_LEN 1024
 #define MAX_THREADS 1024
 static size_t block_size;
@@ -110,7 +111,9 @@ int main(int argc, char **argv) {
             case 'S': // start file size
                 start_file_size = atoi(optarg);
                 start_file_size *= get_unit(optarg[strlen(optarg)-1]);
-                assert((start_file_size % block_size == 0) && "start_file_size should be dividable by block_size");
+                assert(start_file_size > 0 &&
+                      (start_file_size % block_size == 0) &&
+                      "start_file_size should be dividable by block_size");
                 opt_num++;
                 break;
             case 'r': // read_unit size
@@ -153,14 +156,8 @@ int main(int argc, char **argv) {
 
     bool can_digest = false;
 
+    open_many_files(fd_v, filename_v, file_num, PREFIX, O_RDWR | O_CREAT);
     for (int i=0; i < file_num; ++i) {
-        snprintf(filename_v[i], MAX_FILE_NAME_LEN, PREFIX "/MTCC-%d", i);
-        fd_v[i] = open(filename_v[i], O_RDWR | O_CREAT, 0666);
-        if (fd_v[i] == -1) {
-            perror("open failed");
-            exit(-1);
-        }
-
         struct stat s;
         int serr = fstat(fd_v[i], &s);
         if (serr) {

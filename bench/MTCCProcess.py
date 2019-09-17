@@ -1,5 +1,4 @@
 from argparse import ArgumentParser, Namespace
-import copy
 from datetime import datetime
 import itertools
 from IPython import embed
@@ -29,6 +28,7 @@ class MTCCRunner(BenchRunner):
         self.update_bar_proc = None
 
     def __del__(self):
+        ''' Avoid having the asynchronous refresh thread become a zombie. '''
         super().__del__()
         if self.update_bar_proc is not None and self.update_bar_proc is None:
             self.update_bar_proc.terminate()
@@ -37,13 +37,15 @@ class MTCCRunner(BenchRunner):
 
 
     def _parse_readfile_time(self, stdout):
+        ''' Parse the 'elapsed time' field from the readfile output. '''
         lines = stdout.decode().splitlines()
         for line in lines:
             if 'elapsed time:' in line:
                 fields = line.split(':')
                 time = fields[1]
                 return float(time)
-     
+    
+        # Fall through, display the output that didn't have the elapsed time.
         pprint(lines)
         raise Exception('Could not find throughput numbers!')
 
@@ -53,12 +55,15 @@ class MTCCRunner(BenchRunner):
 
         stats_files = [Path(x) for x in glob.glob('/tmp/libfs_prof.*')]
         assert stats_files
-        
+
         for stat_file in stats_files:
             with stat_file.open() as f:
+                file_data = f.read()
+                if not file_data:
+                    continue
                 stats_arr = []
                 try:
-                    stats_arr = json.load(f)
+                    stats_arr = json.loads(file_data)
                     assert isinstance(stats_arr, list)
                 except json.decoder.JSONDecodeError as e:
                     print(e)
@@ -66,8 +71,6 @@ class MTCCRunner(BenchRunner):
                     raise
 
                 for obj in stats_arr:
-                    # if len(data) < 2:
-                    #     continue
                     if 'lsm' not in obj or 'nr' not in obj['lsm']:
                         continue
                     obj['bench'] = 'MTCC (readfile)'
@@ -101,12 +104,14 @@ class MTCCRunner(BenchRunner):
             with stat_file.open() as f:
                 file_data = f.read()
                 stats_arr = []
-                stats_arr = json.loads(file_data)
-                # data_objs = [ x.strip() for x in file_data.split(os.linesep) ]
+                try:
+                    stats_arr = json.loads(file_data)
+                    assert isinstance(stats_arr, list)
+                except json.decoder.JSONDecodeError as e:
+                    print(e)
+                    print(f'Could not decode {str(stat_file)} ({f.read()})!')
+
                 for obj in stats_arr:
-                    # data = data.strip('\x00')
-                    # if len(data) < 2:
-                    #     continue
                     if 'lsm' not in obj or 'nr' not in obj['lsm'] or obj['lsm']['nr'] <= 0:
                         continue
                     obj['bench'] = 'MTCC (readfile)'
@@ -119,11 +124,11 @@ class MTCCRunner(BenchRunner):
             subprocess.run(shlex.split('sudo rm -f {}'.format(
                 str(stat_file))), check=True)
 
-        pprint(stat_objs)
         assert len(stat_objs) == 1
         return stat_objs[0]
 
 
+>>>>>>> a52ca78517a54e6e23ec01ad41b03057f60b6a06
     def _run_mtcc_trial(self, cwd, setup_args, trial_args, labels):
         self.env['MLFS_CACHE_PERF'] = '0'
 
@@ -180,8 +185,7 @@ class MTCCRunner(BenchRunner):
 
         old_stats_files = [Path(x) for x in glob.glob('/tmp/libfs_prof.*')]
         for old_file in old_stats_files:
-            rm_args = shlex.split('sudo rm -f {}'.format(str(old_file)))
-            subprocess.run(rm_args, check=True)
+            old_file.unlink()
 
         widgets = [
                     progressbar.Percentage(),
@@ -335,6 +339,7 @@ class MTCCRunner(BenchRunner):
                 self.update_bar_proc.join()
                 assert self.update_bar_proc is not None
 
+
     def _get_workloads(self):
         io_sizes    = resolve_units(self.args.io_sizes)
         repetitions = self.args.repetitions
@@ -344,6 +349,9 @@ class MTCCRunner(BenchRunner):
         ntrials     = self.args.trials
         nfiles      = self.args.num_files_per_test
 
+        # The order here is important. We want idx_structs to be the external-most
+        # variable, because when it changes we re-run mkfs, which we want to do
+        # pretty infrequently.
         workloads = itertools.product(
             idx_structs, layouts, start_sizes, io_sizes,
             repetitions, nfiles, range(ntrials))
