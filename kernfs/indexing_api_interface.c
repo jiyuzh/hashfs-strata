@@ -129,6 +129,11 @@ static inline ssize_t alloc_generic(size_t nblk,
 
 ssize_t alloc_metadata_blocks(size_t nblocks, paddr_t* pblk) {
     trace_me();
+#if defined(STORAGE_PERF) && defined(KERNFS)
+    if (enable_perf_stats) {
+        g_perf_stats.balloc_meta_nr += nblocks;
+    }
+#endif
     return alloc_generic(nblocks, pblk, TREE);
 }
 

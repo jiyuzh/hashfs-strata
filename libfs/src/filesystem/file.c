@@ -17,7 +17,13 @@ struct open_file_table g_fd_table;
 
 void mlfs_file_init(void)
 {
+	pthread_rwlockattr_t rwlattr;
+	pthread_rwlockattr_setpshared(&rwlattr, PTHREAD_PROCESS_SHARED);
+
 	pthread_spin_init(&g_fd_table.lock, PTHREAD_PROCESS_SHARED); 
+	for (unsigned int i=0; i < g_max_open_files; ++i) {
+		pthread_rwlock_init(&(g_fd_table.open_files[i].rwlock), &rwlattr);
+	}
 }
 
 // Allocate a file structure.
@@ -27,22 +33,19 @@ struct file* mlfs_file_alloc(void)
 {
 	int i = 0;
 	struct file *f;
-	pthread_rwlockattr_t rwlattr;
-
-	pthread_rwlockattr_setpshared(&rwlattr, PTHREAD_PROCESS_SHARED);
-
 	pthread_spin_lock(&g_fd_table.lock);
 
 	for(i = 0, f = &g_fd_table.open_files[0]; 
 			i < g_max_open_files; i++, f++) {
 		if(f->ref == 0) {
-			memset(f, 0, sizeof(*f));
+			pthread_rwlock_wrlock(&f->rwlock);
 			f->ref = 1;
 			f->fd = i;
-			pthread_rwlock_init(&f->rwlock, &rwlattr);
-
+			f->ip = NULL;
+			f->type = FD_NONE;
+			f->readable = f->writable = f->off = 0;
+			pthread_rwlock_unlock(&f->rwlock);
 			pthread_spin_unlock(&g_fd_table.lock);
-
 			return f;
 		}
 	}

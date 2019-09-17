@@ -36,6 +36,16 @@ def add_args(parser):
                          help='Where to output the report')
     process.set_defaults(fn=process_fn)
 
+    # For playing around!
+    # For processing!
+    interact_fn = lambda args: IDXDataObject(file_path=Path(args.input_file)
+                                            ).interact()
+    interact = subparsers.add_parser('interact',
+                                    help='Play around with the data in an interactive shell.')
+    interact.add_argument('--input-file', '-i', default='./report.json',
+                         help='Which report to use.')
+    interact.set_defaults(fn=interact_fn)
+
     # For summaries!
     summary_fn = lambda args: IDXDataObject(file_path=Path(args.input_file)
                                        ).summary(args.output_file, args.final)

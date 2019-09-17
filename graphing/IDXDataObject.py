@@ -40,12 +40,20 @@ class IDXDataObject:
 
     def _parse_relevant_fields(self, data_obj):
         parsed = {}
+        if data_obj is not None and not data_obj:
+            return None
+
         if 'bench' in data_obj and data_obj['bench'] == 'db_bench':
             return self._parse_db_bench(data_obj)
 
         labels = ['struct', 'layout', 'start size', 'io size', 'repetitions',
                   'num files', 'test', 'trial num']
-        parsed = {l: data_obj[l] for l in labels}
+        parsed = {l: data_obj[l] for l in labels if l in data_obj}
+
+        if len(parsed) != len(labels):
+            return None
+
+        parsed['repetitions'] = str(int(parsed['repetitions']))
 
         if 'read_data' in data_obj:
             parsed['read_data_bytes_per_cycle'] = data_obj['read_data']['bytes'] / max(data_obj['read_data']['tsc'], 1.0)
@@ -202,6 +210,9 @@ class IDXDataObject:
     def save_to_file(self, file_path):
         with file_path.open('w') as f:
             json.dump(self.df.to_dict(), f, indent=4)
+
+    def interact(self):
+        embed()
 
     def _reorder_data_frames(self):
         new_dict = defaultdict(dict)

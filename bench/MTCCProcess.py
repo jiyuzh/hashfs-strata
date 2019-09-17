@@ -223,13 +223,16 @@ class MTCCRunner(BenchRunner):
                         idx_struct, layout_score, start_size, io_size, reps, \
                                 nfiles, trial_num = workload
 
+                        self.env['MLFS_CACHE_PERF'] = '0'
+
                         if prev_idx is None or prev_idx != idx_struct:
                             assert self.kernfs is not None
                             self.kernfs.mkfs()
 
+                        prev_idx = idx_struct
+
                         self.env['MLFS_IDX_STRUCT'] = idx_struct
                         self.env['MLFS_LAYOUT_SCORE'] = layout_score
-                        self.env['MLFS_CACHE_PERF'] = '0'
 
                         labels = {}
                         labels['struct'] = idx_struct

@@ -274,6 +274,8 @@ static inline void init_api_idx_struct(uint8_t dev, struct inode *inode) {
         int init_err;
 
         switch(g_idx_choice) {
+            case EXTENT_TREES_TOP_CACHED:
+                g_idx_cached = true;
             case EXTENT_TREES:
                 init_err = extent_tree_fns.im_init_prealloc(&strata_idx_spec,
                                                             &direct_extents,
@@ -417,7 +419,7 @@ static struct fcache_block *fcache_find(struct inode *inode, offset_t key)
         start_tsc = asm_rdtscp();
 #endif
 
-	//pthread_rwlock_rdlock(&inode->fcache_rwlock);
+	pthread_rwlock_rdlock(&inode->fcache_rwlock);
     
 #ifdef fcache_stats
     if (enable_perf_stats) {
@@ -443,7 +445,7 @@ static struct fcache_block *fcache_find(struct inode *inode, offset_t key)
             start_tsc = asm_rdtscp();
 #endif
 	
-        //pthread_rwlock_unlock(&inode->fcache_rwlock);
+        pthread_rwlock_unlock(&inode->fcache_rwlock);
         
 #ifdef fcache_stats
         if (enable_perf_stats) {
@@ -502,7 +504,7 @@ static inline struct fcache_block *fcache_alloc_add(struct inode *inode,
         start_tsc = asm_rdtscp();
 
 #define USE_FCACHE_POOL
-//#undef USE_FCACHE_POOL
+#undef USE_FCACHE_POOL
 #ifdef USE_FCACHE_POOL
     if (!inode->fcache_block_pool) {
         inode->fcache_block_pool = (struct fcache_block*) mmap(NULL, 1024 * 1024 * 1024, 
@@ -535,7 +537,7 @@ static inline struct fcache_block *fcache_alloc_add(struct inode *inode,
 	INIT_LIST_HEAD(&fc_block->l);
     //end_cache_stats(&(g_perf_stats.cache_stats));
 
-	//pthread_rwlock_wrlock(&inode->fcache_rwlock);
+	pthread_rwlock_wrlock(&inode->fcache_rwlock);
 
 	if (inode->fcache_hash == NULL) {
 		inode->fcache_hash = kh_init(fcache);
@@ -554,7 +556,7 @@ static inline struct fcache_block *fcache_alloc_add(struct inode *inode,
 	kh_value(inode->fcache_hash, k) = fc_block;
 	//mlfs_info("add key %u @ inode %u\n", key, inode->inum);
 
-	//pthread_rwlock_unlock(&inode->fcache_rwlock);
+	pthread_rwlock_unlock(&inode->fcache_rwlock);
 
 	return fc_block;
 }
@@ -608,11 +610,10 @@ static inline int fcache_del_all(struct inode *inode)
 				list_del(&fc_block->l);
 				mlfs_free(fc_block->data);
 			} else if (fc_block) {
-				mlfs_free(fc_block);
-			}
 #ifndef USE_FCACHE_POOL
-			mlfs_free(fc_block);
+				mlfs_free(fc_block);
 #endif
+			}
 		}
 	}
 
