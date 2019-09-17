@@ -44,7 +44,7 @@ extern uint8_t g_hdd_dev;
 #define NINDIRECT (g_block_size_bytes / sizeof(addr_t))
 
 #define N_FILE_PER_DIR (g_block_size_bytes / sizeof(struct mlfs_dirent))
-#define g_max_open_files ((NDIRECT + 1) * N_FILE_PER_DIR)
+#define g_max_open_files NINODES
 
 /* FIXME: compute this */
 #define MAXFILE 10000000
