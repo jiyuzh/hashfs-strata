@@ -1,0 +1,22 @@
+display_options:
+  config_names:
+    extent_trees: NVM Only
+    none: DRAM+NVM
+
+  breakdown_names:
+    indexing: Indexing
+    read_data: Read Data
+
+  benchmark_order:
+    - 1MB
+    - 64kB
+    - 4kB
+
+  config_colors:
+    NVM Only: '#bebada'
+    DRAM+NVM: '#ff0000'
+
+  config_order:
+    - NVM Only
+    - DRAM+NVM
+

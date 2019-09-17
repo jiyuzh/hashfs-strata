@@ -76,6 +76,9 @@ class IDXDataObject:
             parsed['llc_misses'] = cache_obj['l3']['misses']
             parsed['llc_accesses'] = cache_obj['l3']['accesses']
 
+            nvdimm_stats = {k: v for k, v in cache_obj.items() if 'nvdimm' in k}
+            parsed.update(nvdimm_stats)
+
             if 'cache' in cache_obj['kernfs']:
                 kern_cache = cache_obj['kernfs']
                 parsed['kernfs_cache_accesses'] = kern_cache['l1']['accesses']
