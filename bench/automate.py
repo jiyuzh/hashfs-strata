@@ -18,6 +18,7 @@ from warnings import warn
 
 from FileBenchProcess import FileBenchRunner
 from MTCCProcess import MTCCRunner
+from YCSBCProcess import YCSBCRunner
 from FragTestProcess import FragTestRunner
 
 from Utils import *
@@ -40,6 +41,11 @@ def add_arguments(parser):
     fragtest = subparsers.add_parser('fragtest')
     fragtest.set_defaults(cls=FragTestRunner)
     FragTestRunner.add_arguments(fragtest)
+
+    ycsbc = subparsers.add_parser('ycsbc')
+    ycsbc.set_defaults(cls=YCSBCRunner)
+    YCSBCRunner.add_arguments(ycsbc)
+
 
     '''
     all_cmds = []
