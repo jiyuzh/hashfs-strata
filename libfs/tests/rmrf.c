@@ -66,7 +66,6 @@ void rmrf(const char *dirpath) {
 }
 
 int main(int argc, char *argv[]) {
-    getchar();
     const char *root_dir_path = argc > 1 ? argv[1] : ".";
     rmrf(root_dir_path);
 
