@@ -7,7 +7,8 @@ CC = gcc9.2 -std=c99
 EXE = file_basic small_io falloc_test ftrunc_test lock_test lock_perf \
 	  simple_spdk_test dir_test many_files_test fork_io readdir_test \
 	  append_test fwrite_fread partial_update_test \
-	  deepqueue multithread age
+	  deepqueue multithread age \
+	  concurrency_stress_test MTCC readfile ls rmrf
 
 #$(info $(EXE))
 
@@ -122,7 +123,8 @@ multithread: multithread.c
 
 age: age.c
 	$(CC) -g -o $@ $^ -I$(INCLUDES) -L$(LIBFS_DIR) -lmlfs $(LDFLAGS)
-
+concurrency_stress_test: concurrency_stress_test.c
+	$(CC) -g -o $@ $^  -I$(INCLUDES) -L$(LIBFS_DIR) -lmlfs -L$(LIBSPDK_DIR) -lspdk -DMLFS $(CFLAGS) $(LDFLAGS)
 MTCC: MTCC.c
 	$(CC) -g -o $@ $^  -I$(INCLUDES) -L$(LIBFS_DIR) -lmlfs -L$(LIBSPDK_DIR) -lspdk -DMLFS $(CFLAGS) $(LDFLAGS)
 MTCCcorrect: MTCCcorrect.c
@@ -132,6 +134,8 @@ readfile: readfile.c
 cp: cp.c
 	$(CC) -g -o $@ $^  -I$(INCLUDES) -L$(LIBFS_DIR) -lmlfs -L$(LIBSPDK_DIR) -lspdk -DMLFS $(CFLAGS) $(LDFLAGS)
 ls: ls.c
+	$(CC) -g -o $@ $^  -I$(INCLUDES) -L$(LIBFS_DIR) -lmlfs -L$(LIBSPDK_DIR) -lspdk -DMLFS $(CFLAGS) $(LDFLAGS)
+rmrf: rmrf.c
 	$(CC) -g -o $@ $^  -I$(INCLUDES) -L$(LIBFS_DIR) -lmlfs -L$(LIBSPDK_DIR) -lspdk -DMLFS $(CFLAGS) $(LDFLAGS)
 recursive_read: recursive_read.c
 	$(CC) -g -o $@ $^  -I$(INCLUDES) -L$(LIBFS_DIR) -lmlfs -L$(LIBSPDK_DIR) -lspdk -DMLFS $(CFLAGS) $(LDFLAGS)
