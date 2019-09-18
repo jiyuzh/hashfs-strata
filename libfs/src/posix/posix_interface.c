@@ -592,7 +592,7 @@ int mlfs_posix_rename(char *oldpath, char *newpath)
 	return 0;
 }
 
-size_t mlfs_posix_getdents(int fd, struct linux_dirent *buf,
+int mlfs_posix_getdents(int fd, struct linux_dirent *buf,
 		size_t nbytes)
 {
 	struct file *f;
@@ -617,7 +617,12 @@ size_t mlfs_posix_getdents(int fd, struct linux_dirent *buf,
 	if (f->off >= f->ip->size)
 		return 0;
 
-	bytes = dir_get_linux_dirent(f->ip, buf, &(f->off), nbytes);
+	if (f->ip->itype == T_DIR) {
+		bytes = dir_get_linux_dirent(f->ip, buf, &(f->off), nbytes);
+	}
+	else {
+		return -ENOTDIR;
+	}
 
 	return bytes;
 }
