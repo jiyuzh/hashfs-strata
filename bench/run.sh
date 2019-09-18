@@ -1,5 +1,5 @@
 #! /bin/bash
-set -x
+#set -x
 PATH=$PATH:.
 STRATA_ROOT=/home/iangneal/workspace/strata
 #export LD_LIBRARY_PATH=../lib/nvml/src/nondebug/:../build:../../shim/glibc-build/:../lib/libspdk/libspdk/:/usr/local/lib64:../src/storage/spdk/:/usr/lib/:/usr/lib/x86_64-linux-gnu/:/lib/x86_64-linux-gnu/
