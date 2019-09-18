@@ -1264,7 +1264,7 @@ void add_to_loghdr(uint8_t type, struct inode *inode, offset_t data,
 		ext_used++;
 		memmove(&loghdr_meta->loghdr_ext[ext_used], extra, extra_len);
 		ext_used += extra_len;
-		strncat((char *)&loghdr_meta->loghdr_ext[ext_used], "|", 1);
+		strncat((char *)&loghdr_meta->loghdr_ext[ext_used], "|", 2);
 		ext_used++;
 		loghdr_meta->loghdr_ext[ext_used] = '\0';
 		loghdr_meta->ext_used = ext_used;

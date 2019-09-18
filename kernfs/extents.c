@@ -906,7 +906,7 @@ struct mlfs_ext_path *mlfs_find_extent(handle_t *handle,
             struct mlfs_ext_path *prevp_next = &(prev_path[ppos + 1]);
 
             if (prevp->p_hdr) {
-                extent_branch_t *l, *r;
+                struct mlfs_extent_idx *l, *r;
                 l = prevp->p_idx;
                 r = EXT_LAST_INDEX(prevp->p_hdr) != l ? l + 1 : l;
                 
