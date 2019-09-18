@@ -1575,7 +1575,7 @@ ssize_t do_unaligned_read(struct inode *ip, uint8_t *dst, offset_t off, size_t i
 
   mlfs_assert(ret != -EIO);
   if(IDXAPI_IS_HASHFS()) {
-    bh = bh_get_sync_IO(bmap_req.dev, bmap_req_arr.block_no[0], BH_NO_DATA_ALLOC);
+    bh = bh_get_sync_IO(bmap_req_arr.dev, bmap_req_arr.block_no[0], BH_NO_DATA_ALLOC);
   }
   else {
     bh = bh_get_sync_IO(bmap_req.dev, bmap_req.block_no, BH_NO_DATA_ALLOC);
