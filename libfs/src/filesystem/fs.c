@@ -1163,6 +1163,7 @@ int bmap_hashfs(struct inode *ip, struct bmap_request_arr *bmap_req_arr)
       memcpy(bmap_req_arr->block_no, &(map_arr.m_pblk), bmap_req_arr->blk_count_found * sizeof(addr_t));
       
       mlfs_debug("physical block: %llu -> %llu\n", map_arr.m_lblk, map_arr.m_pblk[0]);
+      //printf("physical block: %llu -> %llu--%llu (%d)\n", map_arr.m_lblk, map_arr.m_pblk[0], map_arr.m_pblk[0] + ret, ret);
 
       if (ret == bmap_req_arr->blk_count) {
         mlfs_debug("[dev %d] Get all offset %lx: blockno %lx from NVM\n",

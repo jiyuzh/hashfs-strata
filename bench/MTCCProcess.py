@@ -26,6 +26,7 @@ class MTCCRunner(BenchRunner):
     def __init__(self, args):
         super().__init__(args)
         self.update_bar_proc = None
+        self.skip_insert = args.skip_insert
 
     def __del__(self):
         ''' Avoid having the asynchronous refresh thread become a zombie. '''
@@ -167,11 +168,13 @@ class MTCCRunner(BenchRunner):
                         labels['num files'] = nfiles
                         labels['trial num'] = trial_num
 
+                        end_size = int(start_size + ((io_size * reps) / nfiles))
+
                         mtcc_insert_arg_str = \
                             f'''taskset -c 0
                                 numactl -N {numa_node} -m {numa_node} {dir_str}/run.sh
                                 {dir_str}/MTCC -b {io_size} -s 1 -j 1 -n {nfiles}
-                                -S {start_size} -M {start_size + (io_size * reps)} 
+                                -S {start_size} -M {end_size} 
                                 -w {io_size * reps} -r 0'''
 
                         setup_size = 1024 * 4096 if start_size > (1024 * 4096) else start_size
@@ -204,12 +207,13 @@ class MTCCRunner(BenchRunner):
 
                         # Run the benchmarks
                         # 1) Insert test
-                        current = 'Insert'
-                        insert_labels = {}
-                        insert_labels.update(labels)
-                        insert_labels['test'] = 'Insert'
-                        stat_objs += self._run_mtcc_trial(
-                            mtcc_path, None, insert_trial_args, insert_labels)
+                        if not self.skip_insert:
+                            current = 'Insert'
+                            insert_labels = {}
+                            insert_labels.update(labels)
+                            insert_labels['test'] = 'Insert'
+                            stat_objs += self._run_mtcc_trial(
+                                mtcc_path, None, insert_trial_args, insert_labels)
 
                         # 2) Sequential read test
                         current = 'Sequential'
@@ -244,7 +248,8 @@ class MTCCRunner(BenchRunner):
                 keys = ['layout', 'total_time', 'struct', 'test', 'io size',
                         'repetitions', 'num files', 'trial num', 'start size']
 
-                if len(stat_objs) != 3 * len(workloads):
+                ntotal = 3 * len(workloads) if not self.skip_insert else 2 * len(workloads)
+                if len(stat_objs) != ntotal:
                     print(f'What? Should have {3 * len(workloads)}, only have {len(stat_objs)}!')
 
                 stat_summary = []
@@ -302,5 +307,8 @@ class MTCCRunner(BenchRunner):
         # Options
         parser.add_argument('--measure-cache-perf', '-c', action='store_true',
                             help='Measure cache perf as well.')
+
+        parser.add_argument('--skip-insert', action='store_true',
+                            help='Skip the insert test')
 
         cls._add_common_arguments(parser)

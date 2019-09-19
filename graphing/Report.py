@@ -32,7 +32,7 @@ def add_args(parser):
                                     help='Process all results into a single summary.')
     process.add_argument('--input-dir', '-i', default='./benchout',
                          help='Where the raw results live.')
-    process.add_argument('--output-file', '-o', default='report.json',
+    process.add_argument('--output-file', '-o', default='report.yaml',
                          help='Where to output the report')
     process.set_defaults(fn=process_fn)
 
@@ -42,26 +42,30 @@ def add_args(parser):
                                             ).interact()
     interact = subparsers.add_parser('interact',
                                     help='Play around with the data in an interactive shell.')
-    interact.add_argument('--input-file', '-i', default='./report.json',
+    interact.add_argument('--input-file', '-i', default='./report.yaml',
                          help='Which report to use.')
     interact.set_defaults(fn=interact_fn)
 
     # For summaries!
     summary_fn = lambda args: IDXDataObject(file_path=Path(args.input_file)
-                                       ).summary(args.output_file, args.final)
+            ).summary(args.baseline, args.output_file, args.prefix, args.final)
     summary = subparsers.add_parser('summary',
                                     help='Display relavant results')
-    summary.add_argument('--input-file', '-i', default='report.json',
+    summary.add_argument('--input-file', '-i', default='report.yaml',
                          help='Where the aggregations live.')
     summary.add_argument('--output-file', '-o', default=None,
                          help='Dump summary to TeX file.')
+    summary.add_argument('--baseline', '-b', default='extent_trees',
+                         help='What indexing structure to use as the baseline.')
+    summary.add_argument('--prefix', '-p', default='',
+                         help='Prefix to label the latex commands with.')
     summary.add_argument('--final', '-f', action='store_true',
                          help='If dumping to TeX, remove the tentative tags.')
     summary.set_defaults(fn=summary_fn)
 
     # For graphing!
     graph = subparsers.add_parser('graph',
-                                  help='Graph from report.json')
+                                  help='Graph from report.yaml')
     IDXGrapher.add_parser_args(graph)
 
 ################################################################################

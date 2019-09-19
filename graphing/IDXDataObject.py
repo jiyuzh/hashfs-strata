@@ -54,6 +54,7 @@ class IDXDataObject:
             return None
 
         parsed['repetitions'] = str(int(parsed['repetitions']))
+        parsed['layout'] = float(parsed['layout']) / 100.0
 
         if 'read_data' in data_obj:
             parsed['read_data_bytes_per_cycle'] = data_obj['read_data']['bytes'] / max(data_obj['read_data']['tsc'], 1.0)
@@ -197,10 +198,9 @@ class IDXDataObject:
         self.df[df_mean.columns] = df_mean
         self.df = pd.concat([self.df, df_ci], axis=1)
 
-
     def _load_results_file(self, file_path):
         with file_path.open() as f:
-            self.df = pd.DataFrame(json.load(f))
+            self.df = pd.DataFrame.from_dict(yaml.load(f))
 
     def __init__(self, results_dir=None, file_path=None):
         assert results_dir is not None or file_path is not None
@@ -212,9 +212,11 @@ class IDXDataObject:
 
     def save_to_file(self, file_path):
         with file_path.open('w') as f:
-            json.dump(self.df.to_dict(), f, indent=4)
+            yaml.dump(self.df.to_dict(), f)
 
     def interact(self):
+        df = self.df
+        print('DataFrame in df (or self.df)')
         embed()
 
     def _reorder_data_frames(self):
@@ -367,7 +369,7 @@ class IDXDataObject:
     def make_bench_name_latex_compat(bench):
         from itertools import chain
         engine = inflect.engine()
-        pieces = bench.split('_')
+        pieces = chain(*[p.split(' ') for p in bench.split('_')])
         new_name = ''
         for piece in pieces:
             new_piece = ''
@@ -418,12 +420,10 @@ class IDXDataObject:
         output['MTCCReadfile']['MaxTimeImprovement'] = '{:.0%}'.format(improvement.max())
         struct['MTCCReadfile']['MaxTimeImprovement'] = improvement.idxmax()
 
-    def summary(self, output_file_path, is_final):
+    def summary(self, baseline, output_file_path, command_prefix, is_final):
         outfile = None
         if output_file_path is not None:
             outfile = Path(output_file_path)
-
-        baseline = 'extent_trees'
 
         agg = {}
         agg_output = {}
@@ -432,6 +432,7 @@ class IDXDataObject:
         agg_bench = defaultdict(dict)
         agg_bench_output = defaultdict(dict)
         agg_bench_struct = defaultdict(dict)
+
 
         def update_max(key, val, val_str, reason):
             if key not in agg or val > agg[key]:
@@ -449,34 +450,37 @@ class IDXDataObject:
                 return True
             return False
 
-        for bench, bench_data in self.dfs.items():
-            baseline_df = bench_data[baseline]
+        for bench in self.df.test.unique():
+            bench_data = self.df[self.df.test == bench]
+            baseline_df = bench_data[bench_data.struct == baseline.upper()]
+            
             # MaxFragmentationOverhead
-            frag_max, frag_min = None, None
-            if 'throughput' in baseline_df.T:
-                frag_min = baseline_df.T['throughput'].min()
-                frag_max = baseline_df.T['throughput'].max()
-            else:
-                frag_min = 1.0 / baseline_df.T['total_time'].max()
-                frag_max = 1.0 / baseline_df.T['total_time'].min()
+            # frag_max, frag_min = None, None
+            # if 'throughput' in baseline_df:
+            #     frag_min = baseline_df['throughput'].min()
+            #     frag_max = baseline_df['throughput'].max()
+            # else:
+            #     frag_min = 1.0 / baseline_df['total_time'].max()
+            #     frag_max = 1.0 / baseline_df['total_time'].min()
 
-            frag_diff = (frag_max - frag_min) / frag_max
-            update_max('MaxFragmentationOverhead', frag_diff,
-                    '{:.0%}'.format(frag_diff), '%s %s' % (baseline, bench))
-            update_max_bench(bench, 'MaxFragmentationOverhead', frag_diff,
-                    '{:.0%}'.format(frag_diff), '%s %s' % (baseline, bench))
+            # frag_diff = (frag_max - frag_min) / frag_max
+            # update_max('MaxFragmentationOverhead', frag_diff,
+            #         '{:.0%}'.format(frag_diff), '%s %s' % (baseline, bench))
+            # update_max_bench(bench, 'MaxFragmentationOverhead', frag_diff,
+            #         '{:.0%}'.format(frag_diff), '%s %s' % (baseline, bench))
 
-            for idx, df in bench_data.items():
+            for idx in bench_data.struct.unique():
+                df = bench_data[bench_data.struct == idx]
                 # MaxIndexingOverhead
-                if 'indexing' in df.T:
-                    indexing = df.T['indexing'].max()
+                if 'indexing' in df:
+                    indexing = df['indexing'].max()
                     update_max('MaxIndexingOverhead', indexing,
                             '{:.0%}'.format(indexing), '%s %s' % (idx, bench))
                     update_max_bench(bench, 'MaxIndexingOverhead', indexing,
                             '{:.0%}'.format(indexing), '%s %s' % (idx, bench))
 
                 # MaxIndexingOverheadReduction
-                for layout in df.columns:
+                for layout in df.layout.unique():
                     explanation = '%s %s @ %s' % (idx, bench, layout)
 
                     key = 'MaxThroughputImprovement{}LS{}'.format(
@@ -484,76 +488,70 @@ class IDXDataObject:
                             self.make_bench_name_latex_compat(
                                 '%.0f' % (float(layout) * 100) ))
                     df_perf, base_perf = None, None
-                    if 'throughput' in df[layout]:
-                        df_perf = df[layout]['throughput']
-                        base_perf = baseline_df[layout]['throughput']
+                    if 'throughput' in df[df.layout == layout]:
+                        df_perf = df[df.layout == layout]['throughput']
+                        base_perf = baseline_df[baseline_df.layout == layout]['throughput']
                     else:
-                        df_perf = 1.0 / df[layout]['total_time']
-                        base_perf = 1.0 / baseline_df[layout]['total_time']
-                    agg_bench[bench][key] = (df_perf - base_perf) / base_perf
+                        df_perf = 1.0 / df[df.layout == layout]['total_time']
+                        base_perf = 1.0 / baseline_df[baseline_df.layout == layout]['total_time']
+
+                    df_perf = df_perf.reset_index(drop=True)
+                    base_perf = base_perf.reset_index(drop=True)
+
+                    agg_bench[bench][key] = ((df_perf - base_perf) / base_perf).max()
                     agg_bench_output[bench][key] = '{:.0%}'.format(agg_bench[bench][key])
                     agg_bench_struct[bench][key] = explanation
 
-                    if 'indexing' not in df[layout]:
+                    if 'indexing' not in df[df.layout == layout]:
                         continue
 
-                    base = baseline_df[layout]['indexing']
-                    curr = df[layout]['indexing']
+                    base = baseline_df[baseline_df.layout == layout]['indexing'].reset_index(drop=True)
+                    curr = df[df.layout == layout]['indexing'].reset_index(drop=True)
                     reduction = (base - curr)
-                    diff = float(reduction / base)
+                    diff = float((reduction / base).max())
 
                     if update_max('MaxIndexingOverheadReduction', diff,
                             '{:.0%}'.format(diff), explanation):
                         key = 'MaxThroughputImprovement'
                         try:
                             df_perf, base_perf = None, None
-                            if 'throughput' in df[layout]:
-                                df_perf = df[layout]['throughput']
-                                base_perf = baseline_df[layout]['throughput']
+                            if 'throughput' in df[df.layout == layout]:
+                                df_perf = df[df.layout == layout]['throughput']
+                                base_perf = baseline_df[baseline_df.layout == layout]['throughput']
                             else:
-                                df_perf = 1.0 / df[layout]['total_time']
-                                base_perf = 1.0 / baseline_df[layout]['total_time']
-                            agg[key] = (df_perf - base_perf) / base_perf
+                                df_perf = 1.0 / df[df.layout == layout]['total_time']
+                                base_perf = 1.0 / baseline_df[baseline_df.layout == layout]['total_time']
+
+                            df_perf = df_perf.reset_index(drop=True)
+                            base_perf = base_perf.reset_index(drop=True)
+
+                            agg[key] = ((df_perf - base_perf) / base_perf).max()
                             agg_output[key] = '{:.0%}'.format(agg[key])
                             agg_struct[key] = explanation
                         except:
                             pass
 
-                    if update_max_bench(bench, 'MaxIndexingOverheadReduction',
-                            diff, '{:.0%}'.format(diff), explanation):
-                        key = 'MaxThroughputImprovement'
-                        try:
-                            df_perf, base_perf = None, None
-                            if 'throughput' in df[layout]:
-                                df_perf = df[layout]['throughput']
-                                base_perf = baseline_df[layout]['throughput']
-                            else:
-                                df_perf = 1.0 / df[layout]['total_time']
-                                base_perf = 1.0 / baseline_df[layout]['total_time']
-                            agg_bench[bench][key] = (df_perf - base_perf) / base_perf
-                            agg_bench_output[bench][key] = '{:.0%}'.format(agg_bench[bench][key])
-                            agg_bench_struct[bench][key] = explanation
-                        except:
-                            pass
-
-
                 # AvgIndexingOverheadReduction (per-benchmark only!)
-                if 'indexing' in df.T:
-                    base = baseline_df.T['indexing'].mean()
-                    curr = df.T['indexing'].mean()
+                if 'indexing' in df:
+                    base = baseline_df['indexing'].mean()
+                    curr = df['indexing'].mean()
                     reduction = (base - curr)
                     diff = float(reduction / base)
                     explanation = '%s %s' % (idx, bench)
 
                     key = 'AvgThroughputImprovement{}'.format(self.make_bench_name_latex_compat(idx))
                     df_perf, base_perf = None, None
-                    if 'throughput' in df.T:
-                        df_perf = df.T['throughput'].mean()
-                        base_perf = baseline_df.T['throughput'].mean()
+                    if 'throughput' in df:
+                        df_perf = df['throughput']
+                        base_perf = baseline_df['throughput']
                     else:
-                        df_perf = 1.0 / df.T['total_time'].mean()
-                        base_perf = 1.0 / baseline_df.T['total_time'].mean()
-                    agg_bench[bench][key] = (df_perf - base_perf) / base_perf
+                        df_perf = 1.0 / df['total_time']
+                        base_perf = 1.0 / baseline_df['total_time']
+
+                    df_perf = df_perf.reset_index(drop=True)
+                    base_perf = base_perf.reset_index(drop=True)
+
+                    agg_bench[bench][key] = ((df_perf - base_perf) / base_perf).mean()
                     agg_bench_output[bench][key] = '{:.0%}'.format(agg_bench[bench][key])
                     agg_bench_struct[bench][key] = explanation
 
@@ -562,13 +560,17 @@ class IDXDataObject:
                             diff, '{:.0%}'.format(diff), explanation):
                         try:
                             df_perf, base_perf = None, None
-                            if 'throughput' in df.T:
-                                df_perf = df.T['throughput'].mean()
-                                base_perf = baseline_df.T['throughput'].mean()
+                            if 'throughput' in df:
+                                df_perf = df['throughput']
+                                base_perf = baseline_df['throughput']
                             else:
-                                df_perf = 1.0 / df.T['total_time'].mean()
-                                base_perf = 1.0 / baseline_df.T['total_time'].mean()
-                            agg_bench[bench][key] = (df_perf - base_perf) / base_perf
+                                df_perf = 1.0 / df['total_time']
+                                base_perf = 1.0 / baseline_df['total_time']
+
+                            df_perf = df_perf.reset_index(drop=True)
+                            base_perf = base_perf.reset_index(drop=True)
+
+                            agg_bench[bench][key] = ((df_perf - base_perf) / base_perf).mean()
                             agg_bench_output[bench][key] = '{:.0%}'.format(agg_bench[bench][key])
                             agg_bench_struct[bench][key] = explanation
                         except:
@@ -576,34 +578,37 @@ class IDXDataObject:
 
             # Diff across layout scores
             # AvgRangeFragmentation (per benchmark)
-            all_range_fr = {}
-            all_range_bt = {}
-            for idx, df in bench_data.items():
-                if 'total_time' in df.T.iloc[0]:
-                    all_range_fr[idx] = df.T.iloc[0]['total_time'] - df.T.iloc[-1]['total_time']
-                    all_range_fr[idx] /= df.T.iloc[-1]['total_time']
-                else:
-                    all_range_fr[idx] = df.T.iloc[-1]['throughput'] - df.T.iloc[0]['throughput']
-                    all_range_fr[idx] /= df.T.iloc[0]['throughput']
+            # all_range_fr = {}
+            # all_range_bt = {}
+            # for idx in bench_data.struct.unique():
+            #     df = bench_data[bench_data.struct == idx]
+            #     if 'total_time' in df.T.iloc[0]:
+            #         all_range_fr[idx] = df.T.iloc[0]['total_time'] - df.T.iloc[-1]['total_time']
+            #         all_range_fr[idx] /= df.T.iloc[-1]['total_time']
+            #     else:
+            #         all_range_fr[idx] = df.T.iloc[-1]['throughput'] - df.T.iloc[0]['throughput']
+            #         all_range_fr[idx] /= df.T.iloc[0]['throughput']
 
-                k = 'read_data_bytes_per_cycle'
-                if k in df.T.iloc[0]:
-                    all_range_bt[idx] = df.T.iloc[-1][k] - df.T.iloc[0][k]
-                    all_range_bt[idx] /= df.T.iloc[-1][k]
+            #     k = 'read_data_bytes_per_cycle'
+            #     if k in df.T.iloc[0]:
+            #         all_range_bt[idx] = df.T.iloc[-1][k] - df.T.iloc[0][k]
+            #         all_range_bt[idx] /= df.T.iloc[-1][k]
 
-            fr_series = pd.Series(all_range_fr)
-            bt_series = pd.Series(all_range_bt)
+            # fr_series = pd.Series(all_range_fr)
+            # bt_series = pd.Series(all_range_bt)
 
-            agg_bench[bench]['AvgRangeFragmentation'] = fr_series.mean()
-            agg_bench_output[bench]['AvgRangeFragmentation'] = '{:.0%}'.format(fr_series.mean())
-            agg_bench_struct[bench]['AvgRangeFragmentation'] = ''
+            # agg_bench[bench]['AvgRangeFragmentation'] = fr_series.mean()
+            # agg_bench_output[bench]['AvgRangeFragmentation'] = '{:.0%}'.format(fr_series.mean())
+            # agg_bench_struct[bench]['AvgRangeFragmentation'] = ''
 
-            if all_range_bt:
-                agg_bench[bench]['AvgRangeBytesPerTime'] = bt_series.mean()
-                agg_bench_output[bench]['AvgRangeBytesPerTime'] = '{:.0%}'.format(bt_series.mean())
-                agg_bench_struct[bench]['AvgRangeBytesPerTime'] = ''
+            # if all_range_bt:
+            #     agg_bench[bench]['AvgRangeBytesPerTime'] = bt_series.mean()
+            #     agg_bench_output[bench]['AvgRangeBytesPerTime'] = '{:.0%}'.format(bt_series.mean())
+            #     agg_bench_struct[bench]['AvgRangeBytesPerTime'] = ''
 
-        self._mtcc_average(agg_bench, agg_bench_output, agg_bench_struct)
+        # self._mtcc_average(agg_bench, agg_bench_output, agg_bench_struct)
+
+        # Output time
 
         pprint(agg)
         pprint(agg_struct)
@@ -613,23 +618,28 @@ class IDXDataObject:
 
         if outfile is not None:
             with outfile.open('w') as f:
-                cmd_str = '\\newcommand{{\\{0}}}{{\\tentative{{{1}\\xspace}}}}'
-                bench_cmd_str = '\\newcommand{{\\{0}{1}}}{{\\tentative{{{2}\\xspace}}}}'
+                cmd_str = '\\newcommand{{\\{0}{1}}}{{\\tentative{{{2}}}}}'
+                bench_cmd_str = '\\newcommand{{\\{0}{1}{2}}}{{\\tentative{{{3}}}}}'
                 if is_final:
-                    cmd_str = '\\newcommand{{\\{0}}}{{{1}\\xspace}}'
-                    bench_cmd_str = '\\newcommand{{\\{0}{1}}}{{{2}\\xspace}}'
+                    cmd_str = '\\newcommand{{\\{0}{1}}}{{{2}}}'
+                    bench_cmd_str = '\\newcommand{{\\{0}{1}{2}}}{{{3}}}'
 
-                for cmd, data in agg_output.items():
-                    cmd_output = cmd_str.format(cmd, data)
+                for cmd in sorted(agg_output.keys()):
+                    data = agg_output[cmd]
+
+                    cmd_output = cmd_str.format(command_prefix, cmd, data)
                     cmd_output = cmd_output.replace('%', '\\%')
                     f.write(cmd_output)
                     f.write('\n')
 
-                for bench, bench_data in agg_bench_output.items():
+                for bench in sorted(agg_bench_output.keys()):
+                    bench_data = agg_bench_output[bench]
                     bname = self.make_bench_name_latex_compat(bench)
 
-                    for cmd, data in bench_data.items():
-                        cmd_output = bench_cmd_str.format(cmd, bname, data)
+                    for cmd in sorted(bench_data.keys()):
+                        data = bench_data[cmd]
+
+                        cmd_output = bench_cmd_str.format(command_prefix, cmd, bname, data)
                         cmd_output = cmd_output.replace('%', '\\%')
                         f.write(cmd_output)
                         f.write('% {}\n'.format(agg_bench_struct[bench][cmd]))
