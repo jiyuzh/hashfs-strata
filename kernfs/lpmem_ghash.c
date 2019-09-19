@@ -519,7 +519,7 @@ pmem_nvm_hash_table_new(struct disk_superblock *sblk,
   if(pmem_ht->valid == 1) {
     printf("ht exists\n");
     pmem_ht_vol = (pmem_nvm_hash_vol_t *)malloc(sizeof(pmem_nvm_hash_vol_t));
-    pmem_ht_vol->hash_func = hash_func ? hash_func : nvm_idx_direct_hash;
+    pmem_ht_vol->hash_func = hash_func ? hash_func : mix;
     pmem_ht_vol->entries = (paddr_t*)(dax_addr[g_root_dev] + (pmem_ht->entries_blk * g_block_size_bytes));
     return;
   }
@@ -535,7 +535,7 @@ pmem_nvm_hash_table_new(struct disk_superblock *sblk,
 
   //need to update num blocks available somewhere?
   pmem_ht_vol = (pmem_nvm_hash_vol_t *)malloc(sizeof(pmem_nvm_hash_vol_t));
-  pmem_ht_vol->hash_func = hash_func ? hash_func : nvm_idx_direct_hash;
+  pmem_ht_vol->hash_func = hash_func ? hash_func : mix;
   pmem_ht_vol->entries = (paddr_t*)(dax_addr[g_root_dev] + (pmem_ht->entries_blk * g_block_size_bytes));
   pmem_ht->nnodes = 0;
   pmem_ht->noccupied = 0;

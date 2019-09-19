@@ -78,7 +78,7 @@ int main(int argc, char **argv) {
     while ((c = getopt(argc, argv, OPTSTRING)) != -1) {
         switch (c) {
             case 'b': // block_size
-                block_size = atoi(optarg);
+                sscanf(optarg, "%zu", &block_size);
                 block_size *= get_unit(optarg[strlen(optarg)-1]);
                 if (block_size % sizeof(uint64_t)) {
                     panic("block_size should be divisable by 64");
@@ -103,27 +103,33 @@ int main(int argc, char **argv) {
                 opt_num++;
                 break;
             case 'M': // max file size
-                max_file_size = atoi(optarg);
+                //max_file_size = atoi(optarg);
+                sscanf(optarg, "%zu", &max_file_size);
                 max_file_size *= get_unit(optarg[strlen(optarg)-1]);
                 assert((max_file_size % block_size == 0) && "max_file_size should be dividable by block_size");
                 opt_num++;
                 break;
             case 'S': // start file size
-                start_file_size = atoi(optarg);
+                //start_file_size = atoi(optarg);
+                sscanf(optarg, "%zu", &start_file_size);
                 start_file_size *= get_unit(optarg[strlen(optarg)-1]);
-                assert(start_file_size > 0 &&
-                      (start_file_size % block_size == 0) &&
+                printf("%llu %llu %llu\n", start_file_size, block_size,
+                        start_file_size % block_size);
+                assert(start_file_size >= 0ULL &&
+                      (start_file_size % block_size == 0ULL) &&
                       "start_file_size should be dividable by block_size");
                 opt_num++;
                 break;
             case 'r': // read_unit size
-                read_unit = atoi(optarg);
+                //read_unit = atoi(optarg);
+                sscanf(optarg, "%zu", &read_unit);
                 read_unit *= get_unit(optarg[strlen(optarg)-1]);
                 assert((read_unit % block_size == 0) && "read_unit should be dividable by block_size");
                 opt_num++;
                 break;
             case 'w': // write_unit size
-                write_unit = atoi(optarg);
+                //write_unit = atoi(optarg);
+                sscanf(optarg, "%zu", &write_unit);
                 write_unit *= get_unit(optarg[strlen(optarg)-1]);
                 assert((write_unit % block_size == 0) && "write unit should be dividable by block_size");
                 opt_num++;

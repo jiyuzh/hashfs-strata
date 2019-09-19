@@ -87,7 +87,8 @@ int main(int argc, char **argv) {
                 opt_num++;
                 break;
             case 'r': // read_total size
-                read_total = atoi(optarg);
+                //read_total = atoi(optarg);
+                sscanf(optarg, "%zu", &read_total);
                 read_total *= get_unit(optarg[strlen(optarg)-1]);
                 assert((read_total % block_size == 0) && "read_total should be dividable by block_size");
                 opt_num++;

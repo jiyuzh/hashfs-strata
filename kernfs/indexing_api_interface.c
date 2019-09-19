@@ -134,7 +134,14 @@ ssize_t alloc_metadata_blocks(size_t nblocks, paddr_t* pblk) {
         g_perf_stats.balloc_meta_nr += nblocks;
     }
 #endif
-    return alloc_generic(nblocks, pblk, TREE);
+    ssize_t ret = alloc_generic(nblocks, pblk, TREE);
+    if (ret <= 0) return ret;
+
+    char *addr;
+    (void)nvm_get_addr(*pblk, 0, &addr);
+    pmem_memset_persist(addr, 0, ret * g_block_size_bytes);
+
+    return ret;
 }
 
 ssize_t alloc_data_blocks(size_t nblocks, paddr_t *pblk) {
