@@ -152,6 +152,7 @@ static void pmem_nvm_flush(void* start, uint32_t len) {
  * Returns: index of the described node
  */
 #define SEQ_STEP
+//#undef SEQ_STEP
 #pragma GCC push_options
 //#pragma GCC optimize ("unroll-loops")
 
@@ -293,23 +294,26 @@ mixHash_simd8_helper(__m512i *first, __m512i *second, __m512i *third, int right,
 }
 
 
-static void mixHash_simd8(__m512i *c, __m256i *node_indices, __mmask8 searching) {
+static void mixHash_simd8(__m512i *keys, __m256i *node_indices, __mmask8 searching) {
   int RIGHT = 1;
   int LEFT = 0;
+
+  __m512i c = *keys;
+
   __mmask8 oneMask = _cvtu32_mask8(~0); // ones
   __m512i a = _mm512_set1_epi64(0xff51afd7ed558ccdL);
   __m512i b = _mm512_set1_epi64(0xc4ceb9fe1a85ec53L);
-  mixHash_simd8_helper(&a, &b, c, RIGHT, 13, searching);
-  mixHash_simd8_helper(&b, c, &a, LEFT, 8, searching);
-  mixHash_simd8_helper(c, &a, &b, RIGHT, 13, searching);
-  mixHash_simd8_helper(&a, &b, c, RIGHT, 12, searching);
-  mixHash_simd8_helper(&b, c, &a, LEFT, 16, searching);
-  mixHash_simd8_helper(c, &a, &b, RIGHT, 5, searching);
-  mixHash_simd8_helper(&a, &b, c, RIGHT, 3, searching);
-  mixHash_simd8_helper(&b, c, &a, LEFT, 10, searching);
-  mixHash_simd8_helper(c, &a, &b, RIGHT, 15, searching);
+  mixHash_simd8_helper(&a, &b, &c, RIGHT, 13, searching);
+  mixHash_simd8_helper(&b, &c, &a, LEFT, 8, searching);
+  mixHash_simd8_helper(&c, &a, &b, RIGHT, 13, searching);
+  mixHash_simd8_helper(&a, &b, &c, RIGHT, 12, searching);
+  mixHash_simd8_helper(&b, &c, &a, LEFT, 16, searching);
+  mixHash_simd8_helper(&c, &a, &b, RIGHT, 5, searching);
+  mixHash_simd8_helper(&a, &b, &c, RIGHT, 3, searching);
+  mixHash_simd8_helper(&b, &c, &a, LEFT, 10, searching);
+  mixHash_simd8_helper(&c, &a, &b, RIGHT, 15, searching);
 
-  __m256i hash_values = _mm512_cvtepi64_epi32(*c); // direct hash with truncation to 32-bitv
+  __m256i hash_values = _mm512_cvtepi64_epi32(c); // direct hash with truncation to 32-bitv
   pmem_mod_simd8(&hash_values, node_indices);
 }
 
@@ -327,23 +331,24 @@ mixHash_simd4_helper(__m256i *first, __m256i *second, __m256i *third, int right,
   *first = _mm256_maskz_xor_epi64(searching, *first, bsTemp); //first = first XOR (third (<< || >>) shiftcount)
 }
 
-static void mixHash_simd4(__m256i *c, __m128i *node_indices, __mmask8 searching) {
+static void mixHash_simd4(__m256i *keys, __m128i *node_indices, __mmask8 searching) {
+  __m256i c = *keys;
   int RIGHT = 1;
   int LEFT = 0;
   __mmask8 oneMask = _cvtu32_mask8(~0); // ones
   __m256i a = _mm256_maskz_set1_epi64(oneMask, 0xff51afd7ed558ccdL);
   __m256i b = _mm256_maskz_set1_epi64(oneMask, 0xc4ceb9fe1a85ec53L);
-  mixHash_simd4_helper(&a, &b, c, RIGHT, 13, searching);
-  mixHash_simd4_helper(&b, c, &a, LEFT, 8, searching);
-  mixHash_simd4_helper(c, &a, &b, RIGHT, 13, searching);
-  mixHash_simd4_helper(&a, &b, c, RIGHT, 12, searching);
-  mixHash_simd4_helper(&b, c, &a, LEFT, 16, searching);
-  mixHash_simd4_helper(c, &a, &b, RIGHT, 5, searching);
-  mixHash_simd4_helper(&a, &b, c, RIGHT, 3, searching);
-  mixHash_simd4_helper(&b, c, &a, LEFT, 10, searching);
-  mixHash_simd4_helper(c, &a, &b, RIGHT, 15, searching);
+  mixHash_simd4_helper(&a, &b, &c, RIGHT, 13, searching);
+  mixHash_simd4_helper(&b, &c, &a, LEFT, 8, searching);
+  mixHash_simd4_helper(&c, &a, &b, RIGHT, 13, searching);
+  mixHash_simd4_helper(&a, &b, &c, RIGHT, 12, searching);
+  mixHash_simd4_helper(&b, &c, &a, LEFT, 16, searching);
+  mixHash_simd4_helper(&c, &a, &b, RIGHT, 5, searching);
+  mixHash_simd4_helper(&a, &b, &c, RIGHT, 3, searching);
+  mixHash_simd4_helper(&b, &c, &a, LEFT, 10, searching);
+  mixHash_simd4_helper(&c, &a, &b, RIGHT, 15, searching);
 
-  __m128i hash_values = _mm256_cvtepi64_epi32(*c); // direct hash with truncation to 32-bit
+  __m128i hash_values = _mm256_cvtepi64_epi32(c); // direct hash with truncation to 32-bit
   pmem_mod_simd4(&hash_values, node_indices);
 }
 
@@ -403,6 +408,8 @@ void pmem_nvm_hash_table_lookup_node_simd8(__m512i *keys, __m256i *node_indices,
     cur = _mm512_mask_i32gather_epi64 (cur, searching, *node_indices, (void const*)(pmem_ht_vol->entries), 8);
 
   }
+
+  //printf("[lookup] step @ end = %d\n", step);
   
 }
 
@@ -478,8 +485,6 @@ static void pmem_nvm_hash_table_remove_node (int              i//,
   paddr_t *entries = pmem_ht_vol->entries;
   HASHFS_ENT_SET_TOMBSTONE(entries[i]);
   pmem_nvm_flush((void*)(entries + i), sizeof(paddr_t));
-  pmem_ht->nnodes -= 1;
-  pmem_nvm_flush((void*)(&(pmem_ht->nnodes)), sizeof(int));
 }
 
 /**
@@ -537,8 +542,6 @@ pmem_nvm_hash_table_new(struct disk_superblock *sblk,
   pmem_ht_vol = (pmem_nvm_hash_vol_t *)malloc(sizeof(pmem_nvm_hash_vol_t));
   pmem_ht_vol->hash_func = hash_func ? hash_func : mix;
   pmem_ht_vol->entries = (paddr_t*)(dax_addr[g_root_dev] + (pmem_ht->entries_blk * g_block_size_bytes));
-  pmem_ht->nnodes = 0;
-  pmem_ht->noccupied = 0;
   pmem_ht->mod = pmem_ht->num_entries;
   pmem_ht->mask = pmem_ht->num_entries;
   pmem_ht->size = 0;
@@ -585,7 +588,6 @@ pmem_nvm_hash_table_insert_node(uint32_t node_index, uint32_t key_hash,
   paddr_t *entries = pmem_ht_vol->entries;
   paddr_t ent = entries[node_index];
 
-  // todo consider bookkeeping (nnodes, noccupied?)
   paddr_t expected = (paddr_t)~0;
   if(HASHFS_ENT_IS_TOMBSTONE(ent)) {
     expected -= 1;
@@ -651,19 +653,19 @@ int pmem_nvm_hash_table_lookup_simd(uint32_t inum, uint32_t lblk, uint32_t len, 
   int entries4 = len <= 4;
   u512i_64 inum_vec8; u512i_64 lblk_vec8;
   u256i_64 inum_vec4; u256i_64 lblk_vec4;
-	uint32_t pOfTwo[8] = {1, 2, 4, 8, 16, 32, 64, 128};
-	uint32_t to_do = 0;
-	for(size_t i = 0; i < len; ++i) {
-    if(entries4) {
-      inum_vec4.arr[i] = inum;
-		  lblk_vec4.arr[i] = lblk + i;
-    } else {
-      inum_vec8.arr[i] = inum;
-		  lblk_vec8.arr[i] = lblk + i;
+    uint32_t pOfTwo[8] = {1, 2, 4, 8, 16, 32, 64, 128};
+    uint32_t to_do = 0;
+    for(size_t i = 0; i < len; ++i) {
+        if(entries4) {
+          inum_vec4.arr[i] = inum;
+          lblk_vec4.arr[i] = lblk + i;
+        } else {
+          inum_vec8.arr[i] = inum;
+          lblk_vec8.arr[i] = lblk + i;
+        }
+
+        to_do |= pOfTwo[i];
     }
-		
-		to_do |= pOfTwo[i];
-	}
 
   __mmask8 to_find = _cvtu32_mask8(to_do);
 
@@ -684,8 +686,13 @@ int pmem_nvm_hash_table_lookup_simd(uint32_t inum, uint32_t lblk, uint32_t len, 
     if(!success) {
       return success;
     }
+
+    //__m512i meta_vec = _mm512_set1_epi64((int64_t)meta_size);
+    //indices8.vec = _mm512_add_epi64(indices8.vec, meta_vec);
+
     for(size_t i = 0; i < len; ++i) {
       pblks[i] = ((uint64_t)indices8.arr[i]) + ((uint64_t)meta_size);
+      //pblks[i] = ((uint64_t)indices8.arr[i]);
     }
   }
   
@@ -738,11 +745,9 @@ pmem_nvm_hash_table_insert_internal (paddr_t    key,
 
   while (!HASHFS_ENT_IS_EMPTY(cur)) {
     if (cur == key && HASHFS_ENT_IS_VALID(cur)) {
-      printf("already exists: %lx (trying to insert: %lx at index %u)\n",
-        cur, key, node_index);
+      *index = node_index + pmem_ht->meta_size;
       return 0;
     } else if (HASHFS_ENT_IS_TOMBSTONE(cur) && !have_tombstone) {
-      // keep lock until we decide we don't need it
       first_tombstone = node_index;
       have_tombstone = 1;
 #ifndef SEQ_STEP
@@ -779,8 +784,6 @@ pmem_nvm_hash_table_insert_internal (paddr_t    key,
         cur = entries[node_index];
       }
     }
-  pmem_ht->nnodes = pmem_ht->nnodes + 1;
-  pmem_nvm_flush((void*)(&(pmem_ht->nnodes)), sizeof(int));
   *index = node_index + pmem_ht->meta_size;
   return true;
 }
@@ -915,9 +918,11 @@ static inline int pmem_nvm_hash_table_insert_internal_simd8(__m512i *inums, __m5
     duplicates_mask = 0;
     for(uint32_t i = 0; i < 8; ++i) {
       for(uint32_t j = i; j < 8; ++j) {
-        if(i != j && node_indices->arr[i] == node_indices->arr[j] && pOfTwo[i] & to_find_int != 0 && pOfTwo[j] & to_find_int != 0) {
-          duplicates_mask |= pOfTwo[j];
-	        duplicates_mask |= pOfTwo[i];
+        if(i != j && node_indices->arr[i] == node_indices->arr[j] &&
+                ((pOfTwo[i] & to_find_int) != 0) &&
+                ((pOfTwo[j] & to_find_int) != 0)) {
+          //duplicates_mask |= pOfTwo[j];
+            duplicates_mask |= pOfTwo[i];
         }
       }
     }
@@ -927,6 +932,13 @@ static inline int pmem_nvm_hash_table_insert_internal_simd8(__m512i *inums, __m5
     }
   } while(duplicates_mask != 0);
   _mm512_mask_i32scatter_epi64(pmem_ht_vol->entries, to_find, *indices, keys, 8);
+
+  for (int i = 0; i < 8; ++i) {
+      if (!(to_find & (1 << i))) continue;
+
+      pmem_persist((void*)&pmem_ht_vol->entries[node_indices->arr[i]], 
+                  sizeof(*pmem_ht_vol->entries));
+  }
 
   return true;
 
@@ -1074,6 +1086,14 @@ int pmem_nvm_hash_table_remove_internal_simd8(__m512i *inums, __m512i *lblks, __
 
   _mm512_mask_i32scatter_epi64(pmem_ht_vol->entries, to_tombstone, node_indices, tombstone_val, 8);
 
+  u256i_32 *narr = (u256i_32*)&node_indices;
+  for (int i = 0; i < 8; ++i) {
+      if (!(to_remove & (1 << i))) continue;
+
+      pmem_persist((void*)&pmem_ht_vol->entries[narr->arr[i]], 
+                  sizeof(*pmem_ht_vol->entries));
+  }
+
   return _cvtmask8_u32(failure) == 0;
 }
 
@@ -1100,19 +1120,19 @@ int pmem_nvm_hash_table_remove_simd(uint32_t inum, uint32_t lblk, uint32_t len){
   int entries4 = len <= 4;
   u512i_64 inum_vec8; u512i_64 lblk_vec8;
   u256i_64 inum_vec4; u256i_64 lblk_vec4;
-	uint32_t pOfTwo[8] = {1, 2, 4, 8, 16, 32, 64, 128};
-	uint32_t to_do = 0;
-	for(size_t i = 0; i < len; ++i) {
-    if(entries4) {
-      inum_vec4.arr[i] = inum;
-		  lblk_vec4.arr[i] = lblk + i;
-    } else {
-      inum_vec8.arr[i] = inum;
-		  lblk_vec8.arr[i] = lblk + i;
+    uint32_t pOfTwo[8] = {1, 2, 4, 8, 16, 32, 64, 128};
+    uint32_t to_do = 0;
+    for(size_t i = 0; i < len; ++i) {
+        if(entries4) {
+          inum_vec4.arr[i] = inum;
+          lblk_vec4.arr[i] = lblk + i;
+        } else {
+          inum_vec8.arr[i] = inum;
+          lblk_vec8.arr[i] = lblk + i;
+        }
+
+        to_do |= pOfTwo[i];
     }
-		
-		to_do |= pOfTwo[i];
-	}
 
   __mmask8 to_find = _cvtu32_mask8(to_do);
   int success = 0;
@@ -1151,17 +1171,24 @@ pmem_nvm_hash_table_remove (inum_t         inum,
                                         );
 }
 
-
-/**
- * nvm_hash_table_size:
- * @hash_table: a #nvm_hash_idx_t
- *
- * Returns the number of elements contained in the #nvm_hash_idx_t.
- *
- * Returns: the number of key/value pairs in the #nvm_hash_idx_t.
- */
-uint32_t pmem_nvm_hash_table_size () {
-  return pmem_ht->nnodes;
+void debug_stat_pmem_ht() {
+    uint64_t empty_cnt = 0;
+    uint64_t tombstone_cnt = 0;
+    uint64_t valid_cnt = 0;
+    for (unsigned int i=0; i < pmem_ht->num_entries; ++i) {
+        paddr_t ent = pmem_ht_vol->entries[i];
+        if (HASHFS_ENT_IS_EMPTY(ent)) {
+            ++empty_cnt;
+        }
+        else if (HASHFS_ENT_IS_TOMBSTONE(ent)) {
+            ++tombstone_cnt;
+        }
+        else {
+            ++valid_cnt;
+        }
+    }
+    printf("empty_cnt: %lu tombstone_cnt : %lu valid_cnt %lu\n",
+            empty_cnt, tombstone_cnt, valid_cnt);
 }
 
 /*

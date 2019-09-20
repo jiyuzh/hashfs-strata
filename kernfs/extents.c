@@ -2817,8 +2817,10 @@ int mlfs_hashfs_get_blocks(handle_t *handle, struct inode *inode,
 	int create_data = flags & MLFS_GET_BLOCKS_CREATE_DATA;
 	int create_meta = flags & MLFS_GET_BLOCKS_CREATE_META;
 	int success = 0;
-	if(create_data || create_meta) {
-		success = pmem_nvm_hash_table_insert_simd(inode->inum, map_arr->m_lblk, map_arr->m_len, map_arr->m_pblk);
+
+	if (map_arr->m_len >= 8) {
+		if(create_data || create_meta) {
+			success = pmem_nvm_hash_table_insert_simd(inode->inum, map_arr->m_lblk, map_arr->m_len, map_arr->m_pblk);
 #ifdef KERNFS
 		if (enable_perf_stats) {
 			g_perf_stats.path_search_tsc += (asm_rdtscp() - tsc_start);
@@ -2827,27 +2829,29 @@ int mlfs_hashfs_get_blocks(handle_t *handle, struct inode *inode,
 			end_cache_stats(&(g_perf_stats.cache_stats));
 		}
 #endif
-	}
-	else {
-		if (enable_perf_stats) {
-			update_stats_dist(&(g_perf_stats.read_per_index),
-								g_perf_stats.path_storage_nr);
-			end_cache_stats(&(g_perf_stats.cache_stats));
+		}
+		else {
+			if (enable_perf_stats) {
+				update_stats_dist(&(g_perf_stats.read_per_index),
+						g_perf_stats.path_storage_nr);
+				end_cache_stats(&(g_perf_stats.cache_stats));
+			}
+			success = pmem_nvm_hash_table_lookup_simd(inode->inum, map_arr->m_lblk, map_arr->m_len, map_arr->m_pblk);
+		}
+        if (!success) return success;
+
+        // TODO if this works replace with SIMD
+        for(size_t i = 0; i < map_arr->m_len; ++i) {
+            map_arr->m_pblk[i] += sblk->ondisk->datablock_start;
         }
-		success = pmem_nvm_hash_table_lookup_simd(inode->inum, map_arr->m_lblk, map_arr->m_len, map_arr->m_pblk);
-	}
-	return map_arr->m_len;
-	
-	
+
+        return map_arr->m_len;
+    }
+
 	for(size_t i = 0; i < map_arr->m_len; ++i) {
 		paddr_t index;
 		if(create_data || create_meta) {
-			int success = pmem_nvm_hash_table_insert(inode->inum, map_arr->m_lblk + i, &index);
-		}
-		if(!success) {
-			//block already existed, so this does nothing
-			printf("block already existed\n");
-			return i;
+			(void)pmem_nvm_hash_table_insert(inode->inum, map_arr->m_lblk + i, &index);
 		} else {
 			int found = pmem_nvm_hash_table_lookup(inode->inum, map_arr->m_lblk + i, &index);
 			
@@ -3292,11 +3296,14 @@ int mlfs_ext_truncate(handle_t *handle, struct inode *inode,
 		size_t rc = 0;
 		//printf("Start: %ld, End: %ld\n", start, end);
 		
-		for(size_t i = start; i <= end; ++i) {
+		for(size_t i = start; i <= end;) {
             if (end - i + 1 >= 8) {
                 int success = pmem_nvm_hash_table_remove_simd(inode->inum, i, 8);
                 if (success) {
                     ++rc;
+                }
+                else {
+                    abort();
                 }
                 i += 8;
             } else {
@@ -3304,6 +3311,9 @@ int mlfs_ext_truncate(handle_t *handle, struct inode *inode,
                 int success = pmem_nvm_hash_table_remove(inode->inum, i, &index);
                 if (success) {
                     ++rc;
+                }
+                else {
+                    abort();
                 }
                 ++i;
             }
@@ -3332,9 +3342,10 @@ int mlfs_ext_truncate(handle_t *handle, struct inode *inode,
         ret = FN(inode->ext_idx, im_remove, inode->ext_idx, inode->inum, start, 
                  (end - start) + 1);
 
-        if_then_panic(ret != (end - start) + 1, "didn't remove enough blocks! only %d / %u\n", ret, (end - start) + 1);
+        //if_then_panic(ret != (end - start) + 1, "didn't remove enough blocks! only %d / %u\n", ret, (end - start) + 1);
 
-        if (ret == (end - start + 1)) ret = 0;
+        //if (ret == (end - start + 1)) ret = 0;
+        if (ret > 0) ret = 0;
     } else if (IDXAPI_IS_GLOBAL()) {
         ret = mlfs_hash_truncate(handle, inode, start, end);
     } else {

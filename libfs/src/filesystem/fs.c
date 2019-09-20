@@ -1509,7 +1509,7 @@ ssize_t do_unaligned_read(struct inode *ip, uint8_t *dst, offset_t off, size_t i
           }
           mlfs_assert(ret != -EIO);
           if(IDXAPI_IS_HASHFS()) {
-            bh = bh_get_sync_IO(bmap_req.dev, bmap_req_arr.block_no[0], BH_NO_DATA_ALLOC);
+            bh = bh_get_sync_IO(bmap_req_arr.dev, bmap_req_arr.block_no[0], BH_NO_DATA_ALLOC);
           }
           else {
             bh = bh_get_sync_IO(bmap_req.dev, bmap_req.block_no, BH_NO_DATA_ALLOC);
@@ -1583,7 +1583,8 @@ ssize_t do_unaligned_read(struct inode *ip, uint8_t *dst, offset_t off, size_t i
   }
 
   // NVM case: no read caching.
-  if (bmap_req.dev == g_root_dev) {
+  if ((IDXAPI_IS_HASHFS() && bmap_req_arr.dev == g_root_dev)
+       || bmap_req.dev == g_root_dev) {
     if (enable_perf_stats) {
       start_tsc = asm_rdtscp();
     }

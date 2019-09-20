@@ -106,8 +106,6 @@ typedef struct pmem_nvm_hashtable_index {
     int             size;
     int             mod;
     unsigned        mask;
-    int             nnodes;
-    int             noccupied;  /* nnodes + tombstones */
 
     paddr_t entries_blk; /* persists */
     //paddr_t *entries; /* run-time */
