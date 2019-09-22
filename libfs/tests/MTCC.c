@@ -171,28 +171,30 @@ int main(int argc, char **argv) {
             exit(-1);
         }
 
-        if (s.st_size > start_file_size) {
-            int terr = ftruncate(fd_v[i], start_file_size);
+        if (s.st_size != start_file_size) {
+            int terr = ftruncate(fd_v[i], 0);
             if (terr) {
                 perror("truncate failed");
                 exit(-1);
             }
 
             can_digest = true;
-        }
 
-        // init each file with read_unit data or start size, whichever is larger
-        size_t sz = read_unit > start_file_size ? read_unit : start_file_size;
-        // We don't need to make the write unit so small for init size
-        size_t incr = start_file_size < 64 * 1024 * 1024 ? start_file_size 
-                        : 64 * 1024 * 1024;
+            lseek(fd_v[i], 0, SEEK_SET);
 
-        for (size_t s = 0; s < sz; ) {
-            can_digest = true;
-            size_t amount = sz - s > incr ? incr : sz - s;
-            ssize_t ret = write(fd_v[i], init_unit, amount);
-            assert(ret != -1);
-            s += ret;
+            // init each file with read_unit data or start size, whichever is larger
+            size_t sz = read_unit > start_file_size ? read_unit : start_file_size;
+            // We don't need to make the write unit so small for init size
+            size_t incr = start_file_size < 64 * 1024 * 1024 ? start_file_size 
+                            : 64 * 1024 * 1024;
+
+            for (size_t s = 0; s < sz; ) {
+                can_digest = true;
+                size_t amount = sz - s > incr ? incr : sz - s;
+                ssize_t ret = write(fd_v[i], init_unit, amount);
+                assert(ret != -1);
+                s += ret;
+            }
         }
     }
 
