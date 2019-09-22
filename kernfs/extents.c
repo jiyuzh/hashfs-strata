@@ -2821,14 +2821,6 @@ int mlfs_hashfs_get_blocks(handle_t *handle, struct inode *inode,
 	if (map_arr->m_len >= 8) {
 		if(create_data || create_meta) {
 			success = pmem_nvm_hash_table_insert_simd(inode->inum, map_arr->m_lblk, map_arr->m_len, map_arr->m_pblk);
-#ifdef KERNFS
-		if (enable_perf_stats) {
-			g_perf_stats.path_search_tsc += (asm_rdtscp() - tsc_start);
-			g_perf_stats.path_search_size += map_arr->m_len;
-			g_perf_stats.path_search_nr++;
-			end_cache_stats(&(g_perf_stats.cache_stats));
-		}
-#endif
 		}
 		else {
 			if (enable_perf_stats) {
@@ -2845,6 +2837,14 @@ int mlfs_hashfs_get_blocks(handle_t *handle, struct inode *inode,
             map_arr->m_pblk[i] += sblk->ondisk->datablock_start;
         }
 
+#ifdef KERNFS
+		if (enable_perf_stats) {
+			g_perf_stats.path_search_tsc += (asm_rdtscp() - tsc_start);
+			g_perf_stats.path_search_size += map_arr->m_len;
+			g_perf_stats.path_search_nr++;
+			end_cache_stats(&(g_perf_stats.cache_stats));
+		}
+#endif
         return map_arr->m_len;
     }
 
@@ -2863,6 +2863,14 @@ int mlfs_hashfs_get_blocks(handle_t *handle, struct inode *inode,
 		}
 		map_arr->m_pblk[i] = index + sblk->ondisk->datablock_start;
 	}
+#ifdef KERNFS
+		if (enable_perf_stats) {
+			g_perf_stats.path_search_tsc += (asm_rdtscp() - tsc_start);
+			g_perf_stats.path_search_size += map_arr->m_len;
+			g_perf_stats.path_search_nr++;
+			end_cache_stats(&(g_perf_stats.cache_stats));
+		}
+#endif
 	return map_arr->m_len;		
 	
 }
