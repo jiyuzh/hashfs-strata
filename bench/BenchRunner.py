@@ -39,6 +39,9 @@ class BenchRunner:
             raise Exception('No valid benchmark selected!')
 
         self.root_path = Path(__file__).resolve().parent.parent
+        self.libfs_tests_path = (self.root_path / 'libfs' / 'tests').resolve()
+        assert self.libfs_tests_path.exists()
+
         self.kernfs = None
         self.outdir = Path(self.args.outdir)
 
@@ -226,6 +229,18 @@ class BenchRunner:
 
     def run(self):
         self.args.fn(self)
+
+    @staticmethod
+    def get_standard_progress_bar(nitems):
+        import progressbar
+        widgets = [
+                    progressbar.Percentage(),
+                    ' (', progressbar.Counter(), ' of {})'.format(nitems),
+                    ' ', progressbar.Bar(left='[', right=']'),
+                    ' ', progressbar.Timer(),
+                    ' ', progressbar.ETA(),
+                  ]
+        return widgets
 
     @classmethod
     def _add_common_arguments(cls, parser):

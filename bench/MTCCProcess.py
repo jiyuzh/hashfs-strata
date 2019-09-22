@@ -27,6 +27,8 @@ class MTCCRunner(BenchRunner):
         super().__init__(args)
         self.update_bar_proc = None
         self.skip_insert = args.skip_insert
+        self.mtcc_path = (self.root_path / 'libfs' / 'tests').resolve()
+        assert self.mtcc_path.exists()
 
     def __del__(self):
         ''' Avoid having the asynchronous refresh thread become a zombie. '''
@@ -96,11 +98,103 @@ class MTCCRunner(BenchRunner):
 
         return [stat_obj]
 
+    def _run_workload(self, workload):
+
+        stat_objs = []
+        numa_node = self.args.numa_node
+        dir_str = str(self.mtcc_path)
+
+        idx_struct, layout_score, start_size, io_size, reps, \
+                nfiles, trial_num = workload
+
+        self.env['MLFS_CACHE_PERF'] = '0'
+
+        self.env['MLFS_IDX_STRUCT'] = idx_struct
+        self.env['MLFS_LAYOUT_SCORE'] = layout_score
+
+        labels = {}
+        labels['struct'] = idx_struct
+        labels['layout'] = layout_score
+        labels['start size'] = start_size
+        labels['io size'] = io_size
+        labels['repetitions'] = reps
+        labels['num files'] = nfiles
+        labels['trial num'] = trial_num
+
+        end_size = int(start_size + ((io_size * reps) / nfiles))
+
+        mtcc_insert_arg_str = \
+            f'''taskset -c 0
+                numactl -N {numa_node} -m {numa_node} {dir_str}/run.sh
+                {dir_str}/MTCC -b {io_size} -s 1 -j 1 -n {nfiles}
+                -S {start_size} -M {end_size}
+                -w {io_size * reps} -r 0'''
+
+        setup_size = 1024 * 4096 if start_size > (1024 * 4096) else start_size
+
+        readtest_setup_arg_str = \
+            f'''taskset -c 0
+                numactl -N {numa_node} -m {numa_node} {dir_str}/run.sh
+                {dir_str}/MTCC -b {setup_size} -s 1 -j 1 -n {nfiles}
+                -M {start_size} -S {start_size}
+                -w {setup_size} -r 0'''
+
+        mtcc_seq_arg_str = \
+            f'''taskset -c 0
+                numactl -N {numa_node} -m {numa_node} {dir_str}/run.sh
+                {dir_str}/readfile -b {io_size} -s 1 -j 1 -n {nfiles}
+                -r {io_size * reps}'''
+
+        mtcc_rand_arg_str = \
+            f'''taskset -c 0
+                numactl -N {numa_node} -m {numa_node} {dir_str}/run.sh
+                {dir_str}/readfile -b {io_size} -s 0 -j 1 -n {nfiles}
+                -r {io_size * reps} -x'''
+
+        insert_trial_args = shlex.split(mtcc_insert_arg_str)
+
+        seq_setup_args = shlex.split(readtest_setup_arg_str)
+        seq_trial_args = shlex.split(mtcc_seq_arg_str)
+
+        rand_setup_args = seq_setup_args
+        rand_trial_args = shlex.split(mtcc_rand_arg_str)
+
+        # Run the benchmarks
+        # 1) Insert test
+        if not self.skip_insert:
+            insert_labels = {}
+            insert_labels.update(labels)
+            insert_labels['test'] = 'Insert'
+            print(insert_trial_args)
+            stat_objs += self._run_mtcc_trial(
+                self.mtcc_path, None, insert_trial_args, insert_labels)
+
+            if self.args.only_insert:
+                return stat_objs
+
+        # 2) Sequential read test
+        seq_labels = {}
+        seq_labels.update(labels)
+        seq_labels['test'] = 'Sequential Read'
+        print(seq_setup_args)
+        print(seq_trial_args)
+        stat_objs += self._run_mtcc_trial(
+            self.mtcc_path, seq_setup_args, seq_trial_args, seq_labels)
+
+        # 3) Random read test
+        rand_labels = {}
+        rand_labels.update(labels)
+        rand_labels['test'] = 'Random Read'
+        print(rand_setup_args)
+        print(rand_trial_args)
+        stat_objs += self._run_mtcc_trial(
+            self.mtcc_path, rand_setup_args, rand_trial_args, rand_labels)
+
+        return stat_objs
+
 
     def _run_mtcc(self):
         print('Running MTCC profiles.')
-        mtcc_path = (self.root_path / 'libfs' / 'tests').resolve()
-        assert mtcc_path.exists()
        
         workloads = self._get_workloads()
 
@@ -121,7 +215,6 @@ class MTCCRunner(BenchRunner):
             counter = 0
 
             def update_bar(shared_q):
-                import time
                 counter = 0
                 while True:
                     time.sleep(0.5)
@@ -135,109 +228,51 @@ class MTCCRunner(BenchRunner):
             self.update_bar_proc = Process(target=update_bar, args=(shared_q,))
             self.update_bar_proc.start()
 
-            numa_node = self.args.numa_node
-            dir_str   = str(mtcc_path)
 
             stat_objs = []
             current = ''
             prev_idx = None
+            prev_layout = None
+
+            workload_num = 0
+            workload_tries = 0
             try:
-                for workload in workloads:
+                while workload_num < len(workloads):
+
+                    workload = workloads[workload_num]
+                    workload_num += 1
+
+                    idx_struct, layout_score = workload[0:2]
+
+                    self.env['MLFS_CACHE_PERF'] = '0'
+
+                    # Needed for HASHFS
+                    self.env['MLFS_IDX_STRUCT'] = idx_struct
+
                     try:
-
-                        idx_struct, layout_score, start_size, io_size, reps, \
-                                nfiles, trial_num = workload
-
-                        self.env['MLFS_CACHE_PERF'] = '0'
-
-                        if prev_idx is None or prev_idx != idx_struct:
+                        if self.args.always_mkfs or \
+                                prev_idx is None or prev_layout is None or \
+                                prev_idx != idx_struct or \
+                                prev_layout != layout_score:
                             assert self.kernfs is not None
                             self.kernfs.mkfs()
 
-                        prev_idx = idx_struct
-
-                        self.env['MLFS_IDX_STRUCT'] = idx_struct
-                        self.env['MLFS_LAYOUT_SCORE'] = layout_score
-
-                        labels = {}
-                        labels['struct'] = idx_struct
-                        labels['layout'] = layout_score
-                        labels['start size'] = start_size
-                        labels['io size'] = io_size
-                        labels['repetitions'] = reps
-                        labels['num files'] = nfiles
-                        labels['trial num'] = trial_num
-
-                        end_size = int(start_size + ((io_size * reps) / nfiles))
-
-                        mtcc_insert_arg_str = \
-                            f'''taskset -c 0
-                                numactl -N {numa_node} -m {numa_node} {dir_str}/run.sh
-                                {dir_str}/MTCC -b {io_size} -s 1 -j 1 -n {nfiles}
-                                -S {start_size} -M {end_size} 
-                                -w {io_size * reps} -r 0'''
-
-                        setup_size = 1024 * 4096 if start_size > (1024 * 4096) else start_size
-
-                        readtest_setup_arg_str = \
-                            f'''taskset -c 0
-                                numactl -N {numa_node} -m {numa_node} {dir_str}/run.sh
-                                {dir_str}/MTCC -b {setup_size} -s 1 -j 1 -n {nfiles}
-                                -M {start_size} -w {start_size} -r 0 -S 0'''
-
-                        mtcc_seq_arg_str = \
-                            f'''taskset -c 0
-                                numactl -N {numa_node} -m {numa_node} {dir_str}/run.sh
-                                {dir_str}/readfile -b {io_size} -s 1 -j 1 -n {nfiles}
-                                -r {io_size * reps}'''
-
-                        mtcc_rand_arg_str = \
-                            f'''taskset -c 0
-                                numactl -N {numa_node} -m {numa_node} {dir_str}/run.sh
-                                {dir_str}/readfile -b {io_size} -s 0 -j 1 -n {nfiles}
-                                -r {io_size * reps} -x'''
-
-                        insert_trial_args = shlex.split(mtcc_insert_arg_str)
-
-                        seq_setup_args = shlex.split(readtest_setup_arg_str)
-                        seq_trial_args = shlex.split(mtcc_seq_arg_str)
-
-                        rand_setup_args = seq_setup_args
-                        rand_trial_args = shlex.split(mtcc_rand_arg_str)
-
-                        # Run the benchmarks
-                        # 1) Insert test
-                        if not self.skip_insert:
-                            current = 'Insert'
-                            insert_labels = {}
-                            insert_labels.update(labels)
-                            insert_labels['test'] = 'Insert'
-                            stat_objs += self._run_mtcc_trial(
-                                mtcc_path, None, insert_trial_args, insert_labels)
-
-                        # 2) Sequential read test
-                        current = 'Sequential'
-                        seq_labels = {}
-                        seq_labels.update(labels)
-                        seq_labels['test'] = 'Sequential Read'
-                        stat_objs += self._run_mtcc_trial(
-                            mtcc_path, seq_setup_args, seq_trial_args, seq_labels)
-
-                        # 3) Random read test
-                        current = 'Random'
-                        rand_labels = {}
-                        rand_labels.update(labels)
-                        rand_labels['test'] = 'Random Read'
-                        stat_objs += self._run_mtcc_trial(
-                            mtcc_path, rand_setup_args, rand_trial_args, rand_labels)
+                        stat_objs += self._run_workload(workload)
 
                         counter += 1
                         shared_q.put(counter)
+                        workload_tries = 0
 
-                    except:
+                    except Exception as e:
                         print(current)
                         pprint(workload)
-                        raise
+                        print(e)
+                        
+                        self.kernfs.mkfs()
+                        workload_num -= 1
+                        workload_tries += 1
+                        if workload_tries >= 3:
+                            raise e
 
             finally:
                 # Output all the results
@@ -249,8 +284,9 @@ class MTCCRunner(BenchRunner):
                         'repetitions', 'num files', 'trial num', 'start size']
 
                 ntotal = 3 * len(workloads) if not self.skip_insert else 2 * len(workloads)
+                ntotal = ntotal if not self.args.only_insert else len(workloads)
                 if len(stat_objs) != ntotal:
-                    print(f'What? Should have {3 * len(workloads)}, only have {len(stat_objs)}!')
+                    print(f'What? Should have {ntotal}, only have {len(stat_objs)}!')
 
                 stat_summary = []
                 for stat_obj in stat_objs:
@@ -310,5 +346,11 @@ class MTCCRunner(BenchRunner):
 
         parser.add_argument('--skip-insert', action='store_true',
                             help='Skip the insert test')
+
+        parser.add_argument('--only-insert', action='store_true',
+                            help='Only run the insert test')
+
+        parser.add_argument('--always-mkfs', action='store_true',
+                            help='Always rerun mkfs (runs insert-seq-rand-mkfs, repeat).')
 
         cls._add_common_arguments(parser)

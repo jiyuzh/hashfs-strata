@@ -202,7 +202,7 @@ class YCSBCRunner(BenchRunner):
             finally:
                 # Output all the results
                 timestamp_str = datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
-                fname = f'mtcc_{timestamp_str}.json'
+                fname = f'ycsbc_{timestamp_str}.json'
                 self._write_bench_output(stat_objs, fname)
                 # also write a summarized version
                 keys = ['layout', 'total_time', 'struct', 'test', 'io size',
@@ -217,7 +217,7 @@ class YCSBCRunner(BenchRunner):
                 for stat_obj in stat_objs:
                     small_obj = {k: stat_obj[k] for k in keys if k in stat_obj}
                     stat_summary += [small_obj]
-                sname = f'mtcc_summary_{timestamp_str}.json'
+                sname = f'ycsbc_summary_{timestamp_str}.json'
                 self._write_bench_output(stat_summary, sname)
 
                 # Shutdown async tasks
