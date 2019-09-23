@@ -331,7 +331,7 @@ int main(int argc, char *argv[])
 	mlfs_dir_ino = mkfs_ialloc(dev_id, T_DIR);
 	printf("== create /mlfs directory\n");
 	printf("/mlfs inode(inum = %u) at block address %lx\n",
-			rootino, mkfs_get_inode_block(rootino, ondisk_sb.inode_start));
+			mlfs_dir_ino, mkfs_get_inode_block(mlfs_dir_ino, ondisk_sb.inode_start));
 
 	bzero(&de, sizeof(de));
 	de.inum = xshort(mlfs_dir_ino);
@@ -544,11 +544,13 @@ void iappend(uint8_t dev, uint32_t inum, void *xp, int n)
                 // sequential allocation for freeblock
 				if(IDXAPI_IS_HASHFS() && dev_id == g_root_dev) {
 					addr_t index;
-					pmem_nvm_hash_table_insert_simd(inum, 0, 1, &index);
+					pmem_nvm_hash_table_insert(inum, 0, &index);
+					index += ondisk_sb.datablock_start;
 					din.l1_addrs[fbn] = xint(index);
+					dbg_printf("creating new blocks at %u\n", index);
 				}
 				else {
-            		din.l1_addrs[fbn] = xint(freeblock++);
+					din.l1_addrs[fbn] = xint(freeblock++);
 				}
             }
             block_address = xint(din.l1_addrs[fbn]);
