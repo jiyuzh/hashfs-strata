@@ -48,10 +48,9 @@ class YCSBCRunner(BenchRunner):
             cols = line.split()
             if 'leveldb' in line:
                 labels['KTPS'] = cols[-1]
-            elif line.startswith("READ "):
-                labels['READ'] = {'cnt': cols[1], 'cycles': cols[2]}
-            elif line.startswith("UPDATE "):
-                labels['UPDATE'] = {'cnt': cols[1], 'cycles': cols[2]}
+            for op in ["READ", "UPDATE", "SCAN", "INSERT", "READMODIFYWRITE", "SUM"]:
+              if line.startswith(op+ " "):
+                labels[op] = {'cnt': cols[1], 'cycles': cols[2]}
         if len(labels) == 0:
             # Fall through, display the output that didn't have the elapsed time.
             pprint(lines)
@@ -77,6 +76,10 @@ class YCSBCRunner(BenchRunner):
         stat_obj['kernfs'] = self._get_kernfs_stats()
 
         if self.args.measure_cache_perf:
+            if self.args.always_mkfs:
+                assert self.kernfs is not None
+                self.kernfs.mkfs()
+
             self._run_trial_continue(setup_args, cwd, None, timeout=(10*60))
 
             self.aep.start()
