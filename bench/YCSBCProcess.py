@@ -20,12 +20,16 @@ from progressbar import ProgressBar
 
 from Utils import *
 from BenchRunner import BenchRunner
+from AEPWatchThread import AEPWatchThread
 
 class YCSBCRunner(BenchRunner):
 
     def __init__(self, args):
         super().__init__(args)
         self.update_bar_proc = None
+        self.bench_path = (self.root_path / 'bench').resolve()
+        self.dbfilename = "/mlfs/db"
+        assert self.bench_path.exists()
 
     def __del__(self):
         ''' Avoid having the asynchronous refresh thread become a zombie. '''
@@ -57,19 +61,15 @@ class YCSBCRunner(BenchRunner):
 
 
     def _run_ycsbc_trial(self, cwd, setup_args, trial_args, labels):
-        self.env['MLFS_CACHE_PERF'] = '0'
         assert (setup_args is not None)
-        if setup_args:
-            self.env['MLFS_PROFILE'] = '0'
-            self._run_trial_continue(setup_args, cwd, None)
-            self.env['MLFS_PROFILE'] = '1'
 
-            stdout_labels = self._run_trial_end(trial_args, cwd, self._parse_ycsbc_KTPS)
+        self.env['MLFS_PROFILE'] = '1'
+        self.env['MLFS_CACHE_PERF'] = '0'
+        
+        self._run_trial_continue(setup_args, cwd, None, timeout=(10*60))
 
-        else:
-            self.env['MLFS_PROFILE'] = '1'
-
-            stdout_labels = self._run_trial(trial_args, cwd, self._parse_ycsbc_KTPS)
+        stdout_labels = self._run_trial_end(trial_args, cwd, 
+                self._parse_ycsbc_KTPS, timeout=(10*60))
 
         # Get the stats.
         labels.update(stdout_labels)
@@ -77,26 +77,21 @@ class YCSBCRunner(BenchRunner):
         stat_obj['kernfs'] = self._get_kernfs_stats()
 
         if self.args.measure_cache_perf:
-            self.env['MLFS_PROFILE'] = '1'
-            self.env['MLFS_CACHE_PERF'] = '1'
-            if setup_args:
-                self._run_trial_continue(setup_args, cwd, None, timeout=(10*60))
+            self._run_trial_continue(setup_args, cwd, None, timeout=(10*60))
 
-                stdout_labels = self._run_trial_end(
-                    trial_args, cwd, self._parse_ycsbc_KTPS, timeout=(10*60))
-
-            else:
-
-                stdout_labels = self._run_trial(
-                    trial_args, cwd, self._parse_ycsbc_KTPS, timeout=(10*60))
+            self.aep.start()
+            stdout_labels = self._run_trial_end(
+                trial_args, cwd, self._parse_ycsbc_KTPS, timeout=(10*60))
+            aep_stats = self.aep.stop()
 
             # Get the stats.
             labels.update(stdout_labels)
             cache_stat_obj = self._parse_trial_stat_files('N/A', labels)
 
             try:
-                stat_obj['cache'] = cache_stat_obj['idx_cache']
-                stat_obj['cache']['kernfs'] = self._get_kernfs_stats()['idx_cache']
+                #stat_obj['cache'] = cache_stat_obj['idx_cache']
+                #stat_obj['cache']['kernfs'] = self._get_kernfs_stats()['idx_cache']
+                stat_obj['cache'] = aep_stats
             except:
                 pprint(cache_stat_obj)
                 pprint(self._get_kernfs_stats())
@@ -104,28 +99,53 @@ class YCSBCRunner(BenchRunner):
 
         return [stat_obj]
 
+    def _run_yscbc_workload(self, workload):
+        idx_struct, layout_score, ycsb_workload, trial_num = workload
+
+        numa_node = self.args.numa_node
+        dir_str   = str(self.bench_path)
+        libfs_tests_str = str(self.libfs_tests_path)
+
+        self.env['MLFS_CACHE_PERF'] = '0'
+
+        self.env['MLFS_IDX_STRUCT'] = idx_struct
+        self.env['MLFS_LAYOUT_SCORE'] = layout_score
+
+        labels = {}
+        labels['struct'] = idx_struct
+        labels['layout'] = layout_score
+        labels['ycsb_workload'] = ycsb_workload
+        labels['trial num'] = trial_num
+
+        rmrf_setup_str = \
+            f'''taskset -c 0 numactl -N {numa_node} -m {numa_node}
+                {libfs_tests_str}/run.sh {libfs_tests_str}/rmrf {self.dbfilename}
+            '''
+
+        ycsbc_arg_str = \
+            f'''taskset -c 0
+                numactl -N {numa_node} -m {numa_node} {dir_str}/run.sh
+                {dir_str}/YCSB-C/ycsbc -db leveldb
+                -dbfilename {self.dbfilename}
+                -P {dir_str}/YCSB-C/workloads/{ycsb_workload}'''
+
+        rmrf_setup_args = shlex.split(rmrf_setup_str)
+        ycsbc_trial_args = shlex.split(ycsbc_arg_str)
+
+        self.remove_old_libfs_stats()
+
+        # Run the benchmarks
+        return self._run_ycsbc_trial(
+            self.bench_path, rmrf_setup_args, ycsbc_trial_args, labels)
 
     def _run_ycsbc(self):
-        print('Running YCSBC profiles.')
-        bench_path = (self.root_path / 'bench').resolve()
-        libfs_test_path = (self.root_path / 'libfs' / 'tests').resolve()
-        dbfilename = "/mlfs/db"
-        assert bench_path.exists()
-        assert libfs_test_path.exists()
+        print('Running YCSB-C profiles.')
        
         workloads = self._get_workloads()
 
-        old_stats_files = [Path(x) for x in glob.glob('/tmp/libfs_prof.*')]
-        for old_file in old_stats_files:
-            old_file.unlink()
+        self.remove_old_libfs_stats()
 
-        widgets = [
-                    progressbar.Percentage(),
-                    ' (', progressbar.Counter(), ' of {})'.format(len(workloads)),
-                    ' ', progressbar.Bar(left='[', right=']'),
-                    ' ', progressbar.Timer(),
-                    ' ', progressbar.ETA(),
-                  ]
+        widgets = self.get_standard_progress_bar(len(workloads))
 
         with ProgressBar(widgets=widgets, max_value=len(workloads)) as bar:
             bar.start()
@@ -145,52 +165,24 @@ class YCSBCRunner(BenchRunner):
             self.update_bar_proc = Process(target=update_bar, args=(shared_q,))
             self.update_bar_proc.start()
 
-            numa_node = self.args.numa_node
-            dir_str   = str(bench_path)
-            libfs_test_str = str(libfs_test_path)
-
             stat_objs = []
             prev_idx = None
             try:
                 for workload in workloads:
                     try:
-
-                        idx_struct, layout_score, ycsb_workload, trial_num = workload
+                        idx_struct = workload[0]
 
                         self.env['MLFS_CACHE_PERF'] = '0'
+                        self.env['MLFS_IDX_STRUCT'] = idx_struct
 
-                        if prev_idx is None or prev_idx != idx_struct:
+                        if self.args.always_mkfs or \
+                                prev_idx is None or prev_idx != idx_struct:
                             assert self.kernfs is not None
                             self.kernfs.mkfs()
 
                         prev_idx = idx_struct
 
-                        self.env['MLFS_IDX_STRUCT'] = idx_struct
-                        self.env['MLFS_LAYOUT_SCORE'] = layout_score
-
-                        labels = {}
-                        labels['struct'] = idx_struct
-                        labels['layout'] = layout_score
-                        labels['ycsb_workload'] = ycsb_workload
-                        labels['trial num'] = trial_num
-
-                        rmrf_setup_str = \
-                            f'''taskset -c 0 numactl -N {numa_node} -m {numa_node} {libfs_test_str}/run.sh
-                                {libfs_test_str}/rmrf {dbfilename}
-                            '''
-
-                        ycsbc_arg_str = \
-                            f'''taskset -c 0
-                                numactl -N {numa_node} -m {numa_node} {dir_str}/run.sh
-                                {dir_str}/YCSB-C/ycsbc -db leveldb
-                                -dbfilename {dbfilename} -P {dir_str}/YCSB-C/workloads/{ycsb_workload}'''
-
-                        rmrf_setup_args = shlex.split(rmrf_setup_str)
-                        ycsbc_trial_args = shlex.split(ycsbc_arg_str)
-
-                        # Run the benchmarks
-                        stat_objs += self._run_ycsbc_trial(
-                            bench_path, rmrf_setup_args, ycsbc_trial_args, labels)
+                        stat_objs += self._run_yscbc_workload(workload)
 
                         counter += 1
                         shared_q.put(counter)
@@ -250,10 +242,20 @@ class YCSBCRunner(BenchRunner):
 
         # Requirements
         parser.add_argument('--ycsb-workload', '-P', nargs='+', type=str,
+                            default=[
+                                'workloada.strata.spec',
+                                'workloadb.strata.spec',
+                                'workloadc.strata.spec',
+                                'workloadd.strata.spec',
+                                'workloade.strata.spec',
+                                'workloadf.strata.spec',
+                                ],
                             help='The workload name to use')
 
         # Options
         parser.add_argument('--measure-cache-perf', '-c', action='store_true',
                             help='Measure cache perf as well.')
+        parser.add_argument('--always-mkfs', action='store_true',
+                            help='Always rerun mkfs between trials.')
 
         cls._add_common_arguments(parser)

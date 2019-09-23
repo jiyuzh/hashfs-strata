@@ -307,8 +307,17 @@ class Grapher:
         if self._kwargs_bool(kwargs, 'exclude_tick_labels'):
             plt.yticks(ticks=range(len(labels)), labels=['']*len(labels))
         else:
-            # plt.yticks(ticks=range(len(labels)), labels=labels, ha='right')
-
+            # Try to improve the labels
+            new_labels = []
+            for label in labels:
+                try:
+                    new_label = '{:.1f}, {}'.format(label[0], label[1])
+                    new_labels += [new_label]
+                except Exception as e:
+                    print(e)
+                    new_labels += [label]
+            plt.yticks(ticks=range(len(new_labels)), labels=new_labels, ha='right')
+            print(new_labels)
             minor_ticks = []
             if self._kwargs_has(kwargs, 'per_tick_label'):
                 # Required to determine position of ticks.

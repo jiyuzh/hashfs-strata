@@ -20,6 +20,7 @@ from progressbar import ProgressBar
 
 from Utils import *
 from BenchRunner import BenchRunner
+from AEPWatchThread import AEPWatchThread
 
 class MTCCRunner(BenchRunner):
 
@@ -28,6 +29,7 @@ class MTCCRunner(BenchRunner):
         self.update_bar_proc = None
         self.skip_insert = args.skip_insert
         self.mtcc_path = (self.root_path / 'libfs' / 'tests').resolve()
+        self.aep = AEPWatchThread()
         assert self.mtcc_path.exists()
 
     def __del__(self):
@@ -54,43 +56,46 @@ class MTCCRunner(BenchRunner):
 
     def _run_mtcc_trial(self, cwd, setup_args, trial_args, labels):
         self.env['MLFS_CACHE_PERF'] = '0'
+        self.env['MLFS_PROFILE'] = '1'
 
-        if setup_args:
-            self.env['MLFS_PROFILE'] = '0'
-            self._run_trial_continue(setup_args, cwd, None)
-            self.env['MLFS_PROFILE'] = '1'
+        if not self.args.cache_perf_only:
+            if setup_args:
+                self._run_trial_continue(setup_args, cwd, None)
 
-            total_time = self._run_trial_end(trial_args, cwd, self._parse_readfile_time)
+                total_time = self._run_trial_end(trial_args, cwd, self._parse_readfile_time)
 
-        else:
-            self.env['MLFS_PROFILE'] = '1'
-
-            total_time = self._run_trial(trial_args, cwd, self._parse_readfile_time)
+            else:
+                total_time = self._run_trial(trial_args, cwd, self._parse_readfile_time)
 
         # Get the stats.
         stat_obj = self._parse_trial_stat_files(total_time, labels)
         stat_obj['kernfs'] = self._get_kernfs_stats()
 
-        if self.args.measure_cache_perf:
+        if self.args.measure_cache_perf or self.args.cache_perf_only:
             self.env['MLFS_PROFILE'] = '1'
             self.env['MLFS_CACHE_PERF'] = '1'
             if setup_args:
                 self._run_trial_continue(setup_args, cwd, None, timeout=(10*60))
 
+                self.aep.start()
                 total_time = self._run_trial_end(
                     trial_args, cwd, self._parse_readfile_time, timeout=(10*60))
 
             else:
 
+                self.env['MLFS_CACHE_PERF'] = '1'
+                self.aep.start()
                 total_time = self._run_trial(
                     trial_args, cwd, self._parse_readfile_time, timeout=(10*60))
 
+            aep_stats = self.aep.stop()
             # Get the stats.
             cache_stat_obj = self._parse_trial_stat_files(total_time, labels)
 
             try:
                 stat_obj['cache'] = cache_stat_obj['idx_cache']
                 stat_obj['cache']['kernfs'] = self._get_kernfs_stats()['idx_cache']
+                stat_obj['cache'].update(aep_stats)
             except:
                 pprint(cache_stat_obj)
                 pprint(self._get_kernfs_stats())
@@ -232,7 +237,6 @@ class MTCCRunner(BenchRunner):
             stat_objs = []
             current = ''
             prev_idx = None
-            prev_layout = None
 
             workload_num = 0
             workload_tries = 0
@@ -240,9 +244,8 @@ class MTCCRunner(BenchRunner):
                 while workload_num < len(workloads):
 
                     workload = workloads[workload_num]
-                    workload_num += 1
 
-                    idx_struct, layout_score = workload[0:2]
+                    idx_struct = workload[0]
 
                     self.env['MLFS_CACHE_PERF'] = '0'
 
@@ -251,9 +254,7 @@ class MTCCRunner(BenchRunner):
 
                     try:
                         if self.args.always_mkfs or \
-                                prev_idx is None or prev_layout is None or \
-                                prev_idx != idx_struct or \
-                                prev_layout != layout_score:
+                                prev_idx is None or prev_idx != idx_struct:
                             assert self.kernfs is not None
                             self.kernfs.mkfs()
 
@@ -261,6 +262,7 @@ class MTCCRunner(BenchRunner):
 
                         counter += 1
                         shared_q.put(counter)
+                        workload_num += 1
                         workload_tries = 0
 
                     except Exception as e:
@@ -269,8 +271,8 @@ class MTCCRunner(BenchRunner):
                         print(e)
                         
                         self.kernfs.mkfs()
-                        workload_num -= 1
                         workload_tries += 1
+                        print(f'Trying workload again, take {workload_tries + 1}')
                         if workload_tries >= 3:
                             raise e
 
@@ -343,6 +345,9 @@ class MTCCRunner(BenchRunner):
         # Options
         parser.add_argument('--measure-cache-perf', '-c', action='store_true',
                             help='Measure cache perf as well.')
+
+        parser.add_argument('--cache-perf-only', action='store_true',
+                            help='Only measure cache perf.')
 
         parser.add_argument('--skip-insert', action='store_true',
                             help='Skip the insert test')

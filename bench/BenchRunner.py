@@ -18,6 +18,7 @@ import time
 from warnings import warn
 
 from KernFSThread import KernFSThread 
+from AEPWatchThread import AEPWatchThread
 
 class BenchRunner:
 
@@ -62,6 +63,7 @@ class BenchRunner:
         self.kernfs = KernFSThread(self.root_path, self.env, 
                                    gather_stats=True,
                                    verbose=self.args.verbose)
+        self.aep = AEPWatchThread()
 
 
     def __del__(self):
@@ -102,7 +104,7 @@ class BenchRunner:
             with filepath.open('w') as f:
                 json.dump(json_obj, f, indent=4)
 
-    def _run_trial(self, bench_args, bench_cwd, processing_fn, timeout=(5*60),
+    def _run_trial(self, bench_args, bench_cwd, processing_fn, timeout=(2*60),
             no_warn=False):
         self._start_trial()
 
@@ -241,6 +243,15 @@ class BenchRunner:
                     ' ', progressbar.ETA(),
                   ]
         return widgets
+
+    @staticmethod
+    def remove_old_libfs_stats():
+        import glob
+        from pathlib import Path
+
+        old_stats_files = [Path(x) for x in glob.glob('/tmp/libfs_prof.*')]
+        for old_file in old_stats_files:
+            old_file.unlink()
 
     @classmethod
     def _add_common_arguments(cls, parser):

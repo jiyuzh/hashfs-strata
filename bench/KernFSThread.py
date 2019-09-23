@@ -55,9 +55,14 @@ class KernFSThread:
             indexing structures. Avoid using this often since it's really slow.
         '''
         mkfs_args = shlex.split(f'{str(self.kernfs_path / "mkfs.sh")}')
-        proc = subprocess.run(mkfs_args, cwd=self.kernfs_path, check=True,
-                              start_new_session=True, env=self.env,
-                              stdout=DEVNULL, stderr=DEVNULL)
+        proc = None
+        if self.verbose:
+            proc = subprocess.run(mkfs_args, cwd=self.kernfs_path, check=True,
+                                  start_new_session=True, env=self.env)
+        else:
+            proc = subprocess.run(mkfs_args, cwd=self.kernfs_path, check=True,
+                                  start_new_session=True, env=self.env,
+                                  stdout=DEVNULL, stderr=DEVNULL)
         assert proc.returncode == 0
 
     def start(self):
@@ -66,9 +71,7 @@ class KernFSThread:
         '''
 
         # Make sure there are no stats files from prior runs.
-        stats_files = [Path(x) for x in glob.glob('/tmp/kernfs_prof.*')]
-        for s in stats_files:
-            s.unlink()
+        self._cleanup_kernfs()
        
         kernfs_arg_str = '{0}/run.sh taskset -c 0 numactl -N {1} -m {1} {0}/kernfs'.format(
                                   str(self.kernfs_path), '0')
@@ -127,8 +130,7 @@ class KernFSThread:
     def _cleanup_kernfs(self):
         stats_files = [Path(x) for x in glob.glob('/tmp/kernfs_prof.*')]
         for stat_file in stats_files:
-            subprocess.run(shlex.split('sudo rm -f {}'.format(
-                str(stat_file))), check=True)
+            stat_file.unlink()
 
     def stop(self):
         'Kill the kernfs process and potentially gather stats.'

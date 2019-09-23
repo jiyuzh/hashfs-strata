@@ -68,33 +68,16 @@ class IDXDataObject:
             parsed['total_time'] = data_obj['total_time']
         if 'idx_stats' in data_obj:
             parsed['idx_compute_per_op'] = data_obj['idx_stats']['compute_tsc'] / max(data_obj['idx_stats']['compute_nr'], 1.0)
-        if 'cache' in data_obj:
-            cache_obj = data_obj['cache']
-            parsed['cache_accesses'] = cache_obj['l1']['accesses']
-            parsed['l1_hits'] = cache_obj['l1']['hits'] / max(cache_obj['l1']['accesses'], 1.0)
-            parsed['l1_cache_misses'] = cache_obj['l1']['misses']
-            parsed['l2_hits'] = cache_obj['l2']['hits'] / max(cache_obj['l2']['accesses'], 1.0)
-            parsed['llc_misses'] = cache_obj['l3']['misses']
-            parsed['llc_accesses'] = cache_obj['l3']['accesses']
-
-            nvdimm_stats = {k: v for k, v in cache_obj.items() if 'nvdimm' in k}
-            parsed.update(nvdimm_stats)
-
-            if 'cache' in cache_obj['kernfs']:
-                kern_cache = cache_obj['kernfs']
-                parsed['kernfs_cache_accesses'] = kern_cache['l1']['accesses']
-                #parsed['kernfs_cache_misses'] = kern_cache['l1_misses']
-                #parsed['kernfs_llc_misses'] = kern_cache['l3_misses'] / max(kern_cache['l3_accesses'], 1.0)
-                parsed['kernfs_llc_misses'] = kern_cache['l3']['misses']
-                parsed['kernfs_llc_accesses'] = kern_cache['l3']['accesses']
         if 'lsm' in data_obj:
-            if data_obj['lsm']['nr'] > 0:
+            if data_obj['lsm']['nr']:
                 parsed['indexing'] = data_obj['lsm']['tsc']
-                parsed['nops'] = data_obj['lsm']['nr']
                 parsed['read_data'] = data_obj['l0']['tsc'] + data_obj['read_data']['tsc']
+                parsed['nops'] = data_obj['lsm']['nr'] 
             else:
-                parsed['indexing'] = data_obj['kernfs']['path_search']
-                parsed['read_data'] = data_obj['kernfs']['digest'] - parsed['indexing']
+                parsed['indexing'] = data_obj['kernfs']['search']['total_time']
+                parsed['read_data'] = data_obj['kernfs']['digest'] - data_obj['kernfs']['search']['total_time']
+
+                parsed['nops'] =data_obj['kernfs']['search']['nr_search']
 
             total = parsed['indexing'] + parsed['read_data']
             parsed['total_breakdown'] = total
@@ -104,6 +87,37 @@ class IDXDataObject:
             #parsed['indexing'] *= scale
             #parsed['read_data'] /= total
             #parsed['read_data'] *= scale
+        if 'cache' in data_obj:
+            cache_obj = data_obj['cache']
+            parsed['l1_accesses'] = cache_obj['l1']['accesses']
+            parsed['l1_misses'] = cache_obj['l1']['misses']
+            parsed['l2_accesses'] = cache_obj['l2']['accesses']
+            parsed['l2_misses'] = cache_obj['l2']['misses']
+            parsed['llc_misses'] = cache_obj['l3']['misses']
+            parsed['llc_accesses'] = cache_obj['l3']['accesses']
+
+            nvdimm_stats = {k: v for k, v in cache_obj.items() if 'nvdimm' in k}
+            parsed.update(nvdimm_stats)
+
+            if 'kernfs' in cache_obj:
+                kern_cache = cache_obj['kernfs']
+                parsed['l1_accesses'] += kern_cache['l1']['accesses']
+                parsed['l1_misses'] += kern_cache['l1']['misses']
+                parsed['l2_accesses'] += kern_cache['l2']['accesses']
+                parsed['l2_misses'] += kern_cache['l2']['misses']
+                parsed['llc_misses'] += kern_cache['l3']['misses']
+                parsed['llc_accesses'] += kern_cache['l3']['accesses']
+
+            cache_keys = ['l1_accesses', 'l1_misses', 'l2_accesses', 
+                          'l2_misses', 'llc_accesses', 'llc_misses']
+           
+            for k in cache_keys:
+                parsed[k] /= parsed['nops']
+    
+            parsed['l1_hits'] = (parsed['l1_accesses'] - parsed['l1_misses']) / max(parsed['l1_accesses'], 1.0)
+            parsed['l2_hits'] = (parsed['l2_accesses'] - parsed['l2_misses']) / max(parsed['l2_accesses'], 1.0)
+            parsed['llc_hits'] = (parsed['llc_accesses'] - parsed['llc_misses']) / max(parsed['llc_accesses'], 1.0)
+
 
         return parsed
 
@@ -539,7 +553,9 @@ class IDXDataObject:
                     diff = float(reduction / base)
                     explanation = '%s %s' % (idx, bench)
 
-                    key = 'AvgThroughputImprovement{}'.format(self.make_bench_name_latex_compat(idx))
+                    nice_idx = self.make_bench_name_latex_compat(idx)
+
+                    key = 'AvgThroughputImprovement{}'.format(nice_idx)
                     df_perf, base_perf = None, None
                     if 'throughput' in df:
                         df_perf = df['throughput']
@@ -556,6 +572,8 @@ class IDXDataObject:
                     agg_bench_struct[bench][key] = explanation
 
                     key = 'AvgThroughputImprovement'
+                    update_max_bench(bench, f'AvgIndexingOverheadReduction{nice_idx}',
+                            diff, '{:.0%}'.format(diff), explanation)
                     if update_max_bench(bench, 'AvgIndexingOverheadReduction',
                             diff, '{:.0%}'.format(diff), explanation):
                         try:

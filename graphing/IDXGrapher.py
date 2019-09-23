@@ -87,14 +87,17 @@ class IDXGrapher:
         for col, val in config['filter'].items():
             df = df[df[col] == val]
 
-        new_index = [config['axis'], config['groups']]
+        new_index = [*config['axis'], config['groups']] \
+                    if isinstance(config['axis'], list) else \
+                        [config['axis'], config['groups']]
 
         df = df.set_index(new_index)
+        df = df[~df.index.duplicated(keep='last')]
         
         series = df[config['plot']]
         means_df = series.unstack()
         ci_df = df[f'{config["plot"]}_ci'].unstack()
-        
+
         flush = True
         # if 'average' in options and options['average']:
         #     dfs = self.data.average_stats(dfs)
@@ -240,7 +243,7 @@ class IDXGrapher:
 
     @classmethod
     def add_parser_args(cls, parser):
-        parser.add_argument('--input-file', '-i', default='report.json',
+        parser.add_argument('--input-file', '-i', default='report.yaml',
                             help='Where the aggregations live')
         parser.add_argument('--output-dir', '-d', default='.',
                             help='Where to output the report')

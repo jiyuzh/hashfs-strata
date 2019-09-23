@@ -14,7 +14,7 @@ class AEPWatchThread:
 
     AEPWATCH_PATH = Path('/opt/intel/aepwatch/bin/AEPWatch')
 
-    def __init__(self, sample_period, timeout=(10*10), dimm_filter=[0, 1, 2, 3]):
+    def __init__(self, sample_period=.1, timeout=(10*10), dimm_filter=[0, 1, 2, 3]):
         assert self.AEPWATCH_PATH.exists()
         self.sample_period = sample_period
         self.timeout = timeout
@@ -104,8 +104,7 @@ class AEPWatchThread:
         
         self.tmpfile.close()
         assert not self.tmpfile_path.exists()
-        return self.stats()
-
+        return self.stats_dict()
 
     def stats(self):
         return self.stats_series

@@ -57,3 +57,245 @@ schemes:
       {% endfor %}
     ]
   {% endfor %}
+
+  {% set single_file_small_io_stats = 
+      ['indexing', 'l1_hits', 'l2_hits', 'llc_hits', 'l1_accesses',
+        'l1_misses' ] %}
+  {% for stat in single_file_small_io_stats %}
+  single_{{ stat }}:
+    print_size: [7.0, 3.5]
+    file_name: single_{{ stat }}.pdf
+    
+    {% set layouts = ['1.0', '0.7'] %}
+    {% set tests = ['Sequential Read', 'Random Read', 'Insert'] %}
+    {% set raw_size = [33554432, 1073741824] %}
+    {% set repetitions = [50, 500000] %}
+    {% set human_size = ['32MB File', '1GB File'] %}
+
+    {% set width = tests|length %}
+    {% set height = raw_size|length %}
+
+    dimensions: [ {{ height }}, {{ width }} ]
+    plots: [
+    {% for r in range(height) %}
+      {% for c in range(width) %}
+        {
+          pos: [ {{ r }}, {{ c }} ],
+          size: [1, 1],
+          type: single_stat,
+          data_config: {
+            plot: {{ stat }},
+            groups: struct,
+            axis: [layout, repetitions],
+            filter: {
+              'start size': {{ raw_size[r] }},
+              'io size': 64,
+              'num files': 1,
+              'test': {{ tests[c] }},
+            }
+          },
+          options: {
+            label: '{{ tests[c] }}s, {{ human_size[r] }}',
+            label_bars: False,
+            exclude_tick_labels: {{ False if c == 0 else True }},
+            {% if stat not in ['l1_accesses', 'l1_misses'] %}
+            cutoff: 1.0,
+            error_bars: True,
+            {% else %}
+            error_bars: False,
+            {% endif %}
+            {% if r == height - 1 and c == width - 1 %}
+            legend: {
+              prop: {size: 5,},
+              loc: lower right,
+              ncol: 1,
+            },
+            {% endif %}
+          },
+        },
+        {% endfor %}
+      {% endfor %}
+    ]
+  {% endfor %}
+
+  
+  single_l1_stats:
+    print_size: [7.0, 4.0]
+    file_name: single_l1_stats.pdf
+    
+    {% set layouts = ['1.0', '0.7'] %}
+    {% set tests = ['Sequential Read', 'Random Read', 'Insert'] %}
+    {% set raw_size = [33554432, 1073741824] %}
+    {% set repetitions = [50, 500000] %}
+    {% set human_size = ['32MB File', '1GB File'] %}
+
+    {% set single_l1_stats = ['l1_accesses', 'l1_misses' ] %}
+    {% set single_l1_nice  = ['L1 cache accesses', 'L1 cache misses' ] %}
+
+    {% set width = (tests|length) %}
+    {% set height = (raw_size|length) * (single_l1_stats|length) %}
+
+    dimensions: [ {{ height }}, {{ width }} ]
+    plots: [
+    {% for r in range(height) %}
+      {% for c in range(width) %}
+        {
+          pos: [ {{ r }}, {{ c }} ],
+          size: [1, 1],
+          type: single_stat,
+          data_config: {
+            plot: {{ single_l1_stats[r // 2] }},
+            groups: struct,
+            axis: [layout, repetitions],
+            filter: {
+              'start size': {{ raw_size[r % 2] }},
+              'io size': 64,
+              'num files': 1,
+              'test': {{ tests[c] }},
+            }
+          },
+          options: {
+            label: '{{ tests[c] }}s, {{ human_size[r % 2] }}, {{ single_l1_nice[r // 2] }}',
+            label_bars: False,
+            exclude_tick_labels: {{ False if c == 0 else True }},
+            error_bars: False,
+            {% if r == height - 1 and c == width - 1 %}
+            legend: {
+              prop: {size: 5,},
+              loc: lower right,
+              ncol: 1,
+            },
+            {% endif %}
+          },
+        },
+        {% endfor %}
+      {% endfor %}
+    ]
+
+  single_l1_stats_compact:
+    print_size: [7.0, 4.0]
+    file_name: single_l1_stats_compact.pdf
+    
+    {% set layouts = ['1.0', '0.7'] %}
+    {% set tests = ['Sequential Read', 'Random Read', 'Insert'] %}
+    {% set raw_size = [33554432, 1073741824] %}
+    {% set repetitions = [50, 500000] %}
+    {% set human_size = ['32MB File', '1GB File'] %}
+
+    {% set single_l1_stats = ['l1_accesses', 'l1_misses' ] %}
+    {% set single_l1_nice  = ['L1 cache accesses', 'L1 cache misses' ] %}
+
+    {% set width = (tests|length) %}
+    {% set height = (raw_size|length)  %}
+
+    dimensions: [ {{ height }}, {{ 2 * width }} ]
+    plots: [
+    {% for r in range(height) %}
+      {% for c in range(width) %}
+        {
+          pos: [ {{ r }}, {{ 2 * c }} ],
+          size: [1, 1],
+          type: single_stat,
+          data_config: {
+            plot: {{ single_l1_stats[0] }},
+            groups: struct,
+            axis: [layout, repetitions],
+            filter: {
+              'start size': {{ raw_size[r] }},
+              'io size': 64,
+              'num files': 1,
+              'test': {{ tests[c] }},
+            }
+          },
+          options: {
+            label: '{{ tests[c] }}s, {{ human_size[r] }}, Hits',
+            label_bars: False,
+            exclude_tick_labels: {{ False if c == 0 else True }},
+            error_bars: False,
+            {% if r == height - 1 and c == width - 1 and False%}
+            legend: {
+              prop: {size: 5,},
+              loc: lower right,
+              ncol: 1,
+            },
+            {% endif %}
+          },
+        },
+        {
+          pos: [ {{ r }}, {{ (2 * c) + 1 }} ],
+          size: [1, 1],
+          type: single_stat,
+          data_config: {
+            plot: {{ single_l1_stats[1] }},
+            groups: struct,
+            axis: [layout, repetitions],
+            filter: {
+              'start size': {{ raw_size[r] }},
+              'io size': 64,
+              'num files': 1,
+              'test': {{ tests[c] }},
+            }
+          },
+          options: {
+            label: 'Misses',
+            label_bars: False,
+            exclude_tick_labels: True,
+            error_bars: False,
+          },
+        },
+        {% endfor %}
+      {% endfor %}
+    ]
+
+  single_l1_stats_table:
+    print_size: [7.0, 4.0]
+    file_name: single_l1_stats_table.pdf
+    
+    {% set layouts = ['1.0', '0.7'] %}
+    {% set tests = ['Sequential Read', 'Random Read', 'Insert'] %}
+    {% set repetitions = [50, 500000] %}
+    {% set col_names = {33554432: '32MB File', 1073741824: '1GB File'} %}
+
+    {% set single_l1_stats = ['l1_accesses', 'l1_misses' ] %}
+
+    {% set width = (tests|length) if False else 1 %}
+    {% set height = 1 %}
+
+    dimensions: [ {{ height }}, {{ width }} ]
+    plots: [
+    {% for r in range(height) %}
+      {% for c in range(width) %}
+        {
+          pos: [ {{ r }}, {{ c }} ],
+          size: [1, 1],
+          type: table,
+          data_config: {
+            groups: struct,
+            filter: {
+              'io size': 64,
+              'num files': 1,
+              'test': {{ tests[c] }},
+            },
+            values: {{single_l1_stats}},
+            columns: ['start size'],
+            column_names: {{human_size}},
+            rows: ['layout', 'repetitions'],
+            baseline: EXTENT_TREES,
+          },
+          options: {
+            label: '{{ tests[c] }}s',
+            label_bars: False,
+            exclude_tick_labels: {{ False if c == 0 else True }},
+            error_bars: False,
+            {% if r == height - 1 and c == width - 1 %}
+            legend: {
+              prop: {size: 5,},
+              loc: lower right,
+              ncol: 1,
+            },
+            {% endif %}
+          },
+        },
+        {% endfor %}
+      {% endfor %}
+    ]
