@@ -1848,11 +1848,11 @@ do_global_search:
     if(use_req_arr) {
       for(size_t j = 0; j < bmap_req_arr.blk_count_found; ++j) {
         if(to_lookup.dyn) {
-          to_lookup.m_pblk_dyn[to_lookup.size] = bmap_req_arr.block_no[to_lookup.size];
+          to_lookup.m_pblk_dyn[to_lookup.size] = bmap_req_arr.block_no[j];
           to_lookup.m_lens_dyn[to_lookup.size] = 1;
           to_lookup.m_offsets_dyn[to_lookup.size] = pos + (j * g_block_size_bytes);
         } else {
-          to_lookup.m_pblk[to_lookup.size] = bmap_req_arr.block_no[to_lookup.size];
+          to_lookup.m_pblk[to_lookup.size] = bmap_req_arr.block_no[j];
           to_lookup.m_lens[to_lookup.size] = 1;
           to_lookup.m_offsets[to_lookup.size] = pos + (j * g_block_size_bytes);
         }
