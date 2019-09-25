@@ -185,6 +185,9 @@ pmem_nvm_hash_table_lookup_node (paddr_t        key,
   while (!HASHFS_ENT_IS_EMPTY(cur)) {
     if (cur == key && HASHFS_ENT_IS_VALID(cur)) {
       *ent_return = cur;
+#ifndef KERNFS
+      update_stats_dist(&g_perf_stats.hash_lookup_count, count);
+#endif
       return node_index;
     }
     else if (HASHFS_ENT_IS_TOMBSTONE(cur) && !have_tombstone) {
@@ -200,7 +203,9 @@ pmem_nvm_hash_table_lookup_node (paddr_t        key,
     
     count++;
   }
-
+#ifndef KERNFS
+  update_stats_dist(&g_perf_stats.hash_lookup_count, count);
+#endif
 
 end:
   if (have_tombstone) {
