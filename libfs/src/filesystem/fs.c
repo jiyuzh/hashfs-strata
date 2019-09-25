@@ -1680,7 +1680,7 @@ ssize_t do_aligned_read(struct inode *ip, uint8_t *dst, offset_t off, size_t io_
       ret = check_read_log_invalidation(_fcache_block);
       if (ret) {
         if (fcache_del(ip, key)) {
-            mlfs_free(_fcache_block);
+            //mlfs_free(_fcache_block);
         }
         _fcache_block = NULL;
       }

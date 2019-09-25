@@ -387,6 +387,7 @@ static inline int icache_del(struct inode *ip)
 static struct fcache_block *fcache_find(struct inode *inode, offset_t key)
 {
 #define fcache_stats
+#undef fcache_stats
 	khiter_t k;
 	struct fcache_block *fc_block = NULL;
     uint64_t start_tsc, total_tsc;
