@@ -1918,7 +1918,7 @@ static void handle_digest_request(void *arg)
 		memset(response, 0, MAX_SOCK_BUF);
 		sprintf(response, "|ACK |%d|%lu|%d|%d|",
 				digest_count, digest_blkno, rotated, lru_updated);
-		mlfs_info("Write %s to libfs\n", response);
+		//mlfs_info("Write %s to libfs\n", response);
 
 		persist_dirty_objects_nvm();
 		if (enable_perf_stats) {
@@ -2047,7 +2047,7 @@ static void wait_for_event(void)
 				if (ret == 0)
 					continue;
 
-				mlfs_info("GET: %s\n", buf);
+				//mlfs_info("GET: %s\n", buf);
 
 				memset(cmd_header, 0, 12);
 				sscanf(buf, "|%s |%d|%u|%lu|%lu|",

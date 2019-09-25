@@ -1392,7 +1392,7 @@ void handle_digest_response(char *ack_cmd)
 	int n_digested, rotated, lru_updated;
 	struct inode *inode, *tmp;
 
-    printf("digest response, %s\n", ack_cmd);
+    //printf("digest response, %s\n", ack_cmd);
 
 	sscanf(ack_cmd, "|%s |%d|%lu|%d|%d|", ack, &n_digested,
 			&next_hdr_of_digested_hdr, &rotated, &lru_updated);
