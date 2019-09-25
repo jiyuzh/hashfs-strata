@@ -31,7 +31,8 @@ class AEPWatchThread:
         args = shlex.split(command_str)
 
         self.proc = Popen(args, stdout=DEVNULL, stderr=DEVNULL)
-
+        #self.proc = Popen(args)
+        time.sleep(1)
 
     def _parse_stats(self):
         csv_rows = []
@@ -61,6 +62,7 @@ class AEPWatchThread:
             Multiple DIMMX columns. Need to average hit ratios by number of
             bytes across all DIMMS.
         '''
+        #print(df)
         dimms = {}
         for c in numpy.unique(df.columns.droplevel(1).to_list()):
             if c not in self.dimm_filter:
@@ -92,7 +94,7 @@ class AEPWatchThread:
 
     def stop(self):
         # This way we capture everything.
-        time.sleep(2*self.sample_period)
+        time.sleep(1)
         self.proc.terminate()
         self.proc.wait()
         assert self.proc.returncode is not None

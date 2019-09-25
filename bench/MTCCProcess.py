@@ -71,9 +71,13 @@ class MTCCRunner(BenchRunner):
         stat_obj = self._parse_trial_stat_files(total_time, labels)
         stat_obj['kernfs'] = self._get_kernfs_stats()
 
-        if self.args.measure_cache_perf or self.args.cache_perf_only:
+        if self.args.measure_cache_perf or self.args.cache_perf_only \
+                or self.args.aep_only:
+            if self.args.always_mkfs:
+                self.kernfs.mkfs()
             self.env['MLFS_PROFILE'] = '1'
-            self.env['MLFS_CACHE_PERF'] = '1'
+            if not self.args.aep_only:
+                self.env['MLFS_CACHE_PERF'] = '1'
             if setup_args:
                 self._run_trial_continue(setup_args, cwd, None, timeout=(10*60))
 
@@ -82,8 +86,6 @@ class MTCCRunner(BenchRunner):
                     trial_args, cwd, self._parse_readfile_time, timeout=(10*60))
 
             else:
-
-                self.env['MLFS_CACHE_PERF'] = '1'
                 self.aep.start()
                 total_time = self._run_trial(
                     trial_args, cwd, self._parse_readfile_time, timeout=(10*60))
@@ -93,8 +95,12 @@ class MTCCRunner(BenchRunner):
             cache_stat_obj = self._parse_trial_stat_files(total_time, labels)
 
             try:
-                stat_obj['cache'] = cache_stat_obj['idx_cache']
-                stat_obj['cache']['kernfs'] = self._get_kernfs_stats()['idx_cache']
+                if not self.args.aep_only:
+                    stat_obj['cache'] = cache_stat_obj['idx_cache']
+                    stat_obj['cache']['kernfs'] = self._get_kernfs_stats()['idx_cache']
+                else:
+                    stat_obj['cache'] = {}
+
                 stat_obj['cache'].update(aep_stats)
             except:
                 pprint(cache_stat_obj)
@@ -345,6 +351,9 @@ class MTCCRunner(BenchRunner):
         # Options
         parser.add_argument('--measure-cache-perf', '-c', action='store_true',
                             help='Measure cache perf as well.')
+
+        parser.add_argument('--aep-only', '-a', action='store_true',
+                            help='Measure AEP only.')
 
         parser.add_argument('--cache-perf-only', action='store_true',
                             help='Only measure cache perf.')
