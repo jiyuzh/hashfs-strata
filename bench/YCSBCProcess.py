@@ -59,16 +59,17 @@ class YCSBCRunner(BenchRunner):
             return labels
 
 
-    def _run_ycsbc_trial(self, cwd, setup_args, trial_args, labels):
+    def _run_ycsbc_trial(self, cwd, setup_args, load_args, trial_args, labels):
         assert (setup_args is not None)
 
         self.env['MLFS_PROFILE'] = '1'
         self.env['MLFS_CACHE_PERF'] = '0'
         
-        self._run_trial_continue(setup_args, cwd, None, timeout=(10*60))
+        self._run_trial_continue(setup_args, cwd, None, timeout=(12*60))
+        self._run_trial_passthrough(load_args, cwd, None, timeout=(10*60))
 
         stdout_labels = self._run_trial_end(trial_args, cwd, 
-                self._parse_ycsbc_KTPS, timeout=(10*60))
+                self._parse_ycsbc_KTPS, timeout=(12*60))
 
         # Get the stats.
         labels.update(stdout_labels)
@@ -81,6 +82,7 @@ class YCSBCRunner(BenchRunner):
                 self.kernfs.mkfs()
 
             self._run_trial_continue(setup_args, cwd, None, timeout=(10*60))
+            self._run_trial_passthrough(load_args, cwd, None, timeout=(10*60))
 
             self.aep.start()
             stdout_labels = self._run_trial_end(
@@ -125,6 +127,12 @@ class YCSBCRunner(BenchRunner):
                 {libfs_tests_str}/run.sh {libfs_tests_str}/rmrf {self.dbfilename}
             '''
 
+        ycsbc_load_arg_str = \
+            f'''taskset -c 0
+                numactl -N {numa_node} -m {numa_node} {dir_str}/run.sh
+                {dir_str}/YCSB-C/ycsbc -db leveldb
+                -dbfilename {self.dbfilename} -loaddb
+                -P {dir_str}/YCSB-C/workloads/{ycsb_workload}'''
         ycsbc_arg_str = \
             f'''taskset -c 0
                 numactl -N {numa_node} -m {numa_node} {dir_str}/run.sh
@@ -133,13 +141,14 @@ class YCSBCRunner(BenchRunner):
                 -P {dir_str}/YCSB-C/workloads/{ycsb_workload}'''
 
         rmrf_setup_args = shlex.split(rmrf_setup_str)
+        ycsbc_load_args = shlex.split(ycsbc_load_arg_str)
         ycsbc_trial_args = shlex.split(ycsbc_arg_str)
 
         self.remove_old_libfs_stats()
 
         # Run the benchmarks
         return self._run_ycsbc_trial(
-            self.bench_path, rmrf_setup_args, ycsbc_trial_args, labels)
+            self.bench_path, rmrf_setup_args, ycsbc_load_args, ycsbc_trial_args, labels)
 
     def _run_ycsbc(self):
         print('Running YCSB-C profiles.')
