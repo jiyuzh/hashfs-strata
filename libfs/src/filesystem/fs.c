@@ -201,6 +201,7 @@ void show_libfs_stats(const char *title)
   printf("path storage (tsc/op)     : %lu / %lu(%.2f)\n", tri_ratio(g_perf_stats.path_storage_tsc,g_perf_stats.read_per_index.total));
   printf("path storage (tsc/index)  : %lu / %lu(%.2f)\n", tri_ratio(g_perf_stats.path_storage_tsc,g_perf_stats.read_per_index.cnt));
   printf("temp_debug (tsc)       : %lu\n", tri_ratio(g_perf_stats.tmp_tsc,g_perf_stats.tmp_nr));
+  print_stats_dist(&g_perf_stats.hash_lookup_count, "hash_lookup_count");
 #ifdef STORAGE_PERF
   printf("--------------------------------------\n");
   printf("search lsm tree : l0 : read_data = 1 : %f : %f\n",

@@ -207,6 +207,7 @@ typedef struct mlfs_libfs_stats {
     uint64_t hash_loop_tsc;
     uint64_t hash_loop_nr;
     uint64_t hash_iter_nr;
+    stats_dist_t hash_lookup_count;
     // Indexing cache rates
     cache_stats_t cache_stats;
 } libfs_stat_t;
