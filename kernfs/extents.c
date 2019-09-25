@@ -39,6 +39,10 @@
 
 //#define ZERO_FREED_BLOCKS
 
+#if defined(REUSE_PREVIOUS_PATH)
+#undef REUSE_PREVIOUS_PATH
+#endif
+
 pthread_mutex_t block_bitmap_mutex;
 
 static struct inode *__buffer_search(struct rb_root *root,
@@ -899,7 +903,7 @@ struct mlfs_ext_path *mlfs_find_extent(handle_t *handle,
 		mlfs_lsm_debug("depth %d: num %d, max %d\n", ppos,
 				le16_to_cpu(eh->eh_entries), le16_to_cpu(eh->eh_max));
 
-#if defined(REUSE_PREVIOUS_PATH)
+#if 0 && defined(REUSE_PREVIOUS_PATH)
         if (inode->previous_path) {
             struct mlfs_ext_path *prev_path = inode->previous_path;
             struct mlfs_ext_path *prevp = &(prev_path[ppos]);
