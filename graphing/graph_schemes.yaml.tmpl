@@ -71,7 +71,7 @@ schemes:
 
   {% set single_file_small_io_stats = 
       ['indexing', 'l1_hits', 'l2_hits', 'llc_hits', 'l1_accesses',
-        'l1_misses', '' ] %}
+        'l1_misses', 'io_cycles' ] %}
   {% for stat in single_file_small_io_stats %}
   single_{{ stat }}:
     print_size: [7.0, 3.5]
@@ -109,7 +109,7 @@ schemes:
             label: '{{ tests[c] }}s, {{ human_size[r] }}',
             label_bars: False,
             exclude_tick_labels: {{ False if c == 0 else True }},
-            {% if stat not in ['l1_accesses', 'l1_misses'] %}
+            {% if stat not in ['l1_accesses', 'l1_misses', 'io_cycles'] %}
             cutoff: 1.0,
             error_bars: True,
             {% else %}
@@ -131,7 +131,7 @@ schemes:
 
   {% set multi_file_small_io_stats = 
       ['indexing', 'l1_hits', 'l2_hits', 'llc_hits', 'l1_accesses',
-        'l1_misses', '' ] %}
+        'l1_misses', 'io_cycles' ] %}
   {% for stat in single_file_small_io_stats %}
   multi_{{ stat }}:
     print_size: [7.0, 3.0]
@@ -170,13 +170,13 @@ schemes:
             label_bars: False,
             bar_spacing: 1.5,
             exclude_tick_labels: {{ False if c == 0 else True }},
-            {% if stat not in ['l1_accesses', 'l1_misses'] %}
+            {% if stat not in ['l1_accesses', 'l1_misses', 'io_cycles'] %}
             cutoff: 1.0,
             error_bars: True,
             {% else %}
             error_bars: False,
             {% endif %}
-            {% if r == height - 1 and c == 0 %}
+            {% if r == height - 1 and c == width - 1 %}
             legend: {
               prop: {size: 5,},
               loc: lower right,
@@ -192,7 +192,7 @@ schemes:
 
   {% set large_io_stats = 
       ['l1_hits', 'l2_hits', 'llc_hits', 'l1_accesses',
-        'l1_misses', '' ] %}
+        'l1_misses', 'io_cycles', 'io_cycles_rep' ] %}
   {% for stat in large_io_stats %}
   large_io_{{ stat }}:
     print_size: [7.0, 3.5]
@@ -231,7 +231,7 @@ schemes:
             label: '{{ tests[c] }}s, {{ human_size[r] }}',
             label_bars: False,
             exclude_tick_labels: {{ False if c == 0 else True }},
-            {% if stat not in ['l1_accesses', 'l1_misses'] %}
+            {% if stat not in ['l1_accesses', 'l1_misses', 'io_cycles', 'io_cycles_rep'] %}
             cutoff: 1.0,
             error_bars: True,
             {% else %}

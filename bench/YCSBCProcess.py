@@ -66,13 +66,13 @@ class YCSBCRunner(BenchRunner):
         self.env['MLFS_PROFILE'] = '1'
         self.env['MLFS_CACHE_PERF'] = '0'
         
-        self._run_trial_continue(setup_args, cwd, None, timeout=(12*60))
-        self._run_trial_passthrough(load_args, cwd, None, timeout=(10*60))
+        self._run_trial_continue(setup_args, cwd, None, timeout=(10*60))
+        self._run_trial_passthrough(load_args, cwd, None, timeout=(20*60))
 
         if self.args.aep_only:
             self.aep.start()
         stdout_labels = self._run_trial_end(trial_args, cwd, 
-                self._parse_ycsbc_KTPS, timeout=(12*60))
+                self._parse_ycsbc_KTPS, timeout=(10*60))
         if self.args.aep_only:
             aep_stats = self.aep.stop()
             labels['cache'] = aep_stats

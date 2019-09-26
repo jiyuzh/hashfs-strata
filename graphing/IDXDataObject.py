@@ -50,15 +50,17 @@ class IDXDataObject:
                   'num files', 'test', 'trial num']
         parsed = {l: data_obj[l] for l in labels if l in data_obj}
 
-
         if len(parsed) != len(labels) and 'ycsb_workload' not in data_obj \
             and 'Concurrency' not in parsed['test']:
             return None, None
 
-        keys = parsed.copy()
+        okeys = parsed.copy()
+        if 'trial num' in okeys:
+            okeys.pop('trial num')
 
         if 'repetitions' in parsed:
             parsed['repetitions'] = str(int(parsed['repetitions']))
+            parsed['reps'] = int(parsed['repetitions'])
         parsed['layout'] = float(parsed['layout']) / 100.0
 
         if 'log' in data_obj:
@@ -80,6 +82,7 @@ class IDXDataObject:
         if 'ycsb_workload' in data_obj:
             parsed['test'] = \
                 f'{data_obj["ycsb_workload"].split(".")[0].replace("workload", "").upper()}'
+            okeys['test'] = parsed['test']
             parsed['throughput'] = float(data_obj['KTPS'])
             ops = ["READ", "UPDATE", "SCAN", "INSERT", "READMODIFYWRITE"]
             keys = [f'{k.lower()}_latency' for k in ops]
@@ -170,8 +173,7 @@ class IDXDataObject:
                 parsed['l2_hits'] = (parsed['l2_accesses'] - parsed['l2_misses']) / max(parsed['l2_accesses'], 1.0)
                 parsed['llc_hits'] = (parsed['llc_accesses'] - parsed['llc_misses']) / max(parsed['llc_accesses'], 1.0)
 
-
-        return keys, parsed
+        return okeys, parsed
 
     def _normalize_fields(self, dfs):
         #fields = ['cache_accesses', 'llc_misses', 'llc_accesses',
@@ -208,24 +210,29 @@ class IDXDataObject:
         data = defaultdict(list)
         seen = defaultdict(lambda: 1)
         files = [f for f in results_dir.iterdir() if f.is_file() and 'summary' not in f.name]
+        groupby_list = None
         for fp in files:
             with fp.open() as f:
                 objs = json.load(f)
                 for obj in objs:
                     keys, parsed_data = self._parse_relevant_fields(obj)
                     key_str = json.dumps(keys)
+                    if groupby_list is None:
+                        groupby_list = list(keys.keys())
                     if parsed_data is not None:
                         data[parsed_data['trial num']] += [parsed_data]
                         seen[key_str] += 1
 
         df_list = []
         for trial, d in data.items():
-            df_list += [pd.DataFrame(d)]
+            df_list += [pd.DataFrame(d).reset_index(drop=True)]
 
         df_combined = pd.concat(df_list)
+        
         dfg = df_combined.groupby(df_combined.index)
         df_mean = dfg.mean()
         ntrials = len(data)
+        embed()
         df_ci = ((1.96 * dfg.std(ddof=0)) / np.sqrt(ntrials))
         # df_ci = ((1.645 * dfg.std(ddof=0)) / np.sqrt(ntrials))
         # df_ci = ((1.96 * dfg.std(ddof=0)) / (dfg.count() ** (1/2)))
@@ -265,6 +272,10 @@ class IDXDataObject:
         df_ci['io_cycles_ci'] = df_ci['total_breakdown_ci'] / df_mean['nops']
         df_mean['io_cycles'] = df_mean['total_breakdown'] / df_mean['nops']
 
+        if 'reps' in df_mean:
+            df_ci['io_cycles_rep_ci'] = df_ci['total_breakdown_ci'] / df_mean['reps']
+            df_mean['io_cycles_rep'] = df_mean['total_breakdown'] / df_mean['reps']
+
         if 'op_latency' in df_mean:
             df_mean['io_path'] = df_mean['io_cycles'] / df_mean['op_latency']
             df_ci['io_path_ci'] = df_ci['io_cycles_ci'] / df_ci['op_latency_ci']
@@ -285,6 +296,8 @@ class IDXDataObject:
                     hashfs = hashfs[~(hashfs.layout == layout)]
                 
                 l1 = hashfs[hashfs.layout == 1.0]
+                if l1.empty:
+                    break
                 assert not l1.empty
                 l2 = l1.copy()
                 l2.layout = layout
@@ -292,6 +305,7 @@ class IDXDataObject:
 
         # Reset index to reset the row numbers or whatnot
         self.df = self.df.reset_index(drop=True)
+        embed()
 
     def _load_results_file(self, file_path):
         with file_path.open() as f:
