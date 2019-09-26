@@ -29,6 +29,7 @@ class YCSBCRunner(BenchRunner):
         self.update_bar_proc = None
         self.bench_path = (self.root_path / 'bench').resolve()
         self.dbfilename = "/mlfs/db"
+        self.aep = AEPWatchThread()
         assert self.bench_path.exists()
 
     def __del__(self):
@@ -68,8 +69,13 @@ class YCSBCRunner(BenchRunner):
         self._run_trial_continue(setup_args, cwd, None, timeout=(12*60))
         self._run_trial_passthrough(load_args, cwd, None, timeout=(10*60))
 
+        if self.args.aep_only:
+            self.aep.start()
         stdout_labels = self._run_trial_end(trial_args, cwd, 
                 self._parse_ycsbc_KTPS, timeout=(12*60))
+        if self.args.aep_only:
+            aep_stats = self.aep.stop()
+            labels['cache'] = aep_stats
 
         # Get the stats.
         labels.update(stdout_labels)
@@ -278,5 +284,7 @@ class YCSBCRunner(BenchRunner):
                             help='Measure cache perf as well.')
         parser.add_argument('--always-mkfs', action='store_true',
                             help='Always rerun mkfs between trials.')
+        parser.add_argument('--aep-only', '-a', action='store_true',
+                            help='Measure AEP only.')
 
         cls._add_common_arguments(parser)
