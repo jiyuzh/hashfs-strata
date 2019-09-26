@@ -50,18 +50,58 @@ class IDXDataObject:
                   'num files', 'test', 'trial num']
         parsed = {l: data_obj[l] for l in labels if l in data_obj}
 
-        if len(parsed) != len(labels):
-            return None
 
-        parsed['repetitions'] = str(int(parsed['repetitions']))
+        if len(parsed) != len(labels) and 'ycsb_workload' not in data_obj \
+            and 'Concurrency' not in parsed['test']:
+            return None, None
+
+        keys = parsed.copy()
+
+        if 'repetitions' in parsed:
+            parsed['repetitions'] = str(int(parsed['repetitions']))
         parsed['layout'] = float(parsed['layout']) / 100.0
+
+        if 'log' in data_obj:
+            parsed['log_per_op'] = data_obj['log']['commit']['tsc'] / max(data_obj['log']['commit']['nr'], 1.0)
+
+        if 'wait_digest' in data_obj:
+            parsed['wait_digest_per_op'] = data_obj['wait_digest']['tsc'] / max(data_obj['wait_digest']['nr'], 1.0)
 
         if 'read_data' in data_obj:
             parsed['read_data_bytes_per_cycle'] = data_obj['read_data']['bytes'] / max(data_obj['read_data']['tsc'], 1.0)
         if 'threads' in data_obj and data_obj['threads'] != 'T1':
-            return None
+            return None, None
+        if 'num threads' in data_obj:
+            parsed['threads'] = int(data_obj['num threads'])
+            if parsed['threads'] > 32:
+                return None, None
         if 'TP' in data_obj:
             parsed['throughput'] = data_obj['TP']
+        if 'ycsb_workload' in data_obj:
+            parsed['test'] = \
+                f'{data_obj["ycsb_workload"].split(".")[0].replace("workload", "").upper()}'
+            parsed['throughput'] = float(data_obj['KTPS'])
+            ops = ["READ", "UPDATE", "SCAN", "INSERT", "READMODIFYWRITE"]
+            keys = [f'{k.lower()}_latency' for k in ops]
+            parsed['op_cycles'] = 0
+            parsed['op_cnt'] = 0
+
+            all_zero = True
+
+            for op, k in zip(ops, keys):
+                if op in data_obj:
+                    parsed[k] = int(data_obj[op]['cycles']) / max(int(data_obj[op]['cnt']), 1.0)
+                    if parsed[k] != 0.0:
+                        all_zero = False
+
+                    parsed['op_cycles'] += int(data_obj[op]['cycles'])
+                    parsed['op_cnt'] += int(data_obj[op]['cnt'])
+            
+            if all_zero:
+                return None, None
+
+            parsed['op_latency'] = parsed['op_cycles'] / max(parsed['op_cnt'], 1.0)
+
         if 'throughput' in data_obj:
             parsed['throughput'] = data_obj['throughput']
         if 'total_time' in data_obj:
@@ -77,49 +117,61 @@ class IDXDataObject:
                 parsed['indexing'] = data_obj['kernfs']['search']['total_time']
                 parsed['read_data'] = data_obj['kernfs']['digest'] - data_obj['kernfs']['search']['total_time']
 
-                parsed['nops'] =data_obj['kernfs']['search']['nr_search']
+                parsed['nops'] = data_obj['kernfs']['search']['nr_search']
 
             total = parsed['indexing'] + parsed['read_data']
             parsed['total_breakdown'] = total
 
-            #scale = parsed['throughput'] if 'throughput' in parsed else parsed['total_time']
-            #parsed['indexing'] /= total
-            #parsed['indexing'] *= scale
-            #parsed['read_data'] /= total
-            #parsed['read_data'] *= scale
+        if 'total_time' in data_obj and 'io size' in data_obj:
+            total_bytes = data_obj['io size'] * \
+                (data_obj['l0']['nr'] + data_obj['log']['write']['nr'])
+            parsed['throughput'] = total_bytes / data_obj['total_time']
+
+            read_bytes = data_obj['io size'] * data_obj['l0']['nr']
+            parsed['read_throughput'] = read_bytes / data_obj['total_time']
+
+            read_bytes = data_obj['io size'] * data_obj['log']['write']['nr']
+            parsed['write_throughput'] = read_bytes / data_obj['total_time']
+            parsed['write_throughput_mb'] = parsed['write_throughput'] / (1024 ** 2)
+
+
         if 'cache' in data_obj:
             cache_obj = data_obj['cache']
-            parsed['l1_accesses'] = cache_obj['l1']['accesses']
-            parsed['l1_misses'] = cache_obj['l1']['misses']
-            parsed['l2_accesses'] = cache_obj['l2']['accesses']
-            parsed['l2_misses'] = cache_obj['l2']['misses']
-            parsed['llc_misses'] = cache_obj['l3']['misses']
-            parsed['llc_accesses'] = cache_obj['l3']['accesses']
+            if 'l1' in cache_obj:
+                parsed['l1_accesses'] = cache_obj['l1']['accesses']
+                parsed['l1_misses'] = cache_obj['l1']['misses']
+                parsed['l2_accesses'] = cache_obj['l2']['accesses']
+                parsed['l2_misses'] = cache_obj['l2']['misses']
+                parsed['llc_misses'] = cache_obj['l3']['misses']
+                parsed['llc_accesses'] = cache_obj['l3']['accesses']
 
             nvdimm_stats = {k: v for k, v in cache_obj.items() if 'nvdimm' in k}
             parsed.update(nvdimm_stats)
 
             if 'kernfs' in cache_obj:
                 kern_cache = cache_obj['kernfs']
-                parsed['l1_accesses'] += kern_cache['l1']['accesses']
-                parsed['l1_misses'] += kern_cache['l1']['misses']
-                parsed['l2_accesses'] += kern_cache['l2']['accesses']
-                parsed['l2_misses'] += kern_cache['l2']['misses']
-                parsed['llc_misses'] += kern_cache['l3']['misses']
-                parsed['llc_accesses'] += kern_cache['l3']['accesses']
+                if 'l1' in kern_cache:
+                    parsed['l1_accesses'] += kern_cache['l1']['accesses']
+                    parsed['l1_misses'] += kern_cache['l1']['misses']
+                    parsed['l2_accesses'] += kern_cache['l2']['accesses']
+                    parsed['l2_misses'] += kern_cache['l2']['misses']
+                    parsed['llc_misses'] += kern_cache['l3']['misses']
+                    parsed['llc_accesses'] += kern_cache['l3']['accesses']
 
             cache_keys = ['l1_accesses', 'l1_misses', 'l2_accesses', 
                           'l2_misses', 'llc_accesses', 'llc_misses']
            
             for k in cache_keys:
-                parsed[k] /= parsed['nops']
+                if k in parsed:
+                    parsed[k] /= parsed['nops']
     
-            parsed['l1_hits'] = (parsed['l1_accesses'] - parsed['l1_misses']) / max(parsed['l1_accesses'], 1.0)
-            parsed['l2_hits'] = (parsed['l2_accesses'] - parsed['l2_misses']) / max(parsed['l2_accesses'], 1.0)
-            parsed['llc_hits'] = (parsed['llc_accesses'] - parsed['llc_misses']) / max(parsed['llc_accesses'], 1.0)
+            if 'l1_accesses' in parsed:
+                parsed['l1_hits'] = (parsed['l1_accesses'] - parsed['l1_misses']) / max(parsed['l1_accesses'], 1.0)
+                parsed['l2_hits'] = (parsed['l2_accesses'] - parsed['l2_misses']) / max(parsed['l2_accesses'], 1.0)
+                parsed['llc_hits'] = (parsed['llc_accesses'] - parsed['llc_misses']) / max(parsed['llc_accesses'], 1.0)
 
 
-        return parsed
+        return keys, parsed
 
     def _normalize_fields(self, dfs):
         #fields = ['cache_accesses', 'llc_misses', 'llc_accesses',
@@ -154,14 +206,17 @@ class IDXDataObject:
     def _parse_results(self, results_dir):
         from scipy.stats.mstats import gmean
         data = defaultdict(list)
+        seen = defaultdict(lambda: 1)
         files = [f for f in results_dir.iterdir() if f.is_file() and 'summary' not in f.name]
         for fp in files:
             with fp.open() as f:
                 objs = json.load(f)
                 for obj in objs:
-                    parsed_data = self._parse_relevant_fields(obj)
+                    keys, parsed_data = self._parse_relevant_fields(obj)
+                    key_str = json.dumps(keys)
                     if parsed_data is not None:
                         data[parsed_data['trial num']] += [parsed_data]
+                        seen[key_str] += 1
 
         df_list = []
         for trial, d in data.items():
@@ -172,6 +227,8 @@ class IDXDataObject:
         df_mean = dfg.mean()
         ntrials = len(data)
         df_ci = ((1.96 * dfg.std(ddof=0)) / np.sqrt(ntrials))
+        # df_ci = ((1.645 * dfg.std(ddof=0)) / np.sqrt(ntrials))
+        # df_ci = ((1.96 * dfg.std(ddof=0)) / (dfg.count() ** (1/2)))
 
         pprint(df_ci)
         pprint(df_mean)
@@ -205,12 +262,36 @@ class IDXDataObject:
         df_ci['indexing_ci'] /= df_mean['total_breakdown']
         df_ci['read_data_ci'] /= df_mean['total_breakdown']
 
+        df_ci['io_cycles_ci'] = df_ci['total_breakdown_ci'] / df_mean['nops']
+        df_mean['io_cycles'] = df_mean['total_breakdown'] / df_mean['nops']
+
+        if 'op_latency' in df_mean:
+            df_mean['io_path'] = df_mean['io_cycles'] / df_mean['op_latency']
+            df_ci['io_path_ci'] = df_ci['io_cycles_ci'] / df_ci['op_latency_ci']
+        
         df_ci['total_breakdown_ci'] /= df_mean['total_breakdown']
         df_mean['total_breakdown'] /= df_mean['total_breakdown']
-        
+
         self.df = df_list[0].reindex(df_mean.index) # to preserve string fields
         self.df[df_mean.columns] = df_mean
         self.df = pd.concat([self.df, df_ci], axis=1)
+
+        hashfs = self.df[self.df.struct == 'HASHFS'].copy()
+        if not hashfs.empty:
+            for layout in self.df.layout.unique().tolist():
+                if layout == 1.0:
+                    continue
+                if not hashfs[hashfs.layout == layout].empty:
+                    hashfs = hashfs[~(hashfs.layout == layout)]
+                
+                l1 = hashfs[hashfs.layout == 1.0]
+                assert not l1.empty
+                l2 = l1.copy()
+                l2.layout = layout
+                self.df = self.df.append(l2)
+
+        # Reset index to reset the row numbers or whatnot
+        self.df = self.df.reset_index(drop=True)
 
     def _load_results_file(self, file_path):
         with file_path.open() as f:
@@ -382,6 +463,9 @@ class IDXDataObject:
     @staticmethod
     def make_bench_name_latex_compat(bench):
         from itertools import chain
+        if isinstance(bench, float):
+            bench = str(int(bench * 100))
+
         engine = inflect.engine()
         pieces = chain(*[p.split(' ') for p in bench.split('_')])
         new_name = ''
@@ -464,6 +548,45 @@ class IDXDataObject:
                 return True
             return False
 
+        def do_cache_thing(l, col, val, baseline):
+            nice_val = self.make_bench_name_latex_compat(val)
+            nl = self.make_bench_name_latex_compat(l)
+            
+            val_df = self.df[self.df[col] == val]
+            
+            if f'l{l}_hits' in val_df:
+                l1_hit_ratio = val_df[f'l{l}_hits'].mean()
+                update_max(f'AvgL{nl}Hits{nice_val}', l1_hit_ratio,
+                        '{:.0%}'.format(l1_hit_ratio), val)
+
+                if baseline is not None:
+                    baseline_df = self.df[self.df[col] == baseline.upper()]
+                    rel_l1_accesses = val_df[f'l{l}_accesses'].mean() / baseline_df[f'l{l}_accesses'].mean()
+                    update_max(f'L{nl}Ratio{nice_val}', rel_l1_accesses,
+                        '{:.0%}'.format(rel_l1_accesses), val)
+
+        def do_l1_thing(col, val, baseline=None):
+            do_cache_thing('1', col, val, baseline)
+
+        def do_llc_thing(col, val, baseline=None):
+            do_cache_thing('lc', col, val, baseline)
+
+        for idx in self.df.struct.unique():
+            do_l1_thing('struct', idx, baseline=baseline)
+
+
+
+        # Avg indexing time per op by rep
+        if 'repetitions' in self.df.columns:
+            idx_df = self.df.groupby('repetitions').mean().indexing_per_op
+            idx_norm = idx_df / idx_df.min()
+            update_max('IndexingRatioCold', idx_norm[0], 
+                    f'{idx_norm[0]:.1f}\\myx', '')
+
+
+        for layout in self.df.layout.unique():
+            do_llc_thing('layout', layout)
+
         for bench in self.df.test.unique():
             bench_data = self.df[self.df.test == bench]
             baseline_df = bench_data[bench_data.struct == baseline.upper()]
@@ -485,6 +608,7 @@ class IDXDataObject:
 
             for idx in bench_data.struct.unique():
                 df = bench_data[bench_data.struct == idx]
+                nice_idx = self.make_bench_name_latex_compat(idx)
                 # MaxIndexingOverhead
                 if 'indexing' in df:
                     indexing = df['indexing'].max()
@@ -492,6 +616,28 @@ class IDXDataObject:
                             '{:.0%}'.format(indexing), '%s %s' % (idx, bench))
                     update_max_bench(bench, 'MaxIndexingOverhead', indexing,
                             '{:.0%}'.format(indexing), '%s %s' % (idx, bench))
+
+                    # AvgIndexingOverhead (per idx)
+                    avg_indexing = df['indexing'].mean()
+                    update_max_bench(bench, f'AvgIndexingOverhead{nice_idx}', avg_indexing,
+                            '{:.0%}'.format(avg_indexing), '%s %s' % (idx, bench))
+
+                    # Min
+                    min_indexing = df['indexing'].min()
+                    update_max(f'MinIndexingOverhead{nice_idx}', min_indexing,
+                            '{:.0%}'.format(min_indexing), '%s %s' % (idx, bench))
+                    update_max_bench(bench, f'MinIndexingOverhead{nice_idx}', min_indexing,
+                            '{:.0%}'.format(min_indexing), '%s %s' % (idx, bench))
+                
+                if 'l1_hits' in df:
+                    l1_hit_ratio = df['l1_hits'].mean()
+                    rel_l1_accesses = df['l1_accesses'].mean() / baseline_df['l1_accesses'].mean()
+
+                    update_max_bench(bench, f'AvgLOneHits{nice_idx}', l1_hit_ratio,
+                            '{:.0%}'.format(l1_hit_ratio), '%s %s' % (idx, bench))
+
+                    update_max_bench(bench, f'LOneRatio{nice_idx}', rel_l1_accesses,
+                            '{:.0%}'.format(rel_l1_accesses), '%s %s' % (idx, bench))
 
                 # MaxIndexingOverheadReduction
                 for layout in df.layout.unique():

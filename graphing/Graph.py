@@ -103,12 +103,14 @@ class Grapher:
                 else []
         new_names = []
         for name in benchmark_names:
+            lname = name
             if isinstance(name, str):
                 name = name.lower()
+
             if name in bnames:
                 new_names += [bnames[name]]
             else:
-                new_names += [name]
+                new_names += [lname]
         return new_names
 
     @staticmethod
@@ -160,6 +162,47 @@ class Grapher:
     def _kwargs_has(self, kwargs_dict, field):
         return field in kwargs_dict and kwargs_dict[field] is not None
 
+    def create_single_stat_table(self, means_df, ci_df, axis, **kwargs):
+        # axis.table(cellText=[['yo']])
+
+        y = [1, 2, 3, 4, 5, 4, 3, 2, 1, 1, 1, 1, 1, 1, 1, 1]    
+        col_labels = ['col1', 'col2', 'col3']
+        row_labels = ['row1', 'row2', 'row3']
+        table_vals = [[11, 12, 13], [21, 22, 23], [31, 32, 33]]
+
+        row_labels = [' '.join([str(p) for p in x]) for x in means_df.index]
+        col_labels = [' '.join([str(p) for p in x]) for x in means_df.columns]
+
+        pprint(row_labels)
+        pprint(col_labels)
+
+        table_vals = []
+        for r in means_df.index:
+            row = []
+            for c in means_df.columns:
+                row += [f'{means_df[c][r]:.0f}']
+                
+            table_vals += [row]
+
+        # Draw table
+        the_table = axis.table(cellText=table_vals,
+                            # colWidths=[0.1] * 3,
+                            rowLabels=row_labels,
+                            colLabels=col_labels,
+                            loc='center')
+        the_table.auto_set_font_size(False)
+        the_table.set_fontsize(6)
+        the_table.scale(1, 1)
+
+        plt.sca(axis)
+        # Removing ticks and spines enables you to get the figure only with table
+        plt.tick_params(axis='x', which='both', 
+                        bottom=False, top=False, labelbottom=False)
+        plt.tick_params(axis='y', which='both', 
+                        right=False, left=False, labelleft=False)
+        for pos in ['right', 'top', 'bottom', 'left']:
+            axis.spines[pos].set_visible(False)
+
     def graph_single_stat(self, means_df, ci_df, axis, **kwargs):
         all_means = self._rename_configs(self._reorder_configs(means_df))
         all_error = self._rename_configs(self._reorder_configs(ci_df)) if ci_df is not None else None
@@ -185,7 +228,7 @@ class Grapher:
             all_error[:] = 0.0
 
         num_configs = len(all_means.columns)
-        width = num_configs / (num_configs + 2)
+        width = num_configs / (num_configs + self._kwargs_default(kwargs, 'bar_spacing', 2))
         bar_width = width / num_configs
 
         max_val = (all_means + all_error + 0.5).max().max()

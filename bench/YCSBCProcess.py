@@ -46,7 +46,7 @@ class YCSBCRunner(BenchRunner):
         labels = {}
         for line in lines:
             cols = line.split()
-            if 'leveldb' in line:
+            if 'leveldb' in line and 'Closing' not in line:
                 labels['KTPS'] = cols[-1]
             for op in ["READ", "UPDATE", "SCAN", "INSERT", "READMODIFYWRITE", "SUM"]:
               if line.startswith(op+ " "):
@@ -179,9 +179,12 @@ class YCSBCRunner(BenchRunner):
 
             stat_objs = []
             prev_idx = None
+            workload_num = 0
+            tries = 0
             try:
-                for workload in workloads:
+                while workload_num < len(workloads):
                     try:
+                        workload = workloads[workload_num]
                         idx_struct = workload[0]
 
                         self.env['MLFS_CACHE_PERF'] = '0'
@@ -198,10 +201,16 @@ class YCSBCRunner(BenchRunner):
 
                         counter += 1
                         shared_q.put(counter)
+                        workload_num += 1
+                        tries = 0
 
                     except:
                         pprint(workload)
-                        raise
+                        if (tries):
+                            raise
+                        print('Trying again')
+                        self.kernfs.mkfs()
+                        tries += 1
 
             finally:
                 # Output all the results

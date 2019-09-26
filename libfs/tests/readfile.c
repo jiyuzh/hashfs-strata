@@ -64,12 +64,15 @@ uint32_t get_unit(char c) {
 
 int main(int argc, char **argv) {
     int c;
-
-    srand(time(NULL));
+    unsigned t = time(NULL);
+    //unsigned t = 1568842819;
+    printf("Random seed is %u\n", t);
+    srand(t);
     while ((c = getopt(argc, argv, OPTSTRING)) != -1) {
         switch (c) {
             case 'b': // block_size
-                block_size = atoi(optarg);
+                //block_size = atoi(optarg);
+                sscanf(optarg, "%zu", &block_size);
                 block_size *= get_unit(optarg[strlen(optarg)-1]);
                 if (block_size % sizeof(uint64_t)) {
                     panic("block_size should be dividable by 64");

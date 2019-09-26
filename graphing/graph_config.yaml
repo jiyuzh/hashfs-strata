@@ -3,10 +3,10 @@ display_options:
     global_hash_table: Global Hash Table
     global_hash_table_compact: Global Hash Table (Compact)
     radix_trees: Radix Trees
-    extent_trees: NVM Extent Trees
-    none: DRAM+NVM Extent Trees
+    extent_trees: Extent Trees
+    none: Baseline
     level_hash_tables: Level Hash Tables
-    global_cuckoo_hash: Global Cuckoo Hash Table
+    global_cuckoo_hash: "Global\nHash Table"
     global_cuckoo_hash_compact: Global Cuckoo Hash Table (Compact)
     hashfs: HashFS
 
@@ -23,21 +23,21 @@ display_options:
     Global Hash Table: '#8dd3c7'
     Global Hash Table (Compact): '#FF0000'
     Radix Trees: '#ffffb3'
-    NVM Extent Trees: '#bebada'
+    Extent Trees: '#bebada'
     Level Hash Tables: '#fb8072'
-    Global Cuckoo Hash Table: '#999999'
+    "Global\nHash Table": '#999999'
     Global Cuckoo Hash Table (Compact): '#990099'
-    DRAM+NVM Extent Trees: '#ff0000'
+    Baseline: '#ff0000'
     HashFS: '#34a1eb'
 
   config_order:
     - Global Hash Table
     - Global Hash Table (Compact)
     - Radix Trees
-    - NVM Extent Trees
-    - DRAM+NVM Extent Trees
+    - Extent Trees
+    - Baseline
     - Level Hash Tables
-    - Global Cuckoo Hash Table
+    - "Global\nHash Table"
     - Global Cuckoo Hash Table (Compact)
     - HashFS
 

@@ -1,17 +1,26 @@
 config_sets:
   default:
     - global_hash_table
+    - global_cuckoo_hash
     - radix_trees
     - extent_trees
     - level_hash_tables
     - hashfs
+  no_level_hashing:
+   - radix_trees
+   - extent_trees
+   - global_cuckoo_hash
+   - hashfs
+  page_cache:
+   - none 
+   - extent_trees
   
 schemes:
 
   {% set dram_copies_stats = ['indexing', 'l1_hits'] %}
   {% for stat in dram_copies_stats %}
   dram_copies_{{ stat }}:
-    print_size: [7.0, 2.5]
+    print_size: [7.0, 2.0]
     file_name: dram_copies_{{ stat }}.pdf
     {% set width = 3 %}
     {% set height = 2 %}
@@ -26,6 +35,7 @@ schemes:
           pos: [ {{ r }}, {{ c }} ],
           size: [1, 1],
           type: single_stat,
+          config_set: page_cache,
           data_config: {
             plot: {{ stat }},
             groups: struct,
@@ -33,7 +43,7 @@ schemes:
             filter: {
               'start size': {{ raw_size[r] }},
               'io size': 4096,
-              'layout': '50',
+              'layout': 0.5,
               'num files': 1,
               'test': {{ tests[c] }},
             }
@@ -41,6 +51,7 @@ schemes:
           options: {
             label: '{{ tests[c] }}s, {{ human_size[r] }}',
             label_bars: False,
+            bar_spacing: 1.5,
             exclude_tick_labels: {{ False if c == 0 else True }},
             cutoff: 1.0,
             error_bars: True,
@@ -60,7 +71,7 @@ schemes:
 
   {% set single_file_small_io_stats = 
       ['indexing', 'l1_hits', 'l2_hits', 'llc_hits', 'l1_accesses',
-        'l1_misses' ] %}
+        'l1_misses', '' ] %}
   {% for stat in single_file_small_io_stats %}
   single_{{ stat }}:
     print_size: [7.0, 3.5]
@@ -118,6 +129,336 @@ schemes:
     ]
   {% endfor %}
 
+  {% set multi_file_small_io_stats = 
+      ['indexing', 'l1_hits', 'l2_hits', 'llc_hits', 'l1_accesses',
+        'l1_misses', '' ] %}
+  {% for stat in single_file_small_io_stats %}
+  multi_{{ stat }}:
+    print_size: [7.0, 3.0]
+    file_name: multi_{{ stat }}.pdf
+    
+    {% set layouts = ['1.0', '0.7'] %}
+    {% set tests = ['Sequential Read', 'Random Read', 'Insert'] %}
+    {% set raw_size = [65536, 2097152] %}
+    {% set repetitions = [512, 51200] %}
+    {% set human_size = ['64KB File', '2MB File'] %}
+
+    {% set width = tests|length %}
+    {% set height = raw_size|length %}
+
+    dimensions: [ {{ height }}, {{ width }} ]
+    plots: [
+    {% for r in range(height) %}
+      {% for c in range(width) %}
+        {
+          pos: [ {{ r }}, {{ c }} ],
+          size: [1, 1],
+          type: single_stat,
+          data_config: {
+            plot: {{ stat }},
+            groups: struct,
+            axis: [layout, repetitions],
+            filter: {
+              'start size': {{ raw_size[r] }},
+              'io size': 64,
+              'num files': 512,
+              'test': {{ tests[c] }},
+            }
+          },
+          options: {
+            label: '{{ tests[c] }}s, {{ human_size[r] }}',
+            label_bars: False,
+            bar_spacing: 1.5,
+            exclude_tick_labels: {{ False if c == 0 else True }},
+            {% if stat not in ['l1_accesses', 'l1_misses'] %}
+            cutoff: 1.0,
+            error_bars: True,
+            {% else %}
+            error_bars: False,
+            {% endif %}
+            {% if r == height - 1 and c == 0 %}
+            legend: {
+              prop: {size: 5,},
+              loc: lower right,
+              ncol: 1,
+            },
+            {% endif %}
+          },
+        },
+        {% endfor %}
+      {% endfor %}
+    ]
+  {% endfor %}
+
+  {% set large_io_stats = 
+      ['l1_hits', 'l2_hits', 'llc_hits', 'l1_accesses',
+        'l1_misses', '' ] %}
+  {% for stat in large_io_stats %}
+  large_io_{{ stat }}:
+    print_size: [7.0, 3.5]
+    file_name: large_io_{{ stat }}.pdf
+    
+    {% set layouts = ['1.0', '0.7'] %}
+    {% set tests = ['Sequential Read', 'Random Read', 'Insert'] %}
+    {% set io_size = [32768, 262144] %}
+    {% set repetitions = [50, 5000] %}
+    {% set human_size = ['32KB IO', '256KB IO'] %}
+
+    {% set width = tests|length %}
+    {% set height = io_size|length %}
+
+    dimensions: [ {{ height }}, {{ width }} ]
+    plots: [
+    {% for r in range(height) %}
+      {% for c in range(width) %}
+        {
+          pos: [ {{ r }}, {{ c }} ],
+          size: [1, 1],
+          type: single_stat,
+          config_set: no_level_hashing,
+          data_config: {
+            plot: {{ stat }},
+            groups: struct,
+            axis: [layout, repetitions],
+            filter: {
+              'start size': 1073741824,
+              'io size': {{ io_size[r] }},
+              'num files': 1,
+              'test': {{ tests[c] }},
+            }
+          },
+          options: {
+            label: '{{ tests[c] }}s, {{ human_size[r] }}',
+            label_bars: False,
+            exclude_tick_labels: {{ False if c == 0 else True }},
+            {% if stat not in ['l1_accesses', 'l1_misses'] %}
+            cutoff: 1.0,
+            error_bars: True,
+            {% else %}
+            error_bars: False,
+            {% endif %}
+            {% if r == height - 1 and c == width - 1 %}
+            legend: {
+              prop: {size: 4.5,},
+              loc: lower right,
+              ncol: 1,
+            },
+            {% endif %}
+          },
+        },
+        {% endfor %}
+      {% endfor %}
+    ]
+  {% endfor %}
+
+  large_io_indexing:
+    print_size: [3.5, 3.5]
+    file_name: large_io_indexing.pdf
+    
+    {% set layouts = ['1.0', '0.7'] %}
+    {% set tests = ['Sequential Read', 'Random Read', 'Insert'] %}
+    {% set io_size = [32768, 262144] %}
+    {% set repetitions = [50, 5000] %}
+    {% set human_size = ['32KB IO', '256KB IO'] %}
+
+    {% set width = tests|length %}
+    {% set height = io_size|length %}
+
+    dimensions: [ {{ height }}, {{ width + 1 }} ]
+    plots: [
+    {% for r in range(height) %}
+      {% for c in range(width) %}
+        {
+          pos: [ {{ r }}, {{ c }} ],
+          size: [ 1, {{ 1 if c < width - 1 else 2 }} ],
+          type: single_stat,
+          config_set: no_level_hashing,
+          data_config: {
+            plot: indexing,
+            groups: struct,
+            axis: [layout, repetitions],
+            filter: {
+              'start size': 1073741824,
+              'io size': {{ io_size[r] }},
+              'num files': 1,
+              'test': {{ tests[c] }},
+            }
+          },
+          options: {
+            label: "{{ tests[c] }}s\n{{ human_size[r] }}",
+            label_bars: False,
+            exclude_tick_labels: {{ False if c == 0 else True }},
+            {% if stat not in ['l1_accesses', 'l1_misses'] %}
+            cutoff: {{0.31 if c < width - 1 else 1.0}},
+            error_bars: True,
+            {% else %}
+            error_bars: False,
+            {% endif %}
+            {% if r == height - 1 and c == width - 1 %}
+            legend: {
+              prop: {size: 4.5,},
+              loc: lower right,
+              ncol: 1,
+            },
+            {% endif %}
+          },
+        },
+        {% endfor %}
+      {% endfor %}
+    ]
+
+  {% set concurrency_stats = 
+      ['indexing', 'throughput' ] %}
+  {% for stat in concurrency_stats %}
+  concurrency_{{ stat }}:
+    print_size: [3.5, 1.5]
+    file_name: concurrency_{{ stat }}.pdf
+
+    {% set tests = ['Concurrency Test (Sequential)', 'Concurrency Test (Random)'] %}
+
+    {% set width = tests|length %}
+    {% set height = 1%}
+
+    dimensions: [ {{ height }}, {{ width }} ]
+    plots: [
+    {% for r in range(height) %}
+      {% for c in range(width) %}
+        {
+          pos: [ {{ r }}, {{ c }} ],
+          size: [1, 1],
+          type: single_stat,
+          data_config: {
+            plot: {{ stat }},
+            groups: struct,
+            axis: 'threads',
+            filter: {
+              'start size': 1073741824,
+              'io size': 4096,
+              'test': {{ tests[c] }},
+            }
+          },
+          options: {
+            label: '{{ tests[c] }}',
+            label_bars: False,
+            exclude_tick_labels: {{ False if c == 0 else True }},           
+            error_bars: True,
+            {% if r == height - 1 and c == width - 1 %}
+            legend: {
+              prop: {size: 4.5,},
+              loc: lower right,
+              ncol: 1,
+            },
+            {% endif %}
+          },
+        },
+        {% endfor %}
+      {% endfor %}
+    ]
+  {% endfor %}
+
+  
+  concurrency:
+    print_size: [3.5, 1.3]
+    file_name: concurrency.pdf
+
+    {% set concurrency_stats = 
+      ['write_throughput_mb', 'wait_digest_per_op' ] %}
+    {% set concurrency_stats_label = ['Overall throughput (MB/s)',
+      'Cycles waiting on\\napplication log (cycles)' ]  %}
+
+    {% set width = concurrency_stats|length %}
+    {% set height = 1%}
+
+    dimensions: [ {{ height }}, {{ width }} ]
+    plots: [
+    {% for r in range(height) %}
+      {% for c in range(width) %}
+        {
+          pos: [ {{ r }}, {{ c }} ],
+          size: [1, 1],
+          type: single_stat,
+          data_config: {
+            plot: {{ concurrency_stats[c] }},
+            groups: struct,
+            axis: 'threads',
+            filter: {
+              'start size': 1048576,
+              'io size': 4096,
+              'test': 'Concurrency Test (Inserts)',
+            }
+          },
+          options: {
+            label: "{{ concurrency_stats_label[c] }}",
+            label_bars: False,
+            bar_spacing: 1.5,
+            exclude_tick_labels: {{ False if c == 0 else True }},           
+            error_bars: True,
+            {% if r == height - 1 and c == 0 %}
+            legend: {
+              prop: {size: 4.5,},
+              loc: lower right,
+              ncol: 1,
+            },
+            {% endif %}
+          },
+        },
+        {% endfor %}
+      {% endfor %}
+    ]
+
+  {% set concurrency_stats = 
+      ['indexing', 'throughput', 'write_throughput_mb' ] %}
+  {% set concurrency_stats_label = 
+      {'indexing':'', 
+       'throughput':'', 
+       'write_throughput_mb':'Overall throughput (MB/s)' } %}
+  {% for stat in concurrency_stats %}
+  concurrency_{{ stat }}:
+    print_size: [1.5, 1.5]
+    file_name: concurrency_{{ stat }}.pdf
+
+    {% set tests = ['Concurrency Test (Inserts)'] %}
+
+    {% set width = tests|length %}
+    {% set height = 1%}
+
+    dimensions: [ {{ height }}, {{ width }} ]
+    plots: [
+    {% for r in range(height) %}
+      {% for c in range(width) %}
+        {
+          pos: [ {{ r }}, {{ c }} ],
+          size: [1, 1],
+          type: single_stat,
+          data_config: {
+            plot: {{ stat }},
+            groups: struct,
+            axis: 'threads',
+            filter: {
+              'start size': 1048576,
+              'io size': 4096,
+              'test': {{ tests[c] }},
+            }
+          },
+          options: {
+            label: '{{ concurrency_stats_label[stat] }}',
+            label_bars: False,
+            bar_spacing: 1.5,
+            exclude_tick_labels: {{ False if c == 0 else True }},           
+            error_bars: True,
+            {% if r == height - 1 and c == width - 1 %}
+            legend: {
+              prop: {size: 4.5,},
+              loc: lower right,
+              ncol: 1,
+            },
+            {% endif %}
+          },
+        },
+        {% endfor %}
+      {% endfor %}
+    ]
+  {% endfor %}
   
   single_l1_stats:
     print_size: [7.0, 4.0]
@@ -299,3 +640,108 @@ schemes:
         {% endfor %}
       {% endfor %}
     ]
+
+  ycsb:
+    print_size: [3.5, 3.0]
+    file_name: ycsb.pdf
+    
+    {% set stats = [['indexing', 'op_latency',],
+                    ['io_path', 'throughput']]%}
+    {% set nice_stats = ['Proportion of IO Path spent Indexing', 
+                         'Average Operation Latency (cycles)', 
+                         'Throughput (kilo-operations per second)']%}
+    {% set nice_stats = [["Proportion of Indexing\\nin IO Path", "Operation Latency (cycles)"], 
+                         ["Proportion of operations\\nin File System", "Throughput\\n(kilo-operations per second)"]] %}
+    {% set width = 2 %}
+    {% set height = 2 %}
+
+    dimensions: [ {{ height }}, {{ width }} ]
+    plots: [
+    {% for r in range(height) %}
+      {% for c in range(width) %}
+        {
+          pos: [ {{ r }}, {{ c }} ],
+          size: [1, 1],
+          type: single_stat,
+          data_config: {
+            plot: {{ stats[r][c] }},
+            groups: struct,
+            axis: test,
+            filter: {
+              'layout': 1.0,
+            }
+          },
+          options: {
+            label: "{{ nice_stats[r][c] }}",
+            label_bars: False,
+            exclude_tick_labels: {{ False if c == 0 else True }},
+            error_bars: False,
+            bar_spacing: 1.5,
+            {% if r == height - 1 and c == width - 1 %}
+            legend: {
+              prop: {size: 5,},
+              loc: lower right,
+              ncol: 1,
+            },
+            {% endif %}
+          },
+        },
+        {% endfor %}
+      {% endfor %}
+    ]
+
+
+  {#
+  ycsb:
+    print_size: [7.0, 4.0]
+    file_name: ycsb.pdf
+    
+    {% set tests = ['workloada.strata.spec', 'workloadb.strata.spec', 'workloadbc.strata.spec',
+                    'workloadd.strata.spec', 'workloade.strata.spec', 'workloadbf.strata.spec',] %}
+    {% set stats = [['indexing', 'read_latency', 'update_latency', 'throughput'],
+                    ['indexing', 'read_latency', 'update_latency', 'throughput'],
+                    ['indexing', 'read_latency', 'read_latency', 'throughput'],
+                    ['indexing', 'read_latency', 'insert_latency', 'throughput'],
+                    ['indexing', 'scan_latency', 'insert_latency', 'throughput'],
+                    ['indexing', 'read_latency', 'readmodifywrite_latency', 'throughput']]%}
+    {% set width = tests[0]|length %}
+    {% set height = tests|length %}
+
+
+    dimensions: [ {{ height }}, {{ width }} ]
+    plots: [
+    {% for r in range(height) %}
+      {% for c in range(width) %}
+        {
+          pos: [ {{ r }}, {{ c }} ],
+          size: [1, 1],
+          type: single_stat,
+          data_config: {
+            plot: {{ stats[r][c] }},
+            groups: struct,
+            axis: tests,
+            filter: {
+              'start size': {{ raw_size[r % 2] }},
+              'io size': 64,
+              'num files': 1,
+              'test': {{ tests[c] }},
+            }
+          },
+          options: {
+            label: '{{ tests[c] }}s, {{ human_size[r % 2] }}, {{ single_l1_nice[r // 2] }}',
+            label_bars: False,
+            exclude_tick_labels: {{ False if c == 0 else True }},
+            error_bars: False,
+            {% if r == height - 1 and c == width - 1 %}
+            legend: {
+              prop: {size: 5,},
+              loc: lower right,
+              ncol: 1,
+            },
+            {% endif %}
+          },
+        },
+        {% endfor %}
+      {% endfor %}
+    ]
+    #}

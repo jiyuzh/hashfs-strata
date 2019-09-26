@@ -34,7 +34,9 @@ static int fd_v[MAX_FILE_NUM];
 static char filename_v[MAX_FILE_NUM][MAX_FILE_NAME_LEN];
 static pthread_t threads[MAX_THREADS];
 static pthread_barrier_t barrier;
+static bool all_write = false;
 typedef struct {
+    size_t id;
     size_t total_seq_read;
     size_t total_rand_read;
     size_t total_write;
@@ -53,12 +55,12 @@ static void *writer_thread(void *);
 #ifndef PREFIX
 #define PREFIX "/mlfs"
 #endif
-#define OPTSTRING "b:j:n:s:M:r:w:h:S:"
+#define OPTSTRING "b:j:n:s:M:r:w:h:S:a"
 #define OPTNUM 7
 void print_help(char **argv) {
     printf("usage: %s -b block_size -j n_threads -s seq_ratio -n num_file "
            "-M max_file_size -S start_file_size -w write_unit_size "
-           "-r read_unit_size\n", argv[0]);
+           "-r read_unit_size -a (for all write)\n", argv[0]);
 }
 uint32_t get_unit(char c) {
     switch (c) {
@@ -134,6 +136,9 @@ int main(int argc, char **argv) {
                 assert((write_unit % block_size == 0) && "write unit should be dividable by block_size");
                 opt_num++;
                 break;
+            case 'a': // all write threads
+                all_write = true;
+                break;
             case 'h':
                 print_help(argv);
                 exit(0);
@@ -171,28 +176,27 @@ int main(int argc, char **argv) {
             exit(-1);
         }
 
-        if (s.st_size > start_file_size) {
-            int terr = ftruncate(fd_v[i], start_file_size);
+        if (s.st_size != start_file_size) {
+            int terr = ftruncate(fd_v[i], 0);
             if (terr) {
                 perror("truncate failed");
                 exit(-1);
             }
 
             can_digest = true;
-        }
+            // init each file with read_unit data or start size, whichever is larger
+            size_t sz = read_unit > start_file_size ? read_unit : start_file_size;
+            // We don't need to make the write unit so small for init size
+            size_t incr = start_file_size < 64 * 1024 * 1024 ? start_file_size 
+                            : 64 * 1024 * 1024;
 
-        // init each file with read_unit data or start size, whichever is larger
-        size_t sz = read_unit > start_file_size ? read_unit : start_file_size;
-        // We don't need to make the write unit so small for init size
-        size_t incr = start_file_size < 64 * 1024 * 1024 ? start_file_size 
-                        : 64 * 1024 * 1024;
-
-        for (size_t s = 0; s < sz; ) {
-            can_digest = true;
-            size_t amount = sz - s > incr ? incr : sz - s;
-            ssize_t ret = write(fd_v[i], init_unit, amount);
-            assert(ret != -1);
-            s += ret;
+            for (size_t s = 0; s < sz; ) {
+                can_digest = true;
+                size_t amount = sz - s > incr ? incr : sz - s;
+                ssize_t ret = write(fd_v[i], init_unit, amount);
+                assert(ret != -1);
+                s += ret;
+            }
         }
     }
 
@@ -231,7 +235,8 @@ int main(int argc, char **argv) {
     int terr = gettimeofday(&start, NULL);
     if (terr) panic("GETTIMEOFDAY\n");
     for (int i=0; i < n_threads; ++i) {
-        if (!i) {
+        worker_results[i].id = (size_t)i;
+        if (i < file_num || all_write) {
             // 1 writer thread
             assert(pthread_create(&threads[i], NULL, writer_thread, (void*)(&worker_results[i])) == 0);
         } else {
@@ -337,8 +342,9 @@ static void *writer_thread(void *arg) {
         exit(-1);
     }
 
+    int fd = fd_v[r->id];
+
     while (1) {
-        int fd = fd_v[rand()%file_num];
         assert(fstat(fd, &file_stat) == 0 && "fstat failed");
         size_t size = file_stat.st_size;
         size_t block_num = size/block_size;

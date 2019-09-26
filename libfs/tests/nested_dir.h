@@ -51,6 +51,7 @@ void open_many_files(int *fd_v, char (*filename_v)[MAX_FILE_NAME_LEN], int file_
             // make next level dir
             int ret = mkdir(buf, 0755);
             if (ret != 0 && errno != EEXIST) {
+                fprintf(stderr, "'%s' --- %s, ret %d\n", buf, strerror(errno), ret);
                 perror("can not mkdir, not EEXIST");
                 exit(-1);
             }

@@ -65,14 +65,19 @@ class IDXGrapher:
         
         assert self.schema_file.exists()
 
+    def _filter_configs(self, df, layout):
+        config_set_name = layout['config_set'] if 'config_set' in layout else 'default'
+        config_set = [c.upper() for c in self.config_sets[config_set_name]]
+        
+        return df[df.struct.isin(config_set)]
+
     def _plot_single_stat(self, gs, layout):
         grapher = Grapher(self.args)
 
         df = self.data.get_dataframe()
         # options = layout['options']
 
-        # config_set = layout['config_set'] if 'config_set' in layout else 'default'
-        # dfs = self.data.filter_configs(self.config_sets[config_set], dfs)
+        df = self._filter_configs(df, layout)
         # dfs = self.data.reorder_data_frames(dfs)
         # if 'stat' in layout:
         #     dfs = self.data.filter_stats(layout['stat'], dfs)
@@ -96,7 +101,11 @@ class IDXGrapher:
         
         series = df[config['plot']]
         means_df = series.unstack()
-        ci_df = df[f'{config["plot"]}_ci'].unstack()
+        ci_df = df[f'{config["plot"]}_ci'].unstack().fillna(0)
+
+        if means_df.index.names[0] == 'layout':
+            means_df.sort_index(axis=0, ascending=False, inplace=True)
+            ci_df.sort_index(axis=0, ascending=False, inplace=True)
 
         flush = True
         # if 'average' in options and options['average']:
@@ -132,6 +141,41 @@ class IDXGrapher:
         # By this point, means_df should be two dimensional
         return grapher.graph_single_stat(means_df, ci_df, gs,
                                          flush=flush, **layout['options'])
+
+    def _create_table(self, gs, layout):
+        grapher = Grapher(self.args)
+
+        df = self.data.get_dataframe()
+
+        config = layout['data_config']
+        for col, val in config['filter'].items():
+            df = df[df[col] == val]
+
+        new_index = [*config['rows'], config['groups'], *config['columns']]
+
+        df = df.set_index(new_index)
+
+        df = df[~df.index.duplicated(keep='last')]
+
+        series = df[config['values']]
+        means_df = series.unstack()
+
+        ci_values = [f'{v}_ci' for v in config['values']]
+        series_ci = df[ci_values]
+
+        # if 'baseline' in config:
+        #     baseline_value = series.loc[config['baseline']]
+        #     for group_name in series.index.get_level_values(0).unique():
+        #         if group_name == config['baseline']:
+        #             continue
+
+        #         embed()
+        #         series.loc[group_name] /= baseline_value
+        #         series_ci.loc[group_name] /= baseline_value
+     
+        # By this point, means_df should be two dimensional
+        return grapher.create_single_stat_table(means_df, None, gs, 
+                                                **layout['options'])
 
     def _plot_mtcc(self, gs, layout):
         grapher = Grapher(self.args)
@@ -222,6 +266,9 @@ class IDXGrapher:
 
             if layout_config['type'] == 'single_stat':
                 a = self._plot_single_stat(axis, layout_config)
+                artists += [a]
+            elif layout_config['type'] == 'table':
+                a = self._create_table(axis, layout_config)
                 artists += [a]
             elif layout_config['type'] == 'mtcc':
                 a = self._plot_mtcc(axis, layout_config)

@@ -44,6 +44,8 @@ class MTCCRunner(BenchRunner):
     def _parse_readfile_time(self, stdout):
         ''' Parse the 'elapsed time' field from the readfile output. '''
         lines = stdout.decode().splitlines()
+        if self.args.verbose:
+            pprint(lines)
         for line in lines:
             if 'elapsed time:' in line:
                 fields = line.split(':')
@@ -139,7 +141,7 @@ class MTCCRunner(BenchRunner):
                 numactl -N {numa_node} -m {numa_node} {dir_str}/run.sh
                 {dir_str}/MTCC -b {io_size} -s 1 -j 1 -n {nfiles}
                 -S {start_size} -M {end_size}
-                -w {io_size * reps} -r 0'''
+                -w {io_size} -r 0'''
 
         setup_size = 1024 * 4096 if start_size > (1024 * 4096) else start_size
 
@@ -183,6 +185,8 @@ class MTCCRunner(BenchRunner):
             if self.args.only_insert:
                 return stat_objs
 
+        if self.args.always_mkfs:
+            self.kernfs.mkfs()
         # 2) Sequential read test
         seq_labels = {}
         seq_labels.update(labels)
@@ -192,6 +196,8 @@ class MTCCRunner(BenchRunner):
         stat_objs += self._run_mtcc_trial(
             self.mtcc_path, seq_setup_args, seq_trial_args, seq_labels)
 
+        if self.args.always_mkfs:
+            self.kernfs.mkfs()
         # 3) Random read test
         rand_labels = {}
         rand_labels.update(labels)
@@ -278,9 +284,9 @@ class MTCCRunner(BenchRunner):
                         
                         self.kernfs.mkfs()
                         workload_tries += 1
-                        print(f'Trying workload again, take {workload_tries + 1}')
-                        if workload_tries >= 3:
+                        if workload_tries >= 2:
                             raise e
+                        print(f'Trying workload again, take {workload_tries + 1}')
 
             finally:
                 # Output all the results
