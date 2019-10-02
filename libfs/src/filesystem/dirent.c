@@ -121,6 +121,9 @@ uint8_t *get_dirent_block(struct inode *dir_inode, offset_t offset)
 			blk_count_found = bmap_req.blk_count_found;
 			block_num = bmap_req.block_no;
 		}
+
+        //printf("[%s:%s] found block %lu for directory inum %u\n", 
+        //       __FILE__, __func__, block_num, dir_inode->inum);
 		
         if (enable_perf_stats) {
             g_perf_stats.dir_search_ext_tsc += asm_rdtscp() - tsc_begin;

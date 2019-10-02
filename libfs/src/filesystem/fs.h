@@ -915,7 +915,6 @@ static inline void calculate_fragmentation(void) {
 
         if (! ((ip->flags & I_VALID) && (ip->itype == T_FILE))) continue;
 
-
         size_t nblocks = ip->size >> g_block_size_shift;
         nblocks += (ip->size % g_block_size_bytes) > 0;
 
