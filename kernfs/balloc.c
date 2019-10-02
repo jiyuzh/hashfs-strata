@@ -983,7 +983,7 @@ retry:
     srand(time(NULL));
     init_layout_score = true;
     layout_score_fraction = layout_score_percent / 100.0;
-    printf("Simulating fragmentation: '%s' => layout score of %f (max contiguous = %lu)\n",
+    printf("Simulating fragmentation: '%s' => layout score of %f\n",
         mlfs_layout_score, layout_score_fraction);
 
   }
