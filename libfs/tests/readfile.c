@@ -25,6 +25,7 @@ static size_t read_total;
 static int opt_num;
 static uint32_t file_num;
 static int fd_v[MAX_FILE_NUM];
+static char filename_v[MAX_FILE_NUM][MAX_FILE_NAME_LEN];
 static pthread_t threads[MAX_THREADS];
 static bool full_random = false;
 typedef struct {
@@ -125,7 +126,7 @@ int main(int argc, char **argv) {
     reset_libfs_stats();
     //uint64_t tsc_begin = asm_rdtscp();
 
-    open_many_files(fd_v, NULL, file_num, PREFIX, O_RDWR);
+    open_many_files(fd_v, filename_v, file_num, PREFIX, O_RDWR);
 
     struct timeval start, end;
     int terr = gettimeofday(&start, NULL);
@@ -167,10 +168,16 @@ static void *worker_thread(void *arg) {
     worker_result_t *r = (worker_result_t *)(arg);
     struct stat file_stat;
     void *read_buf = malloc(block_size);
+    int curr_file = 0;
     while (1) {
-        int fd = fd_v[rand() % file_num];
+        int fnum = curr_file++ % file_num;
+        int fd = fd_v[fnum];
         assert(fstat(fd, &file_stat) == 0 && "fstat failed");
         size_t size = file_stat.st_size;
+        if (size <= 0) {
+            fprintf(stderr, "file %s (fd %d) has size %lu!\n", 
+                    filename_v[fnum], fd, size);
+        }
         assert(size > 0 && "can't read from a file of size 0!!");
         size_t block_num = size/block_size;
         if (r->total_seq_read + r->total_rand_read >= read_total) {

@@ -10,13 +10,13 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
-/// prefix should not have a taling '/'
+/// prefix should not have a tailing '/'
 /// filename_v could be NULL
 /// fd_v could be NULL, just for robust, do not use like that for now.
 void open_many_files(int *fd_v, char (*filename_v)[MAX_FILE_NAME_LEN], int file_num, const char *prefix, int oflag) {
     if (file_num <= BRANCH_FACTOR) {
         char buf[MAX_FILE_NAME_LEN];
-        for (int i=0; i < BRANCH_FACTOR; ++i) {
+        for (int i=0; i < file_num; ++i) {
             snprintf(buf, MAX_FILE_NAME_LEN, "%s/MTCC-leaf-%03d", prefix, i);
             if (fd_v) {
                 fd_v[i] = open(buf, oflag);
