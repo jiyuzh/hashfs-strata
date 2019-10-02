@@ -85,6 +85,8 @@ void reset_libfs_stats(void)
 }
 void show_libfs_stats(const char *title)
 {
+    calculate_fragmentation();
+
   json_object *root = json_object_new_object();
   json_object_object_add(root, "title", json_object_new_string(title));
   json_object *wait_digest = json_object_new_object(); {
@@ -147,6 +149,13 @@ void show_libfs_stats(const char *title)
     js_add_int64(storage, "wtsc", storage_wtsc.total);
     js_add_int64(storage, "wnr" , storage_wnr.total);
     json_object_object_add(root, "storage", storage);
+  }
+  json_object *fragmentation = json_object_new_object(); {
+      js_add_int64(fragmentation, "nfiles", g_perf_stats.n_files);
+      js_add_int64(fragmentation, "nblocks", g_perf_stats.n_blocks);
+      js_add_int64(fragmentation, "nfragments", g_perf_stats.n_fragments);
+      js_add_double(fragmentation, "layout_derived", g_perf_stats.layout_score_derived);
+      json_object_object_add(root, "fragmentation", fragmentation);
   }
 
   add_cache_stats_to_json(root, "idx_cache", &(g_perf_stats.cache_stats)); 
@@ -241,6 +250,8 @@ void show_libfs_stats(const char *title)
       printf("--------------------------------------\n");
     print_global_idx_stats(enable_perf_stats);
 	printf("--------------------------------------\n");
+
+    print_fragmentation();
 }
 
 void shutdown_fs(void)

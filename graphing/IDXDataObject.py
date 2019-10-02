@@ -79,6 +79,12 @@ class IDXDataObject:
                 return None, None
         if 'TP' in data_obj:
             parsed['throughput'] = data_obj['TP']
+        if 'fragmentation' in data_obj:
+            frag_obj = data_obj['fragmentation']
+            parsed['nfiles'] = frag_obj['nfiles']
+            parsed['nblocks'] = frag_obj['nblocks']
+            parsed['nfragments'] = frag_obj['nfragments']
+            parsed['layout_derived'] = frag_obj['layout_derived']
         if 'ycsb_workload' in data_obj:
             parsed['test'] = \
                 f'{data_obj["ycsb_workload"].split(".")[0].replace("workload", "").upper()}'

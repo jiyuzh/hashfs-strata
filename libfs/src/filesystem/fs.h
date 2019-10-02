@@ -210,6 +210,11 @@ typedef struct mlfs_libfs_stats {
     stats_dist_t hash_lookup_count;
     // Indexing cache rates
     cache_stats_t cache_stats;
+    // Fragmentation stuff
+    uint64_t n_files;
+    uint64_t n_fragments;
+    uint64_t n_blocks;
+    double layout_score_derived;
 } libfs_stat_t;
 
 extern struct lru g_fcache_head;
@@ -890,6 +895,76 @@ static inline void iunlock(struct inode *ip)
 	pthread_rwlock_unlock(&ip->i_rwlock);
 	// It seems that no one is using I_BUSY. comment it out
 	// ip->flags &= ~I_BUSY;
+}
+
+static inline void calculate_fragmentation(void) {
+    if (IDXAPI_IS_HASHFS()) {
+        printf("HashFS doesn't suffer from traditional fragmentation.\n");
+        return;
+    }
+
+    uint32_t end = find_next_zero_bit(sb[g_root_dev]->s_inode_bitmap,
+        sb[g_root_dev]->ondisk->ninodes, 1);
+
+    size_t total_blocks = 0;
+    size_t total_fragments = 0;
+    size_t total_files = 0;
+
+    for (uint32_t inum = 0; inum < end; ++inum) {
+        struct inode *ip = iget(g_root_dev, inum);
+
+        if (! ((ip->flags & I_VALID) && (ip->itype == T_FILE))) continue;
+
+
+        size_t nblocks = ip->size >> g_block_size_shift;
+        nblocks += (ip->size % g_block_size_bytes) > 0;
+
+        if (!nblocks) continue;
+        
+        total_files++;
+
+        size_t nfound = 0;
+        size_t nsearch = 0;
+
+        /* Search for all the blocks. bmap will only return contiguous block
+         * ranges, so the number of searches is equivalent to the number of
+         * fragments.
+         */
+        while (nfound < nblocks) {
+            struct bmap_request bmap_req;
+            bmap_req.start_offset = nfound << g_block_size_shift;
+            bmap_req.blk_count = nblocks - nfound;
+            int ret = bmap(ip, &bmap_req);
+
+            mlfs_assert(ret != -EIO);
+
+            nfound += bmap_req.blk_count_found;
+            nsearch++;
+        }
+
+        total_blocks += nblocks;
+        total_fragments += nsearch;
+    }
+
+    g_perf_stats.n_files = total_files;
+    g_perf_stats.n_fragments = total_fragments;
+    g_perf_stats.n_blocks = total_blocks;
+
+    double blocks_per_file = (double)total_blocks / (double)total_files;
+    double fragments_per_file = (double)total_fragments / (double)total_files;
+    double blocks_optimal_per_file = (blocks_per_file + 1.0) - fragments_per_file;
+
+    printf("%f %f %f\n", blocks_per_file, fragments_per_file, blocks_optimal_per_file);
+
+    g_perf_stats.layout_score_derived = fmin(blocks_optimal_per_file / blocks_per_file, 1.0);
+}
+
+static void print_fragmentation(void) {
+    printf("FRAGMENTATION CALCULATION\n");
+    printf("---- # of files:             %lu\n", g_perf_stats.n_files);
+    printf("---- # of blocks (total):    %lu\n", g_perf_stats.n_blocks);
+    printf("---- # of fragments (total): %lu\n", g_perf_stats.n_fragments);
+    printf("---- OVERALL LAYOUT SCORE:   %.2f\n", g_perf_stats.layout_score_derived);
 }
 
 // Bitmap bits per block
