@@ -954,8 +954,6 @@ static inline void calculate_fragmentation(void) {
     double fragments_per_file = (double)total_fragments / (double)total_files;
     double blocks_optimal_per_file = (blocks_per_file + 1.0) - fragments_per_file;
 
-    printf("%f %f %f\n", blocks_per_file, fragments_per_file, blocks_optimal_per_file);
-
     g_perf_stats.layout_score_derived = fmin(blocks_optimal_per_file / blocks_per_file, 1.0);
 }
 

@@ -1,7 +1,7 @@
 #! /bin/bash
 set -e
 #export OPT_ARGS="-g -O3"
-export OPT_ARGS="-g -O2 -Wall -Werror"
+export OPT_ARGS="-g -O2 -Werror"
 export DEBUG_ARGS=""
 for arg in $@; do
   if [ "$arg" == "mirror" ]; then
@@ -11,7 +11,7 @@ for arg in $@; do
   fi
   if [ "$arg" == "debug" ]; then
     echo "debug"
-    OPT_ARGS="-g -O0 -Wall -Werror"
+    OPT_ARGS="-g -O0 -Werror"
     DEBUG_ARGS="${DEBUG_ARGS}"
   fi
   if [ "$arg" == "verbose" ]; then

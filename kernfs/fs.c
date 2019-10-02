@@ -548,9 +548,9 @@ int digest_directory(uint8_t from_dev, uint8_t to_dev, int n, uint8_t type,
 
 	// Update dirent array block. Possibly, a new directory block could be allocated
 	// during directory walk (in get_dirent_block()).
-	if (type == L_TYPE_DIR_ADD)
+	if (type == L_TYPE_DIR_ADD) {
 		dir_add_entry(dir_inode, name, dirent_inum);
-	else if (type == L_TYPE_DIR_RENAME) {
+    } else if (type == L_TYPE_DIR_RENAME) {
 		struct inode *old_inode;
 
 		old_inode = dir_lookup(dir_inode, name, NULL);
@@ -562,10 +562,11 @@ int digest_directory(uint8_t from_dev, uint8_t to_dev, int n, uint8_t type,
 		}
 
 		dir_add_entry(dir_inode, name, dirent_inum);
-	} else if (type == L_TYPE_DIR_DEL)
+	} else if (type == L_TYPE_DIR_DEL) {
 		dir_remove_entry(dir_inode, name, dirent_inum);
-	else
+    } else {
 		panic("unsupported type\n");
+    }
 
 	mlfs_debug("dir_inode size %lu\n", dir_inode->size);
 

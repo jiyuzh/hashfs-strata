@@ -111,7 +111,7 @@ uint8_t *get_dirent_block(struct inode *dir_inode, offset_t offset)
 		// get block address
         if (enable_perf_stats)
             tsc_begin = asm_rdtscp();
-		int blk_count_found = 0, block_num = 0;;
+		int blk_count_found = 0, block_num = 0;
 		if(IDXAPI_IS_HASHFS()) {
 			ret = bmap_hashfs(dir_inode, &bmap_req_arr);
 			blk_count_found = bmap_req_arr.blk_count_found;
