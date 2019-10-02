@@ -534,8 +534,8 @@ pmem_nvm_hash_table_new(struct disk_superblock *sblk,
     return;
   }
   printf("ht does not exist\n");
-  uint64_t ent_num_bytes = sizeof(paddr_t) * sblk->ndatablocks;
-  int ent_num_blocks_needed = 1 + ent_num_bytes / g_block_size_bytes;
+  uint64_t ent_num_bytes = (sizeof(paddr_t) * sblk->ndatablocks);
+  int ent_num_blocks_needed = 1 + (ent_num_bytes / g_block_size_bytes);
   if(ent_num_bytes % g_block_size_bytes != 0) {
     ++ent_num_blocks_needed;
   }
@@ -544,6 +544,8 @@ pmem_nvm_hash_table_new(struct disk_superblock *sblk,
   pmem_ht->entries_blk = sblk->datablock_start + 1;
 
   //need to update num blocks available somewhere?
+  // (iangneal): Only for the sake of stats tracking. Otherwise, since we control
+  // all block allocation, we don't need to update any bitmaps or anything.
   pmem_ht_vol = (pmem_nvm_hash_vol_t *)malloc(sizeof(pmem_nvm_hash_vol_t));
   pmem_ht_vol->hash_func = hash_func ? hash_func : mix;
   pmem_ht_vol->entries = (paddr_t*)(dax_addr[g_root_dev] + (pmem_ht->entries_blk * g_block_size_bytes));
@@ -936,7 +938,17 @@ static inline int pmem_nvm_hash_table_insert_internal_simd8(__m512i *inums, __m5
       pmem_find_next_invalid_entry_simd8(indices, duplicates_mask);
     }
   } while(duplicates_mask != 0);
-  _mm512_mask_i32scatter_epi64(pmem_ht_vol->entries, to_find, *indices, keys, 8);
+
+  static uint64_t successes = 0;
+  unsigned status;
+  if ((status = _xbegin ()) == _XBEGIN_STARTED) {
+    _mm512_mask_i32scatter_epi64(pmem_ht_vol->entries, to_find, *indices, keys, 8);
+    _xend();
+    successes++;
+  } else {
+      successes = 0;
+      return false;
+  }
 
   for (int i = 0; i < 8; ++i) {
       if (!(to_find & (1 << i))) continue;
@@ -1016,9 +1028,16 @@ int pmem_nvm_hash_table_insert_simd(uint32_t inum, uint32_t lblk, uint32_t len, 
       pblks[i] = ((uint64_t)indices4.arr[i]) + ((uint64_t)meta_size);
     }
   } else {
-    success = pmem_nvm_hash_table_insert_internal_simd8(&(inum_vec8.vec), &(lblk_vec8.vec), &(indices8.vec), to_find);
-    for(size_t i = 0; i < len; ++i) {
-      pblks[i] = ((uint64_t)indices8.arr[i]) + ((uint64_t)meta_size);
+    success = pmem_nvm_hash_table_insert_internal_simd8(
+            &(inum_vec8.vec), &(lblk_vec8.vec), &(indices8.vec), to_find);
+    if (success) {
+        for(size_t i = 0; i < len; ++i) {
+          pblks[i] = ((uint64_t)indices8.arr[i]) + ((uint64_t)meta_size);
+        }
+    } else {
+        for(size_t i = 0; i < len; ++i) {
+            success |= pmem_nvm_hash_table_insert(inum, lblk + i, &pblks[i]);
+        }
     }
   }
   
