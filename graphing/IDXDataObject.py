@@ -311,7 +311,6 @@ class IDXDataObject:
 
         # Reset index to reset the row numbers or whatnot
         self.df = self.df.reset_index(drop=True)
-        embed()
 
     def _load_results_file(self, file_path):
         with file_path.open() as f:

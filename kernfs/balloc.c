@@ -994,14 +994,12 @@ retry:
   unsigned long new_num_blocks = num_blocks;
   // We don't fragment our metadata blocks
   if (atype == DATA) {
-      /*
       new_num_blocks = 1;
       while ((rand() % 100) < layout_score_percent && new_num_blocks < num_blocks) {
           new_num_blocks++;
       }
-      */
-      new_num_blocks = (unsigned long)fmin(1.0 / (1.0 - layout_score_fraction), num_blocks);
-
+      // Less accurate for small sizes
+      //new_num_blocks = (unsigned long)fmin(1.0 / (1.0 - layout_score_fraction), num_blocks);
   }
 	ret_blocks = mlfs_alloc_blocks_in_free_list(sb, free_list, btype,
 			new_num_blocks, &new_blocknr);
