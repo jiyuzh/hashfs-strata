@@ -117,6 +117,10 @@ class IDXDataObject:
             parsed['total_time'] = data_obj['total_time']
         if 'idx_stats' in data_obj:
             parsed['idx_compute_per_op'] = data_obj['idx_stats']['compute_tsc'] / max(data_obj['idx_stats']['compute_nr'], 1.0)
+
+            if 'avg_depth' in data_obj['idx_stats']:
+                parsed['avg_tree_depth'] = data_obj['idx_stats']['avg_depth']
+
         if 'lsm' in data_obj:
             if data_obj['lsm']['nr']:
                 parsed['indexing'] = data_obj['lsm']['tsc']
@@ -130,6 +134,10 @@ class IDXDataObject:
 
             total = parsed['indexing'] + parsed['read_data']
             parsed['total_breakdown'] = total
+
+        if 'hashfs_lookups' in data_obj:
+            hl = data_obj['hashfs_lookups']
+            parsed['hash_entries_per_op'] = float(hl['nentries'] / max(hl['nops'], 1.0)) 
 
         if 'total_time' in data_obj and 'io size' in data_obj:
             total_bytes = data_obj['io size'] * \
@@ -263,6 +271,9 @@ class IDXDataObject:
 
         df_mean['read_data_raw'] = df_mean['read_data']
         df_ci['read_data_raw_ci'] = df_ci['read_data_ci']
+
+        df_mean['read_data_per_op'] = df_mean['read_data'] / df_mean['nops']
+        df_ci['read_data_per_op_ci'] = df_ci['read_data_ci'] / df_mean['nops']
 
         df_mean['indexing_per_op'] = df_mean['indexing'] / df_mean['nops']
         df_ci['indexing_per_op_ci'] = df_ci['indexing_ci'] / df_mean['nops']

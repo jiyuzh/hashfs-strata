@@ -2840,13 +2840,13 @@ int mlfs_hashfs_get_blocks(handle_t *handle, struct inode *inode,
 			g_perf_stats.path_search_tsc += (asm_rdtscp() - tsc_start);
 			g_perf_stats.path_search_size += map_arr->m_len;
 			g_perf_stats.path_search_nr++;
-			end_cache_stats(&(g_perf_stats.cache_stats));
+			end_cache_stats();
 		}
 #else
         if (enable_perf_stats) {
             update_stats_dist(&(g_perf_stats.read_per_index),
                     g_perf_stats.path_storage_nr);
-            end_cache_stats(&(g_perf_stats.cache_stats));
+            end_cache_stats();
         }
 #endif
         return map_arr->m_len;
@@ -2872,13 +2872,13 @@ int mlfs_hashfs_get_blocks(handle_t *handle, struct inode *inode,
         g_perf_stats.path_search_tsc += (asm_rdtscp() - tsc_start);
         g_perf_stats.path_search_size += map_arr->m_len;
         g_perf_stats.path_search_nr++;
-        end_cache_stats(&(g_perf_stats.cache_stats));
+        end_cache_stats();
     }
 #else
     if (enable_perf_stats) {
         update_stats_dist(&(g_perf_stats.read_per_index),
                 g_perf_stats.path_storage_nr);
-        end_cache_stats(&(g_perf_stats.cache_stats));
+        end_cache_stats();
     }
 #endif
 	return map_arr->m_len;		
@@ -2949,7 +2949,7 @@ int mlfs_api_get_blocks(handle_t *handle, struct inode *inode,
     if (enable_perf_stats) {
         update_stats_dist(&(g_perf_stats.read_per_index),
                             g_perf_stats.path_storage_nr);
-        end_cache_stats(&(g_perf_stats.cache_stats));
+        end_cache_stats();
     }
 
     return nblk;
@@ -3022,7 +3022,7 @@ int mlfs_ext_get_blocks(handle_t *handle, struct inode *inode,
                 g_perf_stats.path_search_tsc += (asm_rdtscp() - tsc_start);
                 g_perf_stats.path_search_size += nblk;
                 g_perf_stats.path_search_nr++;
-                end_cache_stats(&(g_perf_stats.cache_stats));
+                end_cache_stats();
             }
 #endif
             return nblk;
@@ -3035,7 +3035,7 @@ int mlfs_ext_get_blocks(handle_t *handle, struct inode *inode,
             if (enable_perf_stats) {
                 update_stats_dist(&(g_perf_stats.read_per_index),
                                   g_perf_stats.path_storage_nr);
-                end_cache_stats(&(g_perf_stats.cache_stats));
+                end_cache_stats();
             }
             //FN(inode->ext_idx, im_print_stats, inode->ext_idx);
             return nblk;
@@ -3049,13 +3049,13 @@ int mlfs_ext_get_blocks(handle_t *handle, struct inode *inode,
             g_perf_stats.path_search_tsc += (asm_rdtscp() - tsc_start);
             g_perf_stats.path_search_size += hash_ret;
             g_perf_stats.path_search_nr++;
-            end_cache_stats(&(g_perf_stats.cache_stats));
+            end_cache_stats();
         }
 #else
         if (enable_perf_stats) {
             update_stats_dist(&(g_perf_stats.read_per_index),
                                 g_perf_stats.path_storage_nr);
-            end_cache_stats(&(g_perf_stats.cache_stats));
+            end_cache_stats();
         }
 #endif
         return hash_ret;
@@ -3290,18 +3290,15 @@ out2:
 
 	/*mutex_unlock(&inode->truncate_mutex);*/
 
-#ifdef KERNFS
 	if (enable_perf_stats) {
+#ifdef KERNFS
 		g_perf_stats.path_search_tsc += (asm_rdtscp() - tsc_start);
         g_perf_stats.path_search_nr++;
-        end_cache_stats(&(g_perf_stats.cache_stats));
-    }
 #else
-    if (enable_perf_stats) {
         update_stats_dist(&(g_perf_stats.read_per_index), g_perf_stats.path_storage_nr);
-        end_cache_stats(&(g_perf_stats.cache_stats));
-    }
 #endif
+        end_cache_stats();
+    }
 
 	return err ? err : allocated;
 }
@@ -3380,7 +3377,7 @@ int mlfs_ext_truncate(handle_t *handle, struct inode *inode,
 		g_perf_stats.path_search_tsc += (asm_rdtscp() - tsc_start);
         g_perf_stats.path_search_size += ret;
         g_perf_stats.path_search_nr++;
-        end_cache_stats(&(g_perf_stats.cache_stats));
+        end_cache_stats();
     }
 #endif
 

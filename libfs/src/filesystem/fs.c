@@ -78,14 +78,16 @@ void reset_libfs_stats(void)
     memset(&(g_perf_stats.cache_stats), 0, sizeof(cache_stats_t));
     reset_stats_dist(&(g_perf_stats.read_per_index));
     reset_stats_dist(&(g_perf_stats.read_data_bytes));
+    reset_stats_dist(&(g_perf_stats.hash_lookup_count));
     cache_stats_init();
     libfs_stats_json = json_object_new_array();
 
+    reset_cache_stats();
     flush_llc();
 }
 void show_libfs_stats(const char *title)
 {
-    calculate_fragmentation();
+    get_cache_stats(&(g_perf_stats.cache_stats));
 
   json_object *root = json_object_new_object();
   json_object_object_add(root, "title", json_object_new_string(title));
@@ -157,6 +159,11 @@ void show_libfs_stats(const char *title)
       js_add_double(fragmentation, "layout_derived", g_perf_stats.layout_score_derived);
       json_object_object_add(root, "fragmentation", fragmentation);
   }
+  json_object *hashfs_lookups = json_object_new_object(); {
+      js_add_int64(hashfs_lookups, "nops", g_perf_stats.hash_lookup_count.cnt);
+      js_add_int64(hashfs_lookups, "nentries", g_perf_stats.hash_lookup_count.total);
+      json_object_object_add(root, "hashfs_lookups", hashfs_lookups);
+  }
 
   add_cache_stats_to_json(root, "idx_cache", &(g_perf_stats.cache_stats)); 
 
@@ -188,7 +195,7 @@ void show_libfs_stats(const char *title)
   printf("  fcache val  (tsc/op)    : %lu / %lu(%.2f)\n", tri_ratio(g_perf_stats.fcache_val_tsc,g_perf_stats.fcache_val_nr));
   printf("  fcache ALL  (tsc/op)    : %lu / %lu(%.2f)\n", tri_ratio(g_perf_stats.fcache_all_tsc,g_perf_stats.fcache_all_nr));
   printf("search lsm tree (tsc/op)  : %lu / %lu(%.2f)\n", tri_ratio(g_perf_stats.tree_search_tsc,g_perf_stats.tree_search_nr));
-  printf("  LLC miss latency : %lu \n", calculate_llc_latency(&(g_perf_stats.cache_stats)));
+    print_cache_stats(&(g_perf_stats.cache_stats));
   printf("log commit (tsc/op)       : %lu / %lu(%.2f)\n", tri_ratio(g_perf_stats.log_commit_tsc,g_perf_stats.log_commit_nr));
   printf("  log writes (tsc/op)     : %lu / %lu(%.2f)\n", tri_ratio(g_perf_stats.log_write_tsc,g_perf_stats.log_write_nr));
   printf("    log inode (tsc/op)    : %lu / %lu(%.2f)\n", tri_ratio(g_perf_stats.log_write_inode_tsc,g_perf_stats.log_write_inode_nr));
@@ -228,7 +235,6 @@ void show_libfs_stats(const char *title)
   printf("storage(read nr/ts)     : %lu / %lu(%.2f)\n", tri_ratio(storage_rnr.total, storage_rtsc.total));
   print_stats_dist(&storage_rtsc, "storage read tsc");
   print_stats_dist(&storage_rnr, "storage read nr");
-  printf("  LLC miss latency : %lu \n", calculate_llc_latency(&dax_cache_stats));
   printf("storage(write nr/ts)    : %lu / %lu(%.2f)\n", tri_ratio(storage_wnr.total, storage_wtsc.total));
   print_stats_dist(&storage_wtsc, "storage write tsc");
   print_stats_dist(&storage_wnr, "storage write nr");
@@ -251,6 +257,7 @@ void show_libfs_stats(const char *title)
     print_global_idx_stats(enable_perf_stats);
 	printf("--------------------------------------\n");
 
+    calculate_fragmentation();
     print_fragmentation();
 }
 

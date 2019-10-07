@@ -131,10 +131,10 @@ schemes:
 
   {% set multi_file_small_io_stats = 
       ['indexing', 'l1_hits', 'l2_hits', 'llc_hits', 'l1_accesses',
-        'l1_misses', 'io_cycles' ] %}
-  {% for stat in single_file_small_io_stats %}
+        'l1_misses', 'io_cycles', 'indexing_per_op' ] %}
+  {% for stat in multi_file_small_io_stats %}
   multi_{{ stat }}:
-    print_size: [7.0, 3.0]
+    print_size: [7.0, 7.0]
     file_name: multi_{{ stat }}.pdf
     
     {% set layouts = ['1.0', '0.7'] %}
@@ -170,7 +170,7 @@ schemes:
             label_bars: False,
             bar_spacing: 1.5,
             exclude_tick_labels: {{ False if c == 0 else True }},
-            {% if stat not in ['l1_accesses', 'l1_misses', 'io_cycles'] %}
+            {% if stat not in ['l1_accesses', 'l1_misses', 'io_cycles', 'indexing_per_op'] %}
             cutoff: 1.0,
             error_bars: True,
             {% else %}
@@ -189,6 +189,57 @@ schemes:
       {% endfor %}
     ]
   {% endfor %}
+
+  multi_breakdown:
+    print_size: [7.0, 7.0]
+    file_name: multi_breakdown.pdf
+    
+    {% set layouts = ['1.0', '0.7'] %}
+    {% set tests = ['Sequential Read', 'Random Read', 'Insert'] %}
+    {% set raw_size = [65536, 2097152] %}
+    {% set repetitions = [512, 51200] %}
+    {% set human_size = ['64KB File', '2MB File'] %}
+
+    {% set width = tests|length %}
+    {% set height = raw_size|length %}
+
+    dimensions: [ {{ height }}, {{ width }} ]
+    plots: [
+    {% for r in range(height) %}
+      {% for c in range(width) %}
+        {
+          pos: [ {{ r }}, {{ c }} ],
+          size: [1, 1],
+          type: grouped_stacked,
+          data_config: {
+            plot: ['indexing_per_op', 'read_data_per_op'],
+            groups: struct,
+            axis: [layout, repetitions],
+            filter: {
+              'start size': {{ raw_size[r] }},
+              'io size': 64,
+              'num files': 512,
+              'test': {{ tests[c] }},
+            }
+          },
+          options: {
+            label: '{{ tests[c] }}s, {{ human_size[r] }}',
+            label_bars: False,
+            bar_spacing: 1.5,
+            exclude_tick_labels: {{ False if c == 0 else True }},
+            error_bars: False,
+            {% if r == height - 1 and c == width - 1 %}
+            legend: {
+              prop: {size: 5,},
+              loc: lower right,
+              ncol: 1,
+            },
+            {% endif %}
+          },
+        },
+        {% endfor %}
+      {% endfor %}
+    ]
 
   {% set large_io_stats = 
       ['l1_hits', 'l2_hits', 'llc_hits', 'l1_accesses',

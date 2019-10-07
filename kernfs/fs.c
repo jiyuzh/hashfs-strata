@@ -179,11 +179,13 @@ void reset_kernfs_stats(void)
     cache_stats_init();
 	kernfs_stats_json = json_object_new_array();	
 	
+    reset_cache_stats();
     flush_llc();
 }
 
 void show_kernfs_stats(void)
 {
+    get_cache_stats(&(g_perf_stats.cache_stats));
     // Construct JSON object
 	json_object *root = json_object_new_object();
     js_add_int64(root, "digest", g_perf_stats.digest_time_tsc);
@@ -265,9 +267,9 @@ void show_kernfs_stats(void)
     printf("---- blk per op  : %lu / %lu (%.1f) blk/op\n",
             g_perf_stats.balloc_nblk, g_perf_stats.balloc_nr, 
             (float)g_perf_stats.balloc_nblk / (float)g_perf_stats.balloc_nr);
-    printf("  LLC miss latency : %lu \n", calculate_llc_latency(&(g_perf_stats.cache_stats)));
 	printf("total migrated  : %lu MB\n", g_perf_stats.total_migrated_mb);
 	printf("--------------------------------------\n");
+    print_cache_stats(&(g_perf_stats.cache_stats));
 #ifdef STORAGE_PERF
     printf("meta alloc: %lu blocks\n", g_perf_stats.balloc_meta_nr);
   printf("storage(read nr/ts)   : %lu/%lu(%.2f)\n", tri_ratio(storage_rnr.total,storage_rtsc.total));

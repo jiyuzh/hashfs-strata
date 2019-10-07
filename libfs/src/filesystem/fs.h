@@ -903,6 +903,9 @@ static inline void calculate_fragmentation(void) {
         return;
     }
 
+    bool tmp = enable_cache_stats;
+    enable_cache_stats = false;
+
     uint32_t end = find_next_zero_bit(sb[g_root_dev]->s_inode_bitmap,
         sb[g_root_dev]->ondisk->ninodes, 1);
 
@@ -954,6 +957,8 @@ static inline void calculate_fragmentation(void) {
     double blocks_optimal_per_file = (blocks_per_file + 1.0) - fragments_per_file;
 
     g_perf_stats.layout_score_derived = fmin(blocks_optimal_per_file / blocks_per_file, 1.0);
+
+    enable_cache_stats = tmp;
 }
 
 static void print_fragmentation(void) {

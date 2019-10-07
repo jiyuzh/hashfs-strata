@@ -78,15 +78,6 @@ class IDXGrapher:
         # options = layout['options']
 
         df = self._filter_configs(df, layout)
-        # dfs = self.data.reorder_data_frames(dfs)
-        # if 'stat' in layout:
-        #     dfs = self.data.filter_stats(layout['stat'], dfs)
-        # elif 'stats' in layout:
-        #     dfs = self.data.filter_stats(layout['stats'], dfs)
-        # if 'layout_score' in layout:
-        #     dfs = self.data.filter_layout_score(layout['layout_score'], dfs)
-        # if 'benchmarks' in layout:
-        #     dfs = self.data.filter_benchmarks(layout['benchmarks'], dfs)
 
         config = layout['data_config']
         for col, val in config['filter'].items():

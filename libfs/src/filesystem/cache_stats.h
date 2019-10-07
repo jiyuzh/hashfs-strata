@@ -89,6 +89,9 @@ static void perf_event_attr_init(perf_event_attr_t *pe, uint64_t config){
     pe->inherit = 1;
     pe->exclude_kernel = 1;
     pe->exclude_hv = 1;
+
+    // Sampling
+    pe->sample_period = 1000;
 }
 
 static inline int perf_event_open(perf_event_attr_t *hw_event, pid_t pid,
@@ -168,15 +171,25 @@ static void start_events(int count, ...){
     va_start(argp, count);
     for( i = 0; i < count; i++ ){
         fd = va_arg(argp, int);
+        int err = ioctl(fd, PERF_EVENT_IOC_ENABLE, 0);
+        if (err) {
+            printf("IOCTL ENABLE (%d): %s\n", errno, strerror(errno)); 
+            panic("");
+        }
+    }
+    va_end(argp);
+}
+
+static void reset_events(int count, ...){
+    va_list argp;
+    int i;
+    int fd = 0;
+    va_start(argp, count);
+    for( i = 0; i < count; i++ ){
+        fd = va_arg(argp, int);
         int err = ioctl(fd, PERF_EVENT_IOC_RESET, 0);
         if (err) {
             printf("IOCTL RESET fd=%d (%d): %s\n", fd, errno, strerror(errno)); 
-            panic("");
-        }
-
-        err = ioctl(fd, PERF_EVENT_IOC_ENABLE, 0);
-        if (err) {
-            printf("IOCTL ENABLE (%d): %s\n", errno, strerror(errno)); 
             panic("");
         }
     }
@@ -247,64 +260,52 @@ static void get_stat(int fd, uint64_t *count, uint64_t *time) {
 	*time = res.time_running;
 }
 
-static void update_stats(cache_stats_t *cs) {
+static void get_cache_stats(cache_stats_t *cs) {
+    if (!enable_cache_stats) return;
     uint64_t count, time;
     get_stat(li_cache_misses_fd, &count, &time);
-    cs->li_misses += (double)count;
+    cs->li_misses = (double)count;
 
     get_stat(l1_cache_access_fd, &count, &time);
-    cs->l1_accesses += (double)count;
+    cs->l1_accesses = (double)count;
     get_stat(l1_cache_misses_fd, &count, &time);
-    cs->l1_misses += (double)count;
-    cs->l2_accesses += (double)count;
-    cs->perf_event_time += (double)time;
+    cs->l1_misses = (double)count;
+    cs->l2_accesses = (double)count;
+    cs->perf_event_time = (double)time;
 
     get_stat(cache_access_fd, &count, &time);
-    cs->l3_accesses += (double)count;
-    cs->l2_misses += (double)count;
+    cs->l3_accesses = (double)count;
+    cs->l2_misses = (double)count;
 
     get_stat(cache_misses_fd, &count, &time);
-    cs->l3_misses += (double)count;
+    cs->l3_misses = (double)count;
 }
 
-static void end_cache_stats(cache_stats_t *cs) {
+static void end_cache_stats(void) {
     if (!enable_cache_stats) return;
+    //printf("end!\n");
     end_events(5, l1_cache_misses_fd, cache_access_fd, cache_misses_fd, 
             l1_cache_access_fd, li_cache_misses_fd);
-
-    update_stats(cs);
 }
 
-static uint64_t calculate_llc_latency(cache_stats_t *cs) 
+static void reset_cache_stats(void) {
+    if (!enable_cache_stats) return;
+    //printf("reset!\n");
+    reset_events(5, l1_cache_misses_fd, cache_access_fd, cache_misses_fd, 
+            l1_cache_access_fd, li_cache_misses_fd);
+}
+
+static void print_cache_stats(cache_stats_t *cs) 
 {
-    if (!enable_cache_stats) return 0;
+    if (!enable_cache_stats) return;
     double l1_hits = cs->l1_accesses - cs->l1_misses;
     double l2_hits = cs->l2_accesses - cs->l2_misses;
     double l3_hits = cs->l3_accesses - cs->l3_misses;
-    double l3_miss = cs->l3_misses;
-
-    double l1_latency = 4;
-    double l2_latency = 20;
-    double l3_latency = 40;
-
-    double l1_hit_time = l1_hits * l1_latency;
-    double l2_hit_time = l2_hits * (l1_latency + l2_latency);
-    double l3_hit_time = l3_hits * (l1_latency + l2_latency + l3_latency);
-
-    double remaining_time = cs->perf_event_time - (l1_hit_time + l2_hit_time + l3_hit_time);
-
-    printf("l1i misses = %.2f\n", cs->li_misses);
 
     printf("l1 (%.2f %.2f %.2f) (%.0f)\nl2 (%.2f %.2f %.2f) (%.0f)\nl3 (%.2f %.2f %.2f) (%.0f)\n",
             cs->l1_accesses, l1_hits, cs->l1_misses, (cs->l1_misses * 100.0) / cs->l1_accesses,
             cs->l2_accesses, l2_hits, cs->l2_misses, (cs->l2_misses * 100.0) / cs->l2_accesses,
             cs->l3_accesses, l3_hits, cs->l3_misses, (cs->l3_misses * 100.0) / cs->l3_accesses);
-    printf("total (%.2f)\nremaining (%.2f)\n", cs->perf_event_time, remaining_time);
-
-    if (l3_miss == 0) return 0;
-    double nvm_latency = remaining_time / l3_miss;
-
-    return (uint64_t)nvm_latency;
 }
 
 void add_cache_stats_to_json(json_object *root, const char *object_name, cache_stats_t *cs);
