@@ -246,8 +246,7 @@ class IDXDataObject:
         dfg = df_combined.groupby(df_combined.index)
         df_mean = dfg.mean()
         ntrials = len(data)
-        embed()
-        df_ci = ((1.96 * dfg.std(ddof=0)) / np.sqrt(ntrials))
+        df_ci = ((1.96 * dfg.std()) / np.sqrt(ntrials))
         # df_ci = ((1.645 * dfg.std(ddof=0)) / np.sqrt(ntrials))
         # df_ci = ((1.96 * dfg.std(ddof=0)) / (dfg.count() ** (1/2)))
 

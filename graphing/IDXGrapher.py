@@ -99,39 +99,90 @@ class IDXGrapher:
             ci_df.sort_index(axis=0, ascending=False, inplace=True)
 
         flush = True
-        # if 'average' in options and options['average']:
-        #     dfs = self.data.average_stats(dfs)
-        #     flush = True
-        #     means_df = pd.DataFrame({'Average': dfs.T['mean']}).T
-        #     ci_df = pd.DataFrame({'Average': dfs.T['ci']}).T
-        # else:
-        #     means_df = dfs
-        #     means_df = means_df.iloc[::-1]
-        #     #ci_df = self.data.filter_stat_field('ci', dfs)
-        #     ci_df = copy.deepcopy(dfs)
-        #     ci_df[:] = 0
-
-        #     if 'benchmarks' in layout and 'Average' in layout['benchmarks']:
-        #         # Also add an average bar:
-        #         dfs = self.data.data_by_benchmark()
-        #         dfs = self.data.filter_configs(self.config_sets[config_set], dfs)
-        #         dfs = self.data.reorder_data_frames(dfs)
-        #         dfs = self.data.filter_stats(layout['stat'], dfs)
-        #         avg_dfs = self.data.average_stats(dfs)
-        #         avg_mean = avg_dfs.T['mean']
-        #         ci_zero = avg_mean.copy()
-        #         ci_zero[:] = 0
-        #         means_df = means_df.append(pd.DataFrame({'Average': avg_mean}).T)
-        #         ci_df = ci_df.append(pd.DataFrame({'Average': ci_zero}).T)
-        #         flush = True
-
-        #if 'benchmarks' in layout:
-        #    means_df = means_df.reindex(layout['benchmarks'])
-        #    ci_df = ci_df.reindex(layout['benchmarks'])
 
         # By this point, means_df should be two dimensional
         return grapher.graph_single_stat(means_df, ci_df, gs,
                                          flush=flush, **layout['options'])
+
+    def _plot_grouped_stacked(self, gs, layout):
+        grapher = Grapher(self.args)
+
+        df = self.data.get_dataframe()
+        options = layout['options']
+
+        df = self._filter_configs(df, layout)
+
+        config = layout['data_config']
+        for col, val in config['filter'].items():
+            df = df[df[col] == val]
+
+        new_index = [*config['axis'], config['groups']] \
+                    if isinstance(config['axis'], list) else \
+                        [config['axis'], config['groups']]
+
+        df = df.set_index(new_index)
+        df = df[~df.index.duplicated(keep='last')]
+        
+        assert isinstance(config['plot'], list)
+        # dfs = []
+        # for stat in config['plot']:
+        #     series = df[stat]
+        #     means_df = series.unstack()
+        #     # ci_df = df[f'{config["plot"]}_ci'].unstack().fillna(0)
+
+        #     if means_df.index.names[0] == 'layout':
+        #         means_df.sort_index(axis=0, ascending=False, inplace=True)
+        #         # ci_df.sort_index(axis=0, ascending=False, inplace=True)
+            
+        #     dfs += [means_df]
+
+        series = df[config['plot']]
+        dfs = series.unstack()
+
+        # By this point, means_df should be two dimensional
+        return grapher.graph_grouped_stacked_bars(dfs, gs, **options)
+        # return grapher.graph_single_stat(means_df, ci_df, gs,
+        #                                  flush=flush, **layout['options'])
+
+    def _plot_indexing_breakdown(self, gs, layout):
+        grapher = Grapher(self.args)
+
+        dfs = self.data.data_by_benchmark()
+        config_set = layout['config_set'] if 'config_set' in layout else 'default'
+        dfs = self.data.filter_configs(self.config_sets[config_set], dfs)
+        dfs = self.data.filter_stats(['indexing', 'read_data'], dfs)
+        if 'benchmarks' in layout:
+            if isinstance(layout['benchmarks'], list):
+                assert 'layout_score' in layout
+                bench_dfs = { b: dfs[b] for b in layout['benchmarks'] }
+                compact = {}
+                for b, data_dict in bench_dfs.items():
+                    compact[b] = pd.concat(data_dict)[str(layout['layout_score'])].T.rename(b)
+                #bench_dfs = dfs[layout['benchmarks']]
+                #bench_dfs = {b: dfs[b] for b in layout['benchmarks']}
+                bench_dfs = { k: v.T for k, v in compact.items()}
+                dfs = pd.concat(bench_dfs).swaplevel(0, 1)
+
+                reorg = defaultdict(dict)
+                for idx, data in dfs.groupby(level=0):
+                    data.index = data.index.droplevel()
+                    df = data.unstack()
+                    reorg[idx] = df
+
+                dfs = pd.concat(reorg).swaplevel(0, 1)
+
+            else:
+                bench_dfs = dfs[layout['benchmarks']]
+                bench_dfs = { k: v.T for k, v in bench_dfs.items()}
+                dfs = pd.concat(bench_dfs).swaplevel(0, 1)
+
+        options = layout['options']
+        if 'average' in options and options['average']:
+            dfs = dfs.mean(level=1)
+            mi_tuples = [('Average', i) for i in dfs.index]
+            dfs.index = pd.MultiIndex.from_tuples(mi_tuples)
+
+        return grapher.graph_grouped_stacked_bars(dfs, gs, **options)
 
     def _create_table(self, gs, layout):
         grapher = Grapher(self.args)
@@ -203,46 +254,6 @@ class IDXGrapher:
         return grapher.graph_single_stat(means_df, ci_df, gs,
                                          flush=flush, **options)
 
-    def _plot_indexing_breakdown(self, gs, layout):
-        grapher = Grapher(self.args)
-
-        dfs = self.data.data_by_benchmark()
-        config_set = layout['config_set'] if 'config_set' in layout else 'default'
-        dfs = self.data.filter_configs(self.config_sets[config_set], dfs)
-        dfs = self.data.filter_stats(['indexing', 'read_data'], dfs)
-        if 'benchmarks' in layout:
-            if isinstance(layout['benchmarks'], list):
-                assert 'layout_score' in layout
-                bench_dfs = { b: dfs[b] for b in layout['benchmarks'] }
-                compact = {}
-                for b, data_dict in bench_dfs.items():
-                    compact[b] = pd.concat(data_dict)[str(layout['layout_score'])].T.rename(b)
-                #bench_dfs = dfs[layout['benchmarks']]
-                #bench_dfs = {b: dfs[b] for b in layout['benchmarks']}
-                bench_dfs = { k: v.T for k, v in compact.items()}
-                dfs = pd.concat(bench_dfs).swaplevel(0, 1)
-
-                reorg = defaultdict(dict)
-                for idx, data in dfs.groupby(level=0):
-                    data.index = data.index.droplevel()
-                    df = data.unstack()
-                    reorg[idx] = df
-
-                dfs = pd.concat(reorg).swaplevel(0, 1)
-
-            else:
-                bench_dfs = dfs[layout['benchmarks']]
-                bench_dfs = { k: v.T for k, v in bench_dfs.items()}
-                dfs = pd.concat(bench_dfs).swaplevel(0, 1)
-
-        options = layout['options']
-        if 'average' in options and options['average']:
-            dfs = dfs.mean(level=1)
-            mi_tuples = [('Average', i) for i in dfs.index]
-            dfs.index = pd.MultiIndex.from_tuples(mi_tuples)
-
-        return grapher.graph_grouped_stacked_bars(dfs, gs, **options)
-
     def plot_schema(self):
         grapher = Grapher(self.args)
 
@@ -257,6 +268,9 @@ class IDXGrapher:
 
             if layout_config['type'] == 'single_stat':
                 a = self._plot_single_stat(axis, layout_config)
+                artists += [a]
+            elif layout_config['type'] == 'grouped_stacked':
+                a = self._plot_grouped_stacked(axis, layout_config)
                 artists += [a]
             elif layout_config['type'] == 'table':
                 a = self._create_table(axis, layout_config)

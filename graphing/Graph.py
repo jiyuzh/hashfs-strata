@@ -387,6 +387,139 @@ class Grapher:
         return artist, ybounds
 
     def graph_grouped_stacked_bars(self, dataframes, axis, **kwargs):
+        embed()
+        dataframes = self._rename_multi_index(dataframes)
+        embed()
+
+        num_bench = dataframes.index.levshape[0]
+        # reversed for top to bottom
+        index = np.arange(num_bench)[::-1]
+        dfs = dataframes.swaplevel(0,1).sort_index().T
+        max_val = ceil(dfs.sum().max() + 0.6)
+        cutoff = self._kwargs_default(kwargs, 'cutoff', max_val)
+        if cutoff != max_val:
+            axis.set_xlim(0, cutoff)
+        axis.margins(x=0, y=0)
+
+        dfs = self._reorder_configs(dfs)
+
+        n = 0.0
+        num_slots = 0
+        if isinstance(dfs, pd.DataFrame):
+            num_slots = float(len(dfs.columns.unique(0)) + 1)
+        else:
+            num_slots = len(dfs) + 1
+        width = 1.0 / num_slots
+        print(num_slots, width)
+
+        config_index = 0
+        hatches = self.__class__.HATCH
+        labels = None
+
+        config_patches = []
+        reason_patches = []
+        for config in dfs.columns.unique(0):
+            bottom = None
+            #df = dfs[config].T.sort_index(ascending=False)
+            df = dfs[config].T
+
+            config_color = np.array(self._get_config_color(config))
+            reason_index = 0
+
+            new_index = index - ((n + 1.0 - (num_slots / 2.0)) * width)
+
+            for reason in df.columns:
+                data = df[reason].values
+
+                hatch = hatches[reason_index % len(hatches)]
+
+                axis.barh(new_index,
+                          data,
+                          height=width,
+                          left=bottom,
+                          color=config_color,
+                          hatch=hatch,
+                          label=config,
+                          **self.barchart_defaults)
+
+
+                bottom = data if bottom is None else data + bottom
+                reason_index += 1
+
+            for i, d, name in zip(new_index, bottom, df[reason].index):
+                #offset = (i * width) - (width * (num_slots / 2)) - (width / 2)
+                #y = i - offset
+                y = i
+                s = '{0:.1f} '.format(d)
+                pos = cutoff if cutoff < d else d
+                if isnan(pos):
+                    continue
+                if self._kwargs_bool(kwargs, 'add_numbers'):
+                    txt = axis.text(pos, y, s, va='center', ha='right', color='white',
+                                    fontweight='bold', fontfamily='sans',
+                                    fontsize=6)
+                    txt.set_path_effects([PathEffects.withStroke(linewidth=1, foreground='black')])
+
+                if self._kwargs_bool(kwargs, 'label_bars'):
+                    txt2 = axis.text(0, y, ' ' + config, va='center', ha='left', color='white',
+                                    fontweight='bold', fontfamily='sans',
+                                    fontsize=6)
+                    txt2.set_path_effects([PathEffects.withStroke(linewidth=1, foreground='black')])
+
+                if labels is None:
+                    #labels = sorted(df[reason].index, reverse=False)
+                    labels = df[reason].index.tolist()[::-1]
+
+            config_patches += [Patch(facecolor=config_color, edgecolor='black',
+                                     label=config)]
+
+            if len(reason_patches) == 0:
+                for reason, hatch, i in zip(df.columns, hatches, itertools.count()):
+                    reason = self._get_reason_name(str(reason))
+                    reason_patches += [Patch(facecolor='white',
+                                             edgecolor='black',
+                                             hatch=hatch,
+                                             label=reason)]
+
+            n += 1.0
+            config_index += 1
+
+        plt.sca(axis)
+        if self._kwargs_bool(kwargs, 'exclude_tick_labels'):
+            plt.yticks(ticks=np.arange(num_bench), labels=['']*num_bench)
+        else:
+            print(labels)
+            plt.yticks(ticks=np.arange(num_bench), labels=labels)
+        plt.xscale(self._kwargs_default(kwargs, 'xscale', 'linear'))
+        #axis.set_ylim(*ybounds)
+
+        config_legend = None
+        reason_legend = None
+        if self._kwargs_has(kwargs, 'config_legend'):
+            config_legend = plt.legend(handles=config_patches,
+                    **kwargs['config_legend'])
+        if self._kwargs_has(kwargs, 'breakdown_legend'):
+            reason_legend = plt.legend(handles=reason_patches,
+                    **kwargs['breakdown_legend'])
+            if self._kwargs_has(kwargs, 'config_legend'):
+                axis.add_artist(config_legend)
+
+        if self._kwargs_default(kwargs, 'xscale', 'linear') != 'linear':
+            interval = max(1.0, cutoff / 1.0)
+            #axis.tick_params(labelsize=4)
+            axis.xaxis.set_major_locator(ticker.MultipleLocator(interval))
+            axis.xaxis.set_minor_locator(ticker.MultipleLocator(interval / 10.0))
+
+        axis.set_axisbelow(True)
+
+        plt.xlabel(self._kwargs_default(kwargs, 'label', ''))
+
+        self.__class__._do_grid_lines()
+
+        return [x for x in [config_legend, reason_legend] if x is not None]
+
+
+    def graph_grouped_stacked_bars_legacy(self, dataframes, axis, **kwargs):
         dataframes = self._rename_multi_index(dataframes)
 
         num_bench = dataframes.index.levshape[0]
