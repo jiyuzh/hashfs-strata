@@ -93,10 +93,11 @@ static void print_hashtable_stats(hash_stats_t *s) {
     PFIELD(s, loop_time);
 }
 */
+typedef paddr_t (*hash_func64_t)(paddr_t key);
 //need to include global.h, shared.h, fs.h
 typedef struct pmem_nvm_hashtable_volatile_metadata {
 	paddr_t *entries;
-	hash_func_t hash_func;
+	hash_func64_t hash_func;
 } pmem_nvm_hash_vol_t;
 
 typedef struct pmem_nvm_hashtable_index {
@@ -151,7 +152,7 @@ extern pmem_nvm_hash_idx_t *pmem_ht;
 
 void
 pmem_nvm_hash_table_new (struct disk_superblock *sblk,
-                    hash_func_t       hash_func
+                    hash_func64_t       hash_func
                     );
 
 void

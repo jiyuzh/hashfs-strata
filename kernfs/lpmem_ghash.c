@@ -163,8 +163,8 @@ pmem_nvm_hash_table_lookup_node (paddr_t        key,
                           bool           force*/) {
 
   uint32_t node_index;
-  uint32_t hash_value;
-  uint32_t mod;
+  uint64_t hash_value;
+  uint64_t mod;
   uint32_t first_tombstone = 0;
   int have_tombstone = FALSE;
 #ifdef SEQ_STEP
@@ -175,8 +175,8 @@ pmem_nvm_hash_table_lookup_node (paddr_t        key,
   paddr_t cur;
   paddr_t *entries = pmem_ht_vol->entries;
   hash_value = pmem_ht_vol->hash_func(key);
-  mod = pmem_ht->mod;
-  node_index = hash_value % mod;
+  mod = (uint64_t)pmem_ht->mod;
+  node_index = (uint32_t)(hash_value % mod);
   cur = entries[node_index];
   uint64_t count = 0;
   *hash_return = hash_value;
@@ -215,6 +215,15 @@ end:
   *ent_return = entries[node_index];
 
   return node_index;
+}
+
+void pmem_mod64_simd8(__m512i *vals, __m512i *ret) {
+  u512i_64 *tempVals = (u512i_64*) vals;
+  u512i_64 *tempMods = (u512i_64*) ret;
+  uint64_t mod = (uint64_t)pmem_ht->mod;
+  for(int i = 0; i < 8; ++i) {
+    tempMods->arr[i] = tempVals->arr[i] % mod;
+  }
 }
 
 void pmem_mod_simd8(__m256i *vals, __m256i *ret) {
@@ -304,7 +313,7 @@ static void mixHash_simd8(__m512i *keys, __m256i *node_indices, __mmask8 searchi
   int LEFT = 0;
 
   __m512i c = *keys;
-
+#if 1
   __mmask8 oneMask = _cvtu32_mask8(~0); // ones
   __m512i a = _mm512_set1_epi64(0xff51afd7ed558ccdL);
   __m512i b = _mm512_set1_epi64(0xc4ceb9fe1a85ec53L);
@@ -317,9 +326,23 @@ static void mixHash_simd8(__m512i *keys, __m256i *node_indices, __mmask8 searchi
   mixHash_simd8_helper(&a, &b, &c, RIGHT, 3, searching);
   mixHash_simd8_helper(&b, &c, &a, LEFT, 10, searching);
   mixHash_simd8_helper(&c, &a, &b, RIGHT, 15, searching);
+#else
+  c = _mm512_mullo_epi64(c, _mm512_set1_epi64(UINT64_C(0x8c98cab1667ed515)));
+  c = _mm512_xor_epi64(c, _mm512_srli_epi64(c, 57));
+  c = _mm512_xor_epi64(c, _mm512_srli_epi64(c, 21));
+  c = _mm512_mullo_epi64(c, _mm512_set1_epi64(UINT64_C(0xac274618482b6398)));
+  c = _mm512_xor_epi64(c, _mm512_srli_epi64(c, 3));
+  c = _mm512_mullo_epi64(c, _mm512_set1_epi64(UINT64_C(0x6908cb6ac8ce9a09)));
+#endif
 
+#if 0
   __m256i hash_values = _mm512_cvtepi64_epi32(c); // direct hash with truncation to 32-bitv
   pmem_mod_simd8(&hash_values, node_indices);
+#else
+  __m512i nodeidx;
+  pmem_mod64_simd8(&c, &nodeidx);
+  *node_indices = _mm512_cvtepi64_epi32(nodeidx);
+#endif
 }
 
 static void
@@ -492,6 +515,39 @@ static void pmem_nvm_hash_table_remove_node (int              i//,
   pmem_nvm_flush((void*)(entries + i), sizeof(paddr_t));
 }
 
+static uint64_t
+hash_64_32(uint64_t x)
+{
+	x ^= x >> 20;
+    x += x << 7;
+    x += x << 26;
+    x ^= x >> 18;
+    x -= x << 39;
+    x ^= x >> 11;
+    x *= UINT64_C(0xf3e769e582196335);
+    x ^= UINT64_C(0xad60ee4967f270ba);
+    x ^= x >> 26;
+    x -= x << 3;
+    x += x << 51;
+    x ^= x >> 19;
+    return x;
+}
+
+static inline paddr_t mix64(paddr_t c)
+{
+    paddr_t a = 0xff51afd7ed558ccdL;
+    paddr_t b = 0xc4ceb9fe1a85ec53L;
+	a=a-b;  a=a-c;  a=a^(c >> 13);
+	b=b-c;  b=b-a;  b=b^(a << 8);
+	c=c-a;  c=c-b;  c=c^(b >> 13);
+	a=a-b;  a=a-c;  a=a^(c >> 12);
+	b=b-c;  b=b-a;  b=b^(a << 16);
+	c=c-a;  c=c-b;  c=c^(b >> 5);
+	a=a-b;  a=a-c;  a=a^(c >> 3);
+	b=b-c;  b=b-a;  b=b^(a << 10);
+	c=c-a;  c=c-b;  c=c^(b >> 15);
+	return c;
+}
 /**
  * nvm_hash_table_new:
  * @hash_func: a function to create a hash value from a key
@@ -519,23 +575,27 @@ static void pmem_nvm_hash_table_remove_node (int              i//,
 
 void
 pmem_nvm_hash_table_new(struct disk_superblock *sblk,
-                   hash_func_t       hash_func
+                   hash_func64_t       hash_func
                    //size_t            block_size,
                    //size_t            range_size,
                    //paddr_t           metadata_location,
                    //const idx_spec_t *idx_spec
                    ) {
   pmem_ht = (pmem_nvm_hash_idx_t*)(dax_addr[g_root_dev] + (sblk->datablock_start * g_block_size_bytes));
+  pmem_ht_vol = (pmem_nvm_hash_vol_t *)malloc(sizeof(pmem_nvm_hash_vol_t));
+  //pmem_ht_vol->hash_func = hash_func ? hash_func : hash_64_32;
+  pmem_ht_vol->hash_func = hash_func ? hash_func : mix64;
+  pmem_ht_vol->entries = (paddr_t*)(dax_addr[g_root_dev] + 
+          (pmem_ht->entries_blk * g_block_size_bytes));
+
   if(pmem_ht->valid == 1) {
     printf("ht exists\n");
-    pmem_ht_vol = (pmem_nvm_hash_vol_t *)malloc(sizeof(pmem_nvm_hash_vol_t));
-    pmem_ht_vol->hash_func = hash_func ? hash_func : mix;
-    pmem_ht_vol->entries = (paddr_t*)(dax_addr[g_root_dev] + (pmem_ht->entries_blk * g_block_size_bytes));
     return;
   }
+
   printf("ht does not exist\n");
   uint64_t ent_num_bytes = (sizeof(paddr_t) * sblk->ndatablocks);
-  int ent_num_blocks_needed = 1 + (ent_num_bytes / g_block_size_bytes);
+  uint64_t ent_num_blocks_needed = 1 + (ent_num_bytes / g_block_size_bytes);
   if(ent_num_bytes % g_block_size_bytes != 0) {
     ++ent_num_blocks_needed;
   }
@@ -543,12 +603,11 @@ pmem_nvm_hash_table_new(struct disk_superblock *sblk,
   pmem_ht->num_entries = sblk->ndatablocks - ent_num_blocks_needed;
   pmem_ht->entries_blk = sblk->datablock_start + 1;
 
+  pmem_ht_vol->entries = (paddr_t*)(dax_addr[g_root_dev] + 
+          (pmem_ht->entries_blk * g_block_size_bytes));
   //need to update num blocks available somewhere?
   // (iangneal): Only for the sake of stats tracking. Otherwise, since we control
   // all block allocation, we don't need to update any bitmaps or anything.
-  pmem_ht_vol = (pmem_nvm_hash_vol_t *)malloc(sizeof(pmem_nvm_hash_vol_t));
-  pmem_ht_vol->hash_func = hash_func ? hash_func : mix;
-  pmem_ht_vol->entries = (paddr_t*)(dax_addr[g_root_dev] + (pmem_ht->entries_blk * g_block_size_bytes));
   pmem_ht->mod = pmem_ht->num_entries;
   pmem_ht->mask = pmem_ht->num_entries;
   pmem_ht->size = 0;
@@ -745,9 +804,9 @@ pmem_nvm_hash_table_insert_internal (paddr_t    key,
   uint32_t tombstone_step;
 #endif
   paddr_t *entries = pmem_ht_vol->entries;
-  int mod = pmem_ht->mod;
-  uint32_t hash_value = pmem_ht_vol->hash_func(key);
-  uint32_t node_index = hash_value % mod;
+  uint64_t mod = (uint64_t)pmem_ht->mod;
+  uint64_t hash_value = pmem_ht_vol->hash_func(key);
+  uint32_t node_index = (uint32_t)(hash_value % mod);
   paddr_t cur = entries[node_index];
 
   while (!HASHFS_ENT_IS_EMPTY(cur)) {
@@ -1069,9 +1128,9 @@ pmem_nvm_hash_table_remove_internal (paddr_t         key,
 
   paddr_t *entries = pmem_ht_vol->entries;
   
-  int mod = pmem_ht->mod;
-  uint32_t hash_value = pmem_ht_vol->hash_func(key);
-  uint32_t node_index = hash_value % mod;
+  uint64_t mod = (uint64_t)pmem_ht->mod;
+  uint64_t hash_value = pmem_ht_vol->hash_func(key);
+  uint32_t node_index = (uint32_t)(hash_value % mod);
   paddr_t cur = entries[node_index];
 
   while (!HASHFS_ENT_IS_EMPTY(cur)) {
