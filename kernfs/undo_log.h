@@ -11,6 +11,7 @@ extern "C" {
 #include "shared.h"
 #include "storage/storage.h"
 #include "fs.h"
+#include "balloc.h"
 
 /**
  *
@@ -23,7 +24,7 @@ extern "C" {
  * 1) Block allocations/deallocations.
  * 2) Indexing structure modifications that are not atomic.
  * 3) [MAYBE] Inode allocations/deallocations (although this may be done by the
- *      LibFS side, I don't recall).
+ *      LibFS side, I don't recall). [UPDATE] Currently allocated by LibFS.
  *
  * The structure of the log should be as follows:
  *
@@ -109,19 +110,34 @@ _Static_assert(sizeof(mlfs_balloc_undo_ent_t) % 2 == 0, "must be a power of 2!")
  */
 int balloc_undo_log(paddr_t start_block, uint32_t nblk, char orig_val);
 
+/**
+ * Undo the changes to the block allocator bitmap. It is later persisted to a
+ * call to persist_dirty_objects_nvm() in the recover_undo_log() function.
+ */
+int balloc_undo_log_rollback(mlfs_balloc_undo_ent_t *ent);
+
 /*******************************************************************************
- * Block allocator interface
+ * Indexing structure interface
  ******************************************************************************/
 
 typedef struct mlfs_idx_struct_undo_ent {
     mlfs_undo_meta_type_t mb_type;
+    uint64_t idx_byte_offset;
     size_t idx_nbytes;
 } mlfs_idx_undo_ent_t;
 
 _Static_assert(sizeof(mlfs_idx_undo_ent_t) <= 64, "must be smaller than cache line!");
 _Static_assert(sizeof(mlfs_idx_undo_ent_t) % 2 == 0, "must be a power of 2!");
 
+/** 
+ * TODO: Need to use for Strata-default indexing.
+ */
 int idx_undo_log(uint64_t dev_byte_offset, size_t nbytes, void *nvm_ptr);
+
+/**
+ *
+ */
+int idx_undo_log_rollback(mlfs_idx_undo_ent_t *ent);
 
 #ifdef __cplusplus
 }

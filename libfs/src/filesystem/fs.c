@@ -1582,8 +1582,7 @@ ssize_t do_unaligned_read(struct inode *ip, uint8_t *dst, offset_t off, size_t i
   // Get block address from shared area.
   if(IDXAPI_IS_HASHFS()) {
     ret = bmap_hashfs(ip, &bmap_req_arr);
-  }
-  else {
+  } else {
     ret = bmap(ip, &bmap_req);
   }
   
