@@ -1,4 +1,4 @@
-from argparse import ArgumentParser, Namespace
+from argparse import ArgumentParser, Namespace, FileType
 from datetime import datetime
 import itertools
 from IPython import embed
@@ -14,6 +14,8 @@ from subprocess import DEVNULL, PIPE, STDOUT, TimeoutExpired
 from multiprocessing import Process, Queue
 import time 
 from warnings import warn
+import yaml
+from tempfile import NamedTemporaryFile
 
 import progressbar
 from progressbar import ProgressBar
@@ -26,6 +28,9 @@ class YCSBCRunner(BenchRunner):
 
     def __init__(self, args):
         super().__init__(args)
+        self._get_workload_settings()
+        from jinja2 import Template
+        self.workload_template = Template(self.args.workload_template.read())
         self.update_bar_proc = None
         self.bench_path = (self.root_path / 'bench').resolve()
         self.dbfilename = "/mlfs/db"
@@ -60,20 +65,21 @@ class YCSBCRunner(BenchRunner):
             return labels
 
 
-    def _run_ycsbc_trial(self, cwd, setup_args, load_args, trial_args, labels):
+    def _run_ycsbc_trial(
+            self, cwd, setup_args, load_args, trial_args, cache_args, labels):
         assert (setup_args is not None)
-
+    
         self.env['MLFS_PROFILE'] = '1'
         self.env['MLFS_CACHE_PERF'] = '0'
         
         self._run_trial_continue(setup_args, cwd, None, timeout=(10*60))
         self._run_trial_passthrough(load_args, cwd, None, timeout=(20*60))
 
-        if self.args.aep_only:
+        if self.args.measure_aep:
             self.aep.start()
         stdout_labels = self._run_trial_end(trial_args, cwd, 
                 self._parse_ycsbc_KTPS, timeout=(10*60))
-        if self.args.aep_only:
+        if self.args.measure_aep:
             aep_stats = self.aep.stop()
             labels['cache'] = aep_stats
 
@@ -90,19 +96,21 @@ class YCSBCRunner(BenchRunner):
             self._run_trial_continue(setup_args, cwd, None, timeout=(10*60))
             self._run_trial_passthrough(load_args, cwd, None, timeout=(10*60))
 
-            self.aep.start()
+            self.env['MLFS_CACHE_PERF'] = '1'
             stdout_labels = self._run_trial_end(
-                trial_args, cwd, self._parse_ycsbc_KTPS, timeout=(10*60))
-            aep_stats = self.aep.stop()
+                cache_args, cwd, self._parse_ycsbc_KTPS, timeout=(10*60))
 
             # Get the stats.
             labels.update(stdout_labels)
             cache_stat_obj = self._parse_trial_stat_files('N/A', labels)
 
             try:
-                #stat_obj['cache'] = cache_stat_obj['idx_cache']
+                if 'cache' in stat_obj:
+                    stat_obj['cache'].update(cache_stat_obj['idx_cache'])
+                else:
+                    stat_obj['cache'] = cache_stat_obj['idx_cache']
                 #stat_obj['cache']['kernfs'] = self._get_kernfs_stats()['idx_cache']
-                stat_obj['cache'] = aep_stats
+                #stat_obj['cache'] = aep_stats
             except:
                 pprint(cache_stat_obj)
                 pprint(self._get_kernfs_stats())
@@ -127,34 +135,61 @@ class YCSBCRunner(BenchRunner):
         labels['layout'] = layout_score
         labels['ycsb_workload'] = ycsb_workload
         labels['trial num'] = trial_num
+        labels.update(self.workload_labels[ycsb_workload])
 
         rmrf_setup_str = \
             f'''taskset -c 0 numactl -N {numa_node} -m {numa_node}
                 {libfs_tests_str}/run.sh {libfs_tests_str}/rmrf {self.dbfilename}
             '''
 
-        ycsbc_load_arg_str = \
-            f'''taskset -c 0
-                numactl -N {numa_node} -m {numa_node} {dir_str}/run.sh
-                {dir_str}/YCSB-C/ycsbc -db leveldb
-                -dbfilename {self.dbfilename} -loaddb
-                -P {dir_str}/YCSB-C/workloads/{ycsb_workload}'''
-        ycsbc_arg_str = \
-            f'''taskset -c 0
-                numactl -N {numa_node} -m {numa_node} {dir_str}/run.sh
-                {dir_str}/YCSB-C/ycsbc -db leveldb
-                -dbfilename {self.dbfilename}
-                -P {dir_str}/YCSB-C/workloads/{ycsb_workload}'''
+        workload_settings = self.workloads[ycsb_workload]
+        cache_settings = self.workloads[f'{ycsb_workload}_cache']
+        with NamedTemporaryFile() as tmp, \
+             NamedTemporaryFile() as tmp_cache:
+            tmp_path = Path(tmp.name)
+            tmp_cache_path = Path(tmp_cache.name)
 
-        rmrf_setup_args = shlex.split(rmrf_setup_str)
-        ycsbc_load_args = shlex.split(ycsbc_load_arg_str)
-        ycsbc_trial_args = shlex.split(ycsbc_arg_str)
+            with tmp_path.open('w') as f:
+                f.write(self.workload_template.render(settings=workload_settings))
 
-        self.remove_old_libfs_stats()
+            with tmp_cache_path.open('w') as f:
+                f.write(self.workload_template.render(settings=cache_settings))
 
-        # Run the benchmarks
-        return self._run_ycsbc_trial(
-            self.bench_path, rmrf_setup_args, ycsbc_load_args, ycsbc_trial_args, labels)
+            ycsbc_load_arg_str = \
+                f'''taskset -c 0
+                    numactl -N {numa_node} -m {numa_node} {dir_str}/run.sh
+                    {dir_str}/YCSB-C/ycsbc -db leveldb
+                    -dbfilename {self.dbfilename} -loaddb
+                    -P {str(tmp_path)}'''
+                    #-P {dir_str}/YCSB-C/workloads/workloadc.strata.spec'''
+
+            ycsbc_arg_str = \
+                f'''taskset -c 0
+                    numactl -N {numa_node} -m {numa_node} {dir_str}/run.sh
+                    {dir_str}/YCSB-C/ycsbc -db leveldb
+                    -dbfilename {self.dbfilename}
+                    -P {str(tmp_path)}'''
+                    #-P {dir_str}/YCSB-C/workloads/workloadc.strata.spec'''
+
+            ycsbc_cache_arg_str = \
+                f'''taskset -c 0
+                    numactl -N {numa_node} -m {numa_node} {dir_str}/run.sh
+                    {dir_str}/YCSB-C/ycsbc -db leveldb
+                    -dbfilename {self.dbfilename}
+                    -P {str(tmp_cache_path)}'''
+                    #-P {dir_str}/YCSB-C/workloads/workloadc.strata.cache.spec'''
+
+            rmrf_setup_args = shlex.split(rmrf_setup_str)
+            ycsbc_load_args = shlex.split(ycsbc_load_arg_str)
+            ycsbc_trial_args = shlex.split(ycsbc_arg_str)
+            ycsbc_cache_trial_args = shlex.split(ycsbc_cache_arg_str)
+
+            self.remove_old_libfs_stats()
+
+            # Run the benchmarks
+            return self._run_ycsbc_trial(
+                self.bench_path, rmrf_setup_args, ycsbc_load_args, 
+                ycsbc_trial_args, ycsbc_cache_trial_args, labels)
 
     def _run_ycsbc(self):
         print('Running YCSB-C profiles.')
@@ -210,11 +245,11 @@ class YCSBCRunner(BenchRunner):
                         workload_num += 1
                         tries = 0
 
-                    except:
+                    except Exception as e:
                         pprint(workload)
                         if (tries):
                             raise
-                        print('Trying again')
+                        print(f'Got {e}, but trying again.')
                         self.kernfs.mkfs()
                         tries += 1
 
@@ -249,7 +284,7 @@ class YCSBCRunner(BenchRunner):
         idx_structs   = self.args.data_structures
         layouts       = self.args.layout_scores
         ntrials       = self.args.trials
-        ycsb_workload = self.args.ycsb_workload
+        ycsb_workload = self._get_workloads_from_sets(self.args.ycsb_workload)
 
         # The order here is important. We want idx_structs to be the external-most
         # variable, because when it changes we re-run mkfs, which we want to do
@@ -258,6 +293,48 @@ class YCSBCRunner(BenchRunner):
             idx_structs, layouts, ycsb_workload, range(ntrials))
 
         return list(workloads)
+
+    def _get_workload_settings(self):
+        ''' Generate all the settings from the YAML descriptions. '''
+        from jinja2 import Template
+        tmpl = Template(self.args.workload_descriptions.read())
+        desc = yaml.safe_load(tmpl.render())
+
+        workloads = desc['descriptions']
+
+        # Need to realize the settings by recursing through the inherits and 
+        # apply them in that order.
+
+        def __resolve_inheritance(workload):
+            overrides = workloads[workload]['settings']
+            olabels = workloads[workload]['labels'] \
+                    if 'labels' in workloads[workload] else {}
+            inherits = workloads[workload]['inherits']
+            settings = {}
+            labels = {}
+            if inherits is not None:
+                settings, labels = __resolve_inheritance(inherits)
+            settings.update(overrides)
+            labels.update(olabels)
+            return settings, labels
+
+        self.workloads = {}
+        self.workload_labels = {}
+        for w in workloads:
+            self.workloads[w], self.workload_labels[w] = \
+                    __resolve_inheritance(w)
+        
+        self.workload_sets = desc['workload_sets']
+
+    def _get_workloads_from_sets(self, workloads):
+        ''' Replace references to workload sets with all workloads. '''
+        workload_list = []
+        for w in workloads:
+            if w in self.workload_sets:
+                workload_list += self.workload_sets[w]
+            else:
+                workload_list += [w]
+        return workload_list
 
     @classmethod
     def add_arguments(cls, parser):
@@ -269,22 +346,19 @@ class YCSBCRunner(BenchRunner):
 
         # Requirements
         parser.add_argument('--ycsb-workload', '-P', nargs='+', type=str,
-                            default=[
-                                'workloada.strata.spec',
-                                'workloadb.strata.spec',
-                                'workloadc.strata.spec',
-                                'workloadd.strata.spec',
-                                'workloade.strata.spec',
-                                'workloadf.strata.spec',
-                                ],
+                            default=['default'],
                             help='The workload name to use')
-
+        parser.add_argument('--workload-template', type=FileType('r'),
+                            default='ycsbc_tmpl.spec', help='Workload template')
+        parser.add_argument('--workload-descriptions', type=FileType('r'),
+                            default='ycsbc_descriptions.tmpl.yaml',
+                            help='Workload descriptions')
         # Options
         parser.add_argument('--measure-cache-perf', '-c', action='store_true',
                             help='Measure cache perf as well.')
         parser.add_argument('--always-mkfs', action='store_true',
                             help='Always rerun mkfs between trials.')
-        parser.add_argument('--aep-only', '-a', action='store_true',
-                            help='Measure AEP only.')
+        parser.add_argument('--measure-aep', '-a', action='store_true',
+                            help='Measure AEP during execution.')
 
         cls._add_common_arguments(parser)

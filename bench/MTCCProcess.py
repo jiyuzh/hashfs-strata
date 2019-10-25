@@ -156,13 +156,13 @@ class MTCCRunner(BenchRunner):
             f'''taskset -c 0
                 numactl -N {numa_node} -m {numa_node} {dir_str}/run.sh
                 {dir_str}/readfile -b {io_size} -s 1 -j 1 -n {nfiles}
-                -r {io_size * reps}'''
+                -r {io_size * reps} {"-p" if self.args.preread else ""}'''
 
         mtcc_rand_arg_str = \
             f'''taskset -c 0
                 numactl -N {numa_node} -m {numa_node} {dir_str}/run.sh
                 {dir_str}/readfile -b {io_size} -s 0 -j 1 -n {nfiles}
-                -r {io_size * reps} -x'''
+                -r {io_size * reps} -x {"-p" if self.args.preread else ""}'''
 
         insert_trial_args = shlex.split(mtcc_insert_arg_str)
 
@@ -363,6 +363,9 @@ class MTCCRunner(BenchRunner):
 
         parser.add_argument('--cache-perf-only', action='store_true',
                             help='Only measure cache perf.')
+
+        parser.add_argument('--preread', action='store_true',
+                            help='Add preread flag')
 
         parser.add_argument('--skip-insert', action='store_true',
                             help='Skip the insert test')
