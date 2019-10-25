@@ -18,6 +18,9 @@ extern uint8_t *dax_addr[];
 static void *curp = NULL;
 static uint64_t logsz;
 
+/**
+ * Treats the log like a big circular buffer.
+ */
 static inline void _incr_log_ptr(void *ptr, size_t sz) {
     void *nextp = ptr + sz;
     if (nextp - get_addr(0, 0) > logsz) {
@@ -148,7 +151,9 @@ int recover_undo_log(mlfs_undo_meta_t *startp) {
         }
     }
 
+#ifdef KERNFS
     persist_dirty_objects_nvm();
+#endif
 
     pmem_memset_persist(startp, 0, mp - startp);
 
@@ -195,7 +200,9 @@ int undo_log_commit_tx(void) {
 int balloc_undo_log(paddr_t start_block, uint32_t nblk, char orig_val) {
     mlfs_balloc_undo_ent_t *ent;
 
+#ifdef KERNFS
     uint64_t start_tsc = asm_rdtscp();
+#endif
 
     set_next(ent);
 
@@ -219,10 +226,12 @@ int balloc_undo_log(paddr_t start_block, uint32_t nblk, char orig_val) {
         nvm_persist_struct_ptr(ent);
     }
 
+#ifdef KERNFS
     if (enable_perf_stats) {
         g_perf_stats.undo_tsc += asm_rdtscp() - start_tsc;
         g_perf_stats.undo_nr++;
     }
+#endif
 
     return 0;
 }
@@ -250,7 +259,9 @@ int balloc_undo_log_rollback(mlfs_balloc_undo_ent_t *ent) {
 int idx_undo_log(uint64_t dev_byte_offset, size_t nbytes, void *nvm_ptr) {
     mlfs_idx_undo_ent_t *ent;
 
+#ifdef KERNFS
     uint64_t start_tsc = asm_rdtscp();
+#endif
 
     set_next(ent);
     void *nvm_loc = curp;
@@ -268,29 +279,35 @@ int idx_undo_log(uint64_t dev_byte_offset, size_t nbytes, void *nvm_ptr) {
     ent->mb_type         = LOG_IDX_ENTRY;
     nvm_persist_struct_ptr(ent);
 
+#ifdef KERNFS
     if (enable_perf_stats) {
         g_perf_stats.undo_tsc += asm_rdtscp() - start_tsc;
         g_perf_stats.undo_nr++;
     }
+#endif
 
     return 0;
 }
 
 int idx_undo_log_rollback(mlfs_idx_undo_ent_t *ent) {
+#ifdef KERNFS
     uint64_t start_tsc = 0;
 
     if (enable_perf_stats) {
         start_tsc = asm_rdtscp();
     }
+#endif
 
     void *nvm_ptr = get_addr(0, ent->idx_byte_offset);
     void *orig_data = ((void*)ent) + ent->idx_nbytes;
     pmem_memcpy_persist(nvm_ptr, orig_data, ent->idx_nbytes);
 
+#ifdef KERNFS
     if (enable_perf_stats) {
         g_perf_stats.undo_tsc += asm_rdtscp() - start_tsc;
         g_perf_stats.undo_nr++;
     }
+#endif
 
     return 0;
 }

@@ -16,8 +16,10 @@
 
 #ifdef KERNFS
 #include "fs.h"
+#include "undo_log.h"
 #elif LIBFS
 #include "filesystem/fs.h"
+#include "filesystem/undo_log.h"
 #endif
 
 // static parameters
@@ -1005,6 +1007,7 @@ int bh_submit_read(struct buffer_head *bh)
  * return: 0 means synced and no longer dirty
  *         1 means still has refcount and shouldn't be delete from dirty_list
  */
+extern uint8_t *dax_addr[];
 int sync_dirty_buffer(struct buffer_head *bh)
 {
 	if (!trylock_buffer(bh))
@@ -1012,6 +1015,11 @@ int sync_dirty_buffer(struct buffer_head *bh)
 
 	if (buffer_dirty(bh)) {
 		int ret = 1;
+        // Do UNDO logging for extent tree changes
+        uint64_t byte_offset = (bh->b_blocknr << g_block_size_shift) + bh->b_offset;
+        // -- record the original values
+        idx_undo_log(byte_offset, bh->b_size, dax_addr[g_root_dev] + byte_offset);
+
 		mlfs_write(bh);
 		if (bh->b_count == 0) {
 			set_buffer_uptodate(bh);

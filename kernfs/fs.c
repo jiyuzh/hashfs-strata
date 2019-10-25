@@ -1740,7 +1740,7 @@ static void digest_log_from_replay_list(uint8_t from_dev, struct replay_list *re
 #endif
 }
 
-static int persist_dirty_objects_nvm(void)
+int persist_dirty_objects_nvm(void)
 {
 	struct rb_node *node;
 

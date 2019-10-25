@@ -51,8 +51,6 @@ extern "C" {
  *
  */
 
-
-
 typedef enum mlfs_undo_meta_type {
     LOG_UNINITIALIZED = 0,
     LOG_START,
@@ -130,12 +128,14 @@ _Static_assert(sizeof(mlfs_idx_undo_ent_t) <= 64, "must be smaller than cache li
 _Static_assert(sizeof(mlfs_idx_undo_ent_t) % 2 == 0, "must be a power of 2!");
 
 /** 
- * TODO: Need to use for Strata-default indexing.
+ * Log the original content of the extent tree node before committing changes,
+ * so that if there is a crash before the end of the digest, we can recover
+ * and replay the digest.
  */
 int idx_undo_log(uint64_t dev_byte_offset, size_t nbytes, void *nvm_ptr);
 
 /**
- *
+ * Apply the original values.
  */
 int idx_undo_log_rollback(mlfs_idx_undo_ent_t *ent);
 

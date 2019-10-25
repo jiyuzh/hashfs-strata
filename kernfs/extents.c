@@ -12,6 +12,7 @@
 #include "cache_stats.h"
 #include "inode_hash.h"
 #include "lpmem_ghash.h"
+#include "undo_log.h"
 
 /*
  * used by extent splitting.
@@ -257,6 +258,10 @@ mlfs_fsblk_t mlfs_new_meta_blocks(handle_t *handle,
         bh->b_data = zero_buf;
         bh->b_size = g_block_size_bytes;
         bh->b_offset = 0;
+
+        idx_undo_log((block + i) << g_block_size_shift, g_block_size_bytes,
+                zero_buf);
+
         mlfs_write(bh);
     }
 #endif
