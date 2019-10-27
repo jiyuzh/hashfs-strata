@@ -49,7 +49,7 @@ static void *worker_thread(void *);
 #ifndef PREFIX
 #define PREFIX "/mlfs"
 #endif
-#define OPTSTRING "b:j:n:s:M:r:w:h:S:"
+#define OPTSTRING "b:j:n:s:M:r:w:h:S:u"
 #define OPTNUM 7
 void print_help(char **argv) {
     printf("usage: %s -b block_size -j n_threads -s seq_ratio -n num_file "

@@ -918,6 +918,12 @@ static inline void calculate_fragmentation(void) {
 
         if (! ((ip->flags & I_VALID) && (ip->itype == T_FILE))) continue;
 
+        if (!IDXAPI_IS_GLOBAL()) { 
+            if (ip->ext_idx && ip->ext_idx->idx_fns->im_set_stats) {
+                FN(ip->ext_idx, im_set_stats, ip->ext_idx, false);
+            }
+        }
+
         size_t nblocks = ip->size >> g_block_size_shift;
         nblocks += (ip->size % g_block_size_bytes) > 0;
 
@@ -946,6 +952,12 @@ static inline void calculate_fragmentation(void) {
 
         total_blocks += nblocks;
         total_fragments += nsearch;
+
+        if (!IDXAPI_IS_GLOBAL()) { 
+            if (ip->ext_idx && ip->ext_idx->idx_fns->im_set_stats) {
+                FN(ip->ext_idx, im_set_stats, ip->ext_idx, enable_perf_stats);
+            }
+        }
     }
 
     g_perf_stats.n_files = total_files;

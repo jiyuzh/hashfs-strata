@@ -257,8 +257,11 @@ void show_libfs_stats(const char *title)
     print_global_idx_stats(enable_perf_stats);
 	printf("--------------------------------------\n");
 
-    calculate_fragmentation();
-    print_fragmentation();
+    char *frag_calc = getenv("MLFS_FRAG_CALC");
+    if (frag_calc && !strcmp("1", frag_calc)) {
+        calculate_fragmentation();
+        print_fragmentation();
+    }
 }
 
 void shutdown_fs(void)

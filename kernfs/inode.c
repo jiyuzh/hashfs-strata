@@ -74,7 +74,7 @@ int write_ondisk_inode(uint8_t dev, struct inode *ip)
 
 	if (dev == g_root_dev) {
 
-        if (USE_IDXAPI() && ip->itype == T_FILE) {
+        if (USE_IDXAPI() && ip->ext_idx) {
             // Prevent ourselves from being screwed over.
             struct dinode di;
             (void)read_ondisk_inode(dev, ip->inum, &di);

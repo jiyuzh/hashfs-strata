@@ -38,10 +38,49 @@ static worker_result_t worker_results[MAX_THREADS];
 static void *worker_thread(void *);
 static void *worker_thread_rand(void *);
 
+static bool flush_cache = false;
+static bool pre_read = false;
+char prebuf[4096];
+void *cbuf = NULL;
+
+void flush_llc(void) {
+    size_t repeats = 1;
+    size_t mult = 1;
+    size_t allocation_size = mult * 32 * 1024 * 1024;
+
+    if (!cbuf) {
+        cbuf = malloc(allocation_size);
+        if (!cbuf) panic("OOM!");
+    }
+
+    const size_t cache_line = 64;
+    register char *cp = (char *)cbuf;
+    register size_t i = 0;
+
+    //memset(buf, 42, allocation_size);
+
+    //asm volatile("sfence\n\t"
+    //             :
+    //             :
+    //             : "memory"); 
+
+    for (i = 0; i < allocation_size; i += cache_line) {
+        asm volatile("clflush (%0)\n\t"
+                     : 
+                     : "r"(&cp[i])
+                     : "memory");
+    }
+
+    asm volatile("sfence\n\t"
+                 :
+                 :
+                 : "memory"); 
+}
+
 #ifndef PREFIX
 #define PREFIX "/mlfs"
 #endif
-#define OPTSTRING "b:j:s:r:n:h:x"
+#define OPTSTRING "b:j:s:r:n:h:xfp"
 #define OPTNUM 5
 void print_help(char **argv) {
     printf("usage: %s -b block_size -j n_threads -s seq_ratio -n num_files -r read_total -x (means full random)\n", argv[0]);
@@ -112,6 +151,14 @@ int main(int argc, char **argv) {
                 full_random = true;
                 opt_num++;
                 break;
+            case 'f':
+                flush_cache = true;
+                opt_num ++;
+                break;
+            case 'p':
+                pre_read = true;
+                opt_num ++;
+                break;
             case '?':
             default:
                 print_help(argv);
@@ -127,6 +174,26 @@ int main(int argc, char **argv) {
     //uint64_t tsc_begin = asm_rdtscp();
 
     open_many_files(fd_v, filename_v, file_num, PREFIX, O_RDWR);
+    if (pre_read) {
+        for (int f = 0; f < file_num; ++f) {
+            struct stat s;
+            int serr = fstat(fd_v[f], &s);
+            if (serr) {
+                perror("stat failed");
+                exit(-1);
+            }
+
+            (void)lseek(fd_v[f], 0, SEEK_SET);
+            for (size_t sz = 0; sz < s.st_size; sz += UINT64_C(4096)) {
+                (void)read(fd_v[f], prebuf, 
+                        4096LLU < s.st_size - sz ? 4096 : s.st_size - sz);
+            }
+            (void)lseek(fd_v[f], 0, SEEK_SET);
+        }
+        show_libfs_stats("preread done");
+        reset_libfs_stats();
+    }
+
 
     struct timeval start, end;
     int terr = gettimeofday(&start, NULL);
@@ -206,6 +273,8 @@ static void *worker_thread(void *arg) {
             off_t offset = lseek(fd, block_size, SEEK_CUR);
             assert(offset != -1 && "lseek failed");
         }
+
+        if (flush_cache) flush_llc();
     }
     return NULL;
 }
@@ -227,6 +296,8 @@ static void *worker_thread_rand(void *arg) {
         ssize_t rs = pread(fd, read_buf, block_size, rand_offset);
         assert(rs != -1 && "random read failed");
         r->total_rand_read += rs;
+
+        if (flush_cache) flush_llc();
     }
     return NULL;
 }

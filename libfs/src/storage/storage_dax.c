@@ -136,7 +136,7 @@ static void perfmodel_add_delay(int read, size_t size)
 
 #endif
 
-#if 1
+#if 0
     char *val = getenv("MLFS_LATENCY");
     if (val) {
         struct timespec spec;
