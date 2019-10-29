@@ -280,7 +280,14 @@ schemes:
             exclude_tick_labels: {{ False if c == 0 else True }},
             error_bars: False,
             {% if r == height - 1 and c == width - 1 %}
-            legend: {
+            config_legend: {
+              prop: {size: 5,},
+              loc: lower right,
+              ncol: 1,
+            },
+            {% endif %}
+            {% if r == 0 and c == width - 1 %}
+            breakdown_legend: {
               prop: {size: 5,},
               loc: lower right,
               ncol: 1,
