@@ -470,7 +470,7 @@ class Grapher:
                     labels = df[reason].index.tolist()[::-1]
 
             config_patches += [Patch(facecolor=config_color, edgecolor='black',
-                                     label=config)]
+                                     label=self._get_config_name(config))]
 
             if len(reason_patches) == 0:
                 for reason, hatch, i in zip(df.columns, hatches, itertools.count()):

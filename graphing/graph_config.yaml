@@ -12,7 +12,9 @@ display_options:
 
   breakdown_names:
     indexing: Indexing
-    read_data: Read Data
+    indexing_per_op: Indexing
+    read_data: Device IO
+    read_data_per_op: Device IO
 
   benchmark_order:
     - 1MB
