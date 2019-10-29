@@ -120,6 +120,9 @@ class IDXDataObject:
 
             if 'avg_depth' in data_obj['idx_stats']:
                 parsed['avg_tree_depth'] = data_obj['idx_stats']['avg_depth']
+            if 'memo_hit_ratio' in data_obj['idx_stats']:
+                parsed['memo_hit_ratio'] = data_obj['idx_stats']['memo_hit_ratio']
+                parsed['ref_per_lookup'] = data_obj['idx_stats']['ref_per_lookup']
 
         if 'lsm' in data_obj:
             if data_obj['lsm']['nr']:

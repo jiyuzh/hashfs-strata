@@ -387,9 +387,7 @@ class Grapher:
         return artist, ybounds
 
     def graph_grouped_stacked_bars(self, dataframes, axis, **kwargs):
-        embed()
         dataframes = self._rename_multi_index(dataframes)
-        embed()
 
         num_bench = dataframes.index.levshape[0]
         # reversed for top to bottom
@@ -401,7 +399,8 @@ class Grapher:
             axis.set_xlim(0, cutoff)
         axis.margins(x=0, y=0)
 
-        dfs = self._reorder_configs(dfs)
+        #dfs = self._reorder_configs(dfs)
+        dfs = dataframes.swaplevel(axis=1)
 
         n = 0.0
         num_slots = 0
@@ -421,7 +420,7 @@ class Grapher:
         for config in dfs.columns.unique(0):
             bottom = None
             #df = dfs[config].T.sort_index(ascending=False)
-            df = dfs[config].T
+            df = dfs[config]
 
             config_color = np.array(self._get_config_color(config))
             reason_index = 0

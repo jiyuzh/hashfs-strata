@@ -1018,7 +1018,8 @@ int sync_dirty_buffer(struct buffer_head *bh)
         // Do UNDO logging for extent tree changes
         uint64_t byte_offset = (bh->b_blocknr << g_block_size_shift) + bh->b_offset;
         // -- record the original values
-        idx_undo_log(byte_offset, bh->b_size, dax_addr[g_root_dev] + byte_offset);
+        // TODO it is buggy
+        //idx_undo_log(byte_offset, bh->b_size, dax_addr[g_root_dev] + byte_offset);
 
 		mlfs_write(bh);
 		if (bh->b_count == 0) {
