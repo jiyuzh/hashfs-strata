@@ -288,6 +288,9 @@ class IDXDataObject:
         df_ci['indexing_ci'] /= df_mean['total_breakdown']
         df_ci['read_data_ci'] /= df_mean['total_breakdown']
 
+        df_mean['indexing_throughput'] = df_mean['indexing'] * df_mean['throughput']
+        df_mean['read_data_throughput'] = df_mean['read_data'] * df_mean['throughput']
+
         df_ci['io_cycles_ci'] = df_ci['total_breakdown_ci'] / df_mean['nops']
         df_mean['io_cycles'] = df_mean['total_breakdown'] / df_mean['nops']
 

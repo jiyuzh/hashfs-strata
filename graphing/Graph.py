@@ -389,7 +389,7 @@ class Grapher:
     def graph_grouped_stacked_bars(self, dataframes, axis, **kwargs):
         dataframes = self._rename_multi_index(dataframes)
 
-        num_bench = dataframes.index.levshape[0]
+        num_bench = dataframes.index.size
         # reversed for top to bottom
         index = np.arange(num_bench)[::-1]
         dfs = dataframes.swaplevel(0,1).sort_index().T
