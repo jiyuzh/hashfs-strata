@@ -46,7 +46,7 @@ class IDXGrapher:
         if 'schema_file' in args and args.schema_file is not None:
             self.schema_file = Path(args.schema_file)
         elif 'schema_template' in args and args.schema_template is not None:
-            from jinja2 import Template
+            from jinja2 import Template, Environment
             tmpl_file = Path(args.schema_template)
             assert tmpl_file.exists()
 
@@ -54,7 +54,9 @@ class IDXGrapher:
             assert self.schema_file != tmpl_file
 
             with tmpl_file.open() as f:
-                tmpl = Template(f.read())
+                jinja_env = Environment(extensions=['jinja2.ext.do'],
+                        trim_blocks=True, lstrip_blocks=True)
+                tmpl = jinja_env.from_string(f.read())
                 schema_raw = tmpl.render()
 
                 with self.schema_file.open('w') as f:
@@ -114,7 +116,13 @@ class IDXGrapher:
 
         config = layout['data_config']
         for col, val in config['filter'].items():
-            df = df[df[col] == val]
+            if isinstance(val, list) or isinstance(val, tuple):
+                df = df[df[col].isin(val)]
+            else:
+                df = df[df[col] == val]
+
+            if 'repetitions' in df:
+                df = df[df['repetitions'] != '1']
 
         new_index = [*config['axis'], config['groups']] \
                     if isinstance(config['axis'], list) else \
@@ -137,7 +145,7 @@ class IDXGrapher:
         #     dfs += [means_df]
 
         series = df[config['plot']]
-        dfs = series.unstack()
+        dfs = series.unstack().fillna(0)
 
         # By this point, means_df should be two dimensional
         return grapher.graph_grouped_stacked_bars(dfs, gs, **options)

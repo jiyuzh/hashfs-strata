@@ -124,6 +124,8 @@ class Grapher:
         return df.rename(columns=new_columns)
 
     def _rename_multi_index(self, df):
+        if not isinstance(df.index, pd.MultiIndex):
+            return df
         index = df.index.unique(1).tolist()
         new_index = [self._get_config_name(c) for c in index]
         df.index = df.index.set_levels(new_index, level=1)
@@ -227,8 +229,9 @@ class Grapher:
             all_error = all_means.copy()
             all_error[:] = 0.0
 
+
         num_configs = len(all_means.columns)
-        width = num_configs / (num_configs + self._kwargs_default(kwargs, 'bar_spacing', 2))
+        width = num_configs / (num_configs + self._kwargs_default(kwargs, 'bar_spacing', 1.5))
         bar_width = width / num_configs
 
         max_val = (all_means + all_error + 0.5).max().max()
@@ -236,6 +239,8 @@ class Grapher:
         start = self._kwargs_default(kwargs, 'start', 0.0)
         axis.set_xlim(start, cutoff)
         axis.margins(0.0)
+
+        all_means.sort_index(axis=1, inplace=True)
 
         ax = all_means.plot.barh(ax=axis,
                                  xerr=all_error,
@@ -277,6 +282,7 @@ class Grapher:
 
         artist = []
 
+
         
         #labels = self._clean_benchmark_names(labels)
 
@@ -317,10 +323,9 @@ class Grapher:
                        box.width, box.height * scale]
             axis.set_position(new_box)
 
+
         plt.sca(axis)
         self.__class__._do_grid_lines()
-
-        
 
         plt.xlabel(self._kwargs_default(kwargs, 'label', ''))
         plt.xscale(self._kwargs_default(kwargs, 'xscale', 'linear'))
@@ -346,20 +351,28 @@ class Grapher:
         else:
             plt.legend().set_visible(False)
 
-
         if self._kwargs_bool(kwargs, 'exclude_tick_labels'):
-            plt.yticks(ticks=range(len(labels)), labels=['']*len(labels))
+            plt.gca().set_yticklabels([])
+            # this causes weird truncation of bars on the graph
+            #plt.yticks(ticks=range(len(labels)), labels=['']*len(labels))
         else:
             # Try to improve the labels
             new_labels = []
             for label in labels:
-                try:
-                    new_label = '{:.1f}, {}'.format(label[0], label[1])
+                if isinstance(label, list) or isinstance(label, tuple):
+                    try:
+                        new_label = '{:.1f}, {}'.format(label[0], label[1])
+                        new_labels += [new_label]
+                    except Exception as e:
+                        print(e)
+                        new_labels += [label]
+                elif isinstance(label, float) and label == round(label):
+                    new_label = f'{round(label)}'
                     new_labels += [new_label]
-                except Exception as e:
-                    print(e)
-                    new_labels += [label]
-            plt.yticks(ticks=range(len(new_labels)), labels=new_labels, ha='right')
+
+            plt.gca().set_yticklabels(new_labels)
+            # this causes weird truncation of bars on the graph
+            #plt.yticks(ticks=range(len(new_labels)), labels=new_labels, ha='right')
             print(new_labels)
             minor_ticks = []
             if self._kwargs_has(kwargs, 'per_tick_label'):
@@ -392,7 +405,10 @@ class Grapher:
         num_bench = dataframes.index.size
         # reversed for top to bottom
         index = np.arange(num_bench)[::-1]
-        dfs = dataframes.swaplevel(0,1).sort_index().T
+        if isinstance(dataframes.index, pd.MultiIndex):
+            dfs = dataframes.swaplevel(0, 1).sort_index().T
+        else:
+            dfs = dataframes.sort_index().T
         max_val = ceil(dfs.sum().max() + 0.6)
         cutoff = self._kwargs_default(kwargs, 'cutoff', max_val)
         if cutoff != max_val:
@@ -431,7 +447,6 @@ class Grapher:
                 data = df[reason].values
 
                 hatch = hatches[reason_index % len(hatches)]
-
                 axis.barh(new_index,
                           data,
                           height=width,
@@ -487,8 +502,16 @@ class Grapher:
         if self._kwargs_bool(kwargs, 'exclude_tick_labels'):
             plt.yticks(ticks=np.arange(num_bench), labels=['']*num_bench)
         else:
-            print(labels)
-            plt.yticks(ticks=np.arange(num_bench), labels=labels)
+            new_labels = []
+            for label in labels:
+                try:
+                    new_label = '{:.1f}, {}'.format(label[0], label[1])
+                    new_labels += [new_label]
+                except Exception as e:
+                    print(e)
+                    new_labels += [label]
+            print(new_labels)
+            plt.yticks(ticks=np.arange(num_bench), labels=new_labels)
         plt.xscale(self._kwargs_default(kwargs, 'xscale', 'linear'))
         #axis.set_ylim(*ybounds)
 
@@ -508,141 +531,12 @@ class Grapher:
             #axis.tick_params(labelsize=4)
             axis.xaxis.set_major_locator(ticker.MultipleLocator(interval))
             axis.xaxis.set_minor_locator(ticker.MultipleLocator(interval / 10.0))
-
+ 
         axis.set_axisbelow(True)
 
         plt.xlabel(self._kwargs_default(kwargs, 'label', ''))
-
-        self.__class__._do_grid_lines()
-
-        return [x for x in [config_legend, reason_legend] if x is not None]
-
-
-    def graph_grouped_stacked_bars_legacy(self, dataframes, axis, **kwargs):
-        dataframes = self._rename_multi_index(dataframes)
-
-        num_bench = dataframes.index.levshape[0]
-        # reversed for top to bottom
-        index = np.arange(num_bench)[::-1]
-        dfs = dataframes.swaplevel(0,1).sort_index().T
-        max_val = ceil(dfs.sum().max() + 0.6)
-        cutoff = self._kwargs_default(kwargs, 'cutoff', max_val)
-        if cutoff != max_val:
-            axis.set_xlim(0, cutoff)
-        axis.margins(x=0, y=0)
-
-        dfs = self._reorder_configs(dfs)
-
-        n = 0.0
-        num_slots = 0
-        if isinstance(dfs, pd.DataFrame):
-            num_slots = float(len(dfs.columns.unique(0)) + 1)
-        else:
-            num_slots = len(dfs) + 1
-        width = 1.0 / num_slots
-        print(num_slots, width)
-
-        config_index = 0
-        hatches = self.__class__.HATCH
-        labels = None
-
-        config_patches = []
-        reason_patches = []
-        for config in dfs.columns.unique(0):
-            bottom = None
-            #df = dfs[config].T.sort_index(ascending=False)
-            df = dfs[config].T
-
-            config_color = np.array(self._get_config_color(config))
-            reason_index = 0
-
-            new_index = index - ((n + 1.0 - (num_slots / 2.0)) * width)
-
-            for reason in df.columns:
-                data = df[reason].values
-
-                hatch = hatches[reason_index % len(hatches)]
-
-                axis.barh(new_index,
-                          data,
-                          height=width,
-                          left=bottom,
-                          color=config_color,
-                          hatch=hatch,
-                          label=config,
-                          **self.barchart_defaults)
-
-
-                bottom = data if bottom is None else data + bottom
-                reason_index += 1
-
-            for i, d, name in zip(new_index, bottom, df[reason].index):
-                #offset = (i * width) - (width * (num_slots / 2)) - (width / 2)
-                #y = i - offset
-                y = i
-                s = '{0:.1f} '.format(d)
-                pos = cutoff if cutoff < d else d
-                if isnan(pos):
-                    continue
-                if self._kwargs_bool(kwargs, 'add_numbers'):
-                    txt = axis.text(pos, y, s, va='center', ha='right', color='white',
-                                    fontweight='bold', fontfamily='sans',
-                                    fontsize=6)
-                    txt.set_path_effects([PathEffects.withStroke(linewidth=1, foreground='black')])
-
-                if self._kwargs_bool(kwargs, 'label_bars'):
-                    txt2 = axis.text(0, y, ' ' + config, va='center', ha='left', color='white',
-                                    fontweight='bold', fontfamily='sans',
-                                    fontsize=6)
-                    txt2.set_path_effects([PathEffects.withStroke(linewidth=1, foreground='black')])
-
-                if labels is None:
-                    #labels = sorted(df[reason].index, reverse=False)
-                    labels = df[reason].index.tolist()[::-1]
-
-            config_patches += [Patch(facecolor=config_color, edgecolor='black',
-                                     label=config)]
-
-            if len(reason_patches) == 0:
-                for reason, hatch, i in zip(df.columns, hatches, itertools.count()):
-                    reason = self._get_reason_name(reason)
-                    reason_patches += [Patch(facecolor='white',
-                                             edgecolor='black',
-                                             hatch=hatch,
-                                             label=reason)]
-
-            n += 1.0
-            config_index += 1
-
-        plt.sca(axis)
-        if self._kwargs_bool(kwargs, 'exclude_tick_labels'):
-            plt.yticks(ticks=np.arange(num_bench), labels=['']*num_bench)
-        else:
-            print(labels)
-            plt.yticks(ticks=np.arange(num_bench), labels=labels)
-        plt.xscale(self._kwargs_default(kwargs, 'xscale', 'linear'))
-        #axis.set_ylim(*ybounds)
-
-        config_legend = None
-        reason_legend = None
-        if self._kwargs_has(kwargs, 'config_legend'):
-            config_legend = plt.legend(handles=config_patches,
-                    **kwargs['config_legend'])
-        if self._kwargs_has(kwargs, 'breakdown_legend'):
-            reason_legend = plt.legend(handles=reason_patches,
-                    **kwargs['breakdown_legend'])
-            if self._kwargs_has(kwargs, 'config_legend'):
-                axis.add_artist(config_legend)
-
-        if self._kwargs_default(kwargs, 'xscale', 'linear') != 'linear':
-            interval = max(1.0, cutoff / 1.0)
-            #axis.tick_params(labelsize=4)
-            axis.xaxis.set_major_locator(ticker.MultipleLocator(interval))
-            axis.xaxis.set_minor_locator(ticker.MultipleLocator(interval / 10.0))
-
-        axis.set_axisbelow(True)
-
-        plt.xlabel(self._kwargs_default(kwargs, 'label', ''))
+        if self._kwargs_has(kwargs, 'xbins'):
+            plt.locator_params(axis='x', nbins=kwargs['xbins'])
 
         self.__class__._do_grid_lines()
 

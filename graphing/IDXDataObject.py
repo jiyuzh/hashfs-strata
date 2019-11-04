@@ -54,6 +54,16 @@ class IDXDataObject:
             and 'Concurrency' not in parsed['test']:
             return None, None
 
+        if 'start size' in parsed:
+            if parsed['start size'] / 1024 ** 3 > 1:
+                parsed['display start size'] = f'{parsed["start size"] // 1024 ** 3}GB'
+            elif parsed['start size'] / 1024 ** 2 > 1:
+                parsed['display start size'] = f'{parsed["start size"] // 1024 ** 2}MB'
+            elif parsed['start size'] / 1024  > 1:
+                parsed['display start size'] = f'{parsed["start size"] // 1024}KB'
+            else:
+                parsed['display start size'] = f'{int(parsed["start size"])}'
+
         okeys = parsed.copy()
         if 'trial num' in okeys:
             okeys.pop('trial num')
@@ -66,11 +76,21 @@ class IDXDataObject:
         if 'log' in data_obj:
             parsed['log_per_op'] = data_obj['log']['commit']['tsc'] / max(data_obj['log']['commit']['nr'], 1.0)
 
+        if 'read_end_to_end' in data_obj:
+            parsed['read_end_to_end_per_op'] = data_obj['read_end_to_end']['tsc'] / max(data_obj['read_end_to_end']['nr'], 1.0)
+            parsed['n_aligned'] = data_obj['read_end_to_end']['n_aligned']
+            parsed['n_unaligned'] = data_obj['read_end_to_end']['n_unaligned']
+        if 'bh_meta' in data_obj:
+            parsed['bh_meta'] = data_obj['bh_meta']['tsc'] / max(data_obj['bh_meta']['nr'], 1.0)
+        if 'ua_fcache' in data_obj:
+            parsed['ua_fcache'] = data_obj['ua_fcache']['tsc'] / max(data_obj['ua_fcache']['nr'], 1.0)
+
         if 'wait_digest' in data_obj:
             parsed['wait_digest_per_op'] = data_obj['wait_digest']['tsc'] / max(data_obj['wait_digest']['nr'], 1.0)
 
         if 'read_data' in data_obj:
             parsed['read_data_bytes_per_cycle'] = data_obj['read_data']['bytes'] / max(data_obj['read_data']['tsc'], 1.0)
+
         if 'threads' in data_obj and data_obj['threads'] != 'T1':
             return None, None
         if 'num threads' in data_obj:
@@ -85,31 +105,6 @@ class IDXDataObject:
             parsed['nblocks'] = frag_obj['nblocks']
             parsed['nfragments'] = frag_obj['nfragments']
             parsed['layout_derived'] = frag_obj['layout_derived']
-        if 'ycsb_workload' in data_obj:
-            parsed['test'] = \
-                f'{data_obj["ycsb_workload"].split(".")[0].replace("workload", "").upper()}'
-            okeys['test'] = parsed['test']
-            parsed['throughput'] = float(data_obj['KTPS'])
-            ops = ["READ", "UPDATE", "SCAN", "INSERT", "READMODIFYWRITE"]
-            keys = [f'{k.lower()}_latency' for k in ops]
-            parsed['op_cycles'] = 0
-            parsed['op_cnt'] = 0
-
-            all_zero = True
-
-            for op, k in zip(ops, keys):
-                if op in data_obj:
-                    parsed[k] = int(data_obj[op]['cycles']) / max(int(data_obj[op]['cnt']), 1.0)
-                    if parsed[k] != 0.0:
-                        all_zero = False
-
-                    parsed['op_cycles'] += int(data_obj[op]['cycles'])
-                    parsed['op_cnt'] += int(data_obj[op]['cnt'])
-            
-            if all_zero:
-                return None, None
-
-            parsed['op_latency'] = parsed['op_cycles'] / max(parsed['op_cnt'], 1.0)
 
         if 'throughput' in data_obj:
             parsed['throughput'] = data_obj['throughput']
@@ -123,17 +118,23 @@ class IDXDataObject:
             if 'memo_hit_ratio' in data_obj['idx_stats']:
                 parsed['memo_hit_ratio'] = data_obj['idx_stats']['memo_hit_ratio']
                 parsed['ref_per_lookup'] = data_obj['idx_stats']['ref_per_lookup']
+            if 'nbuckets_checked' in data_obj['idx_stats']:
+                parsed['nbuckets_checked'] = data_obj['idx_stats']['nbuckets_checked']
 
         if 'lsm' in data_obj:
             if data_obj['lsm']['nr']:
-                parsed['indexing'] = data_obj['lsm']['tsc']
+                #parsed['indexing'] = data_obj['lsm']['tsc']
                 parsed['read_data'] = data_obj['l0']['tsc'] + data_obj['read_data']['tsc']
                 parsed['nops'] = data_obj['lsm']['nr'] 
+                if 'read_end_to_end' in data_obj:
+                    parsed['indexing'] = data_obj['read_end_to_end']['tsc'] - parsed['read_data']
             else:
-                parsed['indexing'] = data_obj['kernfs']['search']['total_time']
-                parsed['read_data'] = data_obj['kernfs']['digest'] - data_obj['kernfs']['search']['total_time']
-
-                parsed['nops'] = data_obj['kernfs']['search']['nr_search']
+                kernfs_obj = data_obj['kernfs']
+                parsed['indexing'] = kernfs_obj['search']['total_time']
+                parsed['read_data'] = kernfs_obj['digest'] - kernfs_obj['search']['total_time']
+                #parsed['read_data'] = kernfs_obj['storage']['rtsc'] + kernfs_obj['storage']['wtsc']
+                #parsed['indexing'] = kernfs_obj['digest'] - parsed['read_data']
+                parsed['nops'] = kernfs_obj['search']['nr_search']
 
             total = parsed['indexing'] + parsed['read_data']
             parsed['total_breakdown'] = total
@@ -189,6 +190,33 @@ class IDXDataObject:
                 parsed['l1_hits'] = (parsed['l1_accesses'] - parsed['l1_misses']) / max(parsed['l1_accesses'], 1.0)
                 parsed['l2_hits'] = (parsed['l2_accesses'] - parsed['l2_misses']) / max(parsed['l2_accesses'], 1.0)
                 parsed['llc_hits'] = (parsed['llc_accesses'] - parsed['llc_misses']) / max(parsed['llc_accesses'], 1.0)
+
+        if 'ycsb_workload' in data_obj:
+            parsed['test'] = \
+                f'{data_obj["ycsb_workload"].split(".")[0].replace("workload", "").upper()}'
+            okeys['test'] = parsed['test']
+            parsed['workload'] = parsed['test'].split('_')[0]
+            parsed['throughput'] = float(data_obj['KTPS'])
+            ops = ["READ", "UPDATE", "SCAN", "INSERT", "READMODIFYWRITE"]
+            keys = [f'{k.lower()}_latency' for k in ops]
+            parsed['op_cycles'] = 0
+            parsed['op_cnt'] = 0
+
+            all_zero = True
+
+            for op, k in zip(ops, keys):
+                if op in data_obj:
+                    parsed[k] = int(data_obj[op]['cycles']) / max(int(data_obj[op]['cnt']), 1.0)
+                    if parsed[k] != 0.0:
+                        all_zero = False
+
+                    parsed['op_cycles'] += int(data_obj[op]['cycles'])
+                    parsed['op_cnt'] += int(data_obj[op]['cnt'])
+            
+            if all_zero:
+                return None, None
+
+            parsed['op_latency'] = parsed['op_cycles'] / max(parsed['op_cnt'], 1.0)
 
         return okeys, parsed
 
@@ -271,6 +299,8 @@ class IDXDataObject:
         # df_mean['read_data'] /= df_mean['read_data'].min()
         # df_mean['total_breakdown'] /= df_mean['total_breakdown'].min()
 
+        df_mean['total_raw_tsc'] = df_mean['total_breakdown']
+
         df_mean['read_data_raw'] = df_mean['read_data']
         df_ci['read_data_raw_ci'] = df_ci['read_data_ci']
 
@@ -279,6 +309,13 @@ class IDXDataObject:
 
         df_mean['indexing_per_op'] = df_mean['indexing'] / df_mean['nops']
         df_ci['indexing_per_op_ci'] = df_ci['indexing_ci'] / df_mean['nops']
+
+        if 'reps' in df_mean:
+            df_mean['read_data_per_rep'] = df_mean['read_data'] / df_mean['reps']
+            df_ci['read_data_per_rep_ci'] = df_ci['read_data_ci'] / df_mean['reps']
+
+            df_mean['indexing_per_rep'] = df_mean['indexing'] / df_mean['reps']
+            df_ci['indexing_per_rep_ci'] = df_ci['indexing_ci'] / df_mean['reps']
 
         df_mean['indexing_raw'] = df_mean['indexing'] / df_mean['indexing'].min()
         df_ci['indexing_raw_ci'] = df_ci['indexing_ci'] / df_mean['indexing'].min()
@@ -293,6 +330,14 @@ class IDXDataObject:
 
         df_ci['io_cycles_ci'] = df_ci['total_breakdown_ci'] / df_mean['nops']
         df_mean['io_cycles'] = df_mean['total_breakdown'] / df_mean['nops']
+
+        if 'reps' in df_mean:
+            df_ci['io_cycles_rep_ci'] = df_ci['total_breakdown_ci'] / df_mean['reps']
+            df_mean['io_cycles_rep'] = df_mean['total_breakdown'] / df_mean['reps']
+
+        if 'op_latency' in df_mean:
+            df_mean['app_logic_per_op'] = ((df_mean['op_latency'] * df_mean['op_cnt']) - df_mean['total_breakdown']) / df_mean['op_cnt']
+            df_mean['io_path_per_op'] = df_mean['total_breakdown'] / df_mean['op_cnt']
 
         if 'reps' in df_mean:
             df_ci['io_cycles_rep_ci'] = df_ci['total_breakdown_ci'] / df_mean['reps']
@@ -523,6 +568,14 @@ class IDXDataObject:
 
             new_name += new_piece
 
+        # Now try numbers
+        import re
+        nums = re.findall(r'\d+', new_name)
+        if nums:
+            new_name = new_name.upper()
+            for num in nums:
+                new_name = new_name.replace(num, engine.number_to_words(num).capitalize())
+
         return new_name
 
     def _mtcc_average(self, agg, output, struct):
@@ -726,6 +779,19 @@ class IDXDataObject:
                         except:
                             pass
 
+                if 'io_cycles' in df:
+                    base = baseline_df['io_cycles'].mean()
+                    curr = df['io_cycles'].mean()
+                    reduction = (base - curr)
+                    diff = float(reduction / base)
+                    explanation = '%s %s' % (idx, bench)
+
+                    nice_idx = self.make_bench_name_latex_compat(idx)
+
+                    update_max_bench(bench, f'AvgIOCycleReduction{nice_idx}',
+                            diff, '{:.0%}'.format(diff), explanation)
+                    print(diff)
+
                 # AvgIndexingOverheadReduction (per-benchmark only!)
                 if 'indexing' in df:
                     base = baseline_df['indexing'].mean()
@@ -842,4 +908,740 @@ class IDXDataObject:
                         cmd_output = cmd_output.replace('%', '\\%')
                         f.write(cmd_output)
                         f.write('% {}\n'.format(agg_bench_struct[bench][cmd]))
+
+    def page_cache_test_summary(self):
+        ''' Returns <latex command name> -> <value> '''
+
+        res = {}
+
+        df = self.df[self.df['repetitions'] != '1']
+       
+        # Overall IO cycle reduction
+        x = df.groupby(['struct', 'test']).mean()
+
+        avg_io_cycle_improvement = 1.0 - (x.loc['EXTENT_TREES'] / x.loc['NONE']).io_cycles
+
+        for test, improvement in avg_io_cycle_improvement.to_dict().items():
+            test_name = self.make_bench_name_latex_compat(test)
+            res[f'PCAvg{test_name}IOCycleDecrease'] = f'{improvement:.0%}'
+
+        # Overall difference in repetitions
+        x = df[df['test'] != 'Insert'].groupby(['struct', 'repetitions']).mean()
+
+        avg_io_cycle_improvement = 1.0 - (x.loc['EXTENT_TREES'] / x.loc['NONE']).io_cycles
+
+        for test, improvement in avg_io_cycle_improvement.to_dict().items():
+            test_name = self.make_bench_name_latex_compat(test)
+            res[f'PCAvg{test_name}ForReadsIOCycleDecrease'] = f'{improvement:.0%}'
+
+        x = df[df['test'] == 'Insert'].groupby(['struct', 'repetitions']).mean()
+
+        avg_io_cycle_improvement = 1.0 - (x.loc['EXTENT_TREES'] / x.loc['NONE']).io_cycles
+
+        for test, improvement in avg_io_cycle_improvement.to_dict().items():
+            test_name = self.make_bench_name_latex_compat(test)
+            res[f'PCAvg{test_name}ForWritesIOCycleDecrease'] = f'{improvement:.0%}'
+
+        # Overall difference in bytes read and written
+
+        x = df.groupby(['struct']).mean()
+        nvdimm = 1.0 - (x.loc['EXTENT_TREES'] / x.loc['NONE'])
+        res[f'PCAvgBytesReadDecrease'] = f'{nvdimm.nvdimm_bytes_read:.0%}'
+        res[f'PCAvgBytesWrittenDecrease'] = f'{nvdimm.nvdimm_bytes_written:.0%}'
+
+        pprint(res)
+
+        return res
+
+    def ycsb_summary(self):
+        ''' Returns <latex command name> -> <value> '''
+
+        res = {}
+
+        for io_size in ['SmallIO', 'LargeIO']:
+
+            df = self.df[self.df['test'].str.contains(io_size.upper())]
+
+            # Overall improvment
+            x = df.groupby(['struct']).mean()
+
+            avg_improvement = 1.0 - (x / x.loc['NONE']).op_latency
+
+            for struct, improvement in avg_improvement.to_dict().items():
+                struct_name = self.make_bench_name_latex_compat(struct)
+                verb = 'Decrease' if improvement > 0 else 'Increase'
+                key = f'YCSBAvg{struct_name}{io_size}Latency{verb}' 
+                val = f'{abs(improvement):.0%}'
+                res[key] = val
+                if improvement > 0:
+                    print(key, val)
+                else:
+                    print('\t', key, val)
+
+            # Max improvement
+            x = df.groupby(['struct', 'test']).mean()
+
+            avg_improvement = 1.0 - (x / x.loc['NONE']).op_latency
+            for struct in x.index.get_level_values(0).unique().to_list():
+                struct_name = self.make_bench_name_latex_compat(struct)
+
+                struct_improvement = avg_improvement[struct]
+                improvement = struct_improvement.max()
+
+                verb = 'Decrease' if improvement > 0 else 'Increase'
+
+                key = f'YCSBMax{struct_name}{io_size}Latency{verb}' 
+                val = f'{abs(improvement):.0%}'
+                res[key] = val
+                if improvement > 0:
+                    print(key, val, struct_improvement.idxmax())
+                else:
+                    print('\t', key, val, struct_improvement.idxmax())
+
+                improvement = struct_improvement.min()
+
+                verb = 'Decrease' if improvement > 0 else 'Increase'
+
+                key = f'YCSBMin{struct_name}{io_size}Latency{verb}' 
+                val = f'{abs(improvement):.0%}'
+                res[key] = val
+                if improvement > 0:
+                    print(key, val, struct_improvement.idxmin())
+                else:
+                    print('\t', key, val, struct_improvement.idxmin())
+
+            print()
+
+
+        pprint(res)
+
+        return res
+
+    def concurrency_test_summary(self):
+        ''' Returns <latex command name> -> <value> '''
+
+        res = {}
+
+        df = self.df
+       
+        '''
+        # Overall IO cycle reduction
+        x = df.groupby(['struct', 'test']).mean()
+
+        avg_io_cycle_improvement = 1.0 - (x / x.loc['EXTENT_TREES']).io_cycles
+
+        for test, improvement in avg_io_cycle_improvement.to_dict().items():
+            struct_name = self.make_bench_name_latex_compat(test[0])
+            test_name = self.make_bench_name_latex_compat(test[1])
+            verb = 'Decrease' if improvement > 0 else 'Increase'
+            key = f'CCAvg{struct_name}{test_name}IOCycle{verb}' 
+            val = f'{abs(improvement):.0%}'
+            res[key] = val
+            if improvement > 0:
+                print(key, val)
+            else:
+                print('\t', key, val)
+
+        print()
+
+        # Overall IO cycle reduction by layout 
+        x = df.groupby(['struct', 'test', 'layout']).mean()
+
+        avg_io_cycle_improvement = 1.0 - (x / x.loc['EXTENT_TREES']).io_cycles
+
+        for test, improvement in avg_io_cycle_improvement.to_dict().items():
+            struct_name = self.make_bench_name_latex_compat(test[0])
+            test_name = self.make_bench_name_latex_compat(test[1])
+            layout_name = self.make_bench_name_latex_compat(test[2])
+            verb = 'Decrease' if improvement > 0 else 'Increase'
+            res[f'CCAvg{struct_name}{test_name}{layout_name}IOCycle{verb}'] = f'{abs(improvement):.0%}'
+
+        # Overall IO cycle reduction by size
+        x = df.groupby(['struct', 'display start size', 'test']).mean()
+
+        avg_io_cycle_improvement = 1.0 - (x / x.loc['EXTENT_TREES']).io_cycles
+
+        for test, improvement in avg_io_cycle_improvement.to_dict().items():
+            struct_name = self.make_bench_name_latex_compat(test[0])
+            size_name = self.make_bench_name_latex_compat(test[1])
+            test_name = self.make_bench_name_latex_compat(test[2])
+            verb = 'Decrease' if improvement > 0 else 'Increase'
+            key = f'CCAvg{struct_name}{test_name}{size_name}IOCycle{verb}'
+            val = f'{abs(improvement):.0%}'
+            res[key] = val
+            if improvement > 0:
+                print(key, val)
+            else:
+                print('\t', key, val)
+
+        print()
+        '''
+
+        x = df.groupby(['threads']).mean()
+
+        avg_improvement = 1.0 - (x / x.loc[2.0]).write_throughput_mb
+
+        for thread, improvement in avg_improvement.to_dict().items():
+            thread_num = self.make_bench_name_latex_compat(str(round(thread)))
+            verb = 'Decrease' if improvement > 0 else 'Increase'
+            key = f'CCAvg{thread_num}ThreadWriteThroughput{verb}' 
+            val = f'{abs(improvement):.0%}'
+            res[key] = val
+            if improvement > 0:
+                print(key, val)
+            else:
+                print('\t', key, val)
+
+        print()
+
+
+        pprint(res)
+
+        return res
+
+    def large_io_test_summary(self):
+        ''' Returns <latex command name> -> <value> '''
+
+        res = {}
+
+        df = self.df[self.df['repetitions'] != '1']
+       
+        # Overall IO cycle reduction
+        x = df.groupby(['struct', 'test']).mean()
+
+        avg_io_cycle_improvement = 1.0 - (x / x.loc['EXTENT_TREES']).io_cycles_rep
+
+        for test, improvement in avg_io_cycle_improvement.to_dict().items():
+            struct_name = self.make_bench_name_latex_compat(test[0])
+            test_name = self.make_bench_name_latex_compat(test[1])
+            verb = 'Decrease' if improvement > 0 else 'Increase'
+            key = f'LIAvg{struct_name}{test_name}IOCycle{verb}' 
+            val = f'{abs(improvement):.0%}'
+            res[key] = val
+            if improvement > 0:
+                print(key, val)
+            else:
+                print('\t', key, val)
+
+        print()
+
+        # Overall IO cycle reduction by layout 
+        x = df.groupby(['struct', 'test', 'layout']).mean()
+
+        avg_io_cycle_improvement = 1.0 - (x / x.loc['EXTENT_TREES']).io_cycles_rep
+
+        for test, improvement in avg_io_cycle_improvement.to_dict().items():
+            struct_name = self.make_bench_name_latex_compat(test[0])
+            test_name = self.make_bench_name_latex_compat(test[1])
+            layout_name = self.make_bench_name_latex_compat(test[2])
+            verb = 'Decrease' if improvement > 0 else 'Increase'
+            res[f'LIAvg{struct_name}{test_name}{layout_name}IOCycle{verb}'] = f'{abs(improvement):.0%}'
+
+        # Increase in read data time
+        x = df.groupby(['struct']).mean()
+
+        avg_improvement = 1.0 - (x / x.loc['EXTENT_TREES']).read_data_per_rep
+
+        for struct, improvement in avg_improvement.to_dict().items():
+            struct_name = self.make_bench_name_latex_compat(struct)
+            verb = 'Decrease' if improvement > 0 else 'Increase'
+            key = f'LIAvg{struct_name}ReadData{verb}'
+            val = f'{abs(improvement):.0%}'
+            res[key] = val 
+            if improvement > 0:
+                print(key, val)
+            else:
+                print('\t', key, val)
+
+        print()
+
+        x = df[df['struct'] != 'HASHFS'].groupby(['layout']).mean()
+
+        avg_improvement = 1.0 - (x / x.loc[1.0]).read_data_per_rep
+
+        for layout, improvement in avg_improvement.to_dict().items():
+            layout_name = self.make_bench_name_latex_compat(layout)
+            verb = 'Decrease' if improvement > 0 else 'Increase'
+            key = f'LIAvgLS{layout_name}ReadData{verb}'
+            val = f'{abs(improvement):.0%}'
+            res[key] = val 
+            if improvement > 0:
+                print(key, val)
+            else:
+                print('\t', key, val)
+
+        print()
+
+        # Overall IO cycle reduction by size
+        x = df.groupby(['struct', 'test', 'layout']).mean()
+
+        avg_io_cycle_improvement = 1.0 - (x / x.loc['EXTENT_TREES']).io_cycles_rep
+
+        for test, improvement in avg_io_cycle_improvement.to_dict().items():
+            struct_name = self.make_bench_name_latex_compat(test[0])
+            test_name = self.make_bench_name_latex_compat(test[1])
+            layout_name = self.make_bench_name_latex_compat(test[2])
+            verb = 'Decrease' if improvement > 0 else 'Increase'
+            res[f'LIAvg{struct_name}{test_name}{layout_name}IOCycle{verb}'] = f'{abs(improvement):.0%}'
+
+        # Overall difference in bytes read and written
+
+        x = df[df['test'] != 'Insert'].groupby(['struct']).mean()
+        nvdimm = 1.0 - (x / x.loc['EXTENT_TREES'])
+        for struct, improvement in nvdimm.nvdimm_bytes_read.to_dict().items():
+            struct_name = self.make_bench_name_latex_compat(struct)
+            verb = 'Decrease' if improvement > 0 else 'Increase'
+            key = f'LIAvgBytesRead{struct_name}{verb}'
+            val = f'{abs(improvement):.0%}'
+            res[key] = val
+            if improvement > 0:
+                print(key, val)
+            else:
+                print('\t', key, val)
+
+        print()
+
+        for struct, improvement in nvdimm.nvdimm_read_hit_ratio.to_dict().items():
+            struct_name = self.make_bench_name_latex_compat(struct)
+            verb = 'Decrease' if improvement > 0 else 'Increase'
+            key = f'LIAvgBytesReadRatio{struct_name}{verb}'
+            val = f'{abs(improvement):.0%}'
+            res[key] = val
+            if improvement > 0:
+                print(key, val)
+            else:
+                print('\t', key, val)
+
+        print()
+
+        x = df[df['test'] == 'Insert'].groupby(['struct']).mean()
+        nvdimm = 1.0 - (x / x.loc['EXTENT_TREES'])
+        for struct, improvement in nvdimm.nvdimm_bytes_written.to_dict().items():
+            struct_name = self.make_bench_name_latex_compat(struct)
+            verb = 'Decrease' if improvement > 0 else 'Increase'
+            key = f'LIAvgBytesWritten{struct_name}{verb}'
+            val = f'{abs(improvement):.0%}'
+            res[key] = val
+            if improvement > 0:
+                print(key, val)
+            else:
+                print('\t', key, val)
+
+        print()
+
+        for struct, improvement in nvdimm.nvdimm_write_hit_ratio.to_dict().items():
+            struct_name = self.make_bench_name_latex_compat(struct)
+            verb = 'Decrease' if improvement > 0 else 'Increase'
+            key = f'LIAvgBytesWrittenRatio{struct_name}{verb}'
+            val = f'{abs(improvement):.0%}'
+            res[key] = val
+            if improvement > 0:
+                print(key, val)
+            else:
+                print('\t', key, val)
+
+        print()
+
+        pprint(res)
+
+        return res
+
+    def large_io_test_summary(self):
+        ''' Returns <latex command name> -> <value> '''
+
+        res = {}
+
+        df = self.df[self.df['repetitions'] != '1']
+       
+        # Overall IO cycle reduction
+        x = df.groupby(['struct', 'test']).mean()
+
+        avg_io_cycle_improvement = 1.0 - (x / x.loc['EXTENT_TREES']).io_cycles_rep
+
+        for test, improvement in avg_io_cycle_improvement.to_dict().items():
+            struct_name = self.make_bench_name_latex_compat(test[0])
+            test_name = self.make_bench_name_latex_compat(test[1])
+            verb = 'Decrease' if improvement > 0 else 'Increase'
+            key = f'LIAvg{struct_name}{test_name}IOCycle{verb}' 
+            val = f'{abs(improvement):.0%}'
+            res[key] = val
+            if improvement > 0:
+                print(key, val)
+            else:
+                print('\t', key, val)
+
+        print()
+
+        # Overall IO cycle reduction by layout 
+        x = df.groupby(['struct', 'test', 'layout']).mean()
+
+        avg_io_cycle_improvement = 1.0 - (x / x.loc['EXTENT_TREES']).io_cycles_rep
+
+        for test, improvement in avg_io_cycle_improvement.to_dict().items():
+            struct_name = self.make_bench_name_latex_compat(test[0])
+            test_name = self.make_bench_name_latex_compat(test[1])
+            layout_name = self.make_bench_name_latex_compat(test[2])
+            verb = 'Decrease' if improvement > 0 else 'Increase'
+            res[f'LIAvg{struct_name}{test_name}{layout_name}IOCycle{verb}'] = f'{abs(improvement):.0%}'
+
+        # Increase in read data time
+        x = df.groupby(['struct']).mean()
+
+        avg_improvement = 1.0 - (x / x.loc['EXTENT_TREES']).read_data_per_rep
+
+        for struct, improvement in avg_improvement.to_dict().items():
+            struct_name = self.make_bench_name_latex_compat(struct)
+            verb = 'Decrease' if improvement > 0 else 'Increase'
+            key = f'LIAvg{struct_name}ReadData{verb}'
+            val = f'{abs(improvement):.0%}'
+            res[key] = val 
+            if improvement > 0:
+                print(key, val)
+            else:
+                print('\t', key, val)
+
+        print()
+
+        x = df[df['struct'] != 'HASHFS'].groupby(['layout']).mean()
+
+        avg_improvement = 1.0 - (x / x.loc[1.0]).read_data_per_rep
+
+        for layout, improvement in avg_improvement.to_dict().items():
+            layout_name = self.make_bench_name_latex_compat(layout)
+            verb = 'Decrease' if improvement > 0 else 'Increase'
+            key = f'LIAvgLS{layout_name}ReadData{verb}'
+            val = f'{abs(improvement):.0%}'
+            res[key] = val 
+            if improvement > 0:
+                print(key, val)
+            else:
+                print('\t', key, val)
+
+        print()
+
+        # Overall IO cycle reduction by size
+        x = df.groupby(['struct', 'test', 'layout']).mean()
+
+        avg_io_cycle_improvement = 1.0 - (x / x.loc['EXTENT_TREES']).io_cycles_rep
+
+        for test, improvement in avg_io_cycle_improvement.to_dict().items():
+            struct_name = self.make_bench_name_latex_compat(test[0])
+            test_name = self.make_bench_name_latex_compat(test[1])
+            layout_name = self.make_bench_name_latex_compat(test[2])
+            verb = 'Decrease' if improvement > 0 else 'Increase'
+            res[f'LIAvg{struct_name}{test_name}{layout_name}IOCycle{verb}'] = f'{abs(improvement):.0%}'
+
+        # Overall difference in bytes read and written
+
+        x = df[df['test'] != 'Insert'].groupby(['struct']).mean()
+        nvdimm = 1.0 - (x / x.loc['EXTENT_TREES'])
+        for struct, improvement in nvdimm.nvdimm_bytes_read.to_dict().items():
+            struct_name = self.make_bench_name_latex_compat(struct)
+            verb = 'Decrease' if improvement > 0 else 'Increase'
+            key = f'LIAvgBytesRead{struct_name}{verb}'
+            val = f'{abs(improvement):.0%}'
+            res[key] = val
+            if improvement > 0:
+                print(key, val)
+            else:
+                print('\t', key, val)
+
+        print()
+
+        for struct, improvement in nvdimm.nvdimm_read_hit_ratio.to_dict().items():
+            struct_name = self.make_bench_name_latex_compat(struct)
+            verb = 'Decrease' if improvement > 0 else 'Increase'
+            key = f'LIAvgBytesReadRatio{struct_name}{verb}'
+            val = f'{abs(improvement):.0%}'
+            res[key] = val
+            if improvement > 0:
+                print(key, val)
+            else:
+                print('\t', key, val)
+
+        print()
+
+        x = df[df['test'] == 'Insert'].groupby(['struct']).mean()
+        nvdimm = 1.0 - (x / x.loc['EXTENT_TREES'])
+        for struct, improvement in nvdimm.nvdimm_bytes_written.to_dict().items():
+            struct_name = self.make_bench_name_latex_compat(struct)
+            verb = 'Decrease' if improvement > 0 else 'Increase'
+            key = f'LIAvgBytesWritten{struct_name}{verb}'
+            val = f'{abs(improvement):.0%}'
+            res[key] = val
+            if improvement > 0:
+                print(key, val)
+            else:
+                print('\t', key, val)
+
+        print()
+
+        for struct, improvement in nvdimm.nvdimm_write_hit_ratio.to_dict().items():
+            struct_name = self.make_bench_name_latex_compat(struct)
+            verb = 'Decrease' if improvement > 0 else 'Increase'
+            key = f'LIAvgBytesWrittenRatio{struct_name}{verb}'
+            val = f'{abs(improvement):.0%}'
+            res[key] = val
+            if improvement > 0:
+                print(key, val)
+            else:
+                print('\t', key, val)
+
+        print()
+
+        pprint(res)
+
+        return res
+
+    def multi_file_summary(self):
+        ''' Returns <latex command name> -> <value> '''
+
+        res = {}
+
+        df = self.df[self.df['repetitions'] != '1']
+       
+        # Overall IO cycle reduction
+        x = df.groupby(['struct', 'test']).mean()
+
+        avg_io_cycle_improvement = 1.0 - (x / x.loc['EXTENT_TREES']).io_cycles
+
+        for test, improvement in avg_io_cycle_improvement.to_dict().items():
+            struct_name = self.make_bench_name_latex_compat(test[0])
+            test_name = self.make_bench_name_latex_compat(test[1])
+            verb = 'Decrease' if improvement > 0 else 'Increase'
+            key = f'MFAvg{struct_name}{test_name}IOCycle{verb}' 
+            val = f'{abs(improvement):.0%}'
+            res[key] = val
+            if improvement > 0:
+                print(key, val)
+            else:
+                print('\t', key, val)
+
+        print()
+
+        # Cache reduction
+        x = df.groupby(['struct', 'test']).mean()
+
+        avg_improvement = 1.0 - (x / x.loc['EXTENT_TREES']).l1_accesses
+
+        for test, improvement in avg_improvement.to_dict().items():
+            struct_name = self.make_bench_name_latex_compat(test[0])
+            test_name = self.make_bench_name_latex_compat(test[1])
+            verb = 'Decrease' if improvement > 0 else 'Increase'
+            key = f'MFAvg{struct_name}{test_name}LOneAccesses{verb}'
+            val = f'{abs(improvement):.0%}'
+            res[key] = val
+            if improvement > 0:
+                print(key, val)
+            else:
+                print('\t', key, val)
+
+        print()
+
+        avg_improvement = 1.0 - (x / x.loc['EXTENT_TREES']).l1_misses
+
+        for test, improvement in avg_improvement.to_dict().items():
+            struct_name = self.make_bench_name_latex_compat(test[0])
+            test_name = self.make_bench_name_latex_compat(test[1])
+            verb = 'Decrease' if improvement > 0 else 'Increase'
+            key = f'MFAvg{struct_name}{test_name}LOneMisses{verb}'
+            val = f'{abs(improvement):.0%}'
+            res[key] = val
+            if improvement > 0:
+                print(key, val)
+            else:
+                print('\t', key, val)
+
+        print()
+
+        # Overall IO cycle reduction by layout 
+        x = df.groupby(['struct', 'test', 'layout']).mean()
+
+        avg_io_cycle_improvement = 1.0 - (x / x.loc['EXTENT_TREES']).io_cycles
+
+        for test, improvement in avg_io_cycle_improvement.to_dict().items():
+            struct_name = self.make_bench_name_latex_compat(test[0])
+            test_name = self.make_bench_name_latex_compat(test[1])
+            layout_name = self.make_bench_name_latex_compat(test[2])
+            verb = 'Decrease' if improvement > 0 else 'Increase'
+            res[f'MFAvg{struct_name}{test_name}{layout_name}IOCycle{verb}'] = f'{abs(improvement):.0%}'
+
+        # Overall IO cycle reduction by size
+        x = df.groupby(['struct', 'test', 'layout']).mean()
+
+        avg_io_cycle_improvement = 1.0 - (x / x.loc['EXTENT_TREES']).io_cycles
+
+        for test, improvement in avg_io_cycle_improvement.to_dict().items():
+            struct_name = self.make_bench_name_latex_compat(test[0])
+            test_name = self.make_bench_name_latex_compat(test[1])
+            layout_name = self.make_bench_name_latex_compat(test[2])
+            verb = 'Decrease' if improvement > 0 else 'Increase'
+            res[f'MFAvg{struct_name}{test_name}{layout_name}IOCycle{verb}'] = f'{abs(improvement):.0%}'
+
+        # Overall difference in bytes read and written
+
+        x = df[df['test'] != 'Insert'].groupby(['struct']).mean()
+        nvdimm = 1.0 - (x / x.loc['EXTENT_TREES'])
+        for struct, improvement in nvdimm.nvdimm_bytes_read.to_dict().items():
+            struct_name = self.make_bench_name_latex_compat(struct)
+            verb = 'Decrease' if improvement > 0 else 'Increase'
+            res[f'MFAvgBytesRead{struct_name}{verb}'] = f'{abs(improvement):.0%}'
+
+        for struct, improvement in nvdimm.nvdimm_read_hit_ratio.to_dict().items():
+            struct_name = self.make_bench_name_latex_compat(struct)
+            verb = 'Decrease' if improvement > 0 else 'Increase'
+            res[f'MFAvgBytesReadRatio{struct_name}{verb}'] = f'{abs(improvement):.0%}'
+
+        x = df[df['test'] == 'Insert'].groupby(['struct']).mean()
+        nvdimm = 1.0 - (x / x.loc['EXTENT_TREES'])
+        for struct, improvement in nvdimm.nvdimm_bytes_written.to_dict().items():
+            struct_name = self.make_bench_name_latex_compat(struct)
+            verb = 'Decrease' if improvement > 0 else 'Increase'
+            res[f'MFAvgBytesWritten{struct_name}{verb}'] = f'{abs(improvement):.0%}'
+
+        for struct, improvement in nvdimm.nvdimm_write_hit_ratio.to_dict().items():
+            struct_name = self.make_bench_name_latex_compat(struct)
+            verb = 'Decrease' if improvement > 0 else 'Increase'
+            res[f'MFAvgBytesWrittenRatio{struct_name}{verb}'] = f'{abs(improvement):.0%}'
+
+        pprint(res)
+
+        return res
+
+
+    def single_block_summary(self):
+        ''' Returns <latex command name> -> <value> '''
+
+        res = {}
+
+        df = self.df[self.df['repetitions'] != '1']
+       
+        # Overall IO cycle reduction
+        x = df.groupby(['struct', 'test']).mean()
+
+        avg_io_cycle_improvement = 1.0 - (x / x.loc['EXTENT_TREES']).io_cycles
+
+        for test, improvement in avg_io_cycle_improvement.to_dict().items():
+            struct_name = self.make_bench_name_latex_compat(test[0])
+            test_name = self.make_bench_name_latex_compat(test[1])
+            verb = 'Decrease' if improvement > 0 else 'Increase'
+            key = f'SBAvg{struct_name}{test_name}IOCycle{verb}' 
+            val = f'{abs(improvement):.0%}'
+            res[key] = val
+            if improvement > 0:
+                print(key, val)
+            else:
+                print('\t', key, val)
+
+        print()
+
+        # Cache reduction
+        x = df.groupby(['struct', 'test']).mean()
+
+        avg_improvement = 1.0 - (x / x.loc['EXTENT_TREES']).l1_accesses
+
+        for test, improvement in avg_improvement.to_dict().items():
+            struct_name = self.make_bench_name_latex_compat(test[0])
+            test_name = self.make_bench_name_latex_compat(test[1])
+            verb = 'Decrease' if improvement > 0 else 'Increase'
+            key = f'SBAvg{struct_name}{test_name}LOneAccesses{verb}'
+            val = f'{abs(improvement):.0%}'
+            res[key] = val
+            if improvement > 0:
+                print(key, val)
+            else:
+                print('\t', key, val)
+
+        print()
+
+        avg_improvement = 1.0 - (x / x.loc['EXTENT_TREES']).l1_misses
+
+        for test, improvement in avg_improvement.to_dict().items():
+            struct_name = self.make_bench_name_latex_compat(test[0])
+            test_name = self.make_bench_name_latex_compat(test[1])
+            verb = 'Decrease' if improvement > 0 else 'Increase'
+            key = f'SBAvg{struct_name}{test_name}LOneMisses{verb}'
+            val = f'{abs(improvement):.0%}'
+            res[key] = val
+            if improvement > 0:
+                print(key, val)
+            else:
+                print('\t', key, val)
+
+        print()
+
+        # Overall IO cycle reduction by layout 
+        x = df.groupby(['struct', 'test', 'layout']).mean()
+
+        avg_io_cycle_improvement = 1.0 - (x / x.loc['EXTENT_TREES']).io_cycles
+
+        for test, improvement in avg_io_cycle_improvement.to_dict().items():
+            struct_name = self.make_bench_name_latex_compat(test[0])
+            test_name = self.make_bench_name_latex_compat(test[1])
+            layout_name = self.make_bench_name_latex_compat(test[2])
+            verb = 'Decrease' if improvement > 0 else 'Increase'
+            res[f'SBAvg{struct_name}{test_name}{layout_name}IOCycle{verb}'] = f'{abs(improvement):.0%}'
+
+        # Overall IO cycle reduction by size
+        x = df.groupby(['struct', 'test', 'layout']).mean()
+
+        avg_io_cycle_improvement = 1.0 - (x / x.loc['EXTENT_TREES']).io_cycles
+
+        for test, improvement in avg_io_cycle_improvement.to_dict().items():
+            struct_name = self.make_bench_name_latex_compat(test[0])
+            test_name = self.make_bench_name_latex_compat(test[1])
+            layout_name = self.make_bench_name_latex_compat(test[2])
+            verb = 'Decrease' if improvement > 0 else 'Increase'
+            res[f'SBAvg{struct_name}{test_name}{layout_name}IOCycle{verb}'] = f'{abs(improvement):.0%}'
+
+        # Overall difference in bytes read and written
+
+        x = df[df['test'] != 'Insert'].groupby(['struct']).mean()
+        nvdimm = 1.0 - (x / x.loc['EXTENT_TREES'])
+        for struct, improvement in nvdimm.nvdimm_bytes_read.to_dict().items():
+            struct_name = self.make_bench_name_latex_compat(struct)
+            verb = 'Decrease' if improvement > 0 else 'Increase'
+            res[f'SBAvgBytesRead{struct_name}{verb}'] = f'{abs(improvement):.0%}'
+
+        for struct, improvement in nvdimm.nvdimm_read_hit_ratio.to_dict().items():
+            struct_name = self.make_bench_name_latex_compat(struct)
+            verb = 'Decrease' if improvement > 0 else 'Increase'
+            res[f'SBAvgBytesReadRatio{struct_name}{verb}'] = f'{abs(improvement):.0%}'
+
+        x = df[df['test'] == 'Insert'].groupby(['struct']).mean()
+        nvdimm = 1.0 - (x / x.loc['EXTENT_TREES'])
+        for struct, improvement in nvdimm.nvdimm_bytes_written.to_dict().items():
+            struct_name = self.make_bench_name_latex_compat(struct)
+            verb = 'Decrease' if improvement > 0 else 'Increase'
+            res[f'SBAvgBytesWritten{struct_name}{verb}'] = f'{abs(improvement):.0%}'
+
+        for struct, improvement in nvdimm.nvdimm_write_hit_ratio.to_dict().items():
+            struct_name = self.make_bench_name_latex_compat(struct)
+            verb = 'Decrease' if improvement > 0 else 'Increase'
+            res[f'SBAvgBytesWrittenRatio{struct_name}{verb}'] = f'{abs(improvement):.0%}'
+
+        pprint(res)
+
+        return res
+
+    def summarize(self, func_name, output_file_path, is_final):
+        outfile = None
+        if output_file_path is not None:
+            outfile = Path(output_file_path)
+
+        res = getattr(self, func_name)()
+
+        if outfile is not None:
+            with outfile.open('w') as f:
+                cmd_str = '\\newcommand{{\\{0}}}{{\\tentative{{{1}}}}}'
+                if is_final:
+                    cmd_str = '\\newcommand{{\\{0}}}{{{1}}}'
+
+                for cmd in sorted(res.keys()):
+                    data = res[cmd]
+
+                    cmd_output = cmd_str.format(cmd, data)
+                    cmd_output = cmd_output.replace('%', '\\%')
+                    f.write(cmd_output)
+                    f.write('\n')
 

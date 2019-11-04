@@ -63,6 +63,21 @@ def add_args(parser):
                          help='If dumping to TeX, remove the tentative tags.')
     summary.set_defaults(fn=summary_fn)
 
+    # For better summaries!
+    summarize_fn = lambda args: IDXDataObject(file_path=Path(args.input_file)
+            ).summarize(args.function_name, args.output_file, args.final)
+    summarize = subparsers.add_parser('summarize',
+                                    help='Display relavant results')
+    summarize.add_argument('--input-file', '-i', default='report.yaml',
+                         help='Where the aggregations live.')
+    summarize.add_argument('--output-file', '-o', default=None,
+                         help='Dump summary to TeX file.')
+    summarize.add_argument('--function-name', '-n', required=True,
+                         help='What summary function to use.')
+    summarize.add_argument('--final', '-f', action='store_true',
+                         help='If dumping to TeX, remove the tentative tags.')
+    summarize.set_defaults(fn=summarize_fn)
+
     # For graphing!
     graph = subparsers.add_parser('graph',
                                   help='Graph from report.yaml')

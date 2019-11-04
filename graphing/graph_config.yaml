@@ -4,8 +4,8 @@ display_options:
     global_hash_table_compact: Global Hash Table (Compact)
     radix_trees: Radix Trees
     extent_trees: Extent Trees
-    none: Baseline
-    level_hash_tables: Level Hash Tables
+    none: Strata Baseline
+    level_hash_tables: "Level\nHash Tables"
     global_cuckoo_hash: "Global\nHash Table"
     global_cuckoo_hash_compact: Global Cuckoo Hash Table (Compact)
     hashfs: HashFS
@@ -13,10 +13,14 @@ display_options:
   breakdown_names:
     indexing: Indexing
     indexing_per_op: Indexing
+    indexing_per_rep: Indexing
     indexing_throughput: Indexing
     read_data: Device IO
     read_data_per_op: Device IO
+    read_data_per_rep: Device IO
     read_data_throughput: Device IO
+    io_path_per_op: File System Overhead
+    app_logic_per_op: Application Overhead
 
   benchmark_order:
     - 1MB
@@ -28,10 +32,10 @@ display_options:
     Global Hash Table (Compact): '#FF0000'
     Radix Trees: '#ffffb3'
     Extent Trees: '#bebada'
-    Level Hash Tables: '#fb8072'
+    "Level\nHash Tables": '#fb8072'
     "Global\nHash Table": '#999999'
     Global Cuckoo Hash Table (Compact): '#990099'
-    Baseline: '#ff0000'
+    Strata Baseline: '#ff0000'
     HashFS: '#34a1eb'
 
   config_order:
@@ -39,9 +43,9 @@ display_options:
     - Global Hash Table (Compact)
     - Radix Trees
     - Extent Trees
-    - Baseline
-    - Level Hash Tables
+    - "Level\nHash Tables"
     - "Global\nHash Table"
     - Global Cuckoo Hash Table (Compact)
     - HashFS
+    - Strata Baseline
 
