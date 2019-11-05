@@ -373,6 +373,7 @@ static void* thread_do(struct thread* thread_p){
 			void*  arg_buff;
 			job* job_p = jobqueue_pull(&thpool_p->jobqueue);
 			if (job_p) {
+                //printf("Thread %ld has work!\n", syscall(SYS_gettid));
 				func_buff = job_p->function;
 				arg_buff  = job_p->arg;
 				func_buff(arg_buff);

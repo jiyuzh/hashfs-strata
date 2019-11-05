@@ -27,10 +27,10 @@ void flush_llc(void) {
 
     //memset(buf, 42, allocation_size);
 
-    asm volatile("sfence\n\t"
-                 :
-                 :
-                 : "memory"); 
+    //asm volatile("sfence\n\t"
+    //             :
+    //             :
+    //             : "memory"); 
 
     for (i = 0; i < allocation_size; i += cache_line) {
         asm volatile("clflush (%0)\n\t"

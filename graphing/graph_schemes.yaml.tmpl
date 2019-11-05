@@ -76,7 +76,7 @@ schemes:
   {% endfor %}
 
   page_cache_breakdown:
-    print_size: [3.5, 3.5]
+    print_size: [3.5, 2.75]
     file_name: page_cache_breakdown.pdf
     
     {% set width = 2 %}
@@ -110,10 +110,11 @@ schemes:
             bar_spacing: 1.5,
             exclude_tick_labels: {{ False if c == 0 else True }},
             error_bars: True,
-            {% if r == 0 and c == 0 %}
+            {% if r == 1 and c == 1 %}
+            cutoff: 25000,
             config_legend: {
               prop: {size: 4.5,},
-              loc: lower center,
+              loc: right,
               ncol: 1,
             },
             {% endif %}
@@ -252,14 +253,14 @@ schemes:
   {% endfor %}
 
   multi_breakdown:
-    print_size: [7.0, 3.0]
+    print_size: [7.0, 2.5]
     file_name: multi_breakdown.pdf
     
     {% set layouts = ['1.0', '0.7'] %}
     {% set tests = ['Sequential Read', 'Random Read', 'Insert'] %}
     {% set raw_size = [524288, 8388608] %}
     {% set repetitions = [5120, 512000] %}
-    {% set human_size = ['512KB File', '8MB File'] %}
+    {% set human_size = ['512KB Files', '8MB Files'] %}
 
     {% set width = tests|length %}
     {% set height = raw_size|length %}
@@ -284,7 +285,7 @@ schemes:
             }
           },
           options: {
-            label: '{{ tests[c] }}s, {{ human_size[r] }}',
+            label: '{{ tests[c] }}s, 512 {{ human_size[r] }}',
             label_bars: False,
             bar_spacing: 1.5,
             exclude_tick_labels: {{ False if c == 0 else True }},
@@ -297,6 +298,7 @@ schemes:
             },
             {% endif %}
             {% if r == 0 and c == 1 %}
+            cutoff: 4800,
             breakdown_legend: {
               prop: {size: 5,},
               loc: lower right,
@@ -310,7 +312,7 @@ schemes:
     ]
 
   capacity_breakdown:
-    print_size: [3.5, 2.0]
+    print_size: [3.5, 1.75]
     file_name: capacity_breakdown.pdf
     
     {% set tests = ['Sequential Read', 'Random Read' ] %}
@@ -346,7 +348,7 @@ schemes:
             cutoff: 3500,
             {% if r == 0 and c == 0 %}
             config_legend: {
-              prop: {size: 4.5,},
+              prop: {size: 4,},
               loc: right,
               ncol: 1,
             },
@@ -404,7 +406,7 @@ schemes:
             error_bars: False,
             {% if r == 0 and c == 0 %}
             config_legend: {
-              prop: {size: 5,},
+              prop: {size: 4.1,},
               loc: upper right,
               ncol: 1,
             },
@@ -423,7 +425,7 @@ schemes:
     ]
 
   large_io_breakdown:
-    print_size: [7.0, 2.0]
+    print_size: [7.0, 1.65]
     file_name: large_io_breakdown.pdf
     
     {% set layouts = ['1.0', '0.7'] %}
@@ -464,9 +466,9 @@ schemes:
             error_bars: False,
             {% if r == 0 and c == 1 %}
             config_legend: {
-              prop: {size: 5,},
+              prop: {size: 4,},
               loc: lower center,
-              ncol: 1,
+              ncol: 2,
             },
             {% endif %}
             {% if r == 0 and c == 2 %}
@@ -985,6 +987,114 @@ schemes:
       {% endfor %}
     ]
 
+  ycsb_small_breakdown:
+    {% set sizes = [(25000 * 512, 'smalldb'), 
+                    (250000 * 512, 'largedb')] %}
+    {% set field_lengths = [(16, 'smallio'), 
+                            (128, 'largeio')] %}
+    {% set uniform = [ false, true ] %}
+
+    {% set sizes = [(0, 25000 * 512, 'smalldb'),
+                    (1, 250000 * 512, 'largedb')] %}
+    {% set field_lengths = [(128, 'largeio')] %}
+    {% set uniform = [ (0, false) ] %}
+
+    {% set tests = [ [[]], [[]] ] %}
+    {% set e_tests = [ [[]], [[]] ] %}
+    {% set test_names = [ ['Small DB, large IO, zipfian access'], 
+                          ['Large DB, large IO, zipfian access'] ] %}
+
+    {% for sidx, s, sn in sizes %}
+      {% for f, fn in field_lengths %}
+        {% for didx, uni in uniform %}
+          {% set dist = "uniform" if uni else "zipf" %}
+          {% for x in ['A', 'B', 'C', 'D', 'F'] %}
+            {% set test = [x, sn, fn, dist]|join('_')|upper %}
+            {% do tests[sidx][didx].append(test) %}
+          {% endfor %}
+          {% for x in ['E'] %}
+            {% set test = [x, sn, fn, dist]|join('_')|upper %}
+            {% do e_tests[sidx][didx].append(test) %}
+          {% endfor %}
+        {% endfor %}
+      {% endfor %}
+    {% endfor %}
+
+    {% set width = tests|length %}
+    {% set height = tests[0]|length %}
+
+    print_size: [3.5, 2.5]
+    file_name: ycsb_breakdown.pdf
+
+    tests: {{tests}}
+
+    dimensions: [ {{ 8 }}, {{ width }} ]
+    plots: [
+    {% for r in range(height) %}
+      {% for c in range(width) %}
+        {
+          pos: [ {{ r }}, {{ c }} ],
+          size: [6, 1],
+          type: grouped_stacked,
+          config_set: ycsb,
+          data_config: {
+            groups: struct,
+            plot: ['io_path_per_op', 'app_logic_per_op'],
+            axis: workload,
+            filter: {
+              'test': {{ tests[c][r] }},
+            }
+          },
+          options: {
+            label_bars: False,
+            exclude_tick_labels: {{ False if c == 0 else True }},
+            error_bars: False,
+            xbins: 5,
+            {% if r == 0 and c == 0 %}
+            cutoff: 25000,
+            config_legend: {
+              prop: {size: 4.5,},
+              loc: upper right,
+              ncol: 1,
+              borderpad: 0.25,
+              borderaxespad: 0.25,
+              labelspacing: 0.25,
+            },
+            {% endif %}
+            {% if r == 0 and c == 1 %}
+            cutoff: 32000,
+            breakdown_legend: {
+              prop: {size: 4.5,},
+              loc: upper right,
+              ncol: 1,
+            },
+            {% endif %}
+          },
+        },
+        {
+          pos: [ {{ r + 6 }}, {{ c }} ],
+          size: [2, 1],
+          type: grouped_stacked,
+          config_set: ycsb,
+          data_config: {
+            groups: struct,
+            plot: ['io_path_per_op', 'app_logic_per_op'],
+            axis: workload,
+            filter: {
+              'test': {{ e_tests[c][r] }},
+            }
+          },
+          options: {
+            label: '{{ test_names[c][r] }}',
+            label_bars: False,
+            exclude_tick_labels: {{ False if c == 0 else True }},
+            error_bars: False,
+            xbins: 5,
+          },
+        },
+        {% endfor %}
+      {% endfor %}
+    ]
 
   ycsb_breakdown:
     {% set sizes = [(25000 * 512, 'smalldb'), 
@@ -995,7 +1105,7 @@ schemes:
 
     {% set sizes = [(0, 25000 * 512, 'smalldb'),
                     (1, 250000 * 512, 'largedb')] %}
-    {% set field_lengths = [(16, 'smallio')] %}
+    {% set field_lengths = [(128, 'largeio')] %}
     {% set uniform = [ (0, false), (1, true) ] %}
 
     {% set tests = [ [[], []], [[], []] ] %}

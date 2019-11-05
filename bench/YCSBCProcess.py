@@ -177,7 +177,15 @@ class YCSBCRunner(BenchRunner):
                     {dir_str}/YCSB-C/ycsbc -db leveldb
                     -dbfilename {self.dbfilename}
                     -P {str(tmp_cache_path)}'''
-                    #-P {dir_str}/YCSB-C/workloads/workloadc.strata.cache.spec'''
+            """
+            ycsbc_cache_arg_str = \
+                f'''perf stat record -o out_{idx_struct}.txt -e cache-misses,cache-references,L1-dcache-loads,L1-dcache-load-misses,l2_rqsts.all_demand_data_rd,l2_rqsts.all_demand_miss,LLC-loads,LLC-load-misses,LLC-stores,LLC-store-misses,dTLB-loads,dTLB-load-misses
+                    taskset -c 0
+                    numactl -N {numa_node} -m {numa_node} {dir_str}/run.sh
+                    {dir_str}/YCSB-C/ycsbc -db leveldb
+                    -dbfilename {self.dbfilename}
+                    -P {str(tmp_path)}'''
+            """
 
             rmrf_setup_args = shlex.split(rmrf_setup_str)
             ycsbc_load_args = shlex.split(ycsbc_load_arg_str)
@@ -347,7 +355,7 @@ class YCSBCRunner(BenchRunner):
         # Requirements
         parser.add_argument('--ycsb-workload', '-P', nargs='+', type=str,
                             default=['default'],
-                            help='The workload name to use')
+                            help='The workload set to use')
         parser.add_argument('--workload-template', type=FileType('r'),
                             default='ycsbc_tmpl.spec', help='Workload template')
         parser.add_argument('--workload-descriptions', type=FileType('r'),

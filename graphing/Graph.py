@@ -418,6 +418,12 @@ class Grapher:
         #dfs = self._reorder_configs(dfs)
         dfs = dataframes.swaplevel(axis=1)
 
+        cols = dfs.columns.unique(0).to_list()
+        if 'NONE' in cols:
+            cols.remove('NONE')
+            cols += ['NONE']
+        dfs = dfs.reindex(cols, level=0, axis='columns')
+
         n = 0.0
         num_slots = 0
         if isinstance(dfs, pd.DataFrame):

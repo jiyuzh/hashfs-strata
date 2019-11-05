@@ -255,14 +255,15 @@ static void *worker_thread(void *arg) {
         if ((double)(rand())/RAND_MAX < seq_ratio) { // sequential read
             off_t offset = lseek(fd, 0, SEEK_CUR);
             assert(offset != -1 && "lseek failed");
-            offset = offset + block_size < size ? offset : 0;
+            off_t next_offset = block_size > 4096 ? offset + block_size : offset + 4096;
+            offset = next_offset < size ? offset : 0;
 
             ssize_t rs = pread(fd, read_buf, block_size, offset);
             assert(rs != -1 && "sequential read failed");
             assert(rs > 0 && "sequential read was 0!");
             r->total_seq_read += rs;
 
-            offset = lseek(fd, offset + block_size, SEEK_SET);
+            offset = lseek(fd, next_offset, SEEK_SET);
             assert(offset != -1 && "post-seq read lseek failed");
         } else { // random read
             int rand_offset = (rand()%(block_num)) * block_size;

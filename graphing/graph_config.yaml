@@ -4,7 +4,7 @@ display_options:
     global_hash_table_compact: Global Hash Table (Compact)
     radix_trees: Radix Trees
     extent_trees: Extent Trees
-    none: Strata Baseline
+    none: "Strata\nBaseline"
     level_hash_tables: "Level\nHash Tables"
     global_cuckoo_hash: "Global\nHash Table"
     global_cuckoo_hash_compact: Global Cuckoo Hash Table (Compact)
@@ -28,15 +28,17 @@ display_options:
     - 4kB
 
   config_colors:
+    "Global\nHash Table": '#e16b6b'
+    HashFS: '#f5a856'
+    "Level\nHash Tables": '#c785a6'
+    Extent Trees: '#6296ea'
+    Radix Trees: '#99c884'
+    "Strata\nBaseline": '#a6a6a6'
+
+    Global Cuckoo Hash Table (Compact): '#990099'
     Global Hash Table: '#8dd3c7'
     Global Hash Table (Compact): '#FF0000'
-    Radix Trees: '#ffffb3'
-    Extent Trees: '#bebada'
-    "Level\nHash Tables": '#fb8072'
-    "Global\nHash Table": '#999999'
-    Global Cuckoo Hash Table (Compact): '#990099'
-    Strata Baseline: '#ff0000'
-    HashFS: '#34a1eb'
+
 
   config_order:
     - Global Hash Table
@@ -47,5 +49,5 @@ display_options:
     - "Global\nHash Table"
     - Global Cuckoo Hash Table (Compact)
     - HashFS
-    - Strata Baseline
+    - "Strata\nBaseline"
 

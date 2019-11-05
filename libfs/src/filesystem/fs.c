@@ -152,6 +152,23 @@ void show_libfs_stats(const char *title)
     js_add_int64(storage, "wnr" , storage_wnr.total);
     json_object_object_add(root, "storage", storage);
   }
+  json_object *read_end_to_end = json_object_new_object(); {
+    js_add_int64(read_end_to_end, "tsc", g_perf_stats.end_to_end_read_tsc);
+    js_add_int64(read_end_to_end, "nr" , g_perf_stats.end_to_end_read_nr);
+    js_add_int64(read_end_to_end, "n_aligned" , g_perf_stats.aligned_read_nr);
+    js_add_int64(read_end_to_end, "n_unaligned" , g_perf_stats.unaligned_read_nr);
+    json_object_object_add(root, "read_end_to_end", read_end_to_end);
+  }
+  json_object *bh_meta = json_object_new_object(); {
+    js_add_int64(bh_meta, "tsc", g_perf_stats.bh_meta_tsc);
+    js_add_int64(bh_meta, "nr" , g_perf_stats.bh_meta_nr);
+    json_object_object_add(root, "bh_meta", bh_meta);
+  }
+  json_object *ua_fcache = json_object_new_object(); {
+    js_add_int64(ua_fcache, "tsc", g_perf_stats.ua_fcache_tsc);
+    js_add_int64(ua_fcache, "nr" , g_perf_stats.ua_fcache_nr);
+    json_object_object_add(root, "ua_fcache", ua_fcache);
+  }
   json_object *fragmentation = json_object_new_object(); {
       js_add_int64(fragmentation, "nfiles", g_perf_stats.n_files);
       js_add_int64(fragmentation, "nblocks", g_perf_stats.n_blocks);
@@ -1455,11 +1472,16 @@ ssize_t do_unaligned_read(struct inode *ip, uint8_t *dst, offset_t off, size_t i
   int ret;
   offset_t key, off_aligned;
   struct fcache_block *_fcache_block;
-  uint64_t start_tsc;
+  uint64_t start_tsc, all_tsc;
   struct buffer_head *bh, *_bh;
   struct list_head io_list_log;
   bmap_req_t bmap_req;
   bmap_req_arr_t bmap_req_arr;
+
+  if (enable_perf_stats) {
+    all_tsc = asm_rdtscp();
+    g_perf_stats.unaligned_read_nr++;
+  }
 
   INIT_LIST_HEAD(&io_list_log);
 
@@ -1474,11 +1496,6 @@ ssize_t do_unaligned_read(struct inode *ip, uint8_t *dst, offset_t off, size_t i
 
   _fcache_block = fcache_find(ip, key);
 
-  if (enable_perf_stats) {
-    g_perf_stats.l0_search_tsc += (asm_rdtscp() - start_tsc);
-    g_perf_stats.l0_search_nr++;
-  }
-
   if (_fcache_block) {
     ret = check_read_log_invalidation(_fcache_block);
     if (ret) {
@@ -1489,12 +1506,23 @@ ssize_t do_unaligned_read(struct inode *ip, uint8_t *dst, offset_t off, size_t i
     }
   }
 
+  if (enable_perf_stats) {
+    g_perf_stats.l0_search_tsc += (asm_rdtscp() - start_tsc);
+    g_perf_stats.l0_search_nr++;
+  }
+
   if (_fcache_block) {
     // read cache hit
+      if (enable_perf_stats)
+        start_tsc = asm_rdtscp();
     if (_fcache_block->is_data_cached) {
       memmove(dst, _fcache_block->data + (off - off_aligned), io_size);
       list_move(&_fcache_block->l, &g_fcache_head.lru_head);
 
+      if (enable_perf_stats) {
+        g_perf_stats.end_to_end_read_tsc += asm_rdtscp() - all_tsc;
+        g_perf_stats.end_to_end_read_nr += 1;
+      }
       return io_size;
     }
     // the update log search
@@ -1558,6 +1586,8 @@ ssize_t do_unaligned_read(struct inode *ip, uint8_t *dst, offset_t off, size_t i
       bh->b_data = dst;
       bh->b_size = io_size;
       if (enable_perf_stats) {
+        g_perf_stats.ua_fcache_tsc += asm_rdtscp() - start_tsc;
+        g_perf_stats.ua_fcache_nr++;
         start_tsc = asm_rdtscp();
       }
       bh_submit_read_sync_IO(bh);
@@ -1567,6 +1597,10 @@ ssize_t do_unaligned_read(struct inode *ip, uint8_t *dst, offset_t off, size_t i
         update_stats_dist(&(g_perf_stats.read_data_bytes), bh->b_size);
       }
       bh_release(bh);
+      if (enable_perf_stats) {
+        g_perf_stats.end_to_end_read_tsc += asm_rdtscp() - all_tsc;
+        g_perf_stats.end_to_end_read_nr += 1;
+      }
       return io_size;
     }
   }
@@ -1595,6 +1629,9 @@ ssize_t do_unaligned_read(struct inode *ip, uint8_t *dst, offset_t off, size_t i
     g_perf_stats.tree_search_nr++;
   }
 
+    if (enable_perf_stats) {
+      start_tsc = asm_rdtscp();
+    }
   mlfs_assert(ret != -EIO);
   if(IDXAPI_IS_HASHFS()) {
     bh = bh_get_sync_IO(bmap_req_arr.dev, bmap_req_arr.block_no[0], BH_NO_DATA_ALLOC);
@@ -1602,6 +1639,10 @@ ssize_t do_unaligned_read(struct inode *ip, uint8_t *dst, offset_t off, size_t i
   else {
     bh = bh_get_sync_IO(bmap_req.dev, bmap_req.block_no, BH_NO_DATA_ALLOC);
   }
+    if (enable_perf_stats) {
+      g_perf_stats.bh_meta_tsc = asm_rdtscp() - start_tsc;
+      g_perf_stats.bh_meta_nr += 1;
+    }
 
   // NVM case: no read caching.
   if ((IDXAPI_IS_HASHFS() && bmap_req_arr.dev == g_root_dev)
@@ -1620,7 +1661,17 @@ ssize_t do_unaligned_read(struct inode *ip, uint8_t *dst, offset_t off, size_t i
         g_perf_stats.read_data_tsc += (asm_rdtscp() - start_tsc);
         update_stats_dist(&(g_perf_stats.read_data_bytes), bh->b_size);
     }
+
+    if (enable_perf_stats) {
+      start_tsc = asm_rdtscp();
+    }
+
     bh_release(bh);
+
+    if (enable_perf_stats) {
+      g_perf_stats.bh_meta_tsc = asm_rdtscp() - start_tsc;
+      g_perf_stats.bh_meta_nr += 1;
+    }
 
   }
   // SSD and HDD cache: do read caching.
@@ -1656,6 +1707,10 @@ ssize_t do_unaligned_read(struct inode *ip, uint8_t *dst, offset_t off, size_t i
     // copying cached data to user buffer
     memmove(dst, _fcache_block->data + (off - off_aligned), io_size);
   }
+  if (enable_perf_stats) {
+    g_perf_stats.end_to_end_read_tsc += asm_rdtscp() - all_tsc;
+    g_perf_stats.end_to_end_read_nr += 1;
+  }
   return io_size;
 }
 
@@ -1664,13 +1719,18 @@ ssize_t do_aligned_read(struct inode *ip, uint8_t *dst, offset_t off, size_t io_
   int io_to_be_done = 0, ret, i;
   offset_t key, _off, pos;
   struct fcache_block *_fcache_block;
-  uint64_t start_tsc;
+  uint64_t start_tsc, all_tsc;
   struct buffer_head *bh, *_bh;
   struct list_head io_list, io_list_log;
   uint32_t bitmap_size = (io_size >> g_block_size_shift), bitmap_pos;
   struct cache_copy_list copy_list[bitmap_size];
   bmap_req_t bmap_req;
   bmap_req_arr_t bmap_req_arr;
+
+  if (enable_perf_stats) {
+      all_tsc = asm_rdtscp();
+      g_perf_stats.aligned_read_nr++;
+  }
 
   DECLARE_BITMAP(io_bitmap, bitmap_size);
 
@@ -1802,6 +1862,8 @@ ssize_t do_aligned_read(struct inode *ip, uint8_t *dst, offset_t off, size_t io_
 
     if (enable_perf_stats) {
       g_perf_stats.read_data_tsc += asm_rdtscp() - start_tsc;
+        g_perf_stats.end_to_end_read_tsc += asm_rdtscp() - all_tsc;
+        g_perf_stats.end_to_end_read_nr += 1;
     }
     return io_size;
   }
@@ -1927,6 +1989,10 @@ do_global_search:
     // register IO memory to read cache for each 4 KB blocks.
     // When bh finishes IO, the IO data will be in the read cache.
     
+    if (enable_perf_stats) {
+      start_tsc = asm_rdtscp();
+    }
+
     for (cur = _off, l = 0; l < bmap_req.blk_count_found;
         cur += g_block_size_bytes, l++) {
       bh = bh_get_sync_IO(bmap_req.dev, bmap_req.block_no + l, BH_NO_DATA_ALLOC);
@@ -1942,6 +2008,11 @@ do_global_search:
     }
 
     list_add_tail(&bh->b_io_list, &io_list);
+
+    if (enable_perf_stats) {
+      g_perf_stats.bh_meta_tsc = asm_rdtscp() - start_tsc;
+      g_perf_stats.bh_meta_nr += 1;
+    }
   }
 
   /* EAGAIN happens in two cases:
@@ -1977,6 +2048,9 @@ do_global_search:
   }
   mlfs_assert(io_to_be_done == (io_size >> g_block_size_shift));
 
+    if (enable_perf_stats) {
+      start_tsc = asm_rdtscp();
+    }
   for(uint32_t i = 0; i < to_lookup.size; ++i) {
 		addr_t curr_pblk = to_lookup.dyn ? to_lookup.m_pblk_dyn[i] : to_lookup.m_pblk[i];
 		bh = bh_get_sync_IO(bmap_req.dev, curr_pblk, BH_NO_DATA_ALLOC);
@@ -1987,6 +2061,10 @@ do_global_search:
 		bh->b_offset = 0;
 		list_add_tail(&bh->b_io_list, &io_list);
 	}
+    if (enable_perf_stats) {
+      g_perf_stats.bh_meta_tsc = asm_rdtscp() - start_tsc;
+      g_perf_stats.bh_meta_nr += 1;
+    }
 
 do_io_aligned:
   //mlfs_assert(bitmap_weight(io_bitmap, bitmap_size) == 0);
@@ -2034,6 +2112,10 @@ do_io_aligned:
     g_perf_stats.read_data_tsc += (asm_rdtscp() - start_tsc);
   }
 
+  if (enable_perf_stats) {
+    g_perf_stats.end_to_end_read_tsc += asm_rdtscp() - all_tsc;
+    g_perf_stats.end_to_end_read_nr += 1;
+  }
   return io_size;
 }
 

@@ -320,6 +320,9 @@ class IDXDataObject:
         df_mean['indexing_raw'] = df_mean['indexing'] / df_mean['indexing'].min()
         df_ci['indexing_raw_ci'] = df_ci['indexing_ci'] / df_mean['indexing'].min()
 
+        if 'op_latency' in df_mean:
+            df_mean['io_path_indexing_per_op'] = df_mean['indexing'] / df_mean['op_cnt']
+
         df_mean['indexing'] /= df_mean['total_breakdown']
         df_mean['read_data'] /= df_mean['total_breakdown']
         df_ci['indexing_ci'] /= df_mean['total_breakdown']
@@ -915,6 +918,16 @@ class IDXDataObject:
         res = {}
 
         df = self.df[self.df['repetitions'] != '1']
+
+        # Overall IO portion indexing
+        x = df.groupby(['struct', 'test']).mean()
+
+        avg_improvement = x.indexing_per_op / x.io_cycles
+
+        for test, ratio in avg_improvement.to_dict().items():
+            struct_name = self.make_bench_name_latex_compat(test[0])
+            test_name = self.make_bench_name_latex_compat(test[1])
+            res[f'PCAvg{struct_name}{test_name}IndexingRatio'] = f'{ratio:.0%}'
        
         # Overall IO cycle reduction
         x = df.groupby(['struct', 'test']).mean()
@@ -957,6 +970,159 @@ class IDXDataObject:
         ''' Returns <latex command name> -> <value> '''
 
         res = {}
+
+        x = self.df.groupby(['struct']).mean()
+
+        avg_improvement = 1.0 - (x / x.loc['NONE']).op_latency
+
+        for struct, improvement in avg_improvement.to_dict().items():
+            struct_name = self.make_bench_name_latex_compat(struct)
+            verb = 'Decrease' if improvement > 0 else 'Increase'
+            key = f'YCSBAvg{struct_name}Latency{verb}' 
+            val = f'{abs(improvement):.0%}'
+            res[key] = val
+            if improvement > 0:
+                print(key, val)
+            else:
+                print('\t', key, val)
+        print()
+
+        avg_improvement = 1.0 - (x / x.loc['NONE']).throughput
+
+        for struct, improvement in avg_improvement.to_dict().items():
+            struct_name = self.make_bench_name_latex_compat(struct)
+            verb = 'Decrease' if improvement > 0 else 'Increase'
+            key = f'YCSBAvg{struct_name}Throughput{verb}' 
+            val = f'{abs(improvement):.0%}'
+            res[key] = val
+            if improvement > 0:
+                print(key, val)
+            else:
+                print('\t', key, val)
+        print()
+
+        # Max improvement
+        x = self.df.groupby(['struct', 'test']).mean()
+
+        avg_improvement = 1.0 - (x / x.loc['NONE']).op_latency
+        for struct in x.index.get_level_values(0).unique().to_list():
+            struct_name = self.make_bench_name_latex_compat(struct)
+
+            struct_improvement = avg_improvement[struct]
+            improvement = struct_improvement.max()
+
+            verb = 'Decrease' if improvement > 0 else 'Increase'
+
+            key = f'YCSBMax{struct_name}Latency{verb}' 
+            val = f'{abs(improvement):.0%}'
+            res[key] = val
+            if improvement > 0:
+                print(key, val, struct_improvement.idxmax())
+            else:
+                print('\t', key, val, struct_improvement.idxmax())
+
+
+            improvement = struct_improvement.min()
+
+            verb = 'Decrease' if improvement > 0 else 'Increase'
+
+            key = f'YCSBMin{struct_name}Latency{verb}' 
+            val = f'{abs(improvement):.0%}'
+            res[key] = val
+            if improvement > 0:
+                print(key, val, struct_improvement.idxmin())
+            else:
+                print('\t', key, val, struct_improvement.idxmin())
+
+            print()
+
+        # Max IO path stats
+        avg_improvement = (x.io_path_per_op / x.op_latency)
+        for struct in x.index.get_level_values(0).unique().to_list():
+            struct_name = self.make_bench_name_latex_compat(struct)
+
+            struct_improvement = avg_improvement[struct]
+            improvement = struct_improvement.max()
+
+            key = f'YCSBMax{struct_name}IOPathPortion' 
+            val = f'{abs(improvement):.0%}'
+            res[key] = val
+            if improvement > 0:
+                print(key, val, struct_improvement.idxmax())
+            else:
+                print('\t', key, val, struct_improvement.idxmax())
+
+        print()
+
+        avg_improvement = (x.io_path_indexing_per_op / x.op_latency)
+        for struct in x.index.get_level_values(0).unique().to_list():
+            struct_name = self.make_bench_name_latex_compat(struct)
+
+            struct_improvement = avg_improvement[struct]
+            improvement = struct_improvement.max()
+
+            key = f'YCSBMax{struct_name}IndexingPortion' 
+            val = f'{abs(improvement):.0%}'
+            res[key] = val
+            if improvement > 0:
+                print(key, val, struct_improvement.idxmax())
+            else:
+                print('\t', key, val, struct_improvement.idxmax())
+
+        print()
+
+        avg_improvement = (x.io_path_indexing_per_op / x.io_path_per_op)
+        for struct in x.index.get_level_values(0).unique().to_list():
+            struct_name = self.make_bench_name_latex_compat(struct)
+
+            struct_improvement = avg_improvement[struct]
+            improvement = struct_improvement.max()
+
+            key = f'YCSBMax{struct_name}IndexingOfIOPortion' 
+            val = f'{abs(improvement):.0%}'
+            res[key] = val
+            if improvement > 0:
+                print(key, val, struct_improvement.idxmax())
+            else:
+                print('\t', key, val, struct_improvement.idxmax())
+
+        print()
+
+        # Throughput stats
+        avg_improvement = (x / x.loc['NONE']).throughput - 1.0
+        for struct in x.index.get_level_values(0).unique().to_list():
+            struct_name = self.make_bench_name_latex_compat(struct)
+
+            struct_improvement = avg_improvement[struct]
+            improvement = struct_improvement.max()
+
+            verb = 'Increase' if improvement > 0 else 'Decrease'
+
+            key = f'YCSBMax{struct_name}Throughput{verb}' 
+            val = f'{abs(improvement):.0%}'
+            res[key] = val
+            if improvement > 0:
+                print(key, val, struct_improvement.idxmax())
+            else:
+                print('\t', key, val, struct_improvement.idxmax())
+
+
+            improvement = struct_improvement.min()
+
+            verb = 'Increase' if improvement > 0 else 'Decrease'
+
+            key = f'YCSBMin{struct_name}Throughput{verb}' 
+            val = f'{abs(improvement):.0%}'
+            res[key] = val
+            if improvement > 0:
+                print(key, val, struct_improvement.idxmin())
+            else:
+                print('\t', key, val, struct_improvement.idxmin())
+
+            print()
+
+        #
+
 
         for io_size in ['SmallIO', 'LargeIO']:
 
@@ -1526,6 +1692,25 @@ class IDXDataObject:
             test_name = self.make_bench_name_latex_compat(test[1])
             verb = 'Decrease' if improvement > 0 else 'Increase'
             key = f'SBAvg{struct_name}{test_name}IOCycle{verb}' 
+            val = f'{abs(improvement):.0%}'
+            res[key] = val
+            if improvement > 0:
+                print(key, val)
+            else:
+                print('\t', key, val)
+
+        print()
+
+        # Overall IO cycle reduction relative to level hashing
+        x = df.groupby(['struct', 'test']).mean()
+
+        avg_io_cycle_improvement = 1.0 - (x / x.loc['LEVEL_HASH_TABLES']).io_cycles
+
+        for test, improvement in avg_io_cycle_improvement.to_dict().items():
+            struct_name = self.make_bench_name_latex_compat(test[0])
+            test_name = self.make_bench_name_latex_compat(test[1])
+            verb = 'Decrease' if improvement > 0 else 'Increase'
+            key = f'SBAvg{struct_name}{test_name}IOCycleOverLevel{verb}' 
             val = f'{abs(improvement):.0%}'
             res[key] = val
             if improvement > 0:

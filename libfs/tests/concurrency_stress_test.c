@@ -316,8 +316,6 @@ static void *reader_thread(void *arg) {
                 r->total_rand_read += rs;
             }
         }
-
-        yield();
     }
 
     return NULL;
@@ -362,7 +360,6 @@ static void *writer_thread(void *arg) {
         }
 
         force_digest();
-        yield();
     }
 
     return NULL;

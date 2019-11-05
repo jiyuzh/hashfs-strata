@@ -192,6 +192,16 @@ typedef struct mlfs_libfs_stats {
 	uint64_t ialloc_nr;
 	uint64_t tmp_nr;
 	uint64_t tmp_tsc;
+
+    uint64_t end_to_end_read_tsc;
+    uint64_t end_to_end_read_nr;
+    uint64_t bh_meta_tsc;
+    uint64_t bh_meta_nr;
+    uint64_t unaligned_read_nr;
+    uint64_t aligned_read_nr;
+    uint64_t ua_fcache_tsc;
+    uint64_t ua_fcache_nr;
+
 	uint64_t bcache_search_tsc;
 	uint64_t bcache_search_nr;
 	uint64_t dir_search_ext_nr;

@@ -26,6 +26,8 @@ class MTCCRunner(BenchRunner):
 
     def __init__(self, args):
         super().__init__(args)
+        if self.args.always_mkfs:
+            print('Warning: ALWAYS MKFS enabled!')
         self.update_bar_proc = None
         self.skip_insert = args.skip_insert
         self.mtcc_path = (self.root_path / 'libfs' / 'tests').resolve()
@@ -269,6 +271,8 @@ class MTCCRunner(BenchRunner):
                                 prev_idx is None or prev_idx != idx_struct:
                             assert self.kernfs is not None
                             self.kernfs.mkfs()
+
+                        prev_idx = idx_struct
 
                         stat_objs += self._run_workload(workload)
 

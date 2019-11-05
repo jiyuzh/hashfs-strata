@@ -214,6 +214,7 @@ static void end_events(int count, ...){
 
 static void start_cache_stats(void) {
     if (!enable_cache_stats) return;
+    //printf("start!\n");
     start_events(5, cache_access_fd, cache_misses_fd, l1_cache_access_fd,
             l1_cache_misses_fd, li_cache_misses_fd);
 }

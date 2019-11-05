@@ -50,8 +50,8 @@ extern "C" {
 static uint64_t dev_size[g_n_devices + 1] = 
                 //{0UL, 63415779328UL, 0UL, 0UL, 2111832064UL, 2111832064UL}; // 60G
                 //{0UL, 4223664128UL, 0UL, 0UL, 2111832064UL, 2111832064UL}; // 4G
-                {0UL, 8453619712UL, 0UL, 0UL, 2111832064UL, 2111832064UL}; //8G
-                //{0UL, 16907239424UL, 0UL, 0UL, 2111832064UL, 2111832064UL}; //16G
+                //{0UL, 8453619712UL, 0UL, 0UL, 2111832064UL, 2111832064UL}; //8G
+                {0UL, 16907239424UL, 0UL, 0UL, 2111832064UL, 2111832064UL}; //16G
             
 
 extern struct storage_operations storage_dax;

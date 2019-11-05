@@ -17,8 +17,8 @@ display_options:
     - 4kB
 
   config_colors:
-    NVM Only: '#bebada'
-    DRAM+NVM: '#ff0000'
+    NVM Only: '#6296ea'
+    DRAM+NVM: '#a6a6a6'
 
   config_order:
     - NVM Only

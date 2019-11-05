@@ -3366,6 +3366,10 @@ int mlfs_ext_truncate(handle_t *handle, struct inode *inode,
 
         //if (ret == (end - start + 1)) ret = 0;
         if (ret > 0) ret = 0;
+
+        struct dinode di;
+        (void)read_ondisk_inode(handle->dev, inode->inum, &di);
+        memmove(inode->l1.addrs, di.l1_addrs, sizeof(addr_t) * (NDIRECT + 1));
     } else if (IDXAPI_IS_GLOBAL()) {
         ret = mlfs_hash_truncate(handle, inode, start, end);
     } else {
