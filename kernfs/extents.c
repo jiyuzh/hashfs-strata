@@ -664,7 +664,7 @@ static int mlfs_ext_check(struct inode *inode, struct mlfs_extent_header *eh,
 
 corrupted:
 	mlfs_info("corrupted block %lu\n", pblk);
-	panic(error_msg);
+	panic("%s", error_msg);
 	return -EIO;
 }
 

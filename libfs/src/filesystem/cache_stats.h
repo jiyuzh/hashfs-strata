@@ -174,7 +174,7 @@ static void start_events(int count, ...){
         int err = ioctl(fd, PERF_EVENT_IOC_ENABLE, 0);
         if (err) {
             printf("IOCTL ENABLE (%d): %s\n", errno, strerror(errno)); 
-            panic("");
+            panic("IOCTL ENABLE");
         }
     }
     va_end(argp);
@@ -190,7 +190,7 @@ static void reset_events(int count, ...){
         int err = ioctl(fd, PERF_EVENT_IOC_RESET, 0);
         if (err) {
             printf("IOCTL RESET fd=%d (%d): %s\n", fd, errno, strerror(errno)); 
-            panic("");
+            panic("IOCTL RESET");
         }
     }
     va_end(argp);
@@ -206,7 +206,7 @@ static void end_events(int count, ...){
         int err = ioctl(fd, PERF_EVENT_IOC_DISABLE, 0);
         if (err) {
             printf("IOCTL DISABLE (%d): %s\n", errno, strerror(errno)); 
-            panic("");
+            panic("IOCTL");
         }
     }
     va_end(argp);
@@ -251,10 +251,10 @@ static void get_stat(int fd, uint64_t *count, uint64_t *time) {
     ssize_t err = __read(fd, (char*)&res, sizeof(res));
 
     if (err < sizeof(res)) {
-        printf("Could not read perf stats! err(%lld) < size(%llu)\n",
+        printf("Could not read perf stats! err(%ld) < size(%lu)\n",
                 err, sizeof(res));
         ssize_t err = __read(fd, (char*)(&res) + 8, sizeof(res));
-        panic("");
+        panic("could not read stats");
     }
 
 	*count = res.value;

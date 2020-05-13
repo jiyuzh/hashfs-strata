@@ -194,9 +194,9 @@ void show_libfs_stats(const char *title)
   const char *js_str = json_object_get_string(libfs_stats_json);
 
   if (enable_perf_stats) {
-    ftruncate(prof_fd, 0);
-    lseek(prof_fd, 0, SEEK_SET);
-    write(prof_fd, js_str, strlen(js_str));
+    assert(!ftruncate(prof_fd, 0));
+    (void)lseek(prof_fd, 0, SEEK_SET);    
+    assert(strlen(js_str) == write(prof_fd, js_str, strlen(js_str)));
     //write(prof_fd, "\n", 2);
   }
   json_object_put(root);
@@ -233,7 +233,7 @@ void show_libfs_stats(const char *title)
   printf("  bmap ext tree (tsc/op)  : %lu / %lu(%.2f)\n", tri_ratio(g_perf_stats.dir_search_ext_tsc,g_perf_stats.dir_search_ext_nr));
   printf("path storage (tsc/op)     : %lu / %lu(%.2f)\n", tri_ratio(g_perf_stats.path_storage_tsc,g_perf_stats.read_per_index.total));
   printf("path storage (tsc/index)  : %lu / %lu(%.2f)\n", tri_ratio(g_perf_stats.path_storage_tsc,g_perf_stats.read_per_index.cnt));
-  printf("temp_debug (tsc)       : %lu\n", tri_ratio(g_perf_stats.tmp_tsc,g_perf_stats.tmp_nr));
+  //printf("temp_debug (tsc)       : %lu\n", tri_ratio(g_perf_stats.tmp_tsc,g_perf_stats.tmp_nr));
   print_stats_dist(&g_perf_stats.hash_lookup_count, "hash_lookup_count");
 #ifdef STORAGE_PERF
   printf("--------------------------------------\n");

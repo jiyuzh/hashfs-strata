@@ -265,7 +265,7 @@ static void printVec_simd32(char* what, __m256i *vec) {
     printf("%s: ", what);
     u256i_32 *temp = (u256i_32*)vec;
     for(size_t i = 0; i < 8; ++i) {
-	printf("%lu ", temp->arr[i]);
+	printf("%u ", temp->arr[i]);
     }
     printf("\n");
 }

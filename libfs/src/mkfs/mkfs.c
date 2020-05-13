@@ -440,7 +440,7 @@ void write_inode(uint32_t inum, struct dinode *ip)
 	dip = ((struct dinode*)buf) + (inum % IPB);
 	*dip = *ip;
 
-	dbg_printf("%s: inode %u (addr %u) type %u\n",
+	dbg_printf("%s: inode %u (addr %lu) type %u\n",
 			__func__, inum, inode_block, ip->itype);
 
 	wsect(inode_block, buf);
@@ -547,7 +547,7 @@ void iappend(uint8_t dev, uint32_t inum, void *xp, int n)
 					pmem_nvm_hash_table_insert(inum, 0, &index);
 					index += ondisk_sb.datablock_start;
 					din.l1_addrs[fbn] = xint(index);
-					dbg_printf("creating new blocks at %u\n", index);
+					dbg_printf("creating new blocks at %lu\n", index);
 				}
 				else {
 					din.l1_addrs[fbn] = xint(freeblock++);

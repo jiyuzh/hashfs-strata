@@ -70,7 +70,7 @@ endif
 endif
 
 OPT_ARGS ?= -g -O3 
-AVX_FLAGS = -march=native -mstackrealign
+AVX_FLAGS = -march=native -mstackrealign -mrtm
 #######
 # Optimization definitions
 #######
