@@ -112,7 +112,7 @@ int main(int argc, char **argv) {
                 //start_file_size = atoi(optarg);
                 sscanf(optarg, "%zu", &start_file_size);
                 start_file_size *= get_unit(optarg[strlen(optarg)-1]);
-                printf("%llu %llu %llu\n", start_file_size, block_size,
+                printf("%lu %lu %lu\n", start_file_size, block_size,
                         start_file_size % block_size);
                 assert(start_file_size >= 0ULL &&
                       (start_file_size % block_size == 0ULL) &&

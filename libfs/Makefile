@@ -23,7 +23,7 @@ MODULES   := io concurrency config filesystem global ds log mkfs \
 ########
 #  All modules' directories in src and build
 ########
-PREFIX ?= ebuild
+PREFIX ?= build
 SRC_DIR   := $(addprefix src/,$(MODULES))
 BUILD_DIR := $(addprefix $(PREFIX)/,$(MODULES))
 
@@ -60,14 +60,14 @@ MLFS_FLAGS += -DKLIB_HASH
 #MLFS_FLAGS += -DUSE_SSD
 #MLFS_FLAGS += -DUSE_HDD
 #MLFS_FLAGS += -DMLFS_LOG
-ifeq ($(PREFIX), hbuild)
-    MLFS_FLAGS += -DHASHTABLE -DINDEX_NAME=\"hash\"
-else
-ifneq ($(PREFIX), ebuild)
-    $(error "prefix must be ebuild or hbuild")
-endif
-	MLFS_FLAGS += -DINDEX_NAME=\"ext\ \"
-endif
+#ifeq ($(PREFIX), hbuild)
+#    MLFS_FLAGS += -DHASHTABLE -DINDEX_NAME=\"hash\"
+#else
+#ifneq ($(PREFIX), ebuild)
+#    $(error "prefix must be ebuild or hbuild")
+#endif
+#	MLFS_FLAGS += -DINDEX_NAME=\"ext\ \"
+#endif
 
 OPT_ARGS ?= -g -O3 
 AVX_FLAGS = -march=native -mstackrealign -mrtm

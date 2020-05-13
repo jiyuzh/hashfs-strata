@@ -23,10 +23,13 @@ function remake() {
     make -C $1 $2 clean
     make -C $1 $2 -j8
 }
-for i in ebuild hbuild; do
-    remake libfs PREFIX=${i}
-    remake kernfs PREFIX=${i}
-done
+#for i in ebuild hbuild; do
+#for i in build; do
+#    remake libfs PREFIX=${i}
+#    remake kernfs PREFIX=${i}
+#done
+remake libfs
+remake kernfs
 remake shim/libshim
 remake kernfs/tests
 remake libfs/tests

@@ -219,9 +219,9 @@ void show_kernfs_stats(void)
 	const char *js_str = json_object_get_string(kernfs_stats_json);
     // Write the JSON string to a file.
 	if (enable_perf_stats) {
-		ftruncate(prof_fd, 0);
+		assert(!ftruncate(prof_fd, 0));
 		lseek(prof_fd, 0, SEEK_SET);
-		write(prof_fd, js_str, strlen(js_str));
+		assert(strlen(js_str) == write(prof_fd, js_str, strlen(js_str)));
 	}
 
 	json_object_put(root);
@@ -231,7 +231,8 @@ void show_kernfs_stats(void)
 
 	printf("\n");
 	//printf("CPU clock : %.3f MHz\n", clock_speed_mhz);
-	printf("-----%s ---------------- kernfs statistics\n", INDEX_NAME);
+	//printf("-----%s ---------------- kernfs statistics\n", INDEX_NAME);
+	printf("--------------------- kernfs statistics\n");
 	printf("digest          : %lu\n",
 			g_perf_stats.digest_time_tsc);
 	printf("- replay        : %lu\n",
@@ -310,7 +311,6 @@ void show_kernfs_stats(void)
             E/(g_perf_stats.digest_time_tsc - storage_tsc));
 #endif
     printf("path/digest is %f\n", (double)g_perf_stats.path_search_tsc/g_perf_stats.digest_time_tsc);
-    printf("");
 	printf("--------------------------------------\n");
     show_storage_stats();
 	printf("--------------------------------------\n");

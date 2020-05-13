@@ -5,10 +5,11 @@ CC = gcc9.2 -std=c99
 #	  append_test fwrite_fread partial_update_test \
 #	  deepqueue multithread age
 EXE = file_basic small_io falloc_test ftrunc_test lock_test lock_perf \
-	  simple_spdk_test dir_test many_files_test fork_io readdir_test \
-	  append_test fwrite_fread partial_update_test \
-	  deepqueue multithread age \
+	  dir_test many_files_test fork_io readdir_test \
+	  fwrite_fread \
+	  age \
 	  concurrency_stress_test MTCC readfile ls rmrf
+#append_test partial_update_test simple_spdk_test deepqueue multithread 
 
 #$(info $(EXE))
 
@@ -60,7 +61,8 @@ all: $(EXE)
 	$(CXX) -std=c++11 $(CFLAGS) -c -g $< -o $@
 
 time_stat.o: time_stat.c
-	$(CC) time_stat.c -c -o time_stat.o -D_BSD_SOURCE
+	#$(CC) time_stat.c -c -o time_stat.o -D_BSD_SOURCE
+	$(CC) time_stat.c -c -o time_stat.o -D_DEFAULT_SOURCE
 
 simple_spdk_test: simple_spdk_test.c
 	$(CC) -g -o $@ $^ -I$(INCLUDES) -L$(LIBFS_DIR) -lmlfs $(LIBSPDK) $(LDFLAGS)

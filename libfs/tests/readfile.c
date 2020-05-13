@@ -224,7 +224,7 @@ int main(int argc, char **argv) {
         printf("thread %d : read %lu (seq %lu rand %lu)\n", i,
                 worker_results[i].total_seq_read + worker_results[i].total_rand_read,
                 worker_results[i].total_seq_read, worker_results[i].total_rand_read);
-        printf("thread %d : throughput = %.1f MB/s\n",
+        printf("thread %d : throughput = %.1f MB/s\n", i,
                 ((double)(worker_results[i].total_seq_read + worker_results[i].total_rand_read) / secs)
                 / (1024.0 * 1024.0));
     }
