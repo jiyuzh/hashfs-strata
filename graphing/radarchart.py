@@ -12,14 +12,17 @@ Help:
     pdf file.
 """
 # This controls we generate global data structure or per-file data structrue
-DoGlobal=True
+DoGlobal=False
 # Set data
+# Note: we deleted "Level Hashing" datapoint bellow
+# Note: we only care the ordering between (Global Hash Table, HashFS) and
+# (Extent Trees, Radix Trees). Comparing across these two sets are meaningless
 df = pd.DataFrame({
 'group': ['Global\nHash Table','HashFS','Level\nHashing','Extent\nTrees','Radix\nTrees'],
-'Cache Misses': [5, 4, 3, 1, 2],
-'\nMemory\nAccesses': [1, 2, 3, 5, 4],
-'Index Size': [4, 5, 3, 1, 2],
-'Complexity': [2, 1, 3, 5, 4],
+'Cache Misses': [4, 2, 0, 2, 4],
+'\nMemory\nAccesses': [2, 4, 0, 4, 2],
+'Index Size': [2, 4, 0, 2, 4],
+'Complexity': [4, 2, 0, 4, 2],
 #'Contention\nOpportunity\n': [2, 1, 3, 5, 4] 
 })
 colors = ['#93c47d', '#a64d79', '#f6b26b', '#73a2ec', '#e06666']
@@ -51,8 +54,8 @@ plt.gcf().canvas.draw()
 # Draw ylabels
 ax.set_rlabel_position(0)
 plt.yticks([],[])
-#plt.yticks([10,20,30], ["10","20","30"], color="grey", size=7)
-#plt.ylim(0,40)
+#plt.yticks([0,5], ["0", "5"], color="grey", size=7)
+plt.ylim(0,4)
 
 
 legend_labels = df.get('group')
