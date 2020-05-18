@@ -17,10 +17,10 @@ DoGlobal=True
 df = pd.DataFrame({
 'group': ['Global\nHash Table','HashFS','Level\nHashing','Extent\nTrees','Radix\nTrees'],
 'Cache Misses': [5, 4, 3, 1, 2],
-'Memory\nAccesses\n': [1, 2, 3, 5, 4],
+'\nMemory\nAccesses': [1, 2, 3, 5, 4],
 'Index Size': [4, 5, 3, 1, 2],
-'\nIndexing\nComplexity': [2, 1, 3, 5, 4],
-'Contention\nOpportunity\n': [2, 1, 3, 5, 4] 
+'Complexity': [2, 1, 3, 5, 4],
+#'Contention\nOpportunity\n': [2, 1, 3, 5, 4] 
 })
 colors = ['#93c47d', '#a64d79', '#f6b26b', '#73a2ec', '#e06666']
 
@@ -33,7 +33,7 @@ categories=list(df)[1:]
 N = len(categories)
 
 # What will be the angle of each axis in the plot? (we divide the plot / number of variable)
-angles = [n / float(N) * 2 * pi for n in range(N)]
+angles = [n / float(N) * 2 * pi + pi/4 for n in range(N)]
 angles += angles[:1]
 
 # Initialise the spider plot
@@ -78,11 +78,11 @@ if DoGlobal:
     ax.fill(angles, values, colors[1], alpha=0.5)
 else:
     # Ind3
-    values=df.loc[2].drop('group').values.flatten().tolist()
-    values += values[:1]
-    ax.plot(angles, values, linewidth=3, linestyle='solid', label=legend_labels[2],
-            color=colors[2])
-    ax.fill(angles, values, colors[2], alpha=0.5)
+    #values=df.loc[2].drop('group').values.flatten().tolist()
+    #values += values[:1]
+    #ax.plot(angles, values, linewidth=3, linestyle='solid', label=legend_labels[2],
+    #        color=colors[2])
+    #ax.fill(angles, values, colors[2], alpha=0.5)
 
     # Ind4
     values=df.loc[3].drop('group').values.flatten().tolist()
@@ -107,7 +107,7 @@ if DoGlobal:
             handles=legend_elements[0:2], ncol=2, fontsize=24)
 else:
     legend = plt.legend(loc='upper center', bbox_to_anchor=(0.5, -0.2),
-            handles=legend_elements[2:], ncol=3, fontsize=24)
+            handles=legend_elements[3:], ncol=3, fontsize=24)
 
 # Draw one axe per variable + add labels
 pltlocs, pltlabels = plt.xticks()
