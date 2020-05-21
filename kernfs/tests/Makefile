@@ -64,7 +64,7 @@ MLFS_FLAGS += -DSIMULATE_FRAGMENTATION
 ########
 .PHONY: kernfs all clean
 
-BIN := kernfs fifo_cli extent_test concurrency_test nvram_versus_dram
+BIN := kernfs fifo_cli concurrency_test nvram_versus_dram
 
 all: $(BIN)
 
