@@ -31,8 +31,9 @@ class MTCCRunner(BenchRunner):
         self.update_bar_proc = None
         self.skip_insert = args.skip_insert
         self.mtcc_path = (self.root_path / 'libfs' / 'tests').resolve()
-        self.aep = AEPWatchThread()
-        assert self.mtcc_path.exists()
+        assert(self.mtcc_path.exists())
+        #self.aep = AEPWatchThread()
+        #assert self.mtcc_path.exists()
 
     def __del__(self):
         ''' Avoid having the asynchronous refresh thread become a zombie. '''
@@ -85,16 +86,16 @@ class MTCCRunner(BenchRunner):
             if setup_args:
                 self._run_trial_continue(setup_args, cwd, None, timeout=(10*60))
 
-                self.aep.start()
+                #self.aep.start()
                 total_time = self._run_trial_end(
                     trial_args, cwd, self._parse_readfile_time, timeout=(10*60))
 
             else:
-                self.aep.start()
+                #self.aep.start()
                 total_time = self._run_trial(
                     trial_args, cwd, self._parse_readfile_time, timeout=(10*60))
 
-            aep_stats = self.aep.stop()
+            #aep_stats = self.aep.stop()
             # Get the stats.
             cache_stat_obj = self._parse_trial_stat_files(total_time, labels)
 
@@ -105,7 +106,7 @@ class MTCCRunner(BenchRunner):
                 else:
                     stat_obj['cache'] = {}
 
-                stat_obj['cache'].update(aep_stats)
+                #stat_obj['cache'].update(aep_stats)
             except:
                 pprint(cache_stat_obj)
                 pprint(self._get_kernfs_stats())

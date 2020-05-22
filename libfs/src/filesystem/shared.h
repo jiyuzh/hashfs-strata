@@ -318,7 +318,7 @@ static inline struct super_block* get_inode_sb(uint8_t dev, struct inode *inode)
 	memmove(__inode->_dinode, __dinode, sizeof(struct dinode)); \
 	__inode->dinode_flags |= DI_VALID; \
 
-#define SRV_SOCK_PATH "/tmp/digest_socket_ian_nosudo\0"
+#define SRV_SOCK_PATH "/tmp/digest_socket_ian_nosudo_noreally\0"
 
 #define MAX_SOCK_BUF 128
 #define MAX_CMD_BUF 128

@@ -20,7 +20,7 @@ from FileBenchProcess import FileBenchRunner
 from FragTestProcess import FragTestRunner
 from MTCCProcess import MTCCRunner
 from YCSBCProcess import YCSBCRunner
-from ConcurrencyProcess import ConcurrencyRunner
+#from ConcurrencyProcess import ConcurrencyRunner
 
 from Utils import *
 
@@ -40,9 +40,9 @@ def add_arguments(parser):
     ycsbc.set_defaults(cls=YCSBCRunner)
     YCSBCRunner.add_arguments(ycsbc)
 
-    concurrency = subparsers.add_parser('concurrency')
-    concurrency.set_defaults(cls=ConcurrencyRunner)
-    ConcurrencyRunner.add_arguments(concurrency)
+    #concurrency = subparsers.add_parser('concurrency')
+    #concurrency.set_defaults(cls=ConcurrencyRunner)
+    #ConcurrencyRunner.add_arguments(concurrency)
 
     #filebench = subparsers.add_parser('filebench')
     #filebench.set_defaults(cls=FileBenchRunner)

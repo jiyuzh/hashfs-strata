@@ -63,7 +63,7 @@ class BenchRunner:
         self.kernfs = KernFSThread(self.root_path, self.env, 
                                    gather_stats=True,
                                    verbose=self.args.verbose)
-        self.aep = AEPWatchThread()
+        #self.aep = AEPWatchThread()
 
 
     def __del__(self):
