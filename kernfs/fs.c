@@ -224,7 +224,7 @@ void show_kernfs_stats(void)
 		assert(strlen(js_str) == write(prof_fd, js_str, strlen(js_str)));
 	}
 
-	json_object_put(root);
+	// json_object_put(root);
 
 	//float clock_speed_mhz = get_cpu_clock_speed();
 	uint64_t n_digest = g_perf_stats.n_digest == 0 ? 1 : g_perf_stats.n_digest;
