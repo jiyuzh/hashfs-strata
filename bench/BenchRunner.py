@@ -70,6 +70,11 @@ class BenchRunner:
         if self.kernfs is not None and self.kernfs.is_running():
             warn('Running cleanup due to failure', UserWarning, stacklevel=2)
             self.kernfs.stop()
+        if hasattr(self, 'current_proc'):
+            try:
+                self._kill_process(self.current_proc)
+            except:
+                pass
 
     def _start_trial(self):
         if self.kernfs is not None and self.kernfs.is_running():
@@ -114,8 +119,10 @@ class BenchRunner:
                                     cwd=bench_cwd, env=self.env, 
                                     stdout=PIPE, stderr=STDOUT,
                                     start_new_session=True)
+            self.current_proc = proc
 
             stdout, stderr = proc.communicate(timeout=timeout)
+            del self.current_proc
 
             if processing_fn is not None:
                 return processing_fn(stdout)
@@ -125,8 +132,13 @@ class BenchRunner:
             if not no_warn:
                 warn('Process "{}" hangs!'.format(' '.join(bench_args)),
                      UserWarning)
+                print(e)
                 pprint(self.env)
             self._kill_process(proc)
+            embed()
+            print("OUT")
+            print(proc.stdout.read().decode())
+            print("OUT")
             #proc.kill()
         finally:
             self._finish_trial()
@@ -168,8 +180,10 @@ class BenchRunner:
                                     cwd=bench_cwd, env=self.env, 
                                     stdout=PIPE, stderr=STDOUT,
                                     start_new_session=True)
+            self.current_proc = proc
 
             stdout, stderr = proc.communicate(timeout=timeout)
+            del self.current_proc
 
             if processing_fn is not None:
                 return processing_fn(stdout)
@@ -194,8 +208,10 @@ class BenchRunner:
                                     cwd=bench_cwd, env=self.env, 
                                     stdout=PIPE, stderr=STDOUT,
                                     start_new_session=True)
+            self.current_proc = proc
 
             stdout, stderr = proc.communicate(timeout=timeout)
+            del self.current_proc
 
             if processing_fn is not None:
                 return processing_fn(stdout)

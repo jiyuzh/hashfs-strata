@@ -136,6 +136,9 @@ class MTCCRunner(BenchRunner):
         labels['repetitions'] = reps
         labels['num files'] = nfiles
         labels['trial num'] = trial_num
+        print('\nLabels:')
+        pprint(labels)
+        print()
 
         end_size = int(start_size + ((io_size * reps) / nfiles))
 
@@ -181,7 +184,7 @@ class MTCCRunner(BenchRunner):
             insert_labels = {}
             insert_labels.update(labels)
             insert_labels['test'] = 'Insert'
-            print(insert_trial_args)
+            print(f'\nInsert test: "{" ".join(insert_trial_args)}"')
             stat_objs += self._run_mtcc_trial(
                 self.mtcc_path, None, insert_trial_args, insert_labels)
 
@@ -194,8 +197,8 @@ class MTCCRunner(BenchRunner):
         seq_labels = {}
         seq_labels.update(labels)
         seq_labels['test'] = 'Sequential Read'
-        print(seq_setup_args)
-        print(seq_trial_args)
+        print(f'\nSequential read setup: "{" ".join(seq_setup_args)}"')
+        print(f'\nSequential read setup: "{" ".join(seq_trial_args)}"')
         stat_objs += self._run_mtcc_trial(
             self.mtcc_path, seq_setup_args, seq_trial_args, seq_labels)
 
@@ -205,8 +208,8 @@ class MTCCRunner(BenchRunner):
         rand_labels = {}
         rand_labels.update(labels)
         rand_labels['test'] = 'Random Read'
-        print(rand_setup_args)
-        print(rand_trial_args)
+        print(f'\nRandom read setup: "{" ".join(rand_setup_args)}"')
+        print(f'\nRandom read setup: "{" ".join(rand_trial_args)}"')
         stat_objs += self._run_mtcc_trial(
             self.mtcc_path, rand_setup_args, rand_trial_args, rand_labels)
 
