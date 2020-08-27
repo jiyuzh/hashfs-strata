@@ -135,7 +135,7 @@ class BenchRunner:
                 print(e)
                 pprint(self.env)
             self._kill_process(proc)
-            embed()
+            # embed()
             print("OUT")
             print(proc.stdout.read().decode())
             print("OUT")

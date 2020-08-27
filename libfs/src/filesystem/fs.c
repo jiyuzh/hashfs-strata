@@ -199,7 +199,7 @@ void show_libfs_stats(const char *title)
     assert(strlen(js_str) == write(prof_fd, js_str, strlen(js_str)));
     //write(prof_fd, "\n", 2);
   }
-  json_object_put(root);
+  // json_object_put(root);
   printf("\n");
   printf("-------%s------------- %s libfs statistics\n", getenv("MLFS_IDX_STRUCT"), title);
   printf("wait on digest  (tsc/op)  : %lu / %lu(%.2f)\n", tri_ratio(g_perf_stats.digest_wait_tsc,g_perf_stats.digest_wait_nr));
