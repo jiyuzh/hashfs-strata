@@ -47,8 +47,10 @@ class MTCCRunner(BenchRunner):
     def _parse_readfile_time(self, stdout):
         ''' Parse the 'elapsed time' field from the readfile output. '''
         lines = stdout.decode().splitlines()
-        if self.args.verbose:
-            pprint(lines)
+        # if self.args.verbose:
+        #     print('Readfile stdout lines:')
+        #     pprint(lines)
+        #     print('\tdone')
         for line in lines:
             if 'elapsed time:' in line:
                 fields = line.split(':')
@@ -63,6 +65,8 @@ class MTCCRunner(BenchRunner):
         self.env['MLFS_CACHE_PERF'] = '0'
         self.env['MLFS_PROFILE'] = '1'
 
+        self.remove_old_libfs_stats()
+
         if not self.args.cache_perf_only:
             if setup_args:
                 self._run_trial_continue(setup_args, cwd, None)
@@ -75,6 +79,8 @@ class MTCCRunner(BenchRunner):
         # Get the stats.
         stat_obj = self._parse_trial_stat_files(total_time, labels)
         stat_obj['kernfs'] = self._get_kernfs_stats()
+
+        self.remove_old_libfs_stats()
 
         if self.args.measure_cache_perf or self.args.cache_perf_only \
                 or self.args.aep_only:
@@ -289,6 +295,7 @@ class MTCCRunner(BenchRunner):
                         print(current)
                         pprint(workload)
                         print(e)
+                        raise e
                         
                         self.kernfs.mkfs()
                         workload_tries += 1

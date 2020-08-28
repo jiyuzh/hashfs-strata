@@ -128,7 +128,15 @@ class BenchRunner:
                 return processing_fn(stdout)
             else:
                 return None
-        except (TimeoutExpired, PermissionError) as e: 
+        except (TimeoutExpired, PermissionError) as e:
+            if not self.kernfs.is_running():
+                print('KERNFS died early!')
+            else:
+                print('KERNFS is alive?')
+                self.kernfs.stop()
+
+            # print(self.kernfs.proc.stdout.read())
+            raise Exception('wut')
             if not no_warn:
                 warn('Process "{}" hangs!'.format(' '.join(bench_args)),
                      UserWarning)
@@ -145,7 +153,7 @@ class BenchRunner:
         
         return None 
 
-    def _run_trial_continue(self, bench_args, bench_cwd, processing_fn, timeout=(5*60),
+    def _run_trial_continue(self, bench_args, bench_cwd, processing_fn, timeout=(2*60),
             no_warn=False):
         self._start_trial()
 
@@ -163,6 +171,14 @@ class BenchRunner:
             else:
                 return None
         except (TimeoutExpired, PermissionError) as e: 
+            if not self.kernfs.is_running():
+                print('KERNFS died early!')
+            else:
+                print('KERNFS is alive?')
+                self.kernfs.stop()
+
+            # print(self.kernfs.proc.stdout.read())
+            raise Exception('wut')
             if not no_warn:
                 warn('Process "{}" hangs!'.format(' '.join(bench_args)),
                      UserWarning)
@@ -172,7 +188,7 @@ class BenchRunner:
         
         return None 
 
-    def _run_trial_passthrough(self, bench_args, bench_cwd, processing_fn, timeout=(5*60),
+    def _run_trial_passthrough(self, bench_args, bench_cwd, processing_fn, timeout=(2*60),
             no_warn=False):
         proc = None
         try:
@@ -190,6 +206,14 @@ class BenchRunner:
             else:
                 return None
         except (TimeoutExpired, PermissionError) as e: 
+            if not self.kernfs.is_running():
+                print('KERNFS died early!')
+            else:
+                print('KERNFS is alive?')
+                self.kernfs.stop()
+
+            # print(self.kernfs.proc.stdout.read())
+            raise Exception('wut')
             if not no_warn:
                 warn('Process "{}" hangs!'.format(' '.join(bench_args)),
                      UserWarning)
@@ -199,7 +223,7 @@ class BenchRunner:
         
         return None 
 
-    def _run_trial_end(self, bench_args, bench_cwd, processing_fn, timeout=(5*60),
+    def _run_trial_end(self, bench_args, bench_cwd, processing_fn, timeout=(2*60),
             no_warn=False):
 
         proc = None
@@ -218,6 +242,14 @@ class BenchRunner:
             else:
                 return None
         except (TimeoutExpired, PermissionError) as e: 
+            if not self.kernfs.is_running():
+                print('KERNFS died early!')
+            else:
+                print('KERNFS is alive?')
+                self.kernfs.stop()
+
+            # print(self.kernfs.proc.stdout.read())
+            raise Exception('wut')
             if not no_warn:
                 warn('Process "{}" hangs!'.format(' '.join(bench_args)),
                      UserWarning)
@@ -233,7 +265,7 @@ class BenchRunner:
         stat_objs = []
 
         stats_files = [Path(x) for x in glob.glob('/tmp/libfs_prof.*')]
-        assert stats_files
+        assert len(stats_files) >= 1, 'Could not find any stat files!!!'
 
         for stat_file in stats_files:
             with stat_file.open() as f:
@@ -260,6 +292,7 @@ class BenchRunner:
             stat_objs = [s for s in stat_objs if s['lsm']['nr'] > 0]
 
         if not stat_objs:
+            print("No valid stats!")
             pprint(stat_objs)
             print(time_elapsed)
             pprint(labels)
@@ -292,6 +325,10 @@ class BenchRunner:
 
         old_stats_files = [Path(x) for x in glob.glob('/tmp/libfs_prof.*')]
         for old_file in old_stats_files:
+            old_file.unlink()
+
+        old_cli_files = [Path(x) for x in glob.glob('/tmp/mlfs_cli.*')]
+        for old_file in old_cli_files:
             old_file.unlink()
 
     @classmethod

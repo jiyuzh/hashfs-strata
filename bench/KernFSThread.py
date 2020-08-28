@@ -42,11 +42,28 @@ class KernFSThread:
 
 
     def _clear_stats(self):
-        'Reset the stats after init.'
-        # kill whole process group
-        pgid = os.getpgid(self.proc.pid)
-        kill_args = shlex.split(f'kill -{signal.SIGUSR2.value} -- -{pgid}')
-        subprocess.run(kill_args, check=True, stdout=DEVNULL, stderr=DEVNULL)
+        ''' Reset the stats after init. '''
+        assert self.is_running(), 'Need to be running kernfs to reset stats!'
+        return
+
+        # # kill whole process group
+        # pgid = os.getpgid(self.proc.pid)
+        # kill_args = shlex.split(f'kill -{signal.SIGUSR2.value} -- -{pgid}')
+        # subprocess.run(kill_args, check=True, stdout=DEVNULL, stderr=DEVNULL)
+
+        pid_files = [Path(x) for x in glob.glob('/tmp/kernfs*.pid')]
+        pids = []
+        for pf in pid_files:
+            with pf.open() as f:
+                pids += [int(f.read())]
+        for pid in pids:
+            assert psutil.pid_exists(pid), 'precondition'
+            kill_args = shlex.split(f'kill -{signal.SIGUSR2.value} {pid}')
+            print('RESET:' + ' '.join(kill_args))
+            subprocess.run(kill_args, check=True, stdout=DEVNULL, stderr=DEVNULL)
+            assert psutil.pid_exists(pid), 'postcondition'
+        
+        assert self.is_running(), 'Resetting the stats killed kernfs!'
 
 
     def mkfs(self):
@@ -54,6 +71,7 @@ class KernFSThread:
             Reset all the DAX devices. Only should be necessary when we change
             indexing structures. Avoid using this often since it's really slow.
         '''
+        print('BEGIN MKFS')
         mkfs_args = shlex.split(f'numactl -N 0 -m 0 {str(self.kernfs_path / "mkfs.sh")}')
         proc = None
         if self.verbose:
@@ -64,6 +82,7 @@ class KernFSThread:
                                   start_new_session=True, env=self.env,
                                   stdout=DEVNULL, stderr=DEVNULL)
         assert proc.returncode == 0
+        print('END MKFS')
 
     def start(self):
         ''' 
@@ -134,6 +153,7 @@ class KernFSThread:
 
     def stop(self):
         'Kill the kernfs process and potentially gather stats.'
+        assert self.is_running(), 'kernfs already dead!'
         pgid = os.getpgid(self.proc.pid)
         kill_args = shlex.split(f'kill -{signal.SIGQUIT.value} -- -{str(pgid)}')
         subprocess.run(kill_args, check=True, stdout=DEVNULL, stderr=DEVNULL)
@@ -148,4 +168,11 @@ class KernFSThread:
         return stats
 
     def is_running(self):
-        return self.proc is not None and self.proc.returncode is None
+        if self.proc is None:
+            return False
+        # You need to poll to set the return code.
+        self.proc.poll()
+        running = self.proc is not None and self.proc.returncode is None
+        print(f'KERNFS: {self.proc}, {self.proc.returncode if self.proc else "N/A"} ? {running}')
+        return running
+        # return self.proc is not None and self.proc.returncode is None

@@ -5,6 +5,7 @@
 #include <sys/un.h>
 #include <unistd.h>
 #include <json-c/json.h>
+#include <pthread.h>
 
 #include "mlfs/mlfs_user.h"
 #include "global/global.h"
@@ -167,8 +168,11 @@ struct f_digest_worker_arg {
 	f_replay_t *f_item;
 };
 
+pthread_mutex_t stat_mutex = PTHREAD_MUTEX_INITIALIZER;
+
 void reset_kernfs_stats(void)
 {
+	pthread_mutex_lock(&stat_mutex);
 #ifdef STORAGE_PERF
     reset_stats_dist(&storage_rtsc);
     reset_stats_dist(&storage_rnr);
@@ -181,10 +185,13 @@ void reset_kernfs_stats(void)
 	
     reset_cache_stats();
     flush_llc();
+	pthread_mutex_unlock(&stat_mutex);
 }
 
 void show_kernfs_stats(void)
 {
+	pthread_mutex_lock(&stat_mutex);
+	mlfs_info("%s\n", "hello!");
     get_cache_stats(&(g_perf_stats.cache_stats));
     // Construct JSON object
 	json_object *root = json_object_new_object();
@@ -225,6 +232,7 @@ void show_kernfs_stats(void)
 	}
 
 	// json_object_put(root);
+	mlfs_info("%s\n", "old put!");
 
 	//float clock_speed_mhz = get_cpu_clock_speed();
 	uint64_t n_digest = g_perf_stats.n_digest == 0 ? 1 : g_perf_stats.n_digest;
@@ -318,6 +326,7 @@ void show_kernfs_stats(void)
 	printf("--------------------------------------\n");
     //undo_log_sanity_check(true);
 	//printf("--------------------------------------\n");
+	pthread_mutex_unlock(&stat_mutex);
 }
 
 void show_storage_stats(void)
