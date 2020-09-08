@@ -163,8 +163,10 @@ class BenchRunner:
                                     cwd=bench_cwd, env=self.env, 
                                     stdout=PIPE, stderr=STDOUT,
                                     start_new_session=True)
-
+            self.current_proc = proc
+            
             stdout, stderr = proc.communicate(timeout=timeout)
+            del self.current_proc
 
             if processing_fn is not None:
                 return processing_fn(stdout)

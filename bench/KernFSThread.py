@@ -71,7 +71,7 @@ class KernFSThread:
             Reset all the DAX devices. Only should be necessary when we change
             indexing structures. Avoid using this often since it's really slow.
         '''
-        print('BEGIN MKFS')
+        # print('BEGIN MKFS')
         mkfs_args = shlex.split(f'numactl -N 0 -m 0 {str(self.kernfs_path / "mkfs.sh")}')
         proc = None
         if self.verbose:
@@ -82,7 +82,7 @@ class KernFSThread:
                                   start_new_session=True, env=self.env,
                                   stdout=DEVNULL, stderr=DEVNULL)
         assert proc.returncode == 0
-        print('END MKFS')
+        # print('END MKFS')
 
     def start(self):
         ''' 

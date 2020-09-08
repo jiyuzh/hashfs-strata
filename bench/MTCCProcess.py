@@ -259,7 +259,6 @@ class MTCCRunner(BenchRunner):
 
 
             stat_objs = []
-            current = ''
             prev_idx = None
 
             workload_num = 0
@@ -292,16 +291,21 @@ class MTCCRunner(BenchRunner):
                         workload_tries = 0
 
                     except Exception as e:
-                        print(current)
+                        print()
                         pprint(workload)
                         print(e)
-                        raise e
+                        # raise e
                         
                         self.kernfs.mkfs()
                         workload_tries += 1
                         if workload_tries >= 2:
-                            raise e
-                        print(f'Trying workload again, take {workload_tries + 1}')
+                            print(f'Done trying to run this workload, skipping!')
+                            counter += 1
+                            shared_q.put(counter)
+                            workload_num += 1
+                            workload_tries = 0
+                        else:
+                            print(f'Trying workload again, take {workload_tries + 1}')
 
             finally:
                 # Output all the results
