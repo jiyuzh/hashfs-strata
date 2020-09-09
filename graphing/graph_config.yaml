@@ -41,13 +41,13 @@ display_options:
 
 
   config_order:
-    - Global Hash Table
-    - Global Hash Table (Compact)
-    - Radix Trees
     - Extent Trees
+    - Radix Trees
     - "Level\nHash Tables"
     - "Global\nHash Table"
     - Global Cuckoo Hash Table (Compact)
+    - Global Hash Table
+    - Global Hash Table (Compact)
     - HashFS
     - "Strata\nBaseline"
 

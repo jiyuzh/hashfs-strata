@@ -240,7 +240,8 @@ class Grapher:
         axis.set_xlim(start, cutoff)
         axis.margins(0.0)
 
-        all_means.sort_index(axis=1, inplace=True)
+        # all_means.sort_index(axis=1, inplace=True)
+        # embed()
 
         ax = all_means.plot.barh(ax=axis,
                                  xerr=all_error,
@@ -366,9 +367,13 @@ class Grapher:
                     except Exception as e:
                         print(e)
                         new_labels += [label]
-                elif isinstance(label, float) and label == round(label):
-                    new_label = f'{round(label)}'
+                elif isinstance(label, float):
+                    new_label = f'{round(label, 2)}'
                     new_labels += [new_label]
+                elif isinstance(label, str):
+                    new_labels += [label]
+                else:
+                    raise Exception('huh?')
 
             plt.gca().set_yticklabels(new_labels)
             # this causes weird truncation of bars on the graph

@@ -50,7 +50,7 @@ class IDXGrapher:
             tmpl_file = Path(args.schema_template)
             assert tmpl_file.exists()
 
-            self.schema_file = Path(args.schema_template.replace('.tmpl', ''))
+            self.schema_file = Path(args.schema_template.replace('.j2', ''))
             assert self.schema_file != tmpl_file
 
             with tmpl_file.open() as f:
@@ -83,7 +83,10 @@ class IDXGrapher:
 
         config = layout['data_config']
         for col, val in config['filter'].items():
-            df = df[df[col] == val]
+            if isinstance(val, list):
+                df = df[df[col].isin(val)]
+            else:
+                df = df[df[col] == val]
 
         new_index = [*config['axis'], config['groups']] \
                     if isinstance(config['axis'], list) else \
@@ -315,7 +318,7 @@ class IDXGrapher:
         schema_group.add_argument('--schema-file',
                             help='File containing relevant schemas.')
         schema_group.add_argument('--schema-template', 
-                                  default='graph_schemes.yaml.tmpl',
+                                  default='graph_schemes.yaml.j2',
                                   help='File containing schema in jinja2 template.')
 
         parser.add_argument('--filter', '-f', default=None, nargs='+',

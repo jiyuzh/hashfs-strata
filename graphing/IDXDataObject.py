@@ -18,6 +18,7 @@ import matplotlib.ticker as ticker
 import re
 import yaml
 import inflect
+from scipy import stats
 
 from Graph import Grapher
 
@@ -64,14 +65,22 @@ class IDXDataObject:
             else:
                 parsed['display start size'] = f'{int(parsed["start size"])}'
 
-        okeys = parsed.copy()
+        okeys = list(parsed.keys())
         if 'trial num' in okeys:
-            okeys.pop('trial num')
+            okeys.remove('trial num')
 
         if 'repetitions' in parsed:
             parsed['repetitions'] = str(int(parsed['repetitions']))
             parsed['reps'] = int(parsed['repetitions'])
+            parsed['hot_or_cold'] = 'hot' if parsed['reps'] > 1000 else 'cold'
+            okeys += ['hot_or_cold']
+
         parsed['layout'] = float(parsed['layout']) / 100.0
+        parsed['layout_str'] = str(round(parsed['layout'], 2))
+        okeys += ['layout_str']
+        assert str(parsed['layout']) == parsed['layout_str'], 'wat'
+        # if parsed['struct'] == 'HASHFS' and parsed['layout'] < 1.0 and parsed['hot_or_cold'] == 'hot':
+        #     embed() 
 
         if 'log' in data_obj:
             parsed['log_per_op'] = data_obj['log']['commit']['tsc'] / max(data_obj['log']['commit']['nr'], 1.0)
@@ -262,22 +271,47 @@ class IDXDataObject:
                 for obj in objs:
                     keys, parsed_data = self._parse_relevant_fields(obj)
                     key_str = json.dumps(keys)
+                    # embed()
                     if groupby_list is None:
-                        groupby_list = list(keys.keys())
+                        groupby_list = keys
                     if parsed_data is not None:
                         data[parsed_data['trial num']] += [parsed_data]
                         seen[key_str] += 1
 
         df_list = []
-        for trial, d in data.items():
-            df_list += [pd.DataFrame(d).reset_index(drop=True)]
+        for _, d in data.items():
+            # embed()
+            # df_list += [pd.DataFrame(d).reset_index(drop=True)]
+            df_list += [pd.DataFrame(d)]
 
-        df_combined = pd.concat(df_list)
+        df_combined = pd.concat(df_list).reset_index(drop=True)
         
-        dfg = df_combined.groupby(df_combined.index)
+        df_list = []
+        # Trim outliers:
+        for g, idx in df_combined.groupby(groupby_list).groups.items():
+            gdf = df_combined.iloc[idx]
+            z_scores = stats.zscore(gdf['indexing'])
+            abs_z_scores = np.abs(z_scores)
+            filtered_df = gdf.loc[abs_z_scores < 2.5]
+            # print(g)
+            # if 'RADIX_TREES' in g and '1' in g and 'Insert' in g:
+            #     print('STAHP')
+            #     embed()
+            # if len(filtered_df) != len(gdf):
+            #     print('hello!')
+            #     embed()
+            #     exit(-1)
+            df_list += [filtered_df]
+
+        df_combined = pd.concat(df_list).reset_index(drop=True)
+
+        # dfg = df_combined.groupby(df_combined.index)
+        dfg = df_combined.groupby(groupby_list)
         df_mean = dfg.mean()
         ntrials = len(data)
         df_ci = ((1.96 * dfg.std()) / np.sqrt(ntrials))
+        # print('passed!')
+        # embed()
         # df_ci = ((1.645 * dfg.std(ddof=0)) / np.sqrt(ntrials))
         # df_ci = ((1.96 * dfg.std(ddof=0)) / (dfg.count() ** (1/2)))
 
@@ -353,28 +387,33 @@ class IDXDataObject:
         df_ci['total_breakdown_ci'] /= df_mean['total_breakdown']
         df_mean['total_breakdown'] /= df_mean['total_breakdown']
 
-        self.df = df_list[0].reindex(df_mean.index) # to preserve string fields
-        self.df[df_mean.columns] = df_mean
+        # self.df = df_list[0].reindex(df_mean.index) # to preserve string fields
+        # self.df[df_mean.columns] = df_mean
+        # self.df = pd.concat([self.df, df_ci], axis=1)
+        self.df = df_mean.reset_index()
+        df_ci = df_ci.reset_index()
+        # embed()q
         self.df = pd.concat([self.df, df_ci], axis=1)
+        # embed()
 
-        hashfs = self.df[self.df.struct == 'HASHFS'].copy()
-        if not hashfs.empty:
-            for layout in self.df.layout.unique().tolist():
-                if layout == 1.0:
-                    continue
-                if not hashfs[hashfs.layout == layout].empty:
-                    hashfs = hashfs[~(hashfs.layout == layout)]
+        # hashfs = self.df[self.df.struct == 'HASHFS'].copy()
+        # if not hashfs.empty:
+        #     for layout in self.df.layout.unique().tolist():
+        #         if layout == 1.0:
+        #             continue
+        #         if not hashfs[hashfs.layout == layout].empty:
+        #             hashfs = hashfs[~(hashfs.layout == layout)]
                 
-                l1 = hashfs[hashfs.layout == 1.0]
-                if l1.empty:
-                    break
-                assert not l1.empty
-                l2 = l1.copy()
-                l2.layout = layout
-                self.df = self.df.append(l2)
+        #         l1 = hashfs[hashfs.layout == 1.0]
+        #         if l1.empty:
+        #             break
+        #         assert not l1.empty
+        #         l2 = l1.copy()
+        #         l2.layout = layout
+        #         self.df = self.df.append(l2)
 
         # Reset index to reset the row numbers or whatnot
-        self.df = self.df.reset_index(drop=True)
+        # self.df = self.df.reset_index(drop=True)
 
     def _load_results_file(self, file_path):
         with file_path.open() as f:
