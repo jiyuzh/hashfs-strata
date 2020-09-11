@@ -132,11 +132,11 @@ class IDXDataObject:
 
         if 'lsm' in data_obj:
             if data_obj['lsm']['nr']:
-                #parsed['indexing'] = data_obj['lsm']['tsc']
+                parsed['indexing'] = data_obj['lsm']['tsc']
                 parsed['read_data'] = data_obj['l0']['tsc'] + data_obj['read_data']['tsc']
                 parsed['nops'] = data_obj['lsm']['nr'] 
-                if 'read_end_to_end' in data_obj:
-                    parsed['indexing'] = data_obj['read_end_to_end']['tsc'] - parsed['read_data']
+                # if 'read_end_to_end' in data_obj:
+                #     parsed['indexing'] = data_obj['read_end_to_end']['tsc'] - parsed['read_data']
             else:
                 kernfs_obj = data_obj['kernfs']
                 parsed['indexing'] = kernfs_obj['search']['total_time']
@@ -203,11 +203,14 @@ class IDXDataObject:
         if 'ycsb_workload' in data_obj:
             parsed['test'] = \
                 f'{data_obj["ycsb_workload"].split(".")[0].replace("workload", "").upper()}'
-            okeys['test'] = parsed['test']
+            # embed()
+            # okeys['test'] = parsed['test']
             parsed['workload'] = parsed['test'].split('_')[0]
             parsed['throughput'] = float(data_obj['KTPS'])
             ops = ["READ", "UPDATE", "SCAN", "INSERT", "READMODIFYWRITE"]
             keys = [f'{k.lower()}_latency' for k in ops]
+            okeys += keys
+            okeys += ['workload']
             parsed['op_cycles'] = 0
             parsed['op_cnt'] = 0
 
@@ -290,9 +293,10 @@ class IDXDataObject:
         # Trim outliers:
         for g, idx in df_combined.groupby(groupby_list).groups.items():
             gdf = df_combined.iloc[idx]
-            z_scores = stats.zscore(gdf['indexing'])
+            z_scores = np.nan_to_num(stats.zscore(gdf['indexing']))
             abs_z_scores = np.abs(z_scores)
             filtered_df = gdf.loc[abs_z_scores < 2.5]
+            # embed()
             # print(g)
             # if 'RADIX_TREES' in g and '1' in g and 'Insert' in g:
             #     print('STAHP')

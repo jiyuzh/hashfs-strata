@@ -150,10 +150,14 @@ class YCSBCRunner(BenchRunner):
             tmp_cache_path = Path(tmp_cache.name)
 
             with tmp_path.open('w') as f:
-                f.write(self.workload_template.render(settings=workload_settings))
+                f.write(self.workload_template.render(**workload_settings))
+
+            # with tmp_path.open() as f:
+            #     print(f.read())
+            #     print(workload_settings)
 
             with tmp_cache_path.open('w') as f:
-                f.write(self.workload_template.render(settings=cache_settings))
+                f.write(self.workload_template.render(**cache_settings))
 
             ycsbc_load_arg_str = \
                 f'''taskset -c 0
@@ -357,9 +361,9 @@ class YCSBCRunner(BenchRunner):
                             default=['default'],
                             help='The workload set to use')
         parser.add_argument('--workload-template', type=FileType('r'),
-                            default='ycsbc_tmpl.spec', help='Workload template')
+                            default='ycsbc_tmpl.j2', help='Workload template')
         parser.add_argument('--workload-descriptions', type=FileType('r'),
-                            default='ycsbc_descriptions.tmpl.yaml',
+                            default='ycsbc_descriptions.yaml.j2',
                             help='Workload descriptions')
         # Options
         parser.add_argument('--measure-cache-perf', '-c', action='store_true',

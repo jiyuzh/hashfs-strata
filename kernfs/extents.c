@@ -3042,6 +3042,14 @@ int mlfs_ext_get_blocks(handle_t *handle, struct inode *inode,
                                   g_perf_stats.path_storage_nr);
                 end_cache_stats();
             }
+#ifdef KERNFS
+            if (enable_perf_stats) {
+                g_perf_stats.path_search_tsc += (asm_rdtscp() - tsc_start);
+                g_perf_stats.path_search_size += nblk;
+                g_perf_stats.path_search_nr++;
+                end_cache_stats();
+            }
+#endif
             //FN(inode->ext_idx, im_print_stats, inode->ext_idx);
             return nblk;
         }
