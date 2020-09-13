@@ -1,16 +1,16 @@
 declare -a confs=(
-    "NONE"
+    #"NONE"
+    "RADIX_TREES" 
     "EXTENT_TREES"
-    "GLOBAL_HASH_TABLE"
+    #"GLOBAL_HASH_TABLE"
     "HASHFS"
     "GLOBAL_CUCKOO_HASH"
     "LEVEL_HASH_TABLES"
-    "RADIX_TREES" 
 );
 
 prefix="/home/takh/git-repos/efes-strata";
 suffix="bench/filebench"
-benchmark_name="fileserver";
+benchmark_name="fileserver"; #"webserver"; #"varmail"; #"webproxy"; #"fileserver";
 ITERATION=10
 
 rm -rf $prefix/$suffix/$benchmark_name;
@@ -26,24 +26,24 @@ do
   do    
     # Format filesystem
     cd $prefix/libfs;
-    sudo MLFS_IDX_STRUCT="$k" ./bin/mkfs.mlfs 1 &>> $prefix/$suffix/$benchmark_name/$k/mkfs1.txt
-    sudo MLFS_IDX_STRUCT="$k" ./bin/mkfs.mlfs 4 &>> $prefix/$suffix/$benchmark_name/$k/mkfs4.txt
+    sudo MLFS_IDX_STRUCT="$k" MLFS_LAYOUT_SCORE='85'  ./bin/mkfs.mlfs 1 &>> $prefix/$suffix/$benchmark_name/$k/mkfs1.txt
+    sudo MLFS_IDX_STRUCT="$k" MLFS_LAYOUT_SCORE='85' ./bin/mkfs.mlfs 4 &>> $prefix/$suffix/$benchmark_name/$k/mkfs4.txt
     # Run server
     cd $prefix/kernfs/tests;
-    sudo MLFS_IDX_STRUCT="$k" ./run.sh kernfs >> $prefix/$suffix/$benchmark_name/$k/server.txt 2>&1 &
+    sudo MLFS_IDX_STRUCT="$k" MLFS_LAYOUT_SCORE='85'  taskset -c 0 ./run.sh kernfs >> $prefix/$suffix/$benchmark_name/$k/server.txt 2>&1 &
+    sleep 5;
     # Run client
     cd $prefix/bench/filebench;
-    sudo MLFS_IDX_STRUCT="$k" ./run_mine.sh $benchmark_name >> $prefix/$suffix/$benchmark_name/$k/client.txt 2>&1 &
+    sudo MLFS_IDX_STRUCT="$k" MLFS_LAYOUT_SCORE='85' taskset -c 3 ./run_mine.sh $benchmark_name >> $prefix/$suffix/$benchmark_name/$k/client.txt 2>&1 &
     #read -p "Exit $k: "
-    sleep 120
-    echo "Exiting"
-    pid=$(ps aux|grep kernfs|head -1|awk '{print $2}');
-    for (( i=pid; i<pid+3;i++ ))
-    do
-      sudo kill -9 $i;
-    done
+    sleep 67
+    echo "Killing"
+    ps aux|grep kernfs|awk '{print $2}'|while read i; do sudo kill -9 $i; done
     ps aux |grep mlfs|awk '{print $2}'|while read i; do sudo kill -9 $i; done
+    ps aux |grep filebench|awk '{print $2}'|while read i; do sudo kill -9 $i; done
     ps aux |grep filereader|awk '{print $2}'|while read i; do sudo kill -9 $i; done
+    ps aux|grep $benchmark_name|awk '{print $2}'|while read i; do sudo kill -9 $i; done
+    ps aux|grep run_mine|awk '{print $2}'|while read i; do sudo kill -9 $i; done
     sudo rm -rf /tmp/filebench-shm-*
   done
   rm -rf /tmp/tmp.txt
