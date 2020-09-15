@@ -1,3 +1,5 @@
+#! /bin/bash
+
 declare -a confs=(
     #"NONE"
     "RADIX_TREES" 
@@ -8,7 +10,7 @@ declare -a confs=(
     "LEVEL_HASH_TABLES"
 );
 
-prefix="/home/takh/git-repos/efes-strata";
+prefix="$(realpath ../../)"
 suffix="bench/filebench"
 benchmark_name="fileserver"; #"webserver"; #"varmail"; #"webproxy"; #"fileserver";
 ITERATION=10
