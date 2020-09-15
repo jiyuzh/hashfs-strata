@@ -59,6 +59,8 @@ static void digest_log(void);
 pthread_mutex_t *g_log_mutex_shared;
 static pthread_rwlock_t log_version_rwlock = PTHREAD_RWLOCK_INITIALIZER;
 
+static pthread_mutex_t hacktx = PTHREAD_MUTEX_INITIALIZER;
+
 //pthread_t is unsigned long
 static unsigned long digest_thread_id;
 //Thread entry point
@@ -116,7 +118,8 @@ void init_log(int dev)
 	pthread_mutexattr_setpshared(&attr, PTHREAD_PROCESS_SHARED);
 	pthread_mutex_init(g_log_mutex_shared, &attr);
 
-	g_fs_log->shared_log_lock = (pthread_mutex_t *)mlfs_zalloc(sizeof(pthread_mutex_t));
+	// g_fs_log->shared_log_lock = (pthread_mutex_t *)mlfs_zalloc(sizeof(pthread_mutex_t));
+	g_fs_log->shared_log_lock = (pthread_mutex_t *)&hacktx;
 	pthread_mutexattr_init(&attr);
 	pthread_mutexattr_setpshared(&attr, PTHREAD_PROCESS_SHARED);
 	pthread_mutex_init(g_fs_log->shared_log_lock, &attr);

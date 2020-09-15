@@ -15,7 +15,7 @@
 
 void flush_llc(void) {
     size_t repeats = 1;
-    size_t mult = 1;
+    size_t mult = 16;
     size_t allocation_size = mult * 32 * 1024 * 1024;
 
     void *buf = malloc(allocation_size);
@@ -33,7 +33,7 @@ void flush_llc(void) {
     //             : "memory"); 
 
     for (i = 0; i < allocation_size; i += cache_line) {
-        asm volatile("clflush (%0)\n\t"
+        asm volatile("clflushopt (%0)\n\t"
                      : 
                      : "r"(&cp[i])
                      : "memory");

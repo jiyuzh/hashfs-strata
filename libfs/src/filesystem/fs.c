@@ -284,7 +284,7 @@ void show_libfs_stats(const char *title)
 void shutdown_fs(void)
 {
   int ret;
-  int _enable_perf_stats = enable_perf_stats;
+  // int _enable_perf_stats = enable_perf_stats;
   if(IDXAPI_IS_HASHFS()) {
 		pmem_nvm_hash_table_close();
 	}
@@ -295,16 +295,17 @@ void shutdown_fs(void)
   fflush(stdout);
   fflush(stderr);
 
-  enable_perf_stats = 0;
-
-  shutdown_log();
-
-  enable_perf_stats = _enable_perf_stats;
-
   if (enable_perf_stats) {
       show_libfs_stats("shutdown fs");
       close(prof_fd);
   }
+
+  enable_perf_stats = 0;
+
+  shutdown_log();
+
+  // enable_perf_stats = _enable_perf_stats;
+
 
   /*
   ret = munmap(mlfs_slab_pool_shared, SHM_SIZE);

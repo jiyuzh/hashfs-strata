@@ -65,7 +65,7 @@ void flush_llc(void) {
     //             : "memory"); 
 
     for (i = 0; i < allocation_size; i += cache_line) {
-        asm volatile("clflush (%0)\n\t"
+        asm volatile("clflushopt (%0)\n\t"
                      : 
                      : "r"(&cp[i])
                      : "memory");
