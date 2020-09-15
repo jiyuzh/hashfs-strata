@@ -39,6 +39,19 @@ class IDXDataObject:
 
         return parsed
 
+    @staticmethod
+    def _parse_filebench(data_obj):
+        parsed = {}
+        keys = ['workload', 'struct', 'layout']
+        data = ['throughput', 'trial num']
+
+        parsed = { i: data_obj[i] for i in keys + data }
+
+        parsed['struct'] = parsed['struct'].upper()
+
+        # embed()
+        return keys, parsed
+
     def _parse_relevant_fields(self, data_obj):
         parsed = {}
         if data_obj is not None and not data_obj:
@@ -46,6 +59,9 @@ class IDXDataObject:
 
         if 'bench' in data_obj and data_obj['bench'] == 'db_bench':
             return self._parse_db_bench(data_obj)
+
+        if 'bench' in data_obj and data_obj['bench'] == 'filebench':
+            return self._parse_filebench(data_obj)
 
         labels = ['struct', 'layout', 'start size', 'io size', 'repetitions',
                   'num files', 'test', 'trial num']
@@ -230,6 +246,11 @@ class IDXDataObject:
 
             parsed['op_latency'] = parsed['op_cycles'] / max(parsed['op_cnt'], 1.0)
 
+        if 'throughput' in parsed:
+            parsed['throughput_mbs'] = parsed['throughput'] / (1024 ** 2)
+            parsed['throughput_kbs'] = parsed['throughput'] / (1024)
+
+        # embed()
         return okeys, parsed
 
     def _normalize_fields(self, dfs):
@@ -291,23 +312,24 @@ class IDXDataObject:
         
         df_list = []
         # Trim outliers:
-        for g, idx in df_combined.groupby(groupby_list).groups.items():
-            gdf = df_combined.iloc[idx]
-            z_scores = np.nan_to_num(stats.zscore(gdf['indexing']))
-            abs_z_scores = np.abs(z_scores)
-            filtered_df = gdf.loc[abs_z_scores < 2.5]
-            # embed()
-            # print(g)
-            # if 'RADIX_TREES' in g and '1' in g and 'Insert' in g:
-            #     print('STAHP')
-            #     embed()
-            # if len(filtered_df) != len(gdf):
-            #     print('hello!')
-            #     embed()
-            #     exit(-1)
-            df_list += [filtered_df]
-
-        df_combined = pd.concat(df_list).reset_index(drop=True)
+        # embed()
+        if 'indexing' in df_combined.columns:
+            for g, idx in df_combined.groupby(groupby_list).groups.items():
+                gdf = df_combined.iloc[idx]
+                z_scores = np.nan_to_num(stats.zscore(gdf['indexing']))
+                abs_z_scores = np.abs(z_scores)
+                filtered_df = gdf.loc[abs_z_scores < 2.5]
+                # embed()
+                # print(g)
+                # if 'RADIX_TREES' in g and '1' in g and 'Insert' in g:
+                #     print('STAHP')
+                #     embed()
+                # if len(filtered_df) != len(gdf):
+                #     print('hello!')
+                #     embed()
+                #     exit(-1)
+                df_list += [filtered_df]
+            df_combined = pd.concat(df_list).reset_index(drop=True)
 
         # dfg = df_combined.groupby(df_combined.index)
         dfg = df_combined.groupby(groupby_list)
@@ -323,11 +345,12 @@ class IDXDataObject:
         pprint(df_mean)
         pprint(df_ci / df_mean)
         
-        df_mean = df_mean[df_mean.indexing != 0]
-        df_mean = df_mean[df_mean.indexing.notna()]
+        if 'indexing' in df_mean.columns:
+            df_mean = df_mean[df_mean.indexing != 0]
+            df_mean = df_mean[df_mean.indexing.notna()]
 
-        df_ci = df_ci[df_ci.indexing != 0]
-        df_ci = df_ci[df_ci.indexing.notna()]
+            df_ci = df_ci[df_ci.indexing != 0]
+            df_ci = df_ci[df_ci.indexing.notna()]
 
         ci_columns = { c: f'{c}_ci' for c in df_ci.columns }
 
@@ -337,16 +360,18 @@ class IDXDataObject:
         # df_mean['read_data'] /= df_mean['read_data'].min()
         # df_mean['total_breakdown'] /= df_mean['total_breakdown'].min()
 
-        df_mean['total_raw_tsc'] = df_mean['total_breakdown']
+        if 'total_breakdown' in df_mean.columns:
+            df_mean['total_raw_tsc'] = df_mean['total_breakdown']
 
-        df_mean['read_data_raw'] = df_mean['read_data']
-        df_ci['read_data_raw_ci'] = df_ci['read_data_ci']
+        if 'read_data' in df_mean.columns:
+            df_mean['read_data_raw'] = df_mean['read_data']
+            df_ci['read_data_raw_ci'] = df_ci['read_data_ci']
 
-        df_mean['read_data_per_op'] = df_mean['read_data'] / df_mean['nops']
-        df_ci['read_data_per_op_ci'] = df_ci['read_data_ci'] / df_mean['nops']
+            df_mean['read_data_per_op'] = df_mean['read_data'] / df_mean['nops']
+            df_ci['read_data_per_op_ci'] = df_ci['read_data_ci'] / df_mean['nops']
 
-        df_mean['indexing_per_op'] = df_mean['indexing'] / df_mean['nops']
-        df_ci['indexing_per_op_ci'] = df_ci['indexing_ci'] / df_mean['nops']
+            df_mean['indexing_per_op'] = df_mean['indexing'] / df_mean['nops']
+            df_ci['indexing_per_op_ci'] = df_ci['indexing_ci'] / df_mean['nops']
 
         if 'reps' in df_mean:
             df_mean['read_data_per_rep'] = df_mean['read_data'] / df_mean['reps']
@@ -355,22 +380,24 @@ class IDXDataObject:
             df_mean['indexing_per_rep'] = df_mean['indexing'] / df_mean['reps']
             df_ci['indexing_per_rep_ci'] = df_ci['indexing_ci'] / df_mean['reps']
 
-        df_mean['indexing_raw'] = df_mean['indexing'] / df_mean['indexing'].min()
-        df_ci['indexing_raw_ci'] = df_ci['indexing_ci'] / df_mean['indexing'].min()
+        if 'indexing' in df_mean:
+            df_mean['indexing_raw'] = df_mean['indexing'] / df_mean['indexing'].min()
+            df_ci['indexing_raw_ci'] = df_ci['indexing_ci'] / df_mean['indexing'].min()
 
         if 'op_latency' in df_mean:
             df_mean['io_path_indexing_per_op'] = df_mean['indexing'] / df_mean['op_cnt']
 
-        df_mean['indexing'] /= df_mean['total_breakdown']
-        df_mean['read_data'] /= df_mean['total_breakdown']
-        df_ci['indexing_ci'] /= df_mean['total_breakdown']
-        df_ci['read_data_ci'] /= df_mean['total_breakdown']
+        if 'indexing' in df_mean:
+            df_mean['indexing'] /= df_mean['total_breakdown']
+            df_mean['read_data'] /= df_mean['total_breakdown']
+            df_ci['indexing_ci'] /= df_mean['total_breakdown']
+            df_ci['read_data_ci'] /= df_mean['total_breakdown']
 
-        df_mean['indexing_throughput'] = df_mean['indexing'] * df_mean['throughput']
-        df_mean['read_data_throughput'] = df_mean['read_data'] * df_mean['throughput']
+            df_mean['indexing_throughput'] = df_mean['indexing'] * df_mean['throughput']
+            df_mean['read_data_throughput'] = df_mean['read_data'] * df_mean['throughput']
 
-        df_ci['io_cycles_ci'] = df_ci['total_breakdown_ci'] / df_mean['nops']
-        df_mean['io_cycles'] = df_mean['total_breakdown'] / df_mean['nops']
+            df_ci['io_cycles_ci'] = df_ci['total_breakdown_ci'] / df_mean['nops']
+            df_mean['io_cycles'] = df_mean['total_breakdown'] / df_mean['nops']
 
         if 'reps' in df_mean:
             df_ci['io_cycles_rep_ci'] = df_ci['total_breakdown_ci'] / df_mean['reps']
@@ -388,8 +415,9 @@ class IDXDataObject:
             df_mean['io_path'] = df_mean['io_cycles'] / df_mean['op_latency']
             df_ci['io_path_ci'] = df_ci['io_cycles_ci'] / df_ci['op_latency_ci']
         
-        df_ci['total_breakdown_ci'] /= df_mean['total_breakdown']
-        df_mean['total_breakdown'] /= df_mean['total_breakdown']
+        if 'total_breakdown' in df_mean:
+            df_ci['total_breakdown_ci'] /= df_mean['total_breakdown']
+            df_mean['total_breakdown'] /= df_mean['total_breakdown']
 
         # self.df = df_list[0].reindex(df_mean.index) # to preserve string fields
         # self.df[df_mean.columns] = df_mean

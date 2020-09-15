@@ -28,8 +28,8 @@ pd.set_option('display.float_format', lambda x: '%.3f' % x)
 
 class Grapher:
 
-    D       = 5
-    HATCH   = [D*'//', '', D*'\\\\', D*'..', D*'', D*'xx', D*'*', D*'+', D*'\\']
+    D       = 3
+    HATCH   = [D*'//', '', D*'\\\\', D*'xx', D*'o', D*'+', D*'*', D*'..']
 
     def _hex_color_to_tuple(self, color_str):
         r = int(color_str[1:3], 16) / 256.0
@@ -229,7 +229,6 @@ class Grapher:
             all_error = all_means.copy()
             all_error[:] = 0.0
 
-
         num_configs = len(all_means.columns)
         width = num_configs / (num_configs + self._kwargs_default(kwargs, 'bar_spacing', 1.5))
         bar_width = width / num_configs
@@ -311,7 +310,7 @@ class Grapher:
             for c in colors ], [])
 
         for bar, hatch, color in zip(bars, all_hatches, all_colors):
-            #bar.set_hatch(hatch)
+            bar.set_hatch(hatch)
             bar.set_color(color)
             bar.set_edgecolor('black')
         
