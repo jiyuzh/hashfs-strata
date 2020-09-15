@@ -71,10 +71,19 @@ class FileBenchRunner(BenchRunner):
         for stat_file in stats_files:
             with stat_file.open() as f:
                 file_data = f.read()
+                if not file_data:
+                    continue
                 stats_arr = []
-                stats_arr = json.loads(file_data)
-                # data_objs = [ x.strip() for x in file_data.split(os.linesep) ]
+                try:
+                    stats_arr = json.loads(file_data)
+                    assert isinstance(stats_arr, list)
+                except json.decoder.JSONDecodeError as e:
+                    print(e)
+                    print(f'Could not decode {str(stat_file)} ({f.read()})!')
+                    raise
+
                 for obj in stats_arr:
+                    print(f'STAT OBJ: {stat_file}')
                     # data = data.strip('\x00')
                     if 'master' in obj or 'shutdown' in obj:
                         continue
@@ -88,10 +97,18 @@ class FileBenchRunner(BenchRunner):
                     stat_objs += [obj]
 
         for stat_file in stats_files:
-            subprocess.run(shlex.split('sudo rm -f {}'.format(
+            subprocess.run(shlex.split('rm -f {}'.format(
                 str(stat_file))), check=True)
 
-        assert len(stat_objs) == 1
+        if len(stat_objs) > 1:
+            warn(f'{len(stat_objs)} instead of just one!')
+            for so in stat_objs:
+                print(f'{so}')
+
+        if not stat_objs:
+            raise Exception(f'len(stat_objs) == {len(stat_objs)}')
+
+        # assert len(stat_objs) >= 1, f'len(stat_objs) == {len(stat_objs)}'
         return stat_objs[0]
 
     def _parse_trial_stat_files_cache(self, workload_name, layout, struct):
@@ -119,7 +136,7 @@ class FileBenchRunner(BenchRunner):
                     stat_objs += [obj]
 
         for stat_file in stats_files:
-            subprocess.run(shlex.split('sudo rm -f {}'.format(
+            subprocess.run(shlex.split('rm -f {}'.format(
                 str(stat_file))), check=True)
 
         assert len(stat_objs) == 1
@@ -134,11 +151,13 @@ class FileBenchRunner(BenchRunner):
 
         old_stats_files = [Path(x) for x in glob.glob('/tmp/libfs_prof.*')]
         for old_file in old_stats_files:
-            rm_args = shlex.split('sudo rm -f {}'.format(str(old_file)))
+            rm_args = shlex.split('rm -f {}'.format(str(old_file)))
             subprocess.run(rm_args, check=True)
 
         num_trials = len(workloads) * len(self.layout_scores) * \
                      len(self.structs) * self.args.trials
+
+        numa_node = self.args.numa_node
         widgets = [
                     progressbar.Percentage(),
                     ' (', progressbar.Counter(), ' of {})'.format(num_trials),
@@ -175,25 +194,51 @@ class FileBenchRunner(BenchRunner):
                             self.env['MLFS_IDX_STRUCT'] = struct
                             self.env['MLFS_LAYOUT_SCORE'] = layout
                             self.env['MLFS_CACHE_PERF'] = '0'
+                            self.env['MLFS_PROFILE'] = '1'
+
+                            if struct == 'LEVEL_HASH_TABLES' and layout != '100':
+                                warn(f'{struct} breaks with layout {layout}, swap!')
+                                self.env['MLFS_LAYOUT_SCORE'] = '100'
 
                             for trialno in range(self.args.trials):
-                                filebench_args = shlex.split(
-                                    'numactl -N 1 -m 1 sudo -E {0}/run.sh {0}/filebench -f {1}'.format(
-                                        str(filebench_path), workload))
+                                argstr = 'numactl -N {2} -m {2} {0}/run.sh {0}/filebench.mlfs -f {1}'.format(
+                                            str(filebench_path), workload, numa_node)
+                                filebench_args = shlex.split(argstr)
 
-                                mb_s = self._run_trial(filebench_args, filebench_path,
-                                                       self._parse_filebench_throughput)
+                                ntries = 0
+                                mb_s = None
+                                stat_obj = None
+                                while True:
+                                    try:
+                                        self.remove_old_libfs_stats()
+                                        self.kernfs.mkfs()
+                                        for shm in [Path(x) for x in glob.glob('/tmp/filebench-shm-*')]:
+                                            shm.unlink()
 
-                                if mb_s is None or not mb_s:
-                                    warn('Could not parse filebench results!',
-                                            UserWarning)
-                                    continue
+                                        mb_s = self._run_trial(filebench_args, filebench_path,
+                                                            self._parse_filebench_throughput,
+                                                            timeout=(2*60), try_parse=True)
 
-                                # Get the stats.
-                                stat_obj = self._parse_trial_stat_files(
-                                        workload_name, layout, struct, mb_s)
+                                        # if mb_s is None or not mb_s:
+                                        #     warn('Could not parse filebench results!',
+                                        #             UserWarning)
+                                        #     continue
 
-                                stat_obj['kernfs'] = self._get_kernfs_stats()
+                                        # Get the stats.
+                                        stat_obj = self._parse_trial_stat_files(
+                                                workload_name, layout, struct, mb_s)
+
+                                        stat_obj['kernfs'] = self._get_kernfs_stats()
+                                        stat_obj['trial num'] = trialno
+
+                                        break
+                                    except Exception as e:
+                                        print(e)
+                                        ntries += 1
+                                        if ntries > 2:
+                                            raise e
+                                        else:
+                                            print(f'RETRY #{ntries}')
 
                                 if self.args.measure_cache_perf:
                                     self.env['MLFS_CACHE_PERF'] = '1'

@@ -21,7 +21,7 @@ from Utils import *
 
 class KernFSThread:
 
-    def __init__(self, root_path, env, gather_stats=False, verbose=False):
+    def __init__(self, root_path, env, numa_node, gather_stats=False, verbose=False):
         'path argument must be to repo root directory.'
         assert isinstance(root_path, Path)
         assert isinstance(env, type(os.environ))
@@ -32,6 +32,7 @@ class KernFSThread:
         self.kernfs_path  = root_path / 'kernfs' / 'tests'
         self.proc         = None
         self.verbose      = verbose
+        self.numa_node    = numa_node
         assert self.kernfs_path.exists()
 
     def __del__(self):
@@ -72,7 +73,7 @@ class KernFSThread:
             indexing structures. Avoid using this often since it's really slow.
         '''
         # print('BEGIN MKFS')
-        mkfs_args = shlex.split(f'numactl -N 0 -m 0 {str(self.kernfs_path / "mkfs.sh")}')
+        mkfs_args = shlex.split(f'numactl -N {self.numa_node} -m {self.numa_node} {str(self.kernfs_path / "mkfs.sh")}')
         proc = None
         if self.verbose:
             proc = subprocess.run(mkfs_args, cwd=self.kernfs_path, check=True,
@@ -81,6 +82,8 @@ class KernFSThread:
             proc = subprocess.run(mkfs_args, cwd=self.kernfs_path, check=True,
                                   start_new_session=True, env=self.env,
                                   stdout=DEVNULL, stderr=DEVNULL)
+        assert proc.returncode == 0
+        proc = subprocess.run(shlex.split('rm -rf /mnt/pmem/clevel.pool'), check=True)
         assert proc.returncode == 0
         # print('END MKFS')
 
@@ -93,7 +96,7 @@ class KernFSThread:
         self._cleanup_kernfs()
        
         kernfs_arg_str = '{0}/run.sh taskset -c 0 numactl -N {1} -m {1} {0}/kernfs'.format(
-                                  str(self.kernfs_path), '0')
+                                  str(self.kernfs_path), self.numa_node)
         kernfs_args = shlex.split(kernfs_arg_str)
 
         opt_args = {}
@@ -151,14 +154,17 @@ class KernFSThread:
         for stat_file in stats_files:
             stat_file.unlink()
 
-    def stop(self):
+    def stop(self, ignore=False):
         'Kill the kernfs process and potentially gather stats.'
-        assert self.is_running(), 'kernfs already dead!'
-        pgid = os.getpgid(self.proc.pid)
-        kill_args = shlex.split(f'kill -{signal.SIGQUIT.value} -- -{str(pgid)}')
-        subprocess.run(kill_args, check=True, stdout=DEVNULL, stderr=DEVNULL)
-        self.proc.wait(timeout=10)
-        assert self.proc.returncode is not None
+        if not ignore:
+            assert self.is_running(), 'kernfs already dead!'
+        
+        if self.is_running():
+            pgid = os.getpgid(self.proc.pid)
+            kill_args = shlex.split(f'kill -{signal.SIGQUIT.value} -- -{str(pgid)}')
+            subprocess.run(kill_args, check=True, stdout=DEVNULL, stderr=DEVNULL)
+            self.proc.wait(timeout=10)
+            assert self.proc.returncode is not None
 
         stats = None
         if self.gather_stats:

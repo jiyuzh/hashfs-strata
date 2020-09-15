@@ -44,15 +44,13 @@ def add_arguments(parser):
     #concurrency.set_defaults(cls=ConcurrencyRunner)
     #ConcurrencyRunner.add_arguments(concurrency)
 
-    #filebench = subparsers.add_parser('filebench')
-    #filebench.set_defaults(cls=FileBenchRunner)
-    #FileBenchRunner.add_arguments(filebench)
+    filebench = subparsers.add_parser('filebench')
+    filebench.set_defaults(cls=FileBenchRunner)
+    FileBenchRunner.add_arguments(filebench)
 
     #fragtest = subparsers.add_parser('fragtest')
     #fragtest.set_defaults(cls=FragTestRunner)
     #FragTestRunner.add_arguments(fragtest)
-
-
 
     '''
     all_cmds = []

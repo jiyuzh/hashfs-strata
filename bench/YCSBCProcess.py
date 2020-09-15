@@ -34,7 +34,7 @@ class YCSBCRunner(BenchRunner):
         self.update_bar_proc = None
         self.bench_path = (self.root_path / 'bench').resolve()
         self.dbfilename = "/mlfs/db"
-        self.aep = AEPWatchThread()
+        # self.aep = AEPWatchThread()
         assert self.bench_path.exists()
 
     def __del__(self):

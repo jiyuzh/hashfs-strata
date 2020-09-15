@@ -60,7 +60,7 @@ class BenchRunner:
         self.env['MLFS_PROFILE'] = '1'
 
         # The same instance is used, but the managed subprocess will change.
-        self.kernfs = KernFSThread(self.root_path, self.env, 
+        self.kernfs = KernFSThread(self.root_path, self.env, self.args.numa_node,
                                    gather_stats=True,
                                    verbose=self.args.verbose)
         #self.aep = AEPWatchThread()
@@ -88,7 +88,7 @@ class BenchRunner:
             warn('KernFS has already stopped before official end.',
                  UserWarning)
 
-        self.kernfs_stats = self.kernfs.stop()
+        self.kernfs_stats = self.kernfs.stop(ignore=True)
 
     def _get_kernfs_stats(self):
         return self.kernfs_stats
@@ -110,7 +110,7 @@ class BenchRunner:
                 json.dump(json_obj, f, indent=4)
 
     def _run_trial(self, bench_args, bench_cwd, processing_fn, timeout=(2*60),
-            no_warn=False):
+            no_warn=False, try_parse=False):
         self._start_trial()
 
         proc = None
@@ -121,7 +121,7 @@ class BenchRunner:
                                     start_new_session=True)
             self.current_proc = proc
 
-            stdout, stderr = proc.communicate(timeout=timeout)
+            stdout, _ = proc.communicate(timeout=timeout)
             del self.current_proc
 
             if processing_fn is not None:
@@ -133,20 +133,27 @@ class BenchRunner:
                 print('KERNFS died early!')
             else:
                 print('KERNFS is alive?')
-                self.kernfs.stop()
+                # self.kernfs.stop()
 
             # print(self.kernfs.proc.stdout.read())
-            raise Exception('wut')
+        
             if not no_warn:
                 warn('Process "{}" hangs!'.format(' '.join(bench_args)),
                      UserWarning)
                 print(e)
                 pprint(self.env)
             self._kill_process(proc)
+            # proc.poll()
+            stdout, _ = proc.communicate(timeout=timeout)
             # embed()
-            print("OUT")
-            print(proc.stdout.read().decode())
-            print("OUT")
+            # print("OUT")
+            if not try_parse:
+                print(f'Output: {stdout.read().decode()}')
+            else:
+                warn('\tTrying to parse anyways!')
+                # print(f'o: {stdout.decode()}')
+                return processing_fn(stdout)
+            # print("OUT")
             #proc.kill()
         finally:
             self._finish_trial()
