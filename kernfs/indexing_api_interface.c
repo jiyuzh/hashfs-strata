@@ -43,9 +43,9 @@ extern uint8_t *dax_addr[];
 
 ssize_t nvm_get_addr(paddr_t blk, off_t off, char** buf) {
     trace_me();
-#ifdef STORAGE_PERF
-    uint64_t tsc_begin = asm_rdtscp();
-#endif
+// #ifdef STORAGE_PERF
+//     uint64_t tsc_begin = asm_rdtscp();
+// #endif
     *buf = dax_addr[g_root_dev] + (blk * g_block_size_bytes) + off;
 #if 0
     if (blk >= disk_sb[g_root_dev].inode_start && 
@@ -61,23 +61,29 @@ ssize_t nvm_get_addr(paddr_t blk, off_t off, char** buf) {
         }
     }
 #endif
-#ifdef STORAGE_PERF
-    g_perf_stats.path_storage_tsc += asm_rdtscp() - tsc_begin;
-    g_perf_stats.path_storage_nr++;
-#endif
+// #ifdef STORAGE_PERF
+//     g_perf_stats.path_storage_tsc += asm_rdtscp() - tsc_begin;
+//     g_perf_stats.path_storage_nr++;
+// #endif
     return 0;
 }
 
 pthread_mutex_t alloc_mutex = PTHREAD_MUTEX_INITIALIZER; 
 
+#define DO_BALLOC_LOCKING 0
+
 static inline void balloc_lock(void) {
+#if DO_BALLOC_LOCKING
     int err = pthread_mutex_lock(&alloc_mutex);
     if_then_panic(err, "Could not lock! %s\n", strerror(err));
+#endif
 }
 
 static inline void balloc_unlock(void) {
+#if DO_BALLOC_LOCKING
     int err = pthread_mutex_unlock(&alloc_mutex);
     if_then_panic(err, "Could not unlock! %s\n", strerror(err));
+#endif
 }
 
 static inline ssize_t alloc_generic(size_t nblk,
@@ -139,7 +145,8 @@ ssize_t alloc_metadata_blocks(size_t nblocks, paddr_t* pblk) {
 
     char *addr;
     (void)nvm_get_addr(*pblk, 0, &addr);
-    pmem_memset_persist(addr, 0, ret * g_block_size_bytes);
+    // pmem_memset_persist(addr, 0, ret * g_block_size_bytes);
+    memset(addr, 0, ret * g_block_size_bytes);
 
     return ret;
 }

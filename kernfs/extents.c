@@ -38,7 +38,7 @@
 
 #define BUG_ON(x) mlfs_assert((x) == 0)
 
-//#define ZERO_FREED_BLOCKS
+#define ZERO_FREED_BLOCKS
 
 #if defined(REUSE_PREVIOUS_PATH)
 #undef REUSE_PREVIOUS_PATH
@@ -119,6 +119,11 @@ int mlfs_ext_alloc_blocks(handle_t *handle, struct inode *inode,
 		int goal, unsigned int flags, mlfs_fsblk_t *blockp, mlfs_lblk_t *count)
 {
 #ifdef KERNFS
+
+#if defined(STORAGE_PERF)
+    uint64_t tsc_begin = asm_rdtscp();
+#endif
+
 	struct super_block *sb = get_inode_sb(handle->dev, inode);
 	int ret;
 	int retry_count = 0;
@@ -148,6 +153,9 @@ retry:
 	if (ret > 0) {
 		//mlfs_assert(*blockp >= disk_sb[handle->dev].datablock_start);
 		*count = ret;
+
+        balloc_undo_log(*blockp, ret, 0);
+
 		bitmap_bits_set_range(get_inode_sb(handle->dev, inode)->s_blk_bitmap,
 				*blockp, *count);
 		get_inode_sb(handle->dev, inode)->used_blocks += *count;
@@ -204,6 +212,14 @@ retry:
 	pthread_mutex_unlock(&block_bitmap_mutex);
 #endif
 
+#if defined(STORAGE_PERF)
+    if (enable_perf_stats) {
+        g_perf_stats.balloc_tsc += asm_rdtscp() - tsc_begin;
+        g_perf_stats.balloc_nblk += ret;
+        g_perf_stats.balloc_nr++;
+    }
+#endif
+
 	return ret;
 #else //LIBFS case
 	// LibFS never calls this function
@@ -249,21 +265,23 @@ mlfs_fsblk_t mlfs_new_meta_blocks(handle_t *handle,
 	flags |= MLFS_GET_BLOCKS_CREATE_META;
 	*errp = mlfs_ext_alloc_blocks(handle, inode, goal, flags, &block, count);
 #ifdef ZERO_FREED_BLOCKS
-    char zero_buf[g_block_size_bytes];
-    memset(zero_buf, 0, g_block_size_bytes);
-    for (mlfs_fsblk_t i = 0; i < *count; ++i) {
-        mlfs_debug("Zero: %lu\n", block + i);
-        struct buffer_head *bh = bh_get_sync_IO(handle->dev,
-                block + i, BH_NO_DATA_ALLOC);
-        bh->b_data = zero_buf;
-        bh->b_size = g_block_size_bytes;
-        bh->b_offset = 0;
+    // char zero_buf[g_block_size_bytes];
+    // memset(zero_buf, 0, g_block_size_bytes);
+    // for (mlfs_fsblk_t i = 0; i < *count; ++i) {
+    //     mlfs_debug("Zero: %lu\n", block + i);
+    //     struct buffer_head *bh = bh_get_sync_IO(handle->dev,
+    //             block + i, BH_NO_DATA_ALLOC);
+    //     bh->b_data = zero_buf;
+    //     bh->b_size = g_block_size_bytes;
+    //     bh->b_offset = 0;
 
-        idx_undo_log((block + i) << g_block_size_shift, g_block_size_bytes,
-                zero_buf);
+    //     idx_undo_log((block + i) << g_block_size_shift, g_block_size_bytes,
+    //             zero_buf);
 
-        mlfs_write(bh);
-    }
+    //     mlfs_write(bh);
+    // }
+	char *buf = dax_addr[handle->dev] + (block * g_block_size_bytes);
+	memset(buf, 0, g_block_size_bytes);
 #endif
 #ifdef KERNFS
 	mlfs_debug("[dev %u] used blocks %d\n", inode->dev,
@@ -294,6 +312,8 @@ void mlfs_free_blocks(handle_t *handle, struct inode *inode,
 	mlfs_assert(ret == 0);
 #endif
 	bitmap_bits_free(sb->s_blk_bitmap, block, count);
+
+	balloc_undo_log(block, count, 1);
 
 	mlfs_debug("inode %u free blocks %lu - %lu \n",
 			inode->inum, block, block + count - 1);
@@ -3074,6 +3094,19 @@ int mlfs_ext_get_blocks(handle_t *handle, struct inode *inode,
         return hash_ret;
     }
 
+	/*
+		Hack: rather than fix this, I'll just give Strata default the same overhead. 
+	*/
+	#ifdef KERNFS
+	if (create) {
+		struct dinode di;
+		addr_t tmp[8];
+		(void)read_ondisk_inode(handle->dev, inode->inum, &di);
+		memmove(tmp, di.l1_addrs, sizeof(addr_t) * (NDIRECT + 1));
+	}
+	
+	#endif
+
 	/*mutex_lock(&inode->truncate_mutex);*/
 
 #ifdef REUSE_PREVIOUS_PATH
@@ -3306,6 +3339,7 @@ out2:
 	if (enable_perf_stats) {
 #ifdef KERNFS
 		g_perf_stats.path_search_tsc += (asm_rdtscp() - tsc_start);
+		g_perf_stats.path_search_size += allocated;
         g_perf_stats.path_search_nr++;
 #else
         update_stats_dist(&(g_perf_stats.read_per_index), g_perf_stats.path_storage_nr);
