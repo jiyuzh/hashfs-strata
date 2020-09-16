@@ -49,6 +49,20 @@ class IDXDataObject:
 
         parsed['struct'] = parsed['struct'].upper()
 
+        # Now, some indexing stuff
+        if 'lsm' in data_obj:
+            parsed['indexing'] = data_obj['lsm']['tsc']
+            parsed['read_data'] = data_obj['l0']['tsc'] + data_obj['read_data']['tsc']
+            parsed['nops'] = data_obj['lsm']['nr'] 
+
+            kernfs_obj = data_obj['kernfs']
+            parsed['indexing'] += kernfs_obj['search']['total_time']
+            parsed['read_data'] += kernfs_obj['digest'] - kernfs_obj['search']['total_time']
+            parsed['nops'] += kernfs_obj['search']['nr_search']
+
+            total = parsed['indexing'] + parsed['read_data']
+            parsed['total_breakdown'] = total
+
         # embed()
         return keys, parsed
 
