@@ -72,8 +72,8 @@ class YCSBCRunner(BenchRunner):
         self.env['MLFS_PROFILE'] = '1'
         self.env['MLFS_CACHE_PERF'] = '0'
         
-        self._run_trial_continue(setup_args, cwd, None, timeout=(10*60))
-        self._run_trial_passthrough(load_args, cwd, None, timeout=(20*60))
+        self._run_trial_continue(setup_args, cwd, None, timeout=(2*60))
+        self._run_trial_passthrough(load_args, cwd, None, timeout=(2*60))
 
         if self.args.measure_aep:
             self.aep.start()
@@ -129,6 +129,9 @@ class YCSBCRunner(BenchRunner):
 
         self.env['MLFS_IDX_STRUCT'] = idx_struct
         self.env['MLFS_LAYOUT_SCORE'] = layout_score
+        if idx_struct == 'LEVEL_HASH_TABLES':
+            warn(f'Using layout 100 for {idx_struct}!')
+            self.env['MLFS_LAYOUT_SCORE'] = 100
 
         labels = {}
         labels['struct'] = idx_struct
