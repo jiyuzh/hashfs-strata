@@ -28,25 +28,25 @@ do
   do    
     # Format filesystem
     cd $prefix/libfs;
-    sudo MLFS_IDX_STRUCT="$k" MLFS_LAYOUT_SCORE='85'  ./bin/mkfs.mlfs 1 &>> $prefix/$suffix/$benchmark_name/$k/mkfs1.txt
-    sudo MLFS_IDX_STRUCT="$k" MLFS_LAYOUT_SCORE='85' ./bin/mkfs.mlfs 4 &>> $prefix/$suffix/$benchmark_name/$k/mkfs4.txt
+    MLFS_IDX_STRUCT="$k" MLFS_LAYOUT_SCORE='85'  ./bin/mkfs.mlfs 1 &>> $prefix/$suffix/$benchmark_name/$k/mkfs1.txt
+    MLFS_IDX_STRUCT="$k" MLFS_LAYOUT_SCORE='85' ./bin/mkfs.mlfs 4 &>> $prefix/$suffix/$benchmark_name/$k/mkfs4.txt
     # Run server
     cd $prefix/kernfs/tests;
-    sudo MLFS_IDX_STRUCT="$k" MLFS_LAYOUT_SCORE='85'  taskset -c 0 ./run.sh kernfs >> $prefix/$suffix/$benchmark_name/$k/server.txt 2>&1 &
+    MLFS_IDX_STRUCT="$k" MLFS_LAYOUT_SCORE='85'  taskset -c 0 ./run.sh kernfs >> $prefix/$suffix/$benchmark_name/$k/server.txt 2>&1 &
     sleep 5;
     # Run client
     cd $prefix/bench/filebench;
-    sudo MLFS_IDX_STRUCT="$k" MLFS_LAYOUT_SCORE='85' taskset -c 3 ./run_mine.sh $benchmark_name >> $prefix/$suffix/$benchmark_name/$k/client.txt 2>&1 &
+    MLFS_IDX_STRUCT="$k" MLFS_LAYOUT_SCORE='85' taskset -c 3 ./run_mine.sh $benchmark_name >> $prefix/$suffix/$benchmark_name/$k/client.txt 2>&1 &
     #read -p "Exit $k: "
     sleep 67
     echo "Killing"
-    ps aux|grep kernfs|awk '{print $2}'|while read i; do sudo kill -9 $i; done
-    ps aux |grep mlfs|awk '{print $2}'|while read i; do sudo kill -9 $i; done
-    ps aux |grep filebench|awk '{print $2}'|while read i; do sudo kill -9 $i; done
-    ps aux |grep filereader|awk '{print $2}'|while read i; do sudo kill -9 $i; done
-    ps aux|grep $benchmark_name|awk '{print $2}'|while read i; do sudo kill -9 $i; done
-    ps aux|grep run_mine|awk '{print $2}'|while read i; do sudo kill -9 $i; done
-    sudo rm -rf /tmp/filebench-shm-*
+    ps aux|grep kernfs|awk '{print $2}'|while read i; do kill -9 $i; done
+    ps aux |grep mlfs|awk '{print $2}'|while read i; do kill -9 $i; done
+    ps aux |grep filebench|awk '{print $2}'|while read i; do kill -9 $i; done
+    ps aux |grep filereader|awk '{print $2}'|while read i; do kill -9 $i; done
+    ps aux|grep $benchmark_name|awk '{print $2}'|while read i; do kill -9 $i; done
+    ps aux|grep run_mine|awk '{print $2}'|while read i; do kill -9 $i; done
+    rm -rf /tmp/filebench-shm-*
   done
   rm -rf /tmp/tmp.txt
   grep 'IO Summary:' $prefix/$suffix/$benchmark_name/$k/client.txt > /tmp/tmp.txt

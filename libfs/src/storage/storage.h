@@ -52,6 +52,8 @@ static uint64_t dev_size[g_n_devices + 1] =
                 //{0UL, 4223664128UL, 0UL, 0UL, 2111832064UL, 2111832064UL}; // 4G
                 {0UL, 33820770304UL, 0UL, 0UL, 1054867456UL, 1054867456UL}; //8G
                 //{0UL, 16907239424UL, 0UL, 0UL, 2111832064UL, 2111832064UL}; //16G
+				// {0UL, 135289372672UL, 0UL, 0UL, 1054867456UL, 1054867456UL}; // 128G
+				
             
 
 extern struct storage_operations storage_dax;
