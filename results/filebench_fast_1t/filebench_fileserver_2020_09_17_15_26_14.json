@@ -1,0 +1,103 @@
+[
+    {
+        "title": "shutdown fs",
+        "wait_digest": {
+            "tsc": 30,
+            "nr": 1
+        },
+        "l0": {
+            "tsc": 3866918,
+            "nr": 25760
+        },
+        "lsm": {
+            "tsc": 0,
+            "nr": 0
+        },
+        "log": {
+            "commit": {
+                "tsc": 95590598,
+                "nr": 1671
+            },
+            "write": {
+                "tsc": 90755984,
+                "nr": 1671
+            },
+            "alloc": {
+                "tsc": 54446,
+                "nr": 1671
+            },
+            "hdr_write": {
+                "tsc": 4512766,
+                "nr": 1671
+            },
+            "hash_update": {
+                "tsc": 13475466,
+                "nr": 805
+            }
+        },
+        "read_data": {
+            "tsc": 0,
+            "nr": 0,
+            "bytes": 0
+        },
+        "path_storage": {
+            "tsc": 0,
+            "nr": 0
+        },
+        "storage": {
+            "rtsc": 58516,
+            "rnr": 436224,
+            "wtsc": 76345096,
+            "wnr": 106043853
+        },
+        "read_end_to_end": {
+            "tsc": 0,
+            "nr": 0,
+            "n_aligned": 0,
+            "n_unaligned": 0
+        },
+        "bh_meta": {
+            "tsc": 0,
+            "nr": 0
+        },
+        "ua_fcache": {
+            "tsc": 0,
+            "nr": 0
+        },
+        "fragmentation": {
+            "nfiles": 0,
+            "nblocks": 0,
+            "nfragments": 0,
+            "layout_derived": 0
+        },
+        "hashfs_lookups": {
+            "nops": 0,
+            "nentries": 0
+        },
+        "idx_stats": {},
+        "bench": "filebench",
+        "workload": "fileserver",
+        "layout": 0.85,
+        "throughput": 1419.0,
+        "struct": "hashfs_rocache",
+        "kernfs": {
+            "digest": 120038286982,
+            "metadata_blocks": 0,
+            "path_search": 5403713170,
+            "path_storage": 0,
+            "storage": {
+                "rtsc": 2096995520,
+                "rnr": 2791439616,
+                "wtsc": 66918164384,
+                "wnr": 45883833277
+            },
+            "search": {
+                "total_time": 5403713170,
+                "total_blocks": 11521361,
+                "nr_search": 2139629
+            },
+            "idx_stats": {}
+        },
+        "trial num": 0
+    }
+]

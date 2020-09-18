@@ -1,0 +1,9 @@
+[
+    {
+        "layout": 0.85,
+        "throughput": 2683.4,
+        "struct": "hashfs_rocache",
+        "bench": "filebench",
+        "workload": "webserver"
+    }
+]
