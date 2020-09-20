@@ -1,0 +1,200 @@
+[
+    {
+        "layout": "85",
+        "total_time": 0.223562,
+        "struct": "HASHFS_ROCACHE",
+        "test": "Insert",
+        "io size": 16,
+        "repetitions": 100000,
+        "num files": 1,
+        "trial num": 0,
+        "start size": 1073741824
+    },
+    {
+        "layout": "85",
+        "total_time": 0.139021,
+        "struct": "HASHFS_ROCACHE",
+        "test": "Sequential Read",
+        "io size": 16,
+        "repetitions": 100000,
+        "num files": 1,
+        "trial num": 0,
+        "start size": 1073741824
+    },
+    {
+        "layout": "85",
+        "total_time": 0.118541,
+        "struct": "HASHFS_ROCACHE",
+        "test": "Random Read",
+        "io size": 16,
+        "repetitions": 100000,
+        "num files": 1,
+        "trial num": 0,
+        "start size": 1073741824
+    },
+    {
+        "layout": "85",
+        "total_time": 0.164304,
+        "struct": "HASHFS_ROCACHE",
+        "test": "Insert",
+        "io size": 16,
+        "repetitions": 100000,
+        "num files": 100,
+        "trial num": 0,
+        "start size": 1073741824
+    },
+    {
+        "layout": "85",
+        "total_time": 0.141354,
+        "struct": "HASHFS_ROCACHE",
+        "test": "Sequential Read",
+        "io size": 16,
+        "repetitions": 100000,
+        "num files": 100,
+        "trial num": 0,
+        "start size": 1073741824
+    },
+    {
+        "layout": "85",
+        "total_time": 0.12634,
+        "struct": "HASHFS_ROCACHE",
+        "test": "Random Read",
+        "io size": 16,
+        "repetitions": 100000,
+        "num files": 100,
+        "trial num": 0,
+        "start size": 1073741824
+    },
+    {
+        "layout": "85",
+        "total_time": 0.215663,
+        "struct": "GLOBAL_CUCKOO_HASH",
+        "test": "Insert",
+        "io size": 16,
+        "repetitions": 100000,
+        "num files": 1,
+        "trial num": 0,
+        "start size": 1073741824
+    },
+    {
+        "layout": "85",
+        "total_time": 0.159329,
+        "struct": "GLOBAL_CUCKOO_HASH",
+        "test": "Sequential Read",
+        "io size": 16,
+        "repetitions": 100000,
+        "num files": 1,
+        "trial num": 0,
+        "start size": 1073741824
+    },
+    {
+        "layout": "85",
+        "total_time": 0.148483,
+        "struct": "GLOBAL_CUCKOO_HASH",
+        "test": "Random Read",
+        "io size": 16,
+        "repetitions": 100000,
+        "num files": 1,
+        "trial num": 0,
+        "start size": 1073741824
+    },
+    {
+        "layout": "85",
+        "total_time": 0.222624,
+        "struct": "GLOBAL_CUCKOO_HASH",
+        "test": "Insert",
+        "io size": 16,
+        "repetitions": 100000,
+        "num files": 100,
+        "trial num": 0,
+        "start size": 1073741824
+    },
+    {
+        "layout": "85",
+        "total_time": 0.137274,
+        "struct": "GLOBAL_CUCKOO_HASH",
+        "test": "Sequential Read",
+        "io size": 16,
+        "repetitions": 100000,
+        "num files": 100,
+        "trial num": 0,
+        "start size": 1073741824
+    },
+    {
+        "layout": "85",
+        "total_time": 0.15552,
+        "struct": "GLOBAL_CUCKOO_HASH",
+        "test": "Random Read",
+        "io size": 16,
+        "repetitions": 100000,
+        "num files": 100,
+        "trial num": 0,
+        "start size": 1073741824
+    },
+    {
+        "layout": "85",
+        "total_time": 0.208204,
+        "struct": "HASHFS",
+        "test": "Insert",
+        "io size": 16,
+        "repetitions": 100000,
+        "num files": 1,
+        "trial num": 0,
+        "start size": 1073741824
+    },
+    {
+        "layout": "85",
+        "total_time": 0.129039,
+        "struct": "HASHFS",
+        "test": "Sequential Read",
+        "io size": 16,
+        "repetitions": 100000,
+        "num files": 1,
+        "trial num": 0,
+        "start size": 1073741824
+    },
+    {
+        "layout": "85",
+        "total_time": 0.142179,
+        "struct": "HASHFS",
+        "test": "Random Read",
+        "io size": 16,
+        "repetitions": 100000,
+        "num files": 1,
+        "trial num": 0,
+        "start size": 1073741824
+    },
+    {
+        "layout": "85",
+        "total_time": 0.212348,
+        "struct": "HASHFS",
+        "test": "Insert",
+        "io size": 16,
+        "repetitions": 100000,
+        "num files": 100,
+        "trial num": 0,
+        "start size": 1073741824
+    },
+    {
+        "layout": "85",
+        "total_time": 0.13621,
+        "struct": "HASHFS",
+        "test": "Sequential Read",
+        "io size": 16,
+        "repetitions": 100000,
+        "num files": 100,
+        "trial num": 0,
+        "start size": 1073741824
+    },
+    {
+        "layout": "85",
+        "total_time": 0.15368,
+        "struct": "HASHFS",
+        "test": "Random Read",
+        "io size": 16,
+        "repetitions": 100000,
+        "num files": 100,
+        "trial num": 0,
+        "start size": 1073741824
+    }
+]
