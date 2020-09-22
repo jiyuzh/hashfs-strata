@@ -1,0 +1,2522 @@
+[
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "NONE",
+        "test": "A",
+        "trial num": 0
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "NONE",
+        "test": "A",
+        "trial num": 1
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "NONE",
+        "test": "A",
+        "trial num": 2
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "NONE",
+        "test": "A",
+        "trial num": 3
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "NONE",
+        "test": "A",
+        "trial num": 4
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "NONE",
+        "test": "A",
+        "trial num": 5
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "NONE",
+        "test": "A",
+        "trial num": 6
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "NONE",
+        "test": "A",
+        "trial num": 7
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "NONE",
+        "test": "A",
+        "trial num": 8
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "NONE",
+        "test": "A",
+        "trial num": 9
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "NONE",
+        "test": "B",
+        "trial num": 0
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "NONE",
+        "test": "B",
+        "trial num": 1
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "NONE",
+        "test": "B",
+        "trial num": 2
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "NONE",
+        "test": "B",
+        "trial num": 3
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "NONE",
+        "test": "B",
+        "trial num": 4
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "NONE",
+        "test": "B",
+        "trial num": 5
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "NONE",
+        "test": "B",
+        "trial num": 6
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "NONE",
+        "test": "B",
+        "trial num": 7
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "NONE",
+        "test": "B",
+        "trial num": 8
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "NONE",
+        "test": "B",
+        "trial num": 9
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "NONE",
+        "test": "C",
+        "trial num": 0
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "NONE",
+        "test": "C",
+        "trial num": 1
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "NONE",
+        "test": "C",
+        "trial num": 2
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "NONE",
+        "test": "C",
+        "trial num": 3
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "NONE",
+        "test": "C",
+        "trial num": 4
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "NONE",
+        "test": "C",
+        "trial num": 5
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "NONE",
+        "test": "C",
+        "trial num": 6
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "NONE",
+        "test": "C",
+        "trial num": 7
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "NONE",
+        "test": "C",
+        "trial num": 8
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "NONE",
+        "test": "C",
+        "trial num": 9
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "NONE",
+        "test": "D",
+        "trial num": 0
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "NONE",
+        "test": "D",
+        "trial num": 1
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "NONE",
+        "test": "D",
+        "trial num": 2
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "NONE",
+        "test": "D",
+        "trial num": 3
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "NONE",
+        "test": "D",
+        "trial num": 4
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "NONE",
+        "test": "D",
+        "trial num": 5
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "NONE",
+        "test": "D",
+        "trial num": 6
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "NONE",
+        "test": "D",
+        "trial num": 7
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "NONE",
+        "test": "D",
+        "trial num": 8
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "NONE",
+        "test": "D",
+        "trial num": 9
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "NONE",
+        "test": "E",
+        "trial num": 0
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "NONE",
+        "test": "E",
+        "trial num": 1
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "NONE",
+        "test": "E",
+        "trial num": 2
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "NONE",
+        "test": "E",
+        "trial num": 3
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "NONE",
+        "test": "E",
+        "trial num": 4
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "NONE",
+        "test": "E",
+        "trial num": 5
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "NONE",
+        "test": "E",
+        "trial num": 6
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "NONE",
+        "test": "E",
+        "trial num": 7
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "NONE",
+        "test": "E",
+        "trial num": 8
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "NONE",
+        "test": "E",
+        "trial num": 9
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "NONE",
+        "test": "F",
+        "trial num": 0
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "NONE",
+        "test": "F",
+        "trial num": 1
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "NONE",
+        "test": "F",
+        "trial num": 2
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "NONE",
+        "test": "F",
+        "trial num": 3
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "NONE",
+        "test": "F",
+        "trial num": 4
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "NONE",
+        "test": "F",
+        "trial num": 5
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "NONE",
+        "test": "F",
+        "trial num": 6
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "NONE",
+        "test": "F",
+        "trial num": 7
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "NONE",
+        "test": "F",
+        "trial num": 8
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "NONE",
+        "test": "F",
+        "trial num": 9
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "EXTENT_TREES",
+        "test": "A",
+        "trial num": 0
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "EXTENT_TREES",
+        "test": "A",
+        "trial num": 1
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "EXTENT_TREES",
+        "test": "A",
+        "trial num": 2
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "EXTENT_TREES",
+        "test": "A",
+        "trial num": 3
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "EXTENT_TREES",
+        "test": "A",
+        "trial num": 4
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "EXTENT_TREES",
+        "test": "A",
+        "trial num": 5
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "EXTENT_TREES",
+        "test": "A",
+        "trial num": 6
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "EXTENT_TREES",
+        "test": "A",
+        "trial num": 7
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "EXTENT_TREES",
+        "test": "A",
+        "trial num": 8
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "EXTENT_TREES",
+        "test": "A",
+        "trial num": 9
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "EXTENT_TREES",
+        "test": "B",
+        "trial num": 0
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "EXTENT_TREES",
+        "test": "B",
+        "trial num": 1
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "EXTENT_TREES",
+        "test": "B",
+        "trial num": 2
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "EXTENT_TREES",
+        "test": "B",
+        "trial num": 3
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "EXTENT_TREES",
+        "test": "B",
+        "trial num": 4
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "EXTENT_TREES",
+        "test": "B",
+        "trial num": 5
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "EXTENT_TREES",
+        "test": "B",
+        "trial num": 6
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "EXTENT_TREES",
+        "test": "B",
+        "trial num": 7
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "EXTENT_TREES",
+        "test": "B",
+        "trial num": 8
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "EXTENT_TREES",
+        "test": "B",
+        "trial num": 9
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "EXTENT_TREES",
+        "test": "C",
+        "trial num": 0
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "EXTENT_TREES",
+        "test": "C",
+        "trial num": 1
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "EXTENT_TREES",
+        "test": "C",
+        "trial num": 2
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "EXTENT_TREES",
+        "test": "C",
+        "trial num": 3
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "EXTENT_TREES",
+        "test": "C",
+        "trial num": 4
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "EXTENT_TREES",
+        "test": "C",
+        "trial num": 5
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "EXTENT_TREES",
+        "test": "C",
+        "trial num": 6
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "EXTENT_TREES",
+        "test": "C",
+        "trial num": 7
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "EXTENT_TREES",
+        "test": "C",
+        "trial num": 8
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "EXTENT_TREES",
+        "test": "C",
+        "trial num": 9
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "EXTENT_TREES",
+        "test": "D",
+        "trial num": 0
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "EXTENT_TREES",
+        "test": "D",
+        "trial num": 1
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "EXTENT_TREES",
+        "test": "D",
+        "trial num": 2
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "EXTENT_TREES",
+        "test": "D",
+        "trial num": 3
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "EXTENT_TREES",
+        "test": "D",
+        "trial num": 4
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "EXTENT_TREES",
+        "test": "D",
+        "trial num": 5
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "EXTENT_TREES",
+        "test": "D",
+        "trial num": 6
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "EXTENT_TREES",
+        "test": "D",
+        "trial num": 7
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "EXTENT_TREES",
+        "test": "D",
+        "trial num": 8
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "EXTENT_TREES",
+        "test": "D",
+        "trial num": 9
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "EXTENT_TREES",
+        "test": "E",
+        "trial num": 0
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "EXTENT_TREES",
+        "test": "E",
+        "trial num": 1
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "EXTENT_TREES",
+        "test": "E",
+        "trial num": 2
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "EXTENT_TREES",
+        "test": "E",
+        "trial num": 3
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "EXTENT_TREES",
+        "test": "E",
+        "trial num": 4
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "EXTENT_TREES",
+        "test": "E",
+        "trial num": 5
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "EXTENT_TREES",
+        "test": "E",
+        "trial num": 6
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "EXTENT_TREES",
+        "test": "E",
+        "trial num": 7
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "EXTENT_TREES",
+        "test": "E",
+        "trial num": 8
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "EXTENT_TREES",
+        "test": "E",
+        "trial num": 9
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "EXTENT_TREES",
+        "test": "F",
+        "trial num": 0
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "EXTENT_TREES",
+        "test": "F",
+        "trial num": 1
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "EXTENT_TREES",
+        "test": "F",
+        "trial num": 2
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "EXTENT_TREES",
+        "test": "F",
+        "trial num": 3
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "EXTENT_TREES",
+        "test": "F",
+        "trial num": 4
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "EXTENT_TREES",
+        "test": "F",
+        "trial num": 5
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "EXTENT_TREES",
+        "test": "F",
+        "trial num": 6
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "EXTENT_TREES",
+        "test": "F",
+        "trial num": 7
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "EXTENT_TREES",
+        "test": "F",
+        "trial num": 8
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "EXTENT_TREES",
+        "test": "F",
+        "trial num": 9
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "GLOBAL_CUCKOO_HASH",
+        "test": "A",
+        "trial num": 0
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "GLOBAL_CUCKOO_HASH",
+        "test": "A",
+        "trial num": 1
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "GLOBAL_CUCKOO_HASH",
+        "test": "A",
+        "trial num": 2
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "GLOBAL_CUCKOO_HASH",
+        "test": "A",
+        "trial num": 3
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "GLOBAL_CUCKOO_HASH",
+        "test": "A",
+        "trial num": 4
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "GLOBAL_CUCKOO_HASH",
+        "test": "A",
+        "trial num": 5
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "GLOBAL_CUCKOO_HASH",
+        "test": "A",
+        "trial num": 6
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "GLOBAL_CUCKOO_HASH",
+        "test": "A",
+        "trial num": 7
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "GLOBAL_CUCKOO_HASH",
+        "test": "A",
+        "trial num": 8
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "GLOBAL_CUCKOO_HASH",
+        "test": "A",
+        "trial num": 9
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "GLOBAL_CUCKOO_HASH",
+        "test": "B",
+        "trial num": 0
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "GLOBAL_CUCKOO_HASH",
+        "test": "B",
+        "trial num": 1
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "GLOBAL_CUCKOO_HASH",
+        "test": "B",
+        "trial num": 2
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "GLOBAL_CUCKOO_HASH",
+        "test": "B",
+        "trial num": 3
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "GLOBAL_CUCKOO_HASH",
+        "test": "B",
+        "trial num": 4
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "GLOBAL_CUCKOO_HASH",
+        "test": "B",
+        "trial num": 5
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "GLOBAL_CUCKOO_HASH",
+        "test": "B",
+        "trial num": 6
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "GLOBAL_CUCKOO_HASH",
+        "test": "B",
+        "trial num": 7
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "GLOBAL_CUCKOO_HASH",
+        "test": "B",
+        "trial num": 8
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "GLOBAL_CUCKOO_HASH",
+        "test": "B",
+        "trial num": 9
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "GLOBAL_CUCKOO_HASH",
+        "test": "C",
+        "trial num": 0
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "GLOBAL_CUCKOO_HASH",
+        "test": "C",
+        "trial num": 1
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "GLOBAL_CUCKOO_HASH",
+        "test": "C",
+        "trial num": 2
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "GLOBAL_CUCKOO_HASH",
+        "test": "C",
+        "trial num": 3
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "GLOBAL_CUCKOO_HASH",
+        "test": "C",
+        "trial num": 4
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "GLOBAL_CUCKOO_HASH",
+        "test": "C",
+        "trial num": 5
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "GLOBAL_CUCKOO_HASH",
+        "test": "C",
+        "trial num": 6
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "GLOBAL_CUCKOO_HASH",
+        "test": "C",
+        "trial num": 7
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "GLOBAL_CUCKOO_HASH",
+        "test": "C",
+        "trial num": 8
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "GLOBAL_CUCKOO_HASH",
+        "test": "C",
+        "trial num": 9
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "GLOBAL_CUCKOO_HASH",
+        "test": "D",
+        "trial num": 0
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "GLOBAL_CUCKOO_HASH",
+        "test": "D",
+        "trial num": 1
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "GLOBAL_CUCKOO_HASH",
+        "test": "D",
+        "trial num": 2
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "GLOBAL_CUCKOO_HASH",
+        "test": "D",
+        "trial num": 3
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "GLOBAL_CUCKOO_HASH",
+        "test": "D",
+        "trial num": 4
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "GLOBAL_CUCKOO_HASH",
+        "test": "D",
+        "trial num": 5
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "GLOBAL_CUCKOO_HASH",
+        "test": "D",
+        "trial num": 6
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "GLOBAL_CUCKOO_HASH",
+        "test": "D",
+        "trial num": 7
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "GLOBAL_CUCKOO_HASH",
+        "test": "D",
+        "trial num": 8
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "GLOBAL_CUCKOO_HASH",
+        "test": "D",
+        "trial num": 9
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "GLOBAL_CUCKOO_HASH",
+        "test": "E",
+        "trial num": 0
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "GLOBAL_CUCKOO_HASH",
+        "test": "E",
+        "trial num": 1
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "GLOBAL_CUCKOO_HASH",
+        "test": "E",
+        "trial num": 2
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "GLOBAL_CUCKOO_HASH",
+        "test": "E",
+        "trial num": 3
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "GLOBAL_CUCKOO_HASH",
+        "test": "E",
+        "trial num": 4
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "GLOBAL_CUCKOO_HASH",
+        "test": "E",
+        "trial num": 5
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "GLOBAL_CUCKOO_HASH",
+        "test": "E",
+        "trial num": 6
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "GLOBAL_CUCKOO_HASH",
+        "test": "E",
+        "trial num": 7
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "GLOBAL_CUCKOO_HASH",
+        "test": "E",
+        "trial num": 8
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "GLOBAL_CUCKOO_HASH",
+        "test": "E",
+        "trial num": 9
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "GLOBAL_CUCKOO_HASH",
+        "test": "F",
+        "trial num": 0
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "GLOBAL_CUCKOO_HASH",
+        "test": "F",
+        "trial num": 1
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "GLOBAL_CUCKOO_HASH",
+        "test": "F",
+        "trial num": 2
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "GLOBAL_CUCKOO_HASH",
+        "test": "F",
+        "trial num": 3
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "GLOBAL_CUCKOO_HASH",
+        "test": "F",
+        "trial num": 4
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "GLOBAL_CUCKOO_HASH",
+        "test": "F",
+        "trial num": 5
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "GLOBAL_CUCKOO_HASH",
+        "test": "F",
+        "trial num": 6
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "GLOBAL_CUCKOO_HASH",
+        "test": "F",
+        "trial num": 7
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "GLOBAL_CUCKOO_HASH",
+        "test": "F",
+        "trial num": 8
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "GLOBAL_CUCKOO_HASH",
+        "test": "F",
+        "trial num": 9
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS",
+        "test": "A",
+        "trial num": 0
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS",
+        "test": "A",
+        "trial num": 1
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS",
+        "test": "A",
+        "trial num": 2
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS",
+        "test": "A",
+        "trial num": 3
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS",
+        "test": "A",
+        "trial num": 4
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS",
+        "test": "A",
+        "trial num": 5
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS",
+        "test": "A",
+        "trial num": 6
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS",
+        "test": "A",
+        "trial num": 7
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS",
+        "test": "A",
+        "trial num": 8
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS",
+        "test": "A",
+        "trial num": 9
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS",
+        "test": "B",
+        "trial num": 0
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS",
+        "test": "B",
+        "trial num": 1
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS",
+        "test": "B",
+        "trial num": 2
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS",
+        "test": "B",
+        "trial num": 3
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS",
+        "test": "B",
+        "trial num": 4
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS",
+        "test": "B",
+        "trial num": 5
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS",
+        "test": "B",
+        "trial num": 6
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS",
+        "test": "B",
+        "trial num": 7
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS",
+        "test": "B",
+        "trial num": 8
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS",
+        "test": "B",
+        "trial num": 9
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS",
+        "test": "C",
+        "trial num": 0
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS",
+        "test": "C",
+        "trial num": 1
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS",
+        "test": "C",
+        "trial num": 2
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS",
+        "test": "C",
+        "trial num": 3
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS",
+        "test": "C",
+        "trial num": 4
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS",
+        "test": "C",
+        "trial num": 5
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS",
+        "test": "C",
+        "trial num": 6
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS",
+        "test": "C",
+        "trial num": 7
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS",
+        "test": "C",
+        "trial num": 8
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS",
+        "test": "C",
+        "trial num": 9
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS",
+        "test": "D",
+        "trial num": 0
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS",
+        "test": "D",
+        "trial num": 1
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS",
+        "test": "D",
+        "trial num": 2
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS",
+        "test": "D",
+        "trial num": 3
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS",
+        "test": "D",
+        "trial num": 4
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS",
+        "test": "D",
+        "trial num": 5
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS",
+        "test": "D",
+        "trial num": 6
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS",
+        "test": "D",
+        "trial num": 7
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS",
+        "test": "D",
+        "trial num": 8
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS",
+        "test": "D",
+        "trial num": 9
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS",
+        "test": "E",
+        "trial num": 0
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS",
+        "test": "E",
+        "trial num": 1
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS",
+        "test": "E",
+        "trial num": 2
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS",
+        "test": "E",
+        "trial num": 3
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS",
+        "test": "E",
+        "trial num": 4
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS",
+        "test": "E",
+        "trial num": 5
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS",
+        "test": "E",
+        "trial num": 6
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS",
+        "test": "E",
+        "trial num": 7
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS",
+        "test": "E",
+        "trial num": 8
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS",
+        "test": "E",
+        "trial num": 9
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS",
+        "test": "F",
+        "trial num": 0
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS",
+        "test": "F",
+        "trial num": 1
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS",
+        "test": "F",
+        "trial num": 2
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS",
+        "test": "F",
+        "trial num": 3
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS",
+        "test": "F",
+        "trial num": 4
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS",
+        "test": "F",
+        "trial num": 5
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS",
+        "test": "F",
+        "trial num": 6
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS",
+        "test": "F",
+        "trial num": 7
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS",
+        "test": "F",
+        "trial num": 8
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS",
+        "test": "F",
+        "trial num": 9
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "RADIX_TREES",
+        "test": "A",
+        "trial num": 0
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "RADIX_TREES",
+        "test": "A",
+        "trial num": 1
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "RADIX_TREES",
+        "test": "A",
+        "trial num": 2
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "RADIX_TREES",
+        "test": "A",
+        "trial num": 3
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "RADIX_TREES",
+        "test": "A",
+        "trial num": 4
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "RADIX_TREES",
+        "test": "A",
+        "trial num": 5
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "RADIX_TREES",
+        "test": "A",
+        "trial num": 6
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "RADIX_TREES",
+        "test": "A",
+        "trial num": 7
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "RADIX_TREES",
+        "test": "A",
+        "trial num": 8
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "RADIX_TREES",
+        "test": "A",
+        "trial num": 9
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "RADIX_TREES",
+        "test": "B",
+        "trial num": 0
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "RADIX_TREES",
+        "test": "B",
+        "trial num": 1
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "RADIX_TREES",
+        "test": "B",
+        "trial num": 2
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "RADIX_TREES",
+        "test": "B",
+        "trial num": 3
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "RADIX_TREES",
+        "test": "B",
+        "trial num": 4
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "RADIX_TREES",
+        "test": "B",
+        "trial num": 5
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "RADIX_TREES",
+        "test": "B",
+        "trial num": 6
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "RADIX_TREES",
+        "test": "B",
+        "trial num": 7
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "RADIX_TREES",
+        "test": "B",
+        "trial num": 8
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "RADIX_TREES",
+        "test": "B",
+        "trial num": 9
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "RADIX_TREES",
+        "test": "C",
+        "trial num": 0
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "RADIX_TREES",
+        "test": "C",
+        "trial num": 1
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "RADIX_TREES",
+        "test": "C",
+        "trial num": 2
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "RADIX_TREES",
+        "test": "C",
+        "trial num": 3
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "RADIX_TREES",
+        "test": "C",
+        "trial num": 4
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "RADIX_TREES",
+        "test": "C",
+        "trial num": 5
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "RADIX_TREES",
+        "test": "C",
+        "trial num": 6
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "RADIX_TREES",
+        "test": "C",
+        "trial num": 7
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "RADIX_TREES",
+        "test": "C",
+        "trial num": 8
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "RADIX_TREES",
+        "test": "C",
+        "trial num": 9
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "RADIX_TREES",
+        "test": "D",
+        "trial num": 0
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "RADIX_TREES",
+        "test": "D",
+        "trial num": 1
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "RADIX_TREES",
+        "test": "D",
+        "trial num": 2
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "RADIX_TREES",
+        "test": "D",
+        "trial num": 3
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "RADIX_TREES",
+        "test": "D",
+        "trial num": 4
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "RADIX_TREES",
+        "test": "D",
+        "trial num": 5
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "RADIX_TREES",
+        "test": "D",
+        "trial num": 6
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "RADIX_TREES",
+        "test": "D",
+        "trial num": 7
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "RADIX_TREES",
+        "test": "D",
+        "trial num": 8
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "RADIX_TREES",
+        "test": "D",
+        "trial num": 9
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "RADIX_TREES",
+        "test": "E",
+        "trial num": 0
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "RADIX_TREES",
+        "test": "E",
+        "trial num": 1
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "RADIX_TREES",
+        "test": "E",
+        "trial num": 2
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "RADIX_TREES",
+        "test": "E",
+        "trial num": 3
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "RADIX_TREES",
+        "test": "E",
+        "trial num": 4
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "RADIX_TREES",
+        "test": "E",
+        "trial num": 5
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "RADIX_TREES",
+        "test": "E",
+        "trial num": 6
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "RADIX_TREES",
+        "test": "E",
+        "trial num": 7
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "RADIX_TREES",
+        "test": "E",
+        "trial num": 8
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "RADIX_TREES",
+        "test": "E",
+        "trial num": 9
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "RADIX_TREES",
+        "test": "F",
+        "trial num": 0
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "RADIX_TREES",
+        "test": "F",
+        "trial num": 1
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "RADIX_TREES",
+        "test": "F",
+        "trial num": 2
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "RADIX_TREES",
+        "test": "F",
+        "trial num": 3
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "RADIX_TREES",
+        "test": "F",
+        "trial num": 4
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "RADIX_TREES",
+        "test": "F",
+        "trial num": 5
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "RADIX_TREES",
+        "test": "F",
+        "trial num": 6
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "RADIX_TREES",
+        "test": "F",
+        "trial num": 7
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "RADIX_TREES",
+        "test": "F",
+        "trial num": 8
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "RADIX_TREES",
+        "test": "F",
+        "trial num": 9
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS_ROCACHE",
+        "test": "A",
+        "trial num": 0
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS_ROCACHE",
+        "test": "A",
+        "trial num": 1
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS_ROCACHE",
+        "test": "A",
+        "trial num": 2
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS_ROCACHE",
+        "test": "A",
+        "trial num": 3
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS_ROCACHE",
+        "test": "A",
+        "trial num": 4
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS_ROCACHE",
+        "test": "A",
+        "trial num": 5
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS_ROCACHE",
+        "test": "A",
+        "trial num": 6
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS_ROCACHE",
+        "test": "A",
+        "trial num": 7
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS_ROCACHE",
+        "test": "A",
+        "trial num": 8
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS_ROCACHE",
+        "test": "A",
+        "trial num": 9
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS_ROCACHE",
+        "test": "B",
+        "trial num": 0
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS_ROCACHE",
+        "test": "B",
+        "trial num": 1
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS_ROCACHE",
+        "test": "B",
+        "trial num": 2
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS_ROCACHE",
+        "test": "B",
+        "trial num": 3
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS_ROCACHE",
+        "test": "B",
+        "trial num": 4
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS_ROCACHE",
+        "test": "B",
+        "trial num": 5
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS_ROCACHE",
+        "test": "B",
+        "trial num": 6
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS_ROCACHE",
+        "test": "B",
+        "trial num": 7
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS_ROCACHE",
+        "test": "B",
+        "trial num": 8
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS_ROCACHE",
+        "test": "B",
+        "trial num": 9
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS_ROCACHE",
+        "test": "C",
+        "trial num": 0
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS_ROCACHE",
+        "test": "C",
+        "trial num": 1
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS_ROCACHE",
+        "test": "C",
+        "trial num": 2
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS_ROCACHE",
+        "test": "C",
+        "trial num": 3
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS_ROCACHE",
+        "test": "C",
+        "trial num": 4
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS_ROCACHE",
+        "test": "C",
+        "trial num": 5
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS_ROCACHE",
+        "test": "C",
+        "trial num": 6
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS_ROCACHE",
+        "test": "C",
+        "trial num": 7
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS_ROCACHE",
+        "test": "C",
+        "trial num": 8
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS_ROCACHE",
+        "test": "C",
+        "trial num": 9
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS_ROCACHE",
+        "test": "D",
+        "trial num": 0
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS_ROCACHE",
+        "test": "D",
+        "trial num": 1
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS_ROCACHE",
+        "test": "D",
+        "trial num": 2
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS_ROCACHE",
+        "test": "D",
+        "trial num": 3
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS_ROCACHE",
+        "test": "D",
+        "trial num": 4
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS_ROCACHE",
+        "test": "D",
+        "trial num": 5
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS_ROCACHE",
+        "test": "D",
+        "trial num": 6
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS_ROCACHE",
+        "test": "D",
+        "trial num": 7
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS_ROCACHE",
+        "test": "D",
+        "trial num": 8
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS_ROCACHE",
+        "test": "D",
+        "trial num": 9
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS_ROCACHE",
+        "test": "E",
+        "trial num": 0
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS_ROCACHE",
+        "test": "E",
+        "trial num": 1
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS_ROCACHE",
+        "test": "E",
+        "trial num": 2
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS_ROCACHE",
+        "test": "E",
+        "trial num": 3
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS_ROCACHE",
+        "test": "E",
+        "trial num": 4
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS_ROCACHE",
+        "test": "E",
+        "trial num": 5
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS_ROCACHE",
+        "test": "E",
+        "trial num": 6
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS_ROCACHE",
+        "test": "E",
+        "trial num": 7
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS_ROCACHE",
+        "test": "E",
+        "trial num": 8
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS_ROCACHE",
+        "test": "E",
+        "trial num": 9
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS_ROCACHE",
+        "test": "F",
+        "trial num": 0
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS_ROCACHE",
+        "test": "F",
+        "trial num": 1
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS_ROCACHE",
+        "test": "F",
+        "trial num": 2
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS_ROCACHE",
+        "test": "F",
+        "trial num": 3
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS_ROCACHE",
+        "test": "F",
+        "trial num": 4
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS_ROCACHE",
+        "test": "F",
+        "trial num": 5
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS_ROCACHE",
+        "test": "F",
+        "trial num": 6
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS_ROCACHE",
+        "test": "F",
+        "trial num": 7
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS_ROCACHE",
+        "test": "F",
+        "trial num": 8
+    },
+    {
+        "layout": "70",
+        "total_time": "N/A",
+        "struct": "HASHFS_ROCACHE",
+        "test": "F",
+        "trial num": 9
+    }
+]
