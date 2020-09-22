@@ -1,0 +1,107 @@
+[
+    {
+        "layout": 0.85,
+        "throughput": 917.3,
+        "struct": "none",
+        "bench": "filebench",
+        "workload": "varmail"
+    },
+    {
+        "layout": 0.85,
+        "throughput": 900.3,
+        "struct": "none",
+        "bench": "filebench",
+        "workload": "varmail"
+    },
+    {
+        "layout": 0.85,
+        "throughput": 912.2,
+        "struct": "none",
+        "bench": "filebench",
+        "workload": "varmail"
+    },
+    {
+        "layout": 0.85,
+        "throughput": 876.0,
+        "struct": "radix_trees",
+        "bench": "filebench",
+        "workload": "varmail"
+    },
+    {
+        "layout": 0.85,
+        "throughput": 869.3,
+        "struct": "radix_trees",
+        "bench": "filebench",
+        "workload": "varmail"
+    },
+    {
+        "layout": 0.85,
+        "throughput": 871.0,
+        "struct": "radix_trees",
+        "bench": "filebench",
+        "workload": "varmail"
+    },
+    {
+        "layout": 0.85,
+        "throughput": 790.6,
+        "struct": "extent_trees",
+        "bench": "filebench",
+        "workload": "varmail"
+    },
+    {
+        "layout": 0.85,
+        "throughput": 790.4,
+        "struct": "extent_trees",
+        "bench": "filebench",
+        "workload": "varmail"
+    },
+    {
+        "layout": 0.85,
+        "throughput": 789.5,
+        "struct": "extent_trees",
+        "bench": "filebench",
+        "workload": "varmail"
+    },
+    {
+        "layout": 0.85,
+        "throughput": 887.0,
+        "struct": "global_cuckoo_hash",
+        "bench": "filebench",
+        "workload": "varmail"
+    },
+    {
+        "layout": 0.85,
+        "throughput": 889.7,
+        "struct": "global_cuckoo_hash",
+        "bench": "filebench",
+        "workload": "varmail"
+    },
+    {
+        "layout": 0.85,
+        "throughput": 893.3,
+        "struct": "global_cuckoo_hash",
+        "bench": "filebench",
+        "workload": "varmail"
+    },
+    {
+        "layout": 0.85,
+        "throughput": 905.3,
+        "struct": "hashfs_rocache",
+        "bench": "filebench",
+        "workload": "varmail"
+    },
+    {
+        "layout": 0.85,
+        "throughput": 898.3,
+        "struct": "hashfs_rocache",
+        "bench": "filebench",
+        "workload": "varmail"
+    },
+    {
+        "layout": 0.85,
+        "throughput": 918.2,
+        "struct": "hashfs_rocache",
+        "bench": "filebench",
+        "workload": "varmail"
+    }
+]

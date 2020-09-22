@@ -1,0 +1,107 @@
+[
+    {
+        "layout": 0.85,
+        "throughput": 1139.0,
+        "struct": "none",
+        "bench": "filebench",
+        "workload": "fileserver"
+    },
+    {
+        "layout": 0.85,
+        "throughput": 1135.9,
+        "struct": "none",
+        "bench": "filebench",
+        "workload": "fileserver"
+    },
+    {
+        "layout": 0.85,
+        "throughput": 1132.2,
+        "struct": "none",
+        "bench": "filebench",
+        "workload": "fileserver"
+    },
+    {
+        "layout": 0.85,
+        "throughput": 1022.2,
+        "struct": "radix_trees",
+        "bench": "filebench",
+        "workload": "fileserver"
+    },
+    {
+        "layout": 0.85,
+        "throughput": 1017.9,
+        "struct": "radix_trees",
+        "bench": "filebench",
+        "workload": "fileserver"
+    },
+    {
+        "layout": 0.85,
+        "throughput": 1026.1,
+        "struct": "radix_trees",
+        "bench": "filebench",
+        "workload": "fileserver"
+    },
+    {
+        "layout": 0.85,
+        "throughput": 1154.3,
+        "struct": "extent_trees",
+        "bench": "filebench",
+        "workload": "fileserver"
+    },
+    {
+        "layout": 0.85,
+        "throughput": 1143.7,
+        "struct": "extent_trees",
+        "bench": "filebench",
+        "workload": "fileserver"
+    },
+    {
+        "layout": 0.85,
+        "throughput": 1149.2,
+        "struct": "extent_trees",
+        "bench": "filebench",
+        "workload": "fileserver"
+    },
+    {
+        "layout": 0.85,
+        "throughput": 1139.1,
+        "struct": "global_cuckoo_hash",
+        "bench": "filebench",
+        "workload": "fileserver"
+    },
+    {
+        "layout": 0.85,
+        "throughput": 1138.0,
+        "struct": "global_cuckoo_hash",
+        "bench": "filebench",
+        "workload": "fileserver"
+    },
+    {
+        "layout": 0.85,
+        "throughput": 1138.4,
+        "struct": "global_cuckoo_hash",
+        "bench": "filebench",
+        "workload": "fileserver"
+    },
+    {
+        "layout": 0.85,
+        "throughput": 1431.8,
+        "struct": "hashfs_rocache",
+        "bench": "filebench",
+        "workload": "fileserver"
+    },
+    {
+        "layout": 0.85,
+        "throughput": 1427.2,
+        "struct": "hashfs_rocache",
+        "bench": "filebench",
+        "workload": "fileserver"
+    },
+    {
+        "layout": 0.85,
+        "throughput": 1430.7,
+        "struct": "hashfs_rocache",
+        "bench": "filebench",
+        "workload": "fileserver"
+    }
+]
