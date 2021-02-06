@@ -69,12 +69,12 @@ class MTCCRunner(BenchRunner):
 
         if not self.args.cache_perf_only:
             if setup_args:
-                self._run_trial_continue(setup_args, cwd, None)
+                self._run_trial_continue(setup_args, cwd, None, timeout=(10*60))
 
-                total_time = self._run_trial_end(trial_args, cwd, self._parse_readfile_time)
+                total_time = self._run_trial_end(trial_args, cwd, self._parse_readfile_time, timeout=(10*60))
 
             else:
-                total_time = self._run_trial(trial_args, cwd, self._parse_readfile_time)
+                total_time = self._run_trial(trial_args, cwd, self._parse_readfile_time, timeout=(10*60))
 
         # Get the stats.
         stat_obj = self._parse_trial_stat_files(total_time, labels)
@@ -124,6 +124,7 @@ class MTCCRunner(BenchRunner):
 
         stat_objs = []
         numa_node = self.args.numa_node
+        threads = self.args.num_threads
         dir_str = str(self.mtcc_path)
 
         idx_struct, layout_score, start_size, io_size, reps, \
@@ -142,6 +143,7 @@ class MTCCRunner(BenchRunner):
         labels['repetitions'] = reps
         labels['num files'] = nfiles
         labels['trial num'] = trial_num
+        labels['threads'] = threads
         print('\nLabels:')
         pprint(labels)
         print()
@@ -149,30 +151,26 @@ class MTCCRunner(BenchRunner):
         end_size = int(start_size + ((io_size * reps) / nfiles))
 
         mtcc_insert_arg_str = \
-            f'''taskset -c 0
-                numactl -N {numa_node} -m {numa_node} {dir_str}/run.sh
-                {dir_str}/MTCC -b {io_size} -s 1 -j 1 -n {nfiles}
+            f'''numactl -N {numa_node} -m {numa_node} {dir_str}/run.sh
+                {dir_str}/MTCC -b {io_size} -s 1 -j {threads} -n {nfiles}
                 -S {start_size} -M {end_size}
                 -w {io_size} -r 0'''
 
         setup_size = 1024 * 4096 if start_size > (1024 * 4096) else start_size
 
         readtest_setup_arg_str = \
-            f'''taskset -c 0
-                numactl -N {numa_node} -m {numa_node} {dir_str}/run.sh
+            f'''numactl -N {numa_node} -m {numa_node} {dir_str}/run.sh
                 {dir_str}/MTCC -b {setup_size} -s 1 -j 1 -n {nfiles}
                 -M {start_size} -S {start_size}
                 -w {setup_size} -r 0'''
 
         mtcc_seq_arg_str = \
-            f'''taskset -c 0
-                numactl -N {numa_node} -m {numa_node} {dir_str}/run.sh
+            f'''numactl -N {numa_node} -m {numa_node} {dir_str}/run.sh
                 {dir_str}/readfile -b {io_size} -s 1 -j 1 -n {nfiles}
                 -r {io_size * reps} {"-p" if self.args.preread else ""}'''
 
         mtcc_rand_arg_str = \
-            f'''taskset -c 0
-                numactl -N {numa_node} -m {numa_node} {dir_str}/run.sh
+            f'''numactl -N {numa_node} -m {numa_node} {dir_str}/run.sh
                 {dir_str}/readfile -b {io_size} -s 0 -j 1 -n {nfiles}
                 -r {io_size * reps} -x {"-p" if self.args.preread else ""}'''
 
@@ -189,8 +187,8 @@ class MTCCRunner(BenchRunner):
         if not self.skip_insert:
             insert_labels = {}
             insert_labels.update(labels)
-            insert_labels['test'] = 'Insert'
-            print(f'\nInsert test: "{" ".join(insert_trial_args)}"')
+            insert_labels['test'] = 'Insert' if threads == 1 else 'Concurrency'
+            print(f'\n{insert_labels["test"]} test: "{" ".join(insert_trial_args)}"')
             stat_objs += self._run_mtcc_trial(
                 self.mtcc_path, None, insert_trial_args, insert_labels)
 
@@ -200,24 +198,26 @@ class MTCCRunner(BenchRunner):
         if self.args.always_mkfs:
             self.kernfs.mkfs()
         # 2) Sequential read test
-        seq_labels = {}
-        seq_labels.update(labels)
-        seq_labels['test'] = 'Sequential Read'
-        print(f'\nSequential read setup: "{" ".join(seq_setup_args)}"')
-        print(f'\nSequential read setup: "{" ".join(seq_trial_args)}"')
-        stat_objs += self._run_mtcc_trial(
-            self.mtcc_path, seq_setup_args, seq_trial_args, seq_labels)
+        if threads == 1:
+            seq_labels = {}
+            seq_labels.update(labels)
+            seq_labels['test'] = 'Sequential Read'
+            print(f'\nSequential read setup: "{" ".join(seq_setup_args)}"')
+            print(f'\nSequential read setup: "{" ".join(seq_trial_args)}"')
+            stat_objs += self._run_mtcc_trial(
+                self.mtcc_path, seq_setup_args, seq_trial_args, seq_labels)
 
         if self.args.always_mkfs:
             self.kernfs.mkfs()
         # 3) Random read test
-        rand_labels = {}
-        rand_labels.update(labels)
-        rand_labels['test'] = 'Random Read'
-        print(f'\nRandom read setup: "{" ".join(rand_setup_args)}"')
-        print(f'\nRandom read setup: "{" ".join(rand_trial_args)}"')
-        stat_objs += self._run_mtcc_trial(
-            self.mtcc_path, rand_setup_args, rand_trial_args, rand_labels)
+        if threads == 1:
+            rand_labels = {}
+            rand_labels.update(labels)
+            rand_labels['test'] = 'Random Read'
+            print(f'\nRandom read setup: "{" ".join(rand_setup_args)}"')
+            print(f'\nRandom read setup: "{" ".join(rand_trial_args)}"')
+            stat_objs += self._run_mtcc_trial(
+                self.mtcc_path, rand_setup_args, rand_trial_args, rand_labels)
 
         return stat_objs
 
@@ -318,6 +318,7 @@ class MTCCRunner(BenchRunner):
 
                 ntotal = 3 * len(workloads) if not self.skip_insert else 2 * len(workloads)
                 ntotal = ntotal if not self.args.only_insert else len(workloads)
+                ntotal = ntotal if self.args.num_threads == 1 else len(workloads)
                 if len(stat_objs) != ntotal:
                     print(f'What? Should have {ntotal}, only have {len(stat_objs)}!')
 
@@ -394,5 +395,8 @@ class MTCCRunner(BenchRunner):
 
         parser.add_argument('--always-mkfs', action='store_true',
                             help='Always rerun mkfs (runs insert-seq-rand-mkfs, repeat).')
+
+        parser.add_argument('--num-threads', '-j', type=int, default=1,
+                            help='Number of threads')
 
         cls._add_common_arguments(parser)

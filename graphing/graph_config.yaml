@@ -9,6 +9,7 @@ display_options:
     global_cuckoo_hash: "Global\nHash Table"
     global_cuckoo_hash_compact: Global Cuckoo Hash Table (Compact)
     hashfs: HashFS
+    hashfs_rocache: HashFS
 
   breakdown_names:
     indexing: Indexing
@@ -25,7 +26,20 @@ display_options:
   benchmark_order:
     - 1MB
     - 64kB
+    - 64KB
     - 4kB
+    - 4GB
+    - 4MB
+    - 1MB
+    - 4KB
+    - 16B
+    - Sequential Read
+    - Random Read
+    - Insert
+    - 80%
+    - 95%
+    - 98%
+    - 100%
 
   config_colors:
     "Global\nHash Table": '#e16b6b'
@@ -43,11 +57,11 @@ display_options:
   config_order:
     - Extent Trees
     - Radix Trees
-    - "Level\nHash Tables"
     - "Global\nHash Table"
     - Global Cuckoo Hash Table (Compact)
     - Global Hash Table
     - Global Hash Table (Compact)
     - HashFS
     - "Strata\nBaseline"
+    - "Level\nHash Tables"
 

@@ -26,9 +26,10 @@ class BenchRunner:
                       'GLOBAL_HASH_TABLE', 'GLOBAL_CUCKOO_HASH',
                       'GLOBAL_HASH_TABLE_COMPACT',
                       'GLOBAL_CUCKOO_HASH_COMPACT',
-                      'LEVEL_HASH_TABLES', 'RADIX_TREES', 'NONE', 'HASHFS' ]
+                      'LEVEL_HASH_TABLES', 'RADIX_TREES', 'NONE', 'HASHFS',
+                      'HASHFS_ROCACHE' ]
     IDX_DEFAULT   = [ 'EXTENT_TREES', 
-                      'GLOBAL_HASH_TABLE', 'GLOBAL_CUCKOO_HASH',
+                      'HASHFS_ROCACHE', 'GLOBAL_CUCKOO_HASH',
                       'RADIX_TREES', 'NONE', 'LEVEL_HASH_TABLES' ]
     #LAYOUT_SCORES = ['100', '90', '80', '70', '60']
     LAYOUT_SCORES = ['100', '70']
@@ -148,7 +149,7 @@ class BenchRunner:
             # embed()
             # print("OUT")
             if not try_parse:
-                print(f'Output: {stdout.read().decode()}')
+                print(f'Output: {stdout.decode()}')
             else:
                 warn('\tTrying to parse anyways!')
                 # print(f'o: {stdout.decode()}')
@@ -187,7 +188,7 @@ class BenchRunner:
                 self.kernfs.stop()
 
             # print(self.kernfs.proc.stdout.read())
-            raise Exception('wut')
+            # raise Exception('wut')
             if not no_warn:
                 warn('Process "{}" hangs!'.format(' '.join(bench_args)),
                      UserWarning)
@@ -222,7 +223,7 @@ class BenchRunner:
                 self.kernfs.stop()
 
             # print(self.kernfs.proc.stdout.read())
-            raise Exception('wut')
+            # raise Exception('wut')
             if not no_warn:
                 warn('Process "{}" hangs!'.format(' '.join(bench_args)),
                      UserWarning)
@@ -258,7 +259,7 @@ class BenchRunner:
                 self.kernfs.stop()
 
             # print(self.kernfs.proc.stdout.read())
-            raise Exception('wut')
+            # raise Exception('wut')
             if not no_warn:
                 warn('Process "{}" hangs!'.format(' '.join(bench_args)),
                      UserWarning)

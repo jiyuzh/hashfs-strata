@@ -49,6 +49,9 @@ class IDXDataObject:
 
         parsed['struct'] = parsed['struct'].upper()
 
+        # if parsed['struct'] == 'LEVEL_HASH_TABLES':
+        #     embed()
+
         # Now, some indexing stuff
         if 'lsm' in data_obj:
             parsed['indexing'] = data_obj['lsm']['tsc']
@@ -67,9 +70,12 @@ class IDXDataObject:
         return keys, parsed
 
     def _parse_relevant_fields(self, data_obj):
+        # embed()
         parsed = {}
         if data_obj is not None and not data_obj:
-            return None
+            return None, None
+
+        # embed()
 
         if 'bench' in data_obj and data_obj['bench'] == 'db_bench':
             return self._parse_db_bench(data_obj)
@@ -83,7 +89,9 @@ class IDXDataObject:
 
         if len(parsed) != len(labels) and 'ycsb_workload' not in data_obj \
             and 'Concurrency' not in parsed['test']:
+            assert False, 'noooooo'
             return None, None
+
 
         if 'start size' in parsed:
             if parsed['start size'] / 1024 ** 3 > 1:
@@ -94,15 +102,38 @@ class IDXDataObject:
                 parsed['display start size'] = f'{parsed["start size"] // 1024}KB'
             else:
                 parsed['display start size'] = f'{int(parsed["start size"])}'
+        
+        if 'io size' in parsed:
+            if parsed['io size'] / 1024 ** 3 >= 1:
+                parsed['display io size'] = f'{parsed["io size"] // 1024 ** 3}GB'
+            elif parsed['io size'] / 1024 ** 2 >= 1:
+                parsed['display io size'] = f'{parsed["io size"] // 1024 ** 2}MB'
+            elif parsed['io size'] / 1024 >= 1:
+                parsed['display io size'] = f'{parsed["io size"] // 1024}KB'
+            else:
+                parsed['display io size'] = f'{int(parsed["io size"])}B'
 
         okeys = list(parsed.keys())
         if 'trial num' in okeys:
             okeys.remove('trial num')
+        
+        if 'threads' in data_obj:
+            parsed['threads'] = data_obj['threads']
+            okeys += ['threads']
+
+        if 'num files' in parsed and 'start size' in parsed:
+            n = parsed['num files']
+            n = n + 3 if n > 120 else n
+            capacity = parsed['start size'] * n / (125 * 1024**3)
+            parsed['capacity'] = f'{capacity:.0%}'
+            if parsed['capacity'] == '96%':
+                parsed['capacity'] = '95%'
+            okeys += ['capacity']
 
         if 'repetitions' in parsed:
             parsed['repetitions'] = str(int(parsed['repetitions']))
             parsed['reps'] = int(parsed['repetitions'])
-            parsed['hot_or_cold'] = 'hot' if parsed['reps'] > 1000 else 'cold'
+            parsed['hot_or_cold'] = 'hot' if parsed['reps'] > 262144 else 'cold'
             okeys += ['hot_or_cold']
 
         parsed['layout'] = float(parsed['layout']) / 100.0
@@ -130,12 +161,13 @@ class IDXDataObject:
         if 'read_data' in data_obj:
             parsed['read_data_bytes_per_cycle'] = data_obj['read_data']['bytes'] / max(data_obj['read_data']['tsc'], 1.0)
 
-        if 'threads' in data_obj and data_obj['threads'] != 'T1':
-            return None, None
-        if 'num threads' in data_obj:
-            parsed['threads'] = int(data_obj['num threads'])
-            if parsed['threads'] > 32:
-                return None, None
+        # if 'threads' in data_obj and data_obj['threads'] != 'T1':
+        #     return None, None
+        # if 'num threads' in data_obj:
+        #     parsed['threads'] = int(data_obj['num threads'])
+        #     if parsed['threads'] > 32:
+        #         return None, None
+
         if 'TP' in data_obj:
             parsed['throughput'] = data_obj['TP']
         if 'fragmentation' in data_obj:
@@ -149,7 +181,7 @@ class IDXDataObject:
             parsed['throughput'] = data_obj['throughput']
         if 'total_time' in data_obj:
             parsed['total_time'] = data_obj['total_time']
-        if 'idx_stats' in data_obj:
+        if 'idx_stats' in data_obj and data_obj['idx_stats']:
             parsed['idx_compute_per_op'] = data_obj['idx_stats']['compute_tsc'] / max(data_obj['idx_stats']['compute_nr'], 1.0)
 
             if 'avg_depth' in data_obj['idx_stats']:
@@ -175,6 +207,9 @@ class IDXDataObject:
                 #parsed['indexing'] = kernfs_obj['digest'] - parsed['read_data']
                 parsed['nops'] = kernfs_obj['search']['nr_search']
 
+            # if parsed['struct'] == "GLOBAL_CUCKOO_HASH" and parsed['reps'] == 10 and parsed['num files'] == 1:
+            #     parsed['indexing'] /= 3
+
             total = parsed['indexing'] + parsed['read_data']
             parsed['total_breakdown'] = total
 
@@ -183,6 +218,7 @@ class IDXDataObject:
             parsed['hash_entries_per_op'] = float(hl['nentries'] / max(hl['nops'], 1.0)) 
 
         if 'total_time' in data_obj and 'io size' in data_obj:
+            '''
             total_bytes = data_obj['io size'] * \
                 (data_obj['l0']['nr'] + data_obj['log']['write']['nr'])
             parsed['throughput'] = total_bytes / data_obj['total_time']
@@ -193,6 +229,24 @@ class IDXDataObject:
             read_bytes = data_obj['io size'] * data_obj['log']['write']['nr']
             parsed['write_throughput'] = read_bytes / data_obj['total_time']
             parsed['write_throughput_mb'] = parsed['write_throughput'] / (1024 ** 2)
+            '''
+            # use read data and log write.
+            read_bytes = data_obj['read_data']['bytes']
+            write_bytes = data_obj['io size'] * data_obj['log']['write']['nr']
+            total_bytes = read_bytes + write_bytes
+                
+            parsed['throughput'] = total_bytes / data_obj['total_time']
+            parsed['read_throughput'] = read_bytes / data_obj['total_time']
+            parsed['read_throughput_mb'] = parsed['read_throughput'] / (1024 ** 2)
+            parsed['write_throughput'] = write_bytes / data_obj['total_time']
+            parsed['write_throughput_mb'] = parsed['write_throughput'] / (1024 ** 2)
+
+            read_ktsc = max(parsed['total_breakdown'] / 1000, 1)
+            write_ktsc = max(data_obj['kernfs']['digest'] / 1000, 1)
+            parsed['read_tp_ktsc'] = read_bytes / read_ktsc
+            parsed['write_tp_ktsc'] = write_bytes / write_ktsc
+            # Not precise, but fine
+            parsed['total_tp_ktsc'] = (read_bytes + write_bytes) / (read_ktsc + write_ktsc)
 
 
         if 'cache' in data_obj:
@@ -239,7 +293,7 @@ class IDXDataObject:
             parsed['throughput'] = float(data_obj['KTPS'])
             ops = ["READ", "UPDATE", "SCAN", "INSERT", "READMODIFYWRITE"]
             keys = [f'{k.lower()}_latency' for k in ops]
-            okeys += keys
+            # okeys += keys
             okeys += ['workload']
             parsed['op_cycles'] = 0
             parsed['op_cnt'] = 0
@@ -256,6 +310,7 @@ class IDXDataObject:
                     parsed['op_cnt'] += int(data_obj[op]['cnt'])
             
             if all_zero:
+                assert False, 'huh?'
                 return None, None
 
             parsed['op_latency'] = parsed['op_cycles'] / max(parsed['op_cnt'], 1.0)
@@ -264,6 +319,7 @@ class IDXDataObject:
             parsed['throughput_mbs'] = parsed['throughput'] / (1024 ** 2)
             parsed['throughput_kbs'] = parsed['throughput'] / (1024)
 
+        # print('end!')
         # embed()
         return okeys, parsed
 
@@ -306,6 +362,7 @@ class IDXDataObject:
         for fp in files:
             with fp.open() as f:
                 objs = json.load(f)
+                # embed()
                 for obj in objs:
                     keys, parsed_data = self._parse_relevant_fields(obj)
                     key_str = json.dumps(keys)
@@ -322,6 +379,7 @@ class IDXDataObject:
             # df_list += [pd.DataFrame(d).reset_index(drop=True)]
             df_list += [pd.DataFrame(d)]
 
+        # embed()
         df_combined = pd.concat(df_list).reset_index(drop=True)
         
         df_list = []
@@ -349,9 +407,10 @@ class IDXDataObject:
         dfg = df_combined.groupby(groupby_list)
         df_mean = dfg.mean()
         ntrials = len(data)
-        df_ci = ((1.96 * dfg.std()) / np.sqrt(ntrials))
+        df_ci = ((1.96 * dfg.std()) / np.sqrt(ntrials)).fillna(1)
         # print('passed!')
         # embed()
+        # df_mean['']
         # df_ci = ((1.645 * dfg.std(ddof=0)) / np.sqrt(ntrials))
         # df_ci = ((1.96 * dfg.std(ddof=0)) / (dfg.count() ** (1/2)))
 
@@ -394,6 +453,9 @@ class IDXDataObject:
             df_mean['indexing_per_rep'] = df_mean['indexing'] / df_mean['reps']
             df_ci['indexing_per_rep_ci'] = df_ci['indexing_ci'] / df_mean['reps']
 
+            df_mean['hack_ratio'] = df_mean['indexing_per_rep'] / df_mean['read_data_per_rep']
+            df_ci['hack_ratio_ci'] = df_ci['indexing_per_rep_ci'] / df_ci['read_data_per_rep_ci']
+
         if 'indexing' in df_mean:
             df_mean['indexing_raw'] = df_mean['indexing'] / df_mean['indexing'].min()
             df_ci['indexing_raw_ci'] = df_ci['indexing_ci'] / df_mean['indexing'].min()
@@ -433,12 +495,18 @@ class IDXDataObject:
             df_ci['total_breakdown_ci'] /= df_mean['total_breakdown']
             df_mean['total_breakdown'] /= df_mean['total_breakdown']
 
+        # if 'indexing_per_rep' in df_mean:
+        #     abs_min = df_mean['indexing_per_rep'].min()
+        #     df_mean['indexing_relative'] = df_mean['indexing_per_rep'] / abs_min
+        #     df_ci['indexing_relative_ci'] = df_ci['indexing_per']
+
         # self.df = df_list[0].reindex(df_mean.index) # to preserve string fields
         # self.df[df_mean.columns] = df_mean
         # self.df = pd.concat([self.df, df_ci], axis=1)
+        # embed()
         self.df = df_mean.reset_index()
         df_ci = df_ci.reset_index()
-        # embed()q
+        # embed()
         self.df = pd.concat([self.df, df_ci], axis=1)
         # embed()
 

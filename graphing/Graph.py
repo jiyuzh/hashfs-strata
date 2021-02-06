@@ -51,7 +51,10 @@ class Grapher:
 
         self.barchart_defaults = {
                                     'edgecolor': 'black',
-                                    'linewidth': 1.0,
+                                    'linewidth': 0.7,
+                                    'error_kw': {
+                                        'elinewidth': 0.8,
+                                    }
                                  }
 
     def _get_config_name(self, config_name):
@@ -369,15 +372,27 @@ class Grapher:
                 elif isinstance(label, float):
                     new_label = f'{round(label, 2)}'
                     new_labels += [new_label]
-                elif isinstance(label, str):
+                elif isinstance(label, str) or isinstance(label, int):
                     new_labels += [label]
                 else:
                     raise Exception('huh?')
 
-            plt.gca().set_yticklabels(new_labels)
             # this causes weird truncation of bars on the graph
             #plt.yticks(ticks=range(len(new_labels)), labels=new_labels, ha='right')
             print(new_labels)
+            if new_labels == ['A', 'B', 'C', 'D', 'E', 'F']:
+                new_labels = [
+                    'Workload A\n(50% read,\n50% update)',
+                    'Workload B\n(95% read,\n5% update)',
+                    'Workload C\n(100% read)',
+                    'Workload D\n(95% read,\n5% insert)',
+                    'Workload E\n(95% scan,\n5% inserts)',
+                    'Workload F\n(50% read,\n50% RMW)'
+                ]
+                print(new_labels)
+            
+            plt.gca().set_yticklabels(new_labels)
+
             minor_ticks = []
             if self._kwargs_has(kwargs, 'per_tick_label'):
                 # Required to determine position of ticks.

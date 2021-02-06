@@ -78,6 +78,7 @@ class IDXGrapher:
 
         df = self.data.get_dataframe()
         # options = layout['options']
+        # embed()
 
         df = self._filter_configs(df, layout)
 
@@ -92,12 +93,15 @@ class IDXGrapher:
                     if isinstance(config['axis'], list) else \
                         [config['axis'], config['groups']]
 
+        # embed()
         df = df.set_index(new_index)
         df = df[~df.index.duplicated(keep='last')]
         
+        # embed()
         series = df[config['plot']]
         means_df = series.unstack()
         ci_df = df[f'{config["plot"]}_ci'].unstack().fillna(0)
+        # embed()
 
         if means_df.index.names[0] == 'layout':
             means_df.sort_index(axis=0, ascending=False, inplace=True)
@@ -300,8 +304,10 @@ class IDXGrapher:
         fig.tight_layout()
 
         output_file = str(self.output_dir / self.schema['file_name'])
-        plt.savefig(output_file, dpi=300, bbox_inches='tight', pad_inches=0.02,
+        plt.tight_layout()
+        plt.savefig(output_file, dpi=600, bbox_inches='tight', pad_inches=0.02,
                     additional_artists=artists)
+        # plt.savefig(output_file, dpi=300, pad_inches=0.02, additional_artists=artists)
         plt.close()
 
     @classmethod

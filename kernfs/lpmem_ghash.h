@@ -96,7 +96,9 @@ static void print_hashtable_stats(hash_stats_t *s) {
 typedef paddr_t (*hash_func64_t)(paddr_t key);
 //need to include global.h, shared.h, fs.h
 typedef struct pmem_nvm_hashtable_volatile_metadata {
-	paddr_t *entries;
+    size_t nbytes;
+    paddr_t *entries_pm;
+	paddr_t *entries; // could be PM or not
 	hash_func64_t hash_func;
 } pmem_nvm_hash_vol_t;
 
@@ -147,7 +149,7 @@ typedef struct pmem_nvm_hashtable_index {
 
 extern uint8_t *dax_addr[];
 extern pmem_nvm_hash_idx_t *pmem_ht;
-
+extern pmem_nvm_hash_vol_t *pmem_ht_vol;
 
 
 void

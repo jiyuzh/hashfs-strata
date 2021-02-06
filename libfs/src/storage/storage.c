@@ -5,11 +5,13 @@ struct block_device *g_bdev[g_n_devices + 1];
 #if 1
 char *g_dev_path[] = {
 	(char *)"unused",
-	(char *)"/dev/dax0.6",
-	// (char *)"/dev/dax0.7",
+	// (char *)"/dev/dax0.6",
+	(char *)"/dev/dax0.7",
 	(char *)"/tmp/devone",
 	(char *)"PCIe-SSD",
-	(char *)"/dev/dax0.3",
+	// (char *)"/dev/dax0.3",
+	(char *)"/dev/dax0.8",
+	// (char *)"/dev/dax0.9",
     (char *)"/dev/dax0.4",
 	//(char *)"/tmp/devtwo",
 	//(char *)"/dev/dax2.0",

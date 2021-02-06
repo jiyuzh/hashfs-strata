@@ -9,6 +9,7 @@
 #include "concurrency/thread.h"
 #include "filesystem/fs.h"
 #include "filesystem/slru.h"
+#include "filesystem/lpmem_ghash.h"
 #include "io/block_io.h"
 #include "global/mem.h"
 #include "global/util.h"
@@ -144,8 +145,10 @@ void shutdown_log(void)
 	if (atomic_load(&g_fs_log->log_sb->n_digest)) {
 		mlfs_info("%s", "[L] Digesting remaining log data\n");
 		while(make_digest_request_async(100) != -EBUSY);
+		mlfs_info("%s", "[L]\twaiting\n");
 		m_barrier();
 		wait_on_digesting();
+		mlfs_info("%s", "[L]\twaiting over\n");
 	}
 	unlink(g_addr.sun_path);
 }
@@ -1288,11 +1291,9 @@ void add_to_loghdr(uint8_t type, struct inode *inode, offset_t data,
 void wait_on_digesting()
 {
 	uint64_t tsc_begin, tsc_end;
-	if (enable_perf_stats)
-		tsc_begin = asm_rdtsc();
+	if (enable_perf_stats) tsc_begin = asm_rdtsc();
 
-	while(g_fs_log->digesting)
-		cpu_relax();
+	while(g_fs_log->digesting) cpu_relax();
 
 	if (enable_perf_stats) {
 		tsc_end = asm_rdtsc();
@@ -1429,9 +1430,15 @@ void handle_digest_response(char *ack_cmd)
 	//cleanup_lru_list(lru_updated);
 
 	if (g_idx_cached && IDXAPI_IS_GLOBAL()) {
+		// printf("INVALIDATE!\n");
         int api_err = mlfs_hash_cache_invalidate();
         if (api_err) panic("couldn't invalidate cache!\n");
     }
+
+  	if (IDXAPI_IS_HASHFS() && IDXAPI_IS_ROCACHED()) {
+    	// printf("RO caching update!\n");
+    	memcpy((char*)pmem_ht_vol->entries, pmem_ht_vol->entries_pm, pmem_ht_vol->nbytes);
+  	}
 
 	// TODO: optimize this. Now sync all inodes in the inode_hash.
 	// As the optimization, Kernfs sends inodes lists (via shared memory),

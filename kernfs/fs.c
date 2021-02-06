@@ -1899,6 +1899,8 @@ static void handle_digest_request(void *arg)
 	addr_t next_hdr_of_digested_hdr;
     uint64_t tsc_begin;
 
+	fprintf(stderr, "\nBEGIN DIGEST\n");
+
 	memset(cmd_header, 0, 12);
 
 	digest_arg = (struct digest_arg *)arg;
@@ -1973,6 +1975,8 @@ static void handle_digest_request(void *arg)
 	} else {
 		panic("invalid command\n");
 	}
+
+	fprintf(stderr, "\nEND DIGEST\n");
 
 	mlfs_free(arg);
 }

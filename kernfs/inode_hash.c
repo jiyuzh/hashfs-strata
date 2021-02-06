@@ -151,12 +151,15 @@ int mlfs_hash_get_blocks(handle_t *handle, struct inode *inode,
     paddr_t value = 0;
     ssize_t size = 0;
 
-//#ifdef LIBFS
+// #ifdef LIBFS
 //    if (inode->l1.addrs[0] == map->m_lblk + 1) {
 //        value = inode->l1.addrs[1];
 //        size = inode->l1.addrs[2];
 //    } else {
 //#endif
+// #ifndef KERNFS
+//   (void)mlfs_hash_cache_invalidate();
+// #endif
 
     size = FN(&hash_idx, im_lookup,
               &hash_idx, inode->inum, map->m_lblk, map->m_len, &value);
@@ -200,6 +203,19 @@ create:
     }
 
     ret = min(ret, map->m_len);
+
+    // if (ret == 0) {
+    //   // hack but whatever
+    //   (void)mlfs_hash_cache_invalidate();
+    //   size = FN(&hash_idx, im_lookup,
+    //           &hash_idx, inode->inum, map->m_lblk, map->m_len, &value);
+    //   // fprintf(stderr, "Re-read, size = %llu (wanted: %llu)\n", size, map->m_len);
+    //   if (size > 0) {
+    //       ret = size;
+    //       map->m_pblk = value;
+    //   }
+    //   ret = min(ret, map->m_len);
+    // }
 
     if_then_panic(ret == 0, "Likely to loop infinitely!\n");
 
@@ -262,11 +278,12 @@ int mlfs_hash_persist() {
 // TODO: probably could keep track of this with a bitmap or something, but this
 // is very easy to implement
 int mlfs_hash_cache_invalidate() {
-#if !defined(USE_API) && defined(HASHCACHE)
-  bitmap_set(ghash->cache_bitmap, 0, ghash->cache_bitmap_size);
-  bitmap_set(gsuper->cache_bitmap, 0, gsuper->cache_bitmap_size);
-#elif defined(USE_API)
+// #if 0 && !defined(USE_API) && defined(HASHCACHE)
+//   bitmap_set(ghash->cache_bitmap, 0, ghash->cache_bitmap_size);
+//   bitmap_set(gsuper->cache_bitmap, 0, gsuper->cache_bitmap_size);
+// #elif defined(USE_API)
+  // printf("ding\n");
   return FN(&hash_idx, im_invalidate, &hash_idx);
-#endif
+// #endif
 }
 

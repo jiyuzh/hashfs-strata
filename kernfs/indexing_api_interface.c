@@ -72,19 +72,23 @@ pthread_mutex_t alloc_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 #define DO_BALLOC_LOCKING 0
 
-static inline void balloc_lock(void) {
 #if DO_BALLOC_LOCKING
+static inline void balloc_lock(void) {
     int err = pthread_mutex_lock(&alloc_mutex);
     if_then_panic(err, "Could not lock! %s\n", strerror(err));
-#endif
 }
 
 static inline void balloc_unlock(void) {
-#if DO_BALLOC_LOCKING
     int err = pthread_mutex_unlock(&alloc_mutex);
     if_then_panic(err, "Could not unlock! %s\n", strerror(err));
-#endif
 }
+
+#else
+
+#define balloc_lock() 0
+#define balloc_unlock() 0
+
+#endif
 
 static inline ssize_t alloc_generic(size_t nblk,
                                     paddr_t* pblk,

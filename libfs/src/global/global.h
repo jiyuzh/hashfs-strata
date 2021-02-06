@@ -86,6 +86,7 @@ typedef enum indexing_api_choice {
     GLOBAL_CUCKOO_HASH,
     GLOBAL_HASH_TABLE,
     HASHFS,
+    HASHFS_ROCACHE,
     LEVEL_HASH_TABLES,
     RADIX_TREES,
     NONE
@@ -102,7 +103,8 @@ extern bool g_idx_has_parallel_lookup;
         g_idx_choice == RADIX_TREES || \
         g_idx_choice == EXTENT_TREES_TOP_CACHED)
 
-#define IDXAPI_IS_HASHFS() (g_idx_choice == HASHFS)
+#define IDXAPI_IS_HASHFS() (g_idx_choice == HASHFS || g_idx_choice == HASHFS_ROCACHE)
+#define IDXAPI_IS_ROCACHED() (g_idx_choice == HASHFS_ROCACHE)
 #define IDXAPI_IS_GLOBAL() (g_idx_choice == GLOBAL_HASH_TABLE || g_idx_choice == GLOBAL_CUCKOO_HASH)
 
 indexing_choice_t get_indexing_choice(void);

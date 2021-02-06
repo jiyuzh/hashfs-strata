@@ -120,12 +120,17 @@ void pEntries() {
 }
 
 static void pmem_nvm_flush(void* start, uint32_t len) {
-    if(pmem_ht->is_pmem) {
+#if 0
+    if(likely(pmem_ht->is_pmem)) {
       pmem_persist(start, len);
     }
     else {
       pmem_msync(start, len);
     }
+#else
+  // We rely on clean dirty objects to fence
+  pmem_flush(start, len);
+#endif
 }
 
 /*
@@ -152,8 +157,8 @@ static void pmem_nvm_flush(void* start, uint32_t len) {
  * Returns: index of the described node
  */
 #define SEQ_STEP
-//#undef SEQ_STEP
-#pragma GCC push_options
+// #undef SEQ_STEP
+// #pragma GCC push_options
 //#pragma GCC optimize ("unroll-loops")
 
 static inline uint32_t
@@ -185,9 +190,9 @@ pmem_nvm_hash_table_lookup_node (paddr_t        key,
   while (!HASHFS_ENT_IS_EMPTY(cur)) {
     if (cur == key && HASHFS_ENT_IS_VALID(cur)) {
       *ent_return = cur;
-#ifndef KERNFS
-      update_stats_dist(&g_perf_stats.hash_lookup_count, count);
-#endif
+// #ifndef KERNFS
+//       update_stats_dist(&g_perf_stats.hash_lookup_count, count);
+// #endif
       return node_index;
     }
     else if (HASHFS_ENT_IS_TOMBSTONE(cur) && !have_tombstone) {
@@ -203,9 +208,9 @@ pmem_nvm_hash_table_lookup_node (paddr_t        key,
     
     count++;
   }
-#ifndef KERNFS
-  update_stats_dist(&g_perf_stats.hash_lookup_count, count);
-#endif
+// #ifndef KERNFS
+//   update_stats_dist(&g_perf_stats.hash_lookup_count, count);
+// #endif
 
 end:
   if (have_tombstone) {
@@ -485,7 +490,7 @@ void pmem_nvm_hash_table_lookup_node_simd4(__m256i *keys, __m128i *node_indices,
   
 }
 
-#pragma GCC pop_options
+// #pragma GCC pop_options
 
 /*
  * Send help.
@@ -587,7 +592,17 @@ pmem_nvm_hash_table_new(struct disk_superblock *sblk,
   pmem_ht_vol->hash_func = hash_func ? hash_func : mix64;
   pmem_ht_vol->entries = (paddr_t*)(dax_addr[g_root_dev] + 
           (pmem_ht->entries_blk * g_block_size_bytes));
+  pmem_ht_vol->entries_pm = pmem_ht_vol->entries;
+  pmem_ht_vol->nbytes = (sizeof(paddr_t) * sblk->ndatablocks);
 
+#ifndef KERNFS
+  if (IDXAPI_IS_ROCACHED()) {
+    printf("RO caching! %d MB\n", pmem_ht_vol->nbytes / (1024 * 1024) );
+    pmem_ht_vol->entries = (paddr_t*)malloc(pmem_ht_vol->nbytes);
+    memcpy((char*)pmem_ht_vol->entries, pmem_ht_vol->entries_pm, pmem_ht_vol->nbytes);
+  }
+#endif
+  
   if(pmem_ht->valid == 1) {
     printf("ht exists\n");
     return;
@@ -622,7 +637,8 @@ pmem_nvm_hash_table_new(struct disk_superblock *sblk,
 
 
 void pmem_nvm_hash_table_close() {
-	free(pmem_ht_vol);  
+  // Hack for ROCACHE
+	// free(pmem_ht_vol);  
 }
 
 
@@ -889,7 +905,7 @@ void pmem_find_next_invalid_entry_simd8(__m256i *node_indices, uint32_t duplicat
 #ifdef SEQ_STEP
   uint32_t step = 1;
 #else
-  panic("simd insert doesn't work with this!");
+  // panic("simd insert doesn't work with this!");
   uint32_t step = 0;
 #endif
 
@@ -915,6 +931,7 @@ void pmem_find_next_invalid_entry_simd8(__m256i *node_indices, uint32_t duplicat
 
 #ifndef SEQ_STEP
     step++;
+    step_vec = _mm256_maskz_set1_epi32(oneMask, step);
 #endif
     
     *node_indices = _mm256_mask_add_epi32(*node_indices, searching, *node_indices, step_vec);
@@ -930,7 +947,7 @@ void pmem_find_next_invalid_entry_simd4(__m128i *node_indices, uint32_t duplicat
 #ifdef SEQ_STEP
   uint32_t step = 1;
 #else
-  panic("simd insert doesn't work with this!");
+  // panic("simd insert doesn't work with this!");
   uint32_t step = 0;
 #endif
 
@@ -956,6 +973,7 @@ void pmem_find_next_invalid_entry_simd4(__m128i *node_indices, uint32_t duplicat
 
 #ifndef SEQ_STEP
     step++;
+    step_vec = _mm_maskz_set1_epi32(oneMask, step);
 #endif
     
     *node_indices = _mm_mask_add_epi32(*node_indices, searching, *node_indices, step_vec);
@@ -1012,7 +1030,7 @@ static inline int pmem_nvm_hash_table_insert_internal_simd8(__m512i *inums, __m5
   for (int i = 0; i < 8; ++i) {
       if (!(to_find & (1 << i))) continue;
 
-      pmem_persist((void*)&pmem_ht_vol->entries[node_indices->arr[i]], 
+      pmem_flush((void*)&pmem_ht_vol->entries[node_indices->arr[i]], 
                   sizeof(*pmem_ht_vol->entries));
   }
 
@@ -1173,7 +1191,7 @@ int pmem_nvm_hash_table_remove_internal_simd8(__m512i *inums, __m512i *lblks, __
   for (int i = 0; i < 8; ++i) {
       if (!(to_remove & (1 << i))) continue;
 
-      pmem_persist((void*)&pmem_ht_vol->entries[narr->arr[i]], 
+      pmem_flush((void*)&pmem_ht_vol->entries[narr->arr[i]], 
                   sizeof(*pmem_ht_vol->entries));
   }
 

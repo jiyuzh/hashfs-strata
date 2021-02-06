@@ -22,6 +22,9 @@ indexing_choice_t get_indexing_choice(void) {
     } else if (env != NULL && !strcmp(env, "HASHFS")) {
         printf("%s -> using API hash fs!\n", env);
         return HASHFS;
+    } else if (env != NULL && !strcmp(env, "HASHFS_ROCACHE")) {
+        printf("%s -> using API hash fs WITH ROCACHING!\n", env);
+        return HASHFS_ROCACHE;
     } else if (env != NULL && !strcmp(env, "GLOBAL_HASH_TABLE_COMPACT")) {
         printf("%s -> using API global hash table! (compact)\n", env);
         if(setenv("IDX_COMPACT", "1", 1)) {
@@ -53,6 +56,11 @@ indexing_choice_t get_indexing_choice(void) {
 }
 
 bool get_indexing_is_cached(void) {
+    // if (g_idx_choice == GLOBAL_CUCKOO_HASH) {
+    //     printf("MLFS_IDX_CACHE autoset for GLOBAL_CUCKOO_HASH!\n");
+    //     return true;
+    // }
+
     const char *env = getenv("MLFS_IDX_CACHE");
 
     if (!env || g_idx_choice != EXTENT_TREES_TOP_CACHED) {

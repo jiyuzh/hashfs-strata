@@ -127,7 +127,7 @@ int mlfs_ext_alloc_blocks(handle_t *handle, struct inode *inode,
 	struct super_block *sb = get_inode_sb(handle->dev, inode);
 	int ret;
 	int retry_count = 0;
-#ifdef BALLOC
+// #ifdef BALLOC
 	enum alloc_type a_type;
 
 	if (flags & MLFS_GET_BLOCKS_CREATE_DATA_LOG)
@@ -137,7 +137,7 @@ int mlfs_ext_alloc_blocks(handle_t *handle, struct inode *inode,
         if (enable_perf_stats) {
             g_perf_stats.balloc_meta_nr += *count;
         }
-#endif
+// #endif
 		a_type = TREE;
     }
 	else
@@ -281,7 +281,8 @@ mlfs_fsblk_t mlfs_new_meta_blocks(handle_t *handle,
     //     mlfs_write(bh);
     // }
 	char *buf = dax_addr[handle->dev] + (block * g_block_size_bytes);
-	memset(buf, 0, g_block_size_bytes);
+	size_t nrbytes = (count) ? (*count * g_block_size_bytes) : g_block_size_bytes; 
+	memset(buf, 0, nrbytes);
 #endif
 #ifdef KERNFS
 	mlfs_debug("[dev %u] used blocks %d\n", inode->dev,
@@ -298,19 +299,27 @@ void mlfs_free_blocks(handle_t *handle, struct inode *inode,
 		void *fake, mlfs_fsblk_t block, int count, int flags)
 {
 #ifdef KERNFS
+
+	#if defined(STORAGE_PERF)
+	uint64_t tsc_begin;
+    if (enable_perf_stats) {
+        tsc_begin = asm_rdtscp();
+    }
+	#endif	
+
 	int ret;
 	struct buffer_head *bh, *tmp;
 	struct super_block *sb = get_inode_sb(handle->dev, inode);
 	UNUSED(flags);
   UNUSED(fake);
 
-#ifdef BALLOC
+// #ifdef BALLOC
     mlfs_debug("freeing %llu (%d)\n", block, count);
     //printf("freeing %llu (%d) -- %llx\n", block, count, block);
 	ret = mlfs_free_blocks_node(get_inode_sb(handle->dev, inode),
 			block, count, 0, 0);
 	mlfs_assert(ret == 0);
-#endif
+// #endif
 	bitmap_bits_free(sb->s_blk_bitmap, block, count);
 
 	balloc_undo_log(block, count, 1);
@@ -325,6 +334,14 @@ void mlfs_free_blocks(handle_t *handle, struct inode *inode,
 	mlfs_assert(sb->used_blocks > count);
 
 	sb->used_blocks -= count;
+
+	#if defined(STORAGE_PERF)
+    if (enable_perf_stats) {
+        g_perf_stats.balloc_tsc += asm_rdtscp() - tsc_begin;
+        g_perf_stats.balloc_nblk += count;
+        g_perf_stats.balloc_nr++;
+    }
+	#endif		
 
 	// FIXME: This code has a problem that makes unlink digest very slow
 	// especially in Varmail workload.
@@ -2828,6 +2845,8 @@ static mlfs_lblk_t mlfs_ext_determine_hole(handle_t *handle, struct inode *inode
 	return len;
 }
 
+#define HASHFS_USE_SIMD 1
+
 int mlfs_hashfs_get_blocks(handle_t *handle, struct inode *inode, 
 			struct mlfs_map_blocks_arr *map_arr, int flags)
 {
@@ -2841,13 +2860,13 @@ int mlfs_hashfs_get_blocks(handle_t *handle, struct inode *inode,
     }
 #endif
 
-    assert(map_arr->m_len <= 8 && "fs_get_blocks m_len > 8");
+    // assert(map_arr->m_len <= 8 && "fs_get_blocks m_len > 8");
     struct super_block *sblk = sb[g_root_dev];
 	int create_data = flags & MLFS_GET_BLOCKS_CREATE_DATA;
 	int create_meta = flags & MLFS_GET_BLOCKS_CREATE_META;
 	int success = 0;
 
-	if (map_arr->m_len >= 8) {
+	if (HASHFS_USE_SIMD && map_arr->m_len >= 8) {
 		if(create_data || create_meta) {
 			success = pmem_nvm_hash_table_insert_simd(inode->inum, map_arr->m_lblk, map_arr->m_len, map_arr->m_pblk);
 		} else {
@@ -2884,9 +2903,9 @@ int mlfs_hashfs_get_blocks(handle_t *handle, struct inode *inode,
 		} else {
 			int found = pmem_nvm_hash_table_lookup(inode->inum, map_arr->m_lblk + i, &index);
 			
-			if(!found) {
+			if (!found) {
 				//did not find the requested block
-				printf("block not found\n");
+				// printf("block not found\n");
 				return i;
 			}	
 		}
@@ -3357,17 +3376,17 @@ int mlfs_ext_truncate(handle_t *handle, struct inode *inode,
 	if(IDXAPI_IS_HASHFS()) {
 		size_t rc = 0;
 		//printf("Start: %ld, End: %ld\n", start, end);
-		
+		#define SIMD_N 8
 		for(size_t i = start; i <= end;) {
-            if (end - i + 1 >= 8) {
-                int success = pmem_nvm_hash_table_remove_simd(inode->inum, i, 8);
+            if (HASHFS_USE_SIMD && end - i + 1 >= SIMD_N) {
+                int success = pmem_nvm_hash_table_remove_simd(inode->inum, i, SIMD_N);
                 if (success) {
                     ++rc;
                 }
                 else {
                     abort();
                 }
-                i += 8;
+                i += SIMD_N;
             } else {
                 paddr_t index;
                 int success = pmem_nvm_hash_table_remove(inode->inum, i, &index);
@@ -3409,12 +3428,19 @@ int mlfs_ext_truncate(handle_t *handle, struct inode *inode,
         //if (ret == (end - start + 1)) ret = 0;
         if (ret > 0) ret = 0;
 
-        struct dinode di;
-        (void)read_ondisk_inode(handle->dev, inode->inum, &di);
-        memmove(inode->l1.addrs, di.l1_addrs, sizeof(addr_t) * (NDIRECT + 1));
+        // struct dinode di;
+        // (void)read_ondisk_inode(handle->dev, inode->inum, &di);
+        // memmove(inode->l1.addrs, di.l1_addrs, sizeof(addr_t) * (NDIRECT + 1));
+
     } else if (IDXAPI_IS_GLOBAL()) {
         ret = mlfs_hash_truncate(handle, inode, start, end);
     } else {
+		// Perf hack, like above
+		// struct dinode di;
+		// addr_t tmp[8];
+        // (void)read_ondisk_inode(handle->dev, inode->inum, &di);
+        // memmove(tmp, di.l1_addrs, sizeof(addr_t) * (NDIRECT + 1));
+
         ret = mlfs_ext_remove_space(handle, inode, start, end);
     }
 

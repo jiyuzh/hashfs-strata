@@ -1,5 +1,10 @@
-{% set sizes = [(25000 * 512, 'smalldb'), 
-                (250000 * 512, 'largedb')] %}
+{% set sizes = [  (25000 * 512, 'smalldb'), 
+                 (250000 * 512, 'largedb'),
+                (1000000 * 512, 'hugedb'),
+                (1500000 * 512, 'biggerdb'),
+                (1600000 * 128, 'finaldb'),
+                ] %}
+                {# (800000 * 128, 'finaldb'), #}
 {% set field_lengths = [(16, 'smallio'), 
                         (128, 'largeio')] %}
 {% set uniform = [ false, true ] %}
@@ -113,11 +118,48 @@ workload_sets:
 {% endfor %}
 {% endfor %}
   test:
-    - E_largedb_largeio_zipf
+    - A_finaldb_largeio_zipf
   fast21:
-    - A_largedb_largeio_zipf
-    - B_largedb_largeio_zipf
-    - C_largedb_largeio_zipf
-    - D_largedb_largeio_zipf
-    - E_largedb_largeio_zipf
-    - F_largedb_largeio_zipf
+    - A_hugedb_largeio_zipf
+    - B_hugedb_largeio_zipf
+    - C_hugedb_largeio_zipf
+    - D_hugedb_largeio_zipf
+    - E_hugedb_largeio_zipf
+    - F_hugedb_largeio_zipf
+  fast21_uniform:
+    - A_hugedb_largeio_uniform
+    - B_hugedb_largeio_uniform
+    - C_hugedb_largeio_uniform
+    - D_hugedb_largeio_uniform
+    - E_hugedb_largeio_uniform
+    - F_hugedb_largeio_uniform
+  fast21_big:
+    - A_biggerdb_largeio_zipf
+    - B_biggerdb_largeio_zipf
+    - C_biggerdb_largeio_zipf
+    - D_biggerdb_largeio_zipf
+    - E_biggerdb_largeio_zipf
+    - F_biggerdb_largeio_zipf
+  hashfs_check:
+    - C_hugedb_largeio_zipf
+  panic:
+    - A_hugedb_largeio_uniform
+    - B_hugedb_largeio_uniform
+    - C_hugedb_largeio_uniform
+    - D_hugedb_largeio_uniform
+    - E_hugedb_largeio_uniform
+    - F_hugedb_largeio_uniform
+  final_uniform:
+    - A_finaldb_largeio_uniform
+    - B_finaldb_largeio_uniform
+    - C_finaldb_largeio_uniform
+    - D_finaldb_largeio_uniform
+    - E_finaldb_largeio_uniform
+    - F_finaldb_largeio_uniform
+  final_zipf:
+    - A_finaldb_largeio_zipf
+    - B_finaldb_largeio_zipf
+    - C_finaldb_largeio_zipf
+    - D_finaldb_largeio_zipf
+    - E_finaldb_largeio_zipf
+    - F_finaldb_largeio_zipf
