@@ -107,7 +107,7 @@ int main(int argc, char **argv)
 	make_digest_request_async(100);
 	wait_on_digesting();
 
-	printf("--- Unlink digest for %s (should no longer exist)\n");
+	printf("--- Unlink digest for %s (should no longer exist)\n", FILE_NAME);
 
   int fd3 = open(FILE_NAME, O_RDONLY);
   if (fd3 >= 0 || errno != ENOENT) {

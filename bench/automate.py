@@ -16,10 +16,13 @@ from subprocess import DEVNULL, PIPE, STDOUT, TimeoutExpired
 import time
 from warnings import warn
 
-from BenchmarkProcesses import KernFSThread
 from FileBenchProcess import FileBenchRunner
-from MTCCProcess import MTCCRunner
 from FragTestProcess import FragTestRunner
+from MTCCProcess import MTCCRunner
+from YCSBCProcess import YCSBCRunner
+#from ConcurrencyProcess import ConcurrencyRunner
+
+from Utils import *
 
 
 ################################################################################
@@ -28,17 +31,26 @@ from FragTestProcess import FragTestRunner
 def add_arguments(parser):
     subparsers = parser.add_subparsers()
 
-    filebench = subparsers.add_parser('filebench')
-    filebench.set_defaults(cls=FileBenchRunner)
-    FileBenchRunner.add_arguments(filebench)
 
     mtcc = subparsers.add_parser('mtcc')
     mtcc.set_defaults(cls=MTCCRunner)
     MTCCRunner.add_arguments(mtcc)
 
-    fragtest = subparsers.add_parser('fragtest')
-    fragtest.set_defaults(cls=FragTestRunner)
-    FragTestRunner.add_arguments(fragtest)
+    ycsbc = subparsers.add_parser('ycsbc')
+    ycsbc.set_defaults(cls=YCSBCRunner)
+    YCSBCRunner.add_arguments(ycsbc)
+
+    #concurrency = subparsers.add_parser('concurrency')
+    #concurrency.set_defaults(cls=ConcurrencyRunner)
+    #ConcurrencyRunner.add_arguments(concurrency)
+
+    filebench = subparsers.add_parser('filebench')
+    filebench.set_defaults(cls=FileBenchRunner)
+    FileBenchRunner.add_arguments(filebench)
+
+    #fragtest = subparsers.add_parser('fragtest')
+    #fragtest.set_defaults(cls=FragTestRunner)
+    #FragTestRunner.add_arguments(fragtest)
 
     '''
     all_cmds = []

@@ -1,0 +1,44 @@
+[
+    {
+        "layout": 0.85,
+        "throughput": 895.0,
+        "struct": "none",
+        "bench": "filebench",
+        "workload": "varmail"
+    },
+    {
+        "layout": 0.85,
+        "throughput": 890.4,
+        "struct": "radix_trees",
+        "bench": "filebench",
+        "workload": "varmail"
+    },
+    {
+        "layout": 0.85,
+        "throughput": 890.6,
+        "struct": "extent_trees",
+        "bench": "filebench",
+        "workload": "varmail"
+    },
+    {
+        "layout": 0.85,
+        "throughput": 878.0,
+        "struct": "global_cuckoo_hash",
+        "bench": "filebench",
+        "workload": "varmail"
+    },
+    {
+        "layout": 0.85,
+        "throughput": 900.5,
+        "struct": "hashfs",
+        "bench": "filebench",
+        "workload": "varmail"
+    },
+    {
+        "layout": 0.85,
+        "throughput": 890.1,
+        "struct": "level_hash_tables",
+        "bench": "filebench",
+        "workload": "varmail"
+    }
+]

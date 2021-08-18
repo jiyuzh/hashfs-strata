@@ -1,0 +1,165 @@
+{% set sizes = [  (25000 * 512, 'smalldb'), 
+                 (250000 * 512, 'largedb'),
+                (1000000 * 512, 'hugedb'),
+                (1500000 * 512, 'biggerdb'),
+                (1600000 * 128, 'finaldb'),
+                ] %}
+                {# (800000 * 128, 'finaldb'), #}
+{% set field_lengths = [(16, 'smallio'), 
+                        (128, 'largeio')] %}
+{% set uniform = [ false, true ] %}
+
+
+descriptions:
+  base:
+    inherits: null
+    settings:
+      operationcount: 100000
+      readproportion: 0
+      updateproportion: 0
+      scanproportion: 0
+      insertproportion: 0
+      readmodifywriteproportion: 0
+      readallfields: false
+
+{% for s, sn in sizes %}
+{% for f, fn in field_lengths %}
+{% for uni in uniform %}
+{% set dist = "uniform" if uni else "zipf" %}
+  base_{{sn}}_{{fn}}_{{dist}}:
+    inherits: base
+    labels: 
+      db_size: {{ s * 10 }}
+      io_size: {{ f }}
+      distribution: {{ dist }}
+    settings:
+      recordcount: {{ (s // f) }}
+      fieldlength: {{ f }}
+  A_{{sn}}_{{fn}}_{{dist}}:
+    inherits: base_{{sn}}_{{fn}}_{{dist}}
+    labels:
+      test: A
+    settings:
+      readproportion: 0.5
+      updateproportion: 0.5
+      requestdistribution: {{'zipfian' if not uni else 'uniform'}}
+  B_{{sn}}_{{fn}}_{{dist}}:
+    inherits: base_{{sn}}_{{fn}}_{{dist}}
+    labels:
+      test: B
+    settings:
+      readproportion: 0.95
+      updateproportion: 0.05
+      requestdistribution: {{'zipfian' if not uni else 'uniform'}}
+  C_{{sn}}_{{fn}}_{{dist}}:
+    inherits: base_{{sn}}_{{fn}}_{{dist}}
+    labels:
+      test: C
+    settings:
+      readproportion: 1
+      requestdistribution: {{'zipfian' if not uni else 'uniform'}}
+  D_{{sn}}_{{fn}}_{{dist}}:
+    inherits: base_{{sn}}_{{fn}}_{{dist}}
+    labels:
+      test: D
+    settings:
+      readproportion: 0.95
+      insertproportion: 0.05
+      requestdistribution: {{'latest' if not uni else 'uniform'}}
+  E_{{sn}}_{{fn}}_{{dist}}:
+    inherits: base_{{sn}}_{{fn}}_{{dist}}
+    labels:
+      test: E
+    settings:
+      scanproportion: 0.95
+      insertproportion: 0.05
+      requestdistribution: {{'zipfian' if not uni else 'uniform'}}
+      maxscanlength: 100
+      scanlengthdistribution: uniform
+  F_{{sn}}_{{fn}}_{{dist}}:
+    inherits: base_{{sn}}_{{fn}}_{{dist}}
+    labels:
+      test: F
+    settings:
+      readproportion: 0.5
+      readmodifywriteproportion: 0.5
+      requestdistribution: {{'zipfian' if not uni else 'uniform'}}
+
+{% for x in ['A', 'B', 'C', 'D', 'E', 'F'] %}
+  {{ x }}_{{sn}}_{{fn}}_{{dist}}_cache:
+    inherits: {{ x }}_{{ sn }}_{{ fn }}_{{dist}}
+    settings:
+      operationcount: 100
+{% endfor %}
+
+{% endfor %}
+{% endfor %}
+{% endfor %}
+
+workload_sets:
+  default:
+{% for s, sn in sizes %}
+{% for f, fn in field_lengths %}
+{% for uni in uniform %}
+{% set dist = "uniform" if uni else "zipf" %}
+{% for x in ['A', 'B', 'C', 'D', 'E', 'F'] %}
+    - {{ x }}_{{ sn }}_{{ fn }}_{{ dist }}
+{% endfor %}
+{% endfor %}
+{% endfor %}
+{% endfor %}
+  C_only:
+{% for s, sn in sizes %}
+{% for f, fn in field_lengths %}
+{% for uni in uniform %}
+{% set dist = "uniform" if uni else "zipf" %}
+    - C_{{ sn }}_{{ fn }}_{{ dist }}
+{% endfor %}
+{% endfor %}
+{% endfor %}
+  test:
+    - A_finaldb_largeio_zipf
+  fast21:
+    - A_hugedb_largeio_zipf
+    - B_hugedb_largeio_zipf
+    - C_hugedb_largeio_zipf
+    - D_hugedb_largeio_zipf
+    - E_hugedb_largeio_zipf
+    - F_hugedb_largeio_zipf
+  fast21_uniform:
+    - A_hugedb_largeio_uniform
+    - B_hugedb_largeio_uniform
+    - C_hugedb_largeio_uniform
+    - D_hugedb_largeio_uniform
+    - E_hugedb_largeio_uniform
+    - F_hugedb_largeio_uniform
+  fast21_big:
+    - A_biggerdb_largeio_zipf
+    - B_biggerdb_largeio_zipf
+    - C_biggerdb_largeio_zipf
+    - D_biggerdb_largeio_zipf
+    - E_biggerdb_largeio_zipf
+    - F_biggerdb_largeio_zipf
+  hashfs_check:
+    - C_hugedb_largeio_zipf
+  panic:
+    - A_hugedb_largeio_uniform
+    - B_hugedb_largeio_uniform
+    - C_hugedb_largeio_uniform
+    - D_hugedb_largeio_uniform
+    - E_hugedb_largeio_uniform
+    - F_hugedb_largeio_uniform
+  final_uniform:
+    - A_finaldb_largeio_uniform
+    - B_finaldb_largeio_uniform
+    - C_finaldb_largeio_uniform
+    - D_finaldb_largeio_uniform
+    - E_finaldb_largeio_uniform
+    - F_finaldb_largeio_uniform
+  final_zipf:
+    - A_finaldb_largeio_zipf
+    - B_finaldb_largeio_zipf
+    - C_finaldb_largeio_zipf
+    - D_finaldb_largeio_zipf
+    - E_finaldb_largeio_zipf
+    - F_finaldb_largeio_zipf

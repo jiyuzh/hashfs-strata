@@ -111,7 +111,7 @@ uint8_t *get_dirent_block(struct inode *dir_inode, offset_t offset)
 		// get block address
         if (enable_perf_stats)
             tsc_begin = asm_rdtscp();
-		int blk_count_found = 0, block_num = 0;;
+		int blk_count_found = 0, block_num = 0;
 		if(IDXAPI_IS_HASHFS()) {
 			ret = bmap_hashfs(dir_inode, &bmap_req_arr);
 			blk_count_found = bmap_req_arr.blk_count_found;
@@ -121,6 +121,9 @@ uint8_t *get_dirent_block(struct inode *dir_inode, offset_t offset)
 			blk_count_found = bmap_req.blk_count_found;
 			block_num = bmap_req.block_no;
 		}
+
+        //printf("[%s:%s] found block %lu for directory inum %u\n", 
+        //       __FILE__, __func__, block_num, dir_inode->inum);
 		
         if (enable_perf_stats) {
             g_perf_stats.dir_search_ext_tsc += asm_rdtscp() - tsc_begin;

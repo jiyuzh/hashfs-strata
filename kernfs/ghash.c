@@ -122,8 +122,13 @@ uint64_t blocks;
 
 #define HASH_TABLE_MIN_SHIFT 3  /* 1 << 3 == 8 buckets */
 
+#ifndef TRUE
 #define TRUE 1
+#endif
+
+#ifndef FALSE
 #define FALSE 0
+#endif
 
 /* Each table size has an associated prime modulo (the first prime
  * lower than the table size) used to find the initial bucket. Probing
@@ -531,7 +536,7 @@ g_hash_table_new (GHashFunc    hash_func,
 
   size_t entries_per_block = g_block_size_bytes / sizeof(hash_entry_t);
 
-  mlfs_info("nblocks = %llu, per_block = %llu\n", nblocks, entries_per_block);
+  mlfs_info("nblocks = %lu, per_block = %lu\n", nblocks, entries_per_block);
   for (mlfs_fsblk_t i = 0; i < nblocks; ++i) {
     hash_table->cache[i] = calloc(g_block_size_bytes / sizeof(hash_entry_t),
         sizeof(hash_entry_t));

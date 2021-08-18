@@ -5,6 +5,7 @@ char pwd[MAX_PATH + 1];
 
 indexing_choice_t g_idx_choice;
 bool g_idx_cached;
+bool g_idx_has_parallel_lookup;
 
 indexing_choice_t get_indexing_choice(void) {
     const char *env = getenv("MLFS_IDX_STRUCT");
@@ -21,6 +22,9 @@ indexing_choice_t get_indexing_choice(void) {
     } else if (env != NULL && !strcmp(env, "HASHFS")) {
         printf("%s -> using API hash fs!\n", env);
         return HASHFS;
+    } else if (env != NULL && !strcmp(env, "HASHFS_ROCACHE")) {
+        printf("%s -> using API hash fs WITH ROCACHING!\n", env);
+        return HASHFS_ROCACHE;
     } else if (env != NULL && !strcmp(env, "GLOBAL_HASH_TABLE_COMPACT")) {
         printf("%s -> using API global hash table! (compact)\n", env);
         if(setenv("IDX_COMPACT", "1", 1)) {
@@ -52,6 +56,11 @@ indexing_choice_t get_indexing_choice(void) {
 }
 
 bool get_indexing_is_cached(void) {
+    // if (g_idx_choice == GLOBAL_CUCKOO_HASH) {
+    //     printf("MLFS_IDX_CACHE autoset for GLOBAL_CUCKOO_HASH!\n");
+    //     return true;
+    // }
+
     const char *env = getenv("MLFS_IDX_CACHE");
 
     if (!env || g_idx_choice != EXTENT_TREES_TOP_CACHED) {
@@ -107,6 +116,34 @@ void print_global_idx_stats(bool enable_perf_stats) {
     } else {
         fprintf(stderr, "(no clean method for global stats)\n");
     }
+}
+
+bool get_idx_has_parallel_lookup() {
+    idx_fns_t *fns;
+    switch(g_idx_choice) {
+        case EXTENT_TREES:
+        case EXTENT_TREES_TOP_CACHED:
+            fns = &extent_tree_fns;
+            break;
+        case RADIX_TREES:
+            fns = &radixtree_fns;
+            break;
+        case LEVEL_HASH_TABLES:
+            fns = &levelhash_fns;
+            break;
+        case GLOBAL_HASH_TABLE:
+            fns = &hash_fns;
+            break;
+        case GLOBAL_CUCKOO_HASH:
+            fns = &cuckoohash_fns;
+            break;
+        default:
+            return false;
+    }
+
+    if (fns->im_lookup_parallel) return true;
+
+    return false;
 }
 
 void add_idx_stats_to_json(bool enable_perf_stats, json_object *root) {

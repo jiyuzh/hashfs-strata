@@ -9,6 +9,7 @@
 #include "concurrency/thread.h"
 #include "filesystem/fs.h"
 #include "filesystem/slru.h"
+#include "filesystem/lpmem_ghash.h"
 #include "io/block_io.h"
 #include "global/mem.h"
 #include "global/util.h"
@@ -58,6 +59,8 @@ static void digest_log(void);
 
 pthread_mutex_t *g_log_mutex_shared;
 static pthread_rwlock_t log_version_rwlock = PTHREAD_RWLOCK_INITIALIZER;
+
+static pthread_mutex_t hacktx = PTHREAD_MUTEX_INITIALIZER;
 
 //pthread_t is unsigned long
 static unsigned long digest_thread_id;
@@ -116,7 +119,8 @@ void init_log(int dev)
 	pthread_mutexattr_setpshared(&attr, PTHREAD_PROCESS_SHARED);
 	pthread_mutex_init(g_log_mutex_shared, &attr);
 
-	g_fs_log->shared_log_lock = (pthread_mutex_t *)mlfs_zalloc(sizeof(pthread_mutex_t));
+	// g_fs_log->shared_log_lock = (pthread_mutex_t *)mlfs_zalloc(sizeof(pthread_mutex_t));
+	g_fs_log->shared_log_lock = (pthread_mutex_t *)&hacktx;
 	pthread_mutexattr_init(&attr);
 	pthread_mutexattr_setpshared(&attr, PTHREAD_PROCESS_SHARED);
 	pthread_mutex_init(g_fs_log->shared_log_lock, &attr);
@@ -141,8 +145,10 @@ void shutdown_log(void)
 	if (atomic_load(&g_fs_log->log_sb->n_digest)) {
 		mlfs_info("%s", "[L] Digesting remaining log data\n");
 		while(make_digest_request_async(100) != -EBUSY);
+		mlfs_info("%s", "[L]\twaiting\n");
 		m_barrier();
 		wait_on_digesting();
+		mlfs_info("%s", "[L]\twaiting over\n");
 	}
 	unlink(g_addr.sun_path);
 }
@@ -1233,8 +1239,11 @@ void add_to_loghdr(uint8_t type, struct inode *inode, offset_t data,
 
 	i = loghdr->n;
 
-	if (i >= g_max_blocks_per_operation)
+	if (i >= g_max_blocks_per_operation) {
+        fprintf(stderr, "i (%d) >= g_max_blocks_per_operation (%d)\n",
+                i, g_max_blocks_per_operation);
 		panic("log header is too small\n");
+    }
 
 	loghdr->type[i] = type;
 	loghdr->inode_no[i] = inode->inum;
@@ -1261,7 +1270,7 @@ void add_to_loghdr(uint8_t type, struct inode *inode, offset_t data,
 		ext_used++;
 		memmove(&loghdr_meta->loghdr_ext[ext_used], extra, extra_len);
 		ext_used += extra_len;
-		strncat((char *)&loghdr_meta->loghdr_ext[ext_used], "|", 1);
+		strncat((char *)&loghdr_meta->loghdr_ext[ext_used], "|", 2);
 		ext_used++;
 		loghdr_meta->loghdr_ext[ext_used] = '\0';
 		loghdr_meta->ext_used = ext_used;
@@ -1282,11 +1291,9 @@ void add_to_loghdr(uint8_t type, struct inode *inode, offset_t data,
 void wait_on_digesting()
 {
 	uint64_t tsc_begin, tsc_end;
-	if (enable_perf_stats)
-		tsc_begin = asm_rdtsc();
+	if (enable_perf_stats) tsc_begin = asm_rdtsc();
 
-	while(g_fs_log->digesting)
-		cpu_relax();
+	while(g_fs_log->digesting) cpu_relax();
 
 	if (enable_perf_stats) {
 		tsc_end = asm_rdtsc();
@@ -1389,7 +1396,7 @@ void handle_digest_response(char *ack_cmd)
 	int n_digested, rotated, lru_updated;
 	struct inode *inode, *tmp;
 
-    printf("digest response, %s\n", ack_cmd);
+    //printf("digest response, %s\n", ack_cmd);
 
 	sscanf(ack_cmd, "|%s |%d|%lu|%d|%d|", ack, &n_digested,
 			&next_hdr_of_digested_hdr, &rotated, &lru_updated);
@@ -1423,9 +1430,15 @@ void handle_digest_response(char *ack_cmd)
 	//cleanup_lru_list(lru_updated);
 
 	if (g_idx_cached && IDXAPI_IS_GLOBAL()) {
+		// printf("INVALIDATE!\n");
         int api_err = mlfs_hash_cache_invalidate();
         if (api_err) panic("couldn't invalidate cache!\n");
     }
+
+  	if (IDXAPI_IS_HASHFS() && IDXAPI_IS_ROCACHED()) {
+    	// printf("RO caching update!\n");
+    	memcpy((char*)pmem_ht_vol->entries, pmem_ht_vol->entries_pm, pmem_ht_vol->nbytes);
+  	}
 
 	// TODO: optimize this. Now sync all inodes in the inode_hash.
 	// As the optimization, Kernfs sends inodes lists (via shared memory),

@@ -1,0 +1,51 @@
+[
+    {
+        "layout": 0.85,
+        "throughput": 1504.3,
+        "struct": "hashfs_rocache",
+        "bench": "filebench",
+        "workload": "fileserver"
+    },
+    {
+        "layout": 0.85,
+        "throughput": 1218.8,
+        "struct": "extent_trees",
+        "bench": "filebench",
+        "workload": "fileserver"
+    },
+    {
+        "layout": 0.85,
+        "throughput": 1180.1,
+        "struct": "none",
+        "bench": "filebench",
+        "workload": "fileserver"
+    },
+    {
+        "layout": 0.85,
+        "throughput": 1091.6,
+        "struct": "radix_trees",
+        "bench": "filebench",
+        "workload": "fileserver"
+    },
+    {
+        "layout": 0.85,
+        "throughput": 1501.2,
+        "struct": "hashfs",
+        "bench": "filebench",
+        "workload": "fileserver"
+    },
+    {
+        "layout": 0.85,
+        "throughput": 1182.6,
+        "struct": "global_cuckoo_hash",
+        "bench": "filebench",
+        "workload": "fileserver"
+    },
+    {
+        "layout": 0.85,
+        "throughput": 911.0,
+        "struct": "level_hash_tables",
+        "bench": "filebench",
+        "workload": "fileserver"
+    }
+]

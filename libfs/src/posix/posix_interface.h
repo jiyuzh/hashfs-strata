@@ -27,7 +27,7 @@ int mlfs_posix_unlink(const char *filename);
 int mlfs_posix_truncate(const char *filename, off_t length);
 int mlfs_posix_ftruncate(int fd, off_t length);
 int mlfs_posix_rename(char *oldname, char *newname);
-size_t mlfs_posix_getdents(int fd, struct linux_dirent *buf, size_t count);
+int mlfs_posix_getdents(int fd, struct linux_dirent *buf, size_t count);
 int mlfs_posix_fcntl(int fd, int cmd, void *arg);
 
 #ifdef __cplusplus

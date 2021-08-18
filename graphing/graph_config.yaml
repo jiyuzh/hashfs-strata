@@ -4,42 +4,64 @@ display_options:
     global_hash_table_compact: Global Hash Table (Compact)
     radix_trees: Radix Trees
     extent_trees: Extent Trees
-    level_hash_tables: Level Hash Tables
-    global_cuckoo_hash: Global Cuckoo Hash Table
+    none: "Strata\nBaseline"
+    level_hash_tables: "Level\nHash Tables"
+    global_cuckoo_hash: "Global\nHash Table"
     global_cuckoo_hash_compact: Global Cuckoo Hash Table (Compact)
-
-  benchmark_names:
-    filemicro_seq_one_4k: 4kB
-    filemicro_seq_one_64k: 64kB
-    filemicro_seq_one_1m: 1MB
-    filemicro_seq_many_4k: 4kB
-    filemicro_seq_many_64k: 64kB
-    filemicro_seq_many_1m: 1MB
+    hashfs: HashFS
+    hashfs_rocache: HashFS
 
   breakdown_names:
     indexing: Indexing
-    read_data: Read Data
+    indexing_per_op: Indexing
+    indexing_per_rep: Indexing
+    indexing_throughput: Indexing
+    read_data: Device IO
+    read_data_per_op: Device IO
+    read_data_per_rep: Device IO
+    read_data_throughput: Device IO
+    io_path_per_op: File System Overhead
+    app_logic_per_op: Application Overhead
 
   benchmark_order:
     - 1MB
     - 64kB
+    - 64KB
     - 4kB
+    - 4GB
+    - 4MB
+    - 1MB
+    - 4KB
+    - 16B
+    - Sequential Read
+    - Random Read
+    - Insert
+    - 80%
+    - 95%
+    - 98%
+    - 100%
 
   config_colors:
+    "Global\nHash Table": '#e16b6b'
+    HashFS: '#f5a856'
+    "Level\nHash Tables": '#c785a6'
+    Extent Trees: '#6296ea'
+    Radix Trees: '#99c884'
+    "Strata\nBaseline": '#a6a6a6'
+
+    Global Cuckoo Hash Table (Compact): '#990099'
     Global Hash Table: '#8dd3c7'
     Global Hash Table (Compact): '#FF0000'
-    Radix Trees: '#ffffb3'
-    Extent Trees: '#bebada'
-    Level Hash Tables: '#fb8072'
-    Global Cuckoo Hash Table: '#999999'
-    Global Cuckoo Hash Table (Compact): '#990099'
+
 
   config_order:
+    - Extent Trees
+    - Radix Trees
+    - "Global\nHash Table"
+    - Global Cuckoo Hash Table (Compact)
     - Global Hash Table
     - Global Hash Table (Compact)
-    - Radix Trees
-    - Extent Trees
-    - Level Hash Tables
-    - Global Cuckoo Hash Table
-    - Global Cuckoo Hash Table (Compact)
+    - HashFS
+    - "Strata\nBaseline"
+    - "Level\nHash Tables"
 

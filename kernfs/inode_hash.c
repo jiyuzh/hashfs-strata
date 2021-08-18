@@ -16,7 +16,7 @@ static GHashTable *ghash = NULL;
 // (iangneal): Second level hash table.
 static GHashTable *gsuper = NULL;
 
-static idx_struct_t hash_idx;
+idx_struct_t hash_idx;
 
 static pthread_mutex_t alloc_tex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -148,11 +148,28 @@ int mlfs_hash_get_blocks(handle_t *handle, struct inode *inode,
 
     int ret = 0;
     map->m_pblk = 0;
-
     paddr_t value = 0;
-    hash_value_t index = 0; // to make life easier
-    ssize_t size = FN(&hash_idx, im_lookup,
-                      &hash_idx, inode->inum, map->m_lblk, map->m_len, &value);
+    ssize_t size = 0;
+
+// #ifdef LIBFS
+//    if (inode->l1.addrs[0] == map->m_lblk + 1) {
+//        value = inode->l1.addrs[1];
+//        size = inode->l1.addrs[2];
+//    } else {
+//#endif
+// #ifndef KERNFS
+//   (void)mlfs_hash_cache_invalidate();
+// #endif
+
+    size = FN(&hash_idx, im_lookup,
+              &hash_idx, inode->inum, map->m_lblk, map->m_len, &value);
+
+//#ifdef LIBFS
+//        inode->l1.addrs[0] = map->m_lblk + 1;
+//        inode->l1.addrs[1] = value;
+//        inode->l1.addrs[2] = size;
+//    }
+//#endif
 
     if (size > 0) {
         ret = size;
@@ -187,6 +204,19 @@ create:
 
     ret = min(ret, map->m_len);
 
+    // if (ret == 0) {
+    //   // hack but whatever
+    //   (void)mlfs_hash_cache_invalidate();
+    //   size = FN(&hash_idx, im_lookup,
+    //           &hash_idx, inode->inum, map->m_lblk, map->m_len, &value);
+    //   // fprintf(stderr, "Re-read, size = %llu (wanted: %llu)\n", size, map->m_len);
+    //   if (size > 0) {
+    //       ret = size;
+    //       map->m_pblk = value;
+    //   }
+    //   ret = min(ret, map->m_len);
+    // }
+
     if_then_panic(ret == 0, "Likely to loop infinitely!\n");
 
     return ret;
@@ -207,10 +237,13 @@ int mlfs_hash_truncate(handle_t *handle, struct inode *inode,
     }
   }
 #else
-  size_t  nremove  = (end - start) + 1;
-  size_t nremoved = FN(&hash_idx, im_remove,
+  ssize_t  nremove  = (end - start) + 1;
+  ssize_t nremoved = FN(&hash_idx, im_remove,
                         &hash_idx, inode->inum, start, nremove);
-  if_then_panic(nremove != nremoved, "Could not remove all blocks!");
+  if_then_panic(nremoved < 0, "Error in remove: %ld (%s)\n", 
+          nremoved, strerror(-nremoved));
+  if_then_panic(nremove != nremoved, "Could not remove all blocks! "
+          "Asked to remove %ld, only removed %ld\n", nremove, nremoved);
 #endif
 
   return 0;
@@ -245,11 +278,12 @@ int mlfs_hash_persist() {
 // TODO: probably could keep track of this with a bitmap or something, but this
 // is very easy to implement
 int mlfs_hash_cache_invalidate() {
-#if !defined(USE_API) && defined(HASHCACHE)
-  bitmap_set(ghash->cache_bitmap, 0, ghash->cache_bitmap_size);
-  bitmap_set(gsuper->cache_bitmap, 0, gsuper->cache_bitmap_size);
-#elif defined(USE_API)
+// #if 0 && !defined(USE_API) && defined(HASHCACHE)
+//   bitmap_set(ghash->cache_bitmap, 0, ghash->cache_bitmap_size);
+//   bitmap_set(gsuper->cache_bitmap, 0, gsuper->cache_bitmap_size);
+// #elif defined(USE_API)
+  // printf("ding\n");
   return FN(&hash_idx, im_invalidate, &hash_idx);
-#endif
+// #endif
 }
 

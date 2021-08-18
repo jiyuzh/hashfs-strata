@@ -3,10 +3,34 @@
 
 #include <stdint.h>
 
-#include "common/common.h"
 #include "xxhash.h"
 
-typedef laddr_t (*hash_func_t)(paddr_t key);
+// score = 99.779449191701261
+static uint64_t
+hash(uint64_t x)
+{
+    x *= UINT64_C(0x8c98cab1667ed515);
+    x ^= x >> 57;
+    x ^= x >> 21;
+    x ^= UINT64_C(0xac274618482b6398);
+    x ^= x >> 3;
+    x *= UINT64_C(0x6908cb6ac8ce9a09);
+    return x;
+}
+
+static uint32_t
+hash_64_32(uint64_t x)
+{
+    x *= UINT64_C(0x8c98cab1667ed515);
+    x ^= x >> 57;
+    x ^= x >> 21;
+    x ^= UINT64_C(0xac274618482b6398);
+    x ^= x >> 3;
+    x *= UINT64_C(0x6908cb6ac8ce9a09);
+    return (uint32_t)x;
+}
+
+typedef paddr_t (*hash_func64_t)(paddr_t key);
 
 // https://gist.github.com/badboy/6267743
 static inline laddr_t nvm_idx_hash6432shift(paddr_t key) {

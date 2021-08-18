@@ -40,6 +40,7 @@ extern struct super_block *sb[g_n_devices + 1];
 // Block group expension is not implemented yet.
 #ifndef MAX_GET_BLOCKS_RETURN
 #define MAX_GET_BLOCKS_RETURN 8
+#define MAX_NUM_BLOCKS_LOOKUP 256
 #endif
 
 // directory entry cache
@@ -124,6 +125,17 @@ typedef struct bmap_request {
 	uint8_t dev;
 } bmap_req_t;
 
+typedef struct pblk_lookup_arr {
+	addr_t m_pblk[MAX_NUM_BLOCKS_LOOKUP];
+	uint32_t m_lens[MAX_NUM_BLOCKS_LOOKUP];
+	offset_t m_offsets[MAX_NUM_BLOCKS_LOOKUP];
+	addr_t *m_pblk_dyn;
+	uint32_t *m_lens_dyn;
+	offset_t *m_offsets_dyn;
+	uint8_t dyn;
+	uint32_t size;
+} pblk_lookup_t;
+
 // statistics
 typedef struct mlfs_libfs_stats {
 	uint64_t digest_wait_tsc;
@@ -180,6 +192,16 @@ typedef struct mlfs_libfs_stats {
 	uint64_t ialloc_nr;
 	uint64_t tmp_nr;
 	uint64_t tmp_tsc;
+
+    uint64_t end_to_end_read_tsc;
+    uint64_t end_to_end_read_nr;
+    uint64_t bh_meta_tsc;
+    uint64_t bh_meta_nr;
+    uint64_t unaligned_read_nr;
+    uint64_t aligned_read_nr;
+    uint64_t ua_fcache_tsc;
+    uint64_t ua_fcache_nr;
+
 	uint64_t bcache_search_tsc;
 	uint64_t bcache_search_nr;
 	uint64_t dir_search_ext_nr;
@@ -195,8 +217,14 @@ typedef struct mlfs_libfs_stats {
     uint64_t hash_loop_tsc;
     uint64_t hash_loop_nr;
     uint64_t hash_iter_nr;
+    stats_dist_t hash_lookup_count;
     // Indexing cache rates
     cache_stats_t cache_stats;
+    // Fragmentation stuff
+    uint64_t n_files;
+    uint64_t n_fragments;
+    uint64_t n_blocks;
+    double layout_score_derived;
 } libfs_stat_t;
 
 extern struct lru g_fcache_head;
@@ -262,6 +290,8 @@ static inline void init_api_idx_struct(uint8_t dev, struct inode *inode) {
         int init_err;
 
         switch(g_idx_choice) {
+            case EXTENT_TREES_TOP_CACHED:
+                g_idx_cached = true;
             case EXTENT_TREES:
                 init_err = extent_tree_fns.im_init_prealloc(&strata_idx_spec,
                                                             &direct_extents,
@@ -373,6 +403,7 @@ static inline int icache_del(struct inode *ip)
 static struct fcache_block *fcache_find(struct inode *inode, offset_t key)
 {
 #define fcache_stats
+#undef fcache_stats
 	khiter_t k;
 	struct fcache_block *fc_block = NULL;
     uint64_t start_tsc, total_tsc;
@@ -405,7 +436,7 @@ static struct fcache_block *fcache_find(struct inode *inode, offset_t key)
         start_tsc = asm_rdtscp();
 #endif
 
-	//pthread_rwlock_rdlock(&inode->fcache_rwlock);
+	pthread_rwlock_rdlock(&inode->fcache_rwlock);
     
 #ifdef fcache_stats
     if (enable_perf_stats) {
@@ -431,7 +462,7 @@ static struct fcache_block *fcache_find(struct inode *inode, offset_t key)
             start_tsc = asm_rdtscp();
 #endif
 	
-        //pthread_rwlock_unlock(&inode->fcache_rwlock);
+        pthread_rwlock_unlock(&inode->fcache_rwlock);
         
 #ifdef fcache_stats
         if (enable_perf_stats) {
@@ -490,7 +521,7 @@ static inline struct fcache_block *fcache_alloc_add(struct inode *inode,
         start_tsc = asm_rdtscp();
 
 #define USE_FCACHE_POOL
-//#undef USE_FCACHE_POOL
+#undef USE_FCACHE_POOL
 #ifdef USE_FCACHE_POOL
     if (!inode->fcache_block_pool) {
         inode->fcache_block_pool = (struct fcache_block*) mmap(NULL, 1024 * 1024 * 1024, 
@@ -523,7 +554,7 @@ static inline struct fcache_block *fcache_alloc_add(struct inode *inode,
 	INIT_LIST_HEAD(&fc_block->l);
     //end_cache_stats(&(g_perf_stats.cache_stats));
 
-	//pthread_rwlock_wrlock(&inode->fcache_rwlock);
+	pthread_rwlock_wrlock(&inode->fcache_rwlock);
 
 	if (inode->fcache_hash == NULL) {
 		inode->fcache_hash = kh_init(fcache);
@@ -542,7 +573,7 @@ static inline struct fcache_block *fcache_alloc_add(struct inode *inode,
 	kh_value(inode->fcache_hash, k) = fc_block;
 	//mlfs_info("add key %u @ inode %u\n", key, inode->inum);
 
-	//pthread_rwlock_unlock(&inode->fcache_rwlock);
+	pthread_rwlock_unlock(&inode->fcache_rwlock);
 
 	return fc_block;
 }
@@ -596,11 +627,10 @@ static inline int fcache_del_all(struct inode *inode)
 				list_del(&fc_block->l);
 				mlfs_free(fc_block->data);
 			} else if (fc_block) {
-				mlfs_free(fc_block);
-			}
 #ifndef USE_FCACHE_POOL
-			mlfs_free(fc_block);
+				mlfs_free(fc_block);
 #endif
+			}
 		}
 	}
 
@@ -875,6 +905,90 @@ static inline void iunlock(struct inode *ip)
 	pthread_rwlock_unlock(&ip->i_rwlock);
 	// It seems that no one is using I_BUSY. comment it out
 	// ip->flags &= ~I_BUSY;
+}
+
+static inline void calculate_fragmentation(void) {
+    if (IDXAPI_IS_HASHFS()) {
+        printf("HashFS doesn't suffer from traditional fragmentation.\n");
+        return;
+    }
+
+    bool tmp = enable_cache_stats;
+    enable_cache_stats = false;
+
+    uint32_t end = find_next_zero_bit(sb[g_root_dev]->s_inode_bitmap,
+        sb[g_root_dev]->ondisk->ninodes, 1);
+
+    size_t total_blocks = 0;
+    size_t total_fragments = 0;
+    size_t total_files = 0;
+
+    for (uint32_t inum = 0; inum < end; ++inum) {
+        struct inode *ip = iget(g_root_dev, inum);
+
+        if (! ((ip->flags & I_VALID) && (ip->itype == T_FILE))) continue;
+
+        if (!IDXAPI_IS_GLOBAL()) { 
+            if (ip->ext_idx && ip->ext_idx->idx_fns->im_set_stats) {
+                FN(ip->ext_idx, im_set_stats, ip->ext_idx, false);
+            }
+        }
+
+        size_t nblocks = ip->size >> g_block_size_shift;
+        nblocks += (ip->size % g_block_size_bytes) > 0;
+
+        if (!nblocks) continue;
+        
+        total_files++;
+
+        size_t nfound = 0;
+        size_t nsearch = 0;
+
+        /* Search for all the blocks. bmap will only return contiguous block
+         * ranges, so the number of searches is equivalent to the number of
+         * fragments.
+         */
+        while (nfound < nblocks) {
+            struct bmap_request bmap_req;
+            bmap_req.start_offset = nfound << g_block_size_shift;
+            bmap_req.blk_count = nblocks - nfound;
+            int ret = bmap(ip, &bmap_req);
+
+            mlfs_assert(ret != -EIO);
+
+            nfound += bmap_req.blk_count_found;
+            nsearch++;
+        }
+
+        total_blocks += nblocks;
+        total_fragments += nsearch;
+
+        if (!IDXAPI_IS_GLOBAL()) { 
+            if (ip->ext_idx && ip->ext_idx->idx_fns->im_set_stats) {
+                FN(ip->ext_idx, im_set_stats, ip->ext_idx, enable_perf_stats);
+            }
+        }
+    }
+
+    g_perf_stats.n_files = total_files;
+    g_perf_stats.n_fragments = total_fragments;
+    g_perf_stats.n_blocks = total_blocks;
+
+    double blocks_per_file = (double)total_blocks / (double)total_files;
+    double fragments_per_file = (double)total_fragments / (double)total_files;
+    double blocks_optimal_per_file = (blocks_per_file + 1.0) - fragments_per_file;
+
+    g_perf_stats.layout_score_derived = fmin(blocks_optimal_per_file / blocks_per_file, 1.0);
+
+    enable_cache_stats = tmp;
+}
+
+static void print_fragmentation(void) {
+    printf("FRAGMENTATION CALCULATION\n");
+    printf("---- # of files:             %lu\n", g_perf_stats.n_files);
+    printf("---- # of blocks (total):    %lu\n", g_perf_stats.n_blocks);
+    printf("---- # of fragments (total): %lu\n", g_perf_stats.n_fragments);
+    printf("---- OVERALL LAYOUT SCORE:   %.2f\n", g_perf_stats.layout_score_derived);
 }
 
 // Bitmap bits per block

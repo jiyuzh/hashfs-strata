@@ -93,10 +93,13 @@ static void print_hashtable_stats(hash_stats_t *s) {
     PFIELD(s, loop_time);
 }
 */
+typedef paddr_t (*hash_func64_t)(paddr_t key);
 //need to include global.h, shared.h, fs.h
 typedef struct pmem_nvm_hashtable_volatile_metadata {
-	paddr_t *entries;
-	hash_func_t hash_func;
+    size_t nbytes;
+    paddr_t *entries_pm;
+	paddr_t *entries; // could be PM or not
+	hash_func64_t hash_func;
 } pmem_nvm_hash_vol_t;
 
 typedef struct pmem_nvm_hashtable_index {
@@ -106,8 +109,6 @@ typedef struct pmem_nvm_hashtable_index {
     int             size;
     int             mod;
     unsigned        mask;
-    int             nnodes;
-    int             noccupied;  /* nnodes + tombstones */
 
     paddr_t entries_blk; /* persists */
     //paddr_t *entries; /* run-time */
@@ -148,12 +149,12 @@ typedef struct pmem_nvm_hashtable_index {
 
 extern uint8_t *dax_addr[];
 extern pmem_nvm_hash_idx_t *pmem_ht;
-
+extern pmem_nvm_hash_vol_t *pmem_ht_vol;
 
 
 void
 pmem_nvm_hash_table_new (struct disk_superblock *sblk,
-                    hash_func_t       hash_func
+                    hash_func64_t       hash_func
                     );
 
 void
@@ -175,9 +176,9 @@ int pmem_nvm_hash_table_contains(inum_t inum, paddr_t lblk);
 
 unsigned pmem_nvm_hash_table_size();
 
-int pmem_nvm_hash_table_insert_simd64(uint32_t inum, uint32_t lblk, uint32_t len, uint64_t *pblks);
-int pmem_nvm_hash_table_lookup_simd64(uint32_t inum, uint32_t lblk, uint32_t len, uint64_t *pblks);
-int pmem_nvm_hash_table_remove_simd64(uint32_t inum, uint32_t lblk, uint32_t len);
+int pmem_nvm_hash_table_insert_simd(uint32_t inum, uint32_t lblk, uint32_t len, uint64_t *pblks);
+int pmem_nvm_hash_table_lookup_simd(uint32_t inum, uint32_t lblk, uint32_t len, uint64_t *pblks);
+int pmem_nvm_hash_table_remove_simd(uint32_t inum, uint32_t lblk, uint32_t len);
 
 
 extern uint64_t reads;

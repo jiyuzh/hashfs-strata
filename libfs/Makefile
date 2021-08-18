@@ -23,7 +23,7 @@ MODULES   := io concurrency config filesystem global ds log mkfs \
 ########
 #  All modules' directories in src and build
 ########
-PREFIX ?= ebuild
+PREFIX ?= build
 SRC_DIR   := $(addprefix src/,$(MODULES))
 BUILD_DIR := $(addprefix $(PREFIX)/,$(MODULES))
 
@@ -60,17 +60,17 @@ MLFS_FLAGS += -DKLIB_HASH
 #MLFS_FLAGS += -DUSE_SSD
 #MLFS_FLAGS += -DUSE_HDD
 #MLFS_FLAGS += -DMLFS_LOG
-ifeq ($(PREFIX), hbuild)
-    MLFS_FLAGS += -DHASHTABLE -DINDEX_NAME=\"hash\"
-else
-ifneq ($(PREFIX), ebuild)
-    $(error "prefix must be ebuild or hbuild")
-endif
-	MLFS_FLAGS += -DINDEX_NAME=\"ext\ \"
-endif
+#ifeq ($(PREFIX), hbuild)
+#    MLFS_FLAGS += -DHASHTABLE -DINDEX_NAME=\"hash\"
+#else
+#ifneq ($(PREFIX), ebuild)
+#    $(error "prefix must be ebuild or hbuild")
+#endif
+#	MLFS_FLAGS += -DINDEX_NAME=\"ext\ \"
+#endif
 
 OPT_ARGS ?= -g -O3 
-AVX_FLAGS = -march=skylake-avx512 -mavx -mavx512f -mavx512vl -mavx512cd -mavx512bw -mavx512dq
+AVX_FLAGS = -march=native -mstackrealign -mrtm
 #######
 # Optimization definitions
 #######
@@ -122,8 +122,8 @@ spdk: $(OBJ)
 	make -C src/storage/spdk/ MLFS_FLAGS="$(MLFS_FLAGS)" PREFIX="$(PREFIX)"
 
 mkfs: $(OBJ) libmlfs
-	$(CC) $(OPT_ARGS) -o $(PREFIX)/mkfs.o -c src/mkfs/mkfs.c $(INCLUDES) $(MLFS_FLAGS)
-	$(CC) $(OPT_ARGS) -o bin/mkfs.mlfs  $(PREFIX)/libmlfs.a $(INCLUDES) -L$(LIBSPDK_DIR) -lspdk $(LD_FLAGS) -DLIBFS -Wl,-rpath=$(abspath $(LIBSPDK_DIR)) -Wl,-rpath=$(abspath $(NVML_DIR)/nondebug) -ljson-c
+	$(CC) $(OPT_ARGS) $(AVX_FLAGS) -o $(PREFIX)/mkfs.o -c src/mkfs/mkfs.c $(INCLUDES) $(MLFS_FLAGS)
+	$(CC) $(OPT_ARGS) $(AVX_FLAGS) -o bin/mkfs.mlfs  $(PREFIX)/libmlfs.a $(INCLUDES) -L$(LIBSPDK_DIR) -lspdk $(LD_FLAGS) -DLIBFS -Wl,-rpath=$(abspath $(LIBSPDK_DIR)) -Wl,-rpath=$(abspath $(NVML_DIR)/nondebug) -ljson-c
 
 
 ########

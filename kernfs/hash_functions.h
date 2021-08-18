@@ -3,10 +3,88 @@
 
 #include <stdint.h>
 
-#include "common/common.h"
 #include "xxhash.h"
+#include <emmintrin.h>
+#include <immintrin.h>
 
-typedef laddr_t (*hash_func_t)(paddr_t key);
+// score = 99.779449191701261
+static uint64_t
+hash(uint64_t x)
+{
+    x *= UINT64_C(0x8c98cab1667ed515);
+    x ^= x >> 57;
+    x ^= x >> 21;
+    x ^= UINT64_C(0xac274618482b6398);
+    x ^= x >> 3;
+    x *= UINT64_C(0x6908cb6ac8ce9a09);
+    return x;
+}
+
+static uint32_t
+hash_64_32(uint64_t x)
+{
+    x *= UINT64_C(0x8c98cab1667ed515);
+    x ^= x >> 57;
+    x ^= x >> 21;
+    x ^= UINT64_C(0xac274618482b6398);
+    x ^= x >> 3;
+    x *= UINT64_C(0x6908cb6ac8ce9a09);
+    return (uint32_t)x;
+}
+
+void pmem_mod_simd32(__m256i *vals, __m256i *ret) {
+  u256i_32 *tempVals = (u256i_32*) vals;
+  u256i_32 *tempMods = (u256i_32*) ret;
+  uint32_t mod = pmem_ht->mod;
+  for(int i = 0; i < 8; ++i) {
+    tempMods->arr[i] = tempVals->arr[i] % mod;
+  }
+
+  // __mmask8 oneMask = _cvtu32_mask8(~0);
+  // __m256i mod_vec = _mm256_maskz_set1_epi32 (oneMask, pmem_ht->mod); // set mod vector
+  // __m256i quotient = _mm256_div_epi32(*vals, mod_vec); //divide hash_values by mod (SVML)
+  // __m256i mult_result = _mm256_mask_mul_epu32(quotient, oneMask, quotient, mod_vec); // multiply quotient by mod
+  // *ret = _mm256_mask_sub_epi32 (mult_result, oneMask, *vals, mult_result); //subtract mult result from hash_values
+  
+}
+
+static void
+mixHash_simd64_helper(__m512i *first, __m512i *second, __m512i *third, int right, uint32_t shiftCount) {
+  *first = _mm512_sub_epi64(*first, *second); //first = first - second
+  *first = _mm512_sub_epi64(*first, *third); //first = first - third
+  __m512i bsTemp;
+  if(right) {
+    bsTemp = _mm512_srli_epi64(*third, shiftCount); //>>
+  }
+  else {
+    bsTemp = _mm512_slli_epi64(*third, shiftCount); //<<
+  }
+  *first = _mm512_xor_epi64(*first, bsTemp); //first = first XOR (third (<< || >>) shiftcount)
+}
+
+
+static void mixHash_simd64(__m512i *c, __m256i *node_indices) {
+  int RIGHT = 1;
+  int LEFT = 0;
+  __mmask8 oneMask = _cvtu32_mask8(~0); // ones
+  __m512i a = _mm512_set1_epi64(0xff51afd7ed558ccdL);
+  __m512i b = _mm512_set1_epi64(0xc4ceb9fe1a85ec53L);
+  mixHash_simd64_helper(&a, &b, c, RIGHT, 13);
+  mixHash_simd64_helper(&b, c, &a, LEFT, 8);
+  mixHash_simd64_helper(c, &a, &b, RIGHT, 13);
+  mixHash_simd64_helper(&a, &b, c, RIGHT, 12);
+  mixHash_simd64_helper(&b, c, &a, LEFT, 16);
+  mixHash_simd64_helper(c, &a, &b, RIGHT, 5);
+  mixHash_simd64_helper(&a, &b, c, RIGHT, 3);
+  mixHash_simd64_helper(&b, c, &a, LEFT, 10);
+  mixHash_simd64_helper(c, &a, &b, RIGHT, 15);
+
+  __m256i hash_values = _mm512_cvtepi64_epi32(*c); // direct hash with truncation to 32-bit
+  pmem_mod_simd32(&hash_values, node_indices);
+}
+
+
+typedef paddr_t (*hash_func_t)(paddr_t key);
 
 // https://gist.github.com/badboy/6267743
 static inline laddr_t nvm_idx_hash6432shift(paddr_t key) {

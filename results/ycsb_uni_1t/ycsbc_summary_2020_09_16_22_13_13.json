@@ -1,0 +1,212 @@
+[
+    {
+        "layout": "85",
+        "total_time": "N/A",
+        "struct": "NONE",
+        "test": "A",
+        "trial num": 0
+    },
+    {
+        "layout": "85",
+        "total_time": "N/A",
+        "struct": "NONE",
+        "test": "B",
+        "trial num": 0
+    },
+    {
+        "layout": "85",
+        "total_time": "N/A",
+        "struct": "NONE",
+        "test": "C",
+        "trial num": 0
+    },
+    {
+        "layout": "85",
+        "total_time": "N/A",
+        "struct": "NONE",
+        "test": "D",
+        "trial num": 0
+    },
+    {
+        "layout": "85",
+        "total_time": "N/A",
+        "struct": "NONE",
+        "test": "E",
+        "trial num": 0
+    },
+    {
+        "layout": "85",
+        "total_time": "N/A",
+        "struct": "NONE",
+        "test": "F",
+        "trial num": 0
+    },
+    {
+        "layout": "85",
+        "total_time": "N/A",
+        "struct": "EXTENT_TREES",
+        "test": "A",
+        "trial num": 0
+    },
+    {
+        "layout": "85",
+        "total_time": "N/A",
+        "struct": "EXTENT_TREES",
+        "test": "B",
+        "trial num": 0
+    },
+    {
+        "layout": "85",
+        "total_time": "N/A",
+        "struct": "EXTENT_TREES",
+        "test": "C",
+        "trial num": 0
+    },
+    {
+        "layout": "85",
+        "total_time": "N/A",
+        "struct": "EXTENT_TREES",
+        "test": "D",
+        "trial num": 0
+    },
+    {
+        "layout": "85",
+        "total_time": "N/A",
+        "struct": "EXTENT_TREES",
+        "test": "E",
+        "trial num": 0
+    },
+    {
+        "layout": "85",
+        "total_time": "N/A",
+        "struct": "EXTENT_TREES",
+        "test": "F",
+        "trial num": 0
+    },
+    {
+        "layout": "85",
+        "total_time": "N/A",
+        "struct": "HASHFS",
+        "test": "A",
+        "trial num": 0
+    },
+    {
+        "layout": "85",
+        "total_time": "N/A",
+        "struct": "HASHFS",
+        "test": "B",
+        "trial num": 0
+    },
+    {
+        "layout": "85",
+        "total_time": "N/A",
+        "struct": "HASHFS",
+        "test": "C",
+        "trial num": 0
+    },
+    {
+        "layout": "85",
+        "total_time": "N/A",
+        "struct": "HASHFS",
+        "test": "D",
+        "trial num": 0
+    },
+    {
+        "layout": "85",
+        "total_time": "N/A",
+        "struct": "HASHFS",
+        "test": "E",
+        "trial num": 0
+    },
+    {
+        "layout": "85",
+        "total_time": "N/A",
+        "struct": "HASHFS",
+        "test": "F",
+        "trial num": 0
+    },
+    {
+        "layout": "85",
+        "total_time": "N/A",
+        "struct": "RADIX_TREES",
+        "test": "A",
+        "trial num": 0
+    },
+    {
+        "layout": "85",
+        "total_time": "N/A",
+        "struct": "RADIX_TREES",
+        "test": "B",
+        "trial num": 0
+    },
+    {
+        "layout": "85",
+        "total_time": "N/A",
+        "struct": "RADIX_TREES",
+        "test": "C",
+        "trial num": 0
+    },
+    {
+        "layout": "85",
+        "total_time": "N/A",
+        "struct": "RADIX_TREES",
+        "test": "D",
+        "trial num": 0
+    },
+    {
+        "layout": "85",
+        "total_time": "N/A",
+        "struct": "RADIX_TREES",
+        "test": "E",
+        "trial num": 0
+    },
+    {
+        "layout": "85",
+        "total_time": "N/A",
+        "struct": "RADIX_TREES",
+        "test": "F",
+        "trial num": 0
+    },
+    {
+        "layout": "85",
+        "total_time": "N/A",
+        "struct": "GLOBAL_CUCKOO_HASH",
+        "test": "A",
+        "trial num": 0
+    },
+    {
+        "layout": "85",
+        "total_time": "N/A",
+        "struct": "GLOBAL_CUCKOO_HASH",
+        "test": "B",
+        "trial num": 0
+    },
+    {
+        "layout": "85",
+        "total_time": "N/A",
+        "struct": "GLOBAL_CUCKOO_HASH",
+        "test": "C",
+        "trial num": 0
+    },
+    {
+        "layout": "85",
+        "total_time": "N/A",
+        "struct": "GLOBAL_CUCKOO_HASH",
+        "test": "D",
+        "trial num": 0
+    },
+    {
+        "layout": "85",
+        "total_time": "N/A",
+        "struct": "GLOBAL_CUCKOO_HASH",
+        "test": "E",
+        "trial num": 0
+    },
+    {
+        "layout": "85",
+        "total_time": "N/A",
+        "struct": "GLOBAL_CUCKOO_HASH",
+        "test": "F",
+        "trial num": 0
+    }
+]

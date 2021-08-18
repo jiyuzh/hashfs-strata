@@ -1,5 +1,0 @@
-1. correct and re-enable unlink syscall
-    Currently, unlink still breaks the correctness of filesystem, and unlink syscall is totally ignored in libshim
-
-2. optimize libfs extent tree nodes reading
-    Previously, libfs will only read each extent tree node once. Currently, libfs will re-read each extent tree everytime need them. A better implementation should be: bookkeep which buffer is read by which inode, then invalidate all buffers related to an inode at sync_inode_ext_tree

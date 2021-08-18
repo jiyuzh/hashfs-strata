@@ -418,6 +418,7 @@ static const struct rb_augment_callbacks dummy_callbacks = {
 void rb_insert_color(struct rb_node *node, struct rb_root *root)
 {
 	__rb_insert(node, root, dummy_rotate);
+    root->rb_nnodes++;
 }
 EXPORT_SYMBOL(rb_insert_color);
 
@@ -427,6 +428,7 @@ void rb_erase(struct rb_node *node, struct rb_root *root)
 	rebalance = __rb_erase_augmented(node, root, &dummy_callbacks);
 	if (rebalance)
 		____rb_erase_color(rebalance, root, dummy_rotate);
+    root->rb_nnodes--;
 }
 EXPORT_SYMBOL(rb_erase);
 

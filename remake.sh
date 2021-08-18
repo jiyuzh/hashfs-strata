@@ -1,7 +1,7 @@
 #! /bin/bash
 set -e
 #export OPT_ARGS="-g -O3"
-export OPT_ARGS="-g -O2"
+export OPT_ARGS="-g -O2 -Werror"
 export DEBUG_ARGS=""
 for arg in $@; do
   if [ "$arg" == "mirror" ]; then
@@ -11,7 +11,7 @@ for arg in $@; do
   fi
   if [ "$arg" == "debug" ]; then
     echo "debug"
-    OPT_ARGS="-g -O0"
+    OPT_ARGS="-g -O0 -Werror"
     DEBUG_ARGS="${DEBUG_ARGS}"
   fi
   if [ "$arg" == "verbose" ]; then
@@ -23,10 +23,13 @@ function remake() {
     make -C $1 $2 clean
     make -C $1 $2 -j8
 }
-for i in ebuild hbuild; do
-    remake libfs PREFIX=${i}
-    remake kernfs PREFIX=${i}
-done
+#for i in ebuild hbuild; do
+#for i in build; do
+#    remake libfs PREFIX=${i}
+#    remake kernfs PREFIX=${i}
+#done
+remake libfs
+remake kernfs
 remake shim/libshim
 remake kernfs/tests
 remake libfs/tests

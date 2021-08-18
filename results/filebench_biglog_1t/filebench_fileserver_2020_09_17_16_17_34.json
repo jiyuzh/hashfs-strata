@@ -1,0 +1,745 @@
+[
+    {
+        "title": "shutdown fs",
+        "wait_digest": {
+            "tsc": 18,
+            "nr": 1
+        },
+        "l0": {
+            "tsc": 3898486,
+            "nr": 25760
+        },
+        "lsm": {
+            "tsc": 0,
+            "nr": 0
+        },
+        "log": {
+            "commit": {
+                "tsc": 95818698,
+                "nr": 1671
+            },
+            "write": {
+                "tsc": 90954168,
+                "nr": 1671
+            },
+            "alloc": {
+                "tsc": 55366,
+                "nr": 1671
+            },
+            "hdr_write": {
+                "tsc": 4537866,
+                "nr": 1671
+            },
+            "hash_update": {
+                "tsc": 13643166,
+                "nr": 805
+            }
+        },
+        "read_data": {
+            "tsc": 0,
+            "nr": 0,
+            "bytes": 0
+        },
+        "path_storage": {
+            "tsc": 0,
+            "nr": 0
+        },
+        "storage": {
+            "rtsc": 53962,
+            "rnr": 436224,
+            "wtsc": 76343136,
+            "wnr": 106043853
+        },
+        "read_end_to_end": {
+            "tsc": 0,
+            "nr": 0,
+            "n_aligned": 0,
+            "n_unaligned": 0
+        },
+        "bh_meta": {
+            "tsc": 0,
+            "nr": 0
+        },
+        "ua_fcache": {
+            "tsc": 0,
+            "nr": 0
+        },
+        "fragmentation": {
+            "nfiles": 0,
+            "nblocks": 0,
+            "nfragments": 0,
+            "layout_derived": 0
+        },
+        "hashfs_lookups": {
+            "nops": 0,
+            "nentries": 0
+        },
+        "idx_stats": {},
+        "bench": "filebench",
+        "workload": "fileserver",
+        "layout": 0.85,
+        "throughput": 1504.3,
+        "struct": "hashfs_rocache",
+        "kernfs": {
+            "digest": 122333825514,
+            "metadata_blocks": 0,
+            "path_search": 5537817684,
+            "path_storage": 0,
+            "storage": {
+                "rtsc": 2010573534,
+                "rnr": 2835465728,
+                "wtsc": 68115720000,
+                "wnr": 46589824175
+            },
+            "search": {
+                "total_time": 5537817684,
+                "total_blocks": 11704651,
+                "nr_search": 2173644
+            },
+            "idx_stats": {}
+        },
+        "trial num": 0
+    },
+    {
+        "title": "shutdown fs",
+        "wait_digest": {
+            "tsc": 36,
+            "nr": 1
+        },
+        "l0": {
+            "tsc": 3962286,
+            "nr": 25760
+        },
+        "lsm": {
+            "tsc": 0,
+            "nr": 0
+        },
+        "log": {
+            "commit": {
+                "tsc": 97565744,
+                "nr": 1671
+            },
+            "write": {
+                "tsc": 92725470,
+                "nr": 1671
+            },
+            "alloc": {
+                "tsc": 55310,
+                "nr": 1671
+            },
+            "hdr_write": {
+                "tsc": 4513708,
+                "nr": 1671
+            },
+            "hash_update": {
+                "tsc": 13881804,
+                "nr": 805
+            }
+        },
+        "read_data": {
+            "tsc": 0,
+            "nr": 0,
+            "bytes": 0
+        },
+        "path_storage": {
+            "tsc": 0,
+            "nr": 0
+        },
+        "storage": {
+            "rtsc": 88718,
+            "rnr": 436224,
+            "wtsc": 77885386,
+            "wnr": 106043853
+        },
+        "read_end_to_end": {
+            "tsc": 0,
+            "nr": 0,
+            "n_aligned": 0,
+            "n_unaligned": 0
+        },
+        "bh_meta": {
+            "tsc": 0,
+            "nr": 0
+        },
+        "ua_fcache": {
+            "tsc": 0,
+            "nr": 0
+        },
+        "fragmentation": {
+            "nfiles": 0,
+            "nblocks": 0,
+            "nfragments": 0,
+            "layout_derived": 0
+        },
+        "hashfs_lookups": {
+            "nops": 0,
+            "nentries": 0
+        },
+        "idx_stats": {
+            "compute_tsc": 0,
+            "compute_nr": 0
+        },
+        "bench": "filebench",
+        "workload": "fileserver",
+        "layout": 0.85,
+        "throughput": 1218.8,
+        "struct": "extent_trees",
+        "kernfs": {
+            "digest": 126534997616,
+            "metadata_blocks": 270998,
+            "path_search": 51694341528,
+            "path_storage": 0,
+            "storage": {
+                "rtsc": 1590440420,
+                "rnr": 3391308032,
+                "wtsc": 55976454188,
+                "wnr": 38022937266
+            },
+            "search": {
+                "total_time": 51694341528,
+                "total_blocks": 9550429,
+                "nr_search": 4428669
+            },
+            "idx_stats": {
+                "compute_tsc": 0,
+                "compute_nr": 0
+            }
+        },
+        "trial num": 0
+    },
+    {
+        "title": "shutdown fs",
+        "wait_digest": {
+            "tsc": 20,
+            "nr": 1
+        },
+        "l0": {
+            "tsc": 3831852,
+            "nr": 25760
+        },
+        "lsm": {
+            "tsc": 0,
+            "nr": 0
+        },
+        "log": {
+            "commit": {
+                "tsc": 96823600,
+                "nr": 1671
+            },
+            "write": {
+                "tsc": 91907410,
+                "nr": 1671
+            },
+            "alloc": {
+                "tsc": 55846,
+                "nr": 1671
+            },
+            "hdr_write": {
+                "tsc": 4584440,
+                "nr": 1671
+            },
+            "hash_update": {
+                "tsc": 13718122,
+                "nr": 805
+            }
+        },
+        "read_data": {
+            "tsc": 0,
+            "nr": 0,
+            "bytes": 0
+        },
+        "path_storage": {
+            "tsc": 0,
+            "nr": 0
+        },
+        "storage": {
+            "rtsc": 83448,
+            "rnr": 436224,
+            "wtsc": 77212368,
+            "wnr": 106043853
+        },
+        "read_end_to_end": {
+            "tsc": 0,
+            "nr": 0,
+            "n_aligned": 0,
+            "n_unaligned": 0
+        },
+        "bh_meta": {
+            "tsc": 0,
+            "nr": 0
+        },
+        "ua_fcache": {
+            "tsc": 0,
+            "nr": 0
+        },
+        "fragmentation": {
+            "nfiles": 0,
+            "nblocks": 0,
+            "nfragments": 0,
+            "layout_derived": 0
+        },
+        "hashfs_lookups": {
+            "nops": 0,
+            "nentries": 0
+        },
+        "bench": "filebench",
+        "workload": "fileserver",
+        "layout": 0.85,
+        "throughput": 1180.1,
+        "struct": "none",
+        "kernfs": {
+            "digest": 122713974550,
+            "metadata_blocks": 257004,
+            "path_search": 53191545052,
+            "path_storage": 1649956020,
+            "storage": {
+                "rtsc": 1555637800,
+                "rnr": 3207410432,
+                "wtsc": 62619040296,
+                "wnr": 47890171616
+            },
+            "search": {
+                "total_time": 53191545052,
+                "total_blocks": 9056149,
+                "nr_search": 4208253
+            }
+        },
+        "trial num": 0
+    },
+    {
+        "title": "shutdown fs",
+        "wait_digest": {
+            "tsc": 30,
+            "nr": 1
+        },
+        "l0": {
+            "tsc": 3863080,
+            "nr": 25760
+        },
+        "lsm": {
+            "tsc": 0,
+            "nr": 0
+        },
+        "log": {
+            "commit": {
+                "tsc": 96890160,
+                "nr": 1671
+            },
+            "write": {
+                "tsc": 91938174,
+                "nr": 1671
+            },
+            "alloc": {
+                "tsc": 55708,
+                "nr": 1671
+            },
+            "hdr_write": {
+                "tsc": 4622142,
+                "nr": 1671
+            },
+            "hash_update": {
+                "tsc": 13820692,
+                "nr": 805
+            }
+        },
+        "read_data": {
+            "tsc": 0,
+            "nr": 0,
+            "bytes": 0
+        },
+        "path_storage": {
+            "tsc": 0,
+            "nr": 0
+        },
+        "storage": {
+            "rtsc": 84062,
+            "rnr": 436224,
+            "wtsc": 77171134,
+            "wnr": 106043853
+        },
+        "read_end_to_end": {
+            "tsc": 0,
+            "nr": 0,
+            "n_aligned": 0,
+            "n_unaligned": 0
+        },
+        "bh_meta": {
+            "tsc": 0,
+            "nr": 0
+        },
+        "ua_fcache": {
+            "tsc": 0,
+            "nr": 0
+        },
+        "fragmentation": {
+            "nfiles": 0,
+            "nblocks": 0,
+            "nfragments": 0,
+            "layout_derived": 0
+        },
+        "hashfs_lookups": {
+            "nops": 0,
+            "nentries": 0
+        },
+        "idx_stats": {
+            "compute_tsc": 0,
+            "compute_nr": 0,
+            "avg_depth": NaN,
+            "ref_per_lookup": NaN,
+            "memo_hit_ratio": NaN
+        },
+        "bench": "filebench",
+        "workload": "fileserver",
+        "layout": 0.85,
+        "throughput": 1091.6,
+        "struct": "radix_trees",
+        "kernfs": {
+            "digest": 119381161948,
+            "metadata_blocks": 238908,
+            "path_search": 61302298216,
+            "path_storage": 0,
+            "storage": {
+                "rtsc": 1369318832,
+                "rnr": 2957020672,
+                "wtsc": 48089086010,
+                "wnr": 33156569300
+            },
+            "search": {
+                "total_time": 61302306476,
+                "total_blocks": 8327896,
+                "nr_search": 3851377
+            },
+            "idx_stats": {
+                "compute_tsc": 0,
+                "compute_nr": 0,
+                "avg_depth": 3,
+                "ref_per_lookup": 7,
+                "memo_hit_ratio": 0.25
+            }
+        },
+        "trial num": 0
+    },
+    {
+        "title": "shutdown fs",
+        "wait_digest": {
+            "tsc": 24,
+            "nr": 1
+        },
+        "l0": {
+            "tsc": 4027344,
+            "nr": 25760
+        },
+        "lsm": {
+            "tsc": 0,
+            "nr": 0
+        },
+        "log": {
+            "commit": {
+                "tsc": 96238970,
+                "nr": 1671
+            },
+            "write": {
+                "tsc": 91408794,
+                "nr": 1671
+            },
+            "alloc": {
+                "tsc": 58620,
+                "nr": 1671
+            },
+            "hdr_write": {
+                "tsc": 4492128,
+                "nr": 1671
+            },
+            "hash_update": {
+                "tsc": 13827586,
+                "nr": 805
+            }
+        },
+        "read_data": {
+            "tsc": 0,
+            "nr": 0,
+            "bytes": 0
+        },
+        "path_storage": {
+            "tsc": 0,
+            "nr": 0
+        },
+        "storage": {
+            "rtsc": 92140,
+            "rnr": 436224,
+            "wtsc": 76639948,
+            "wnr": 106043853
+        },
+        "read_end_to_end": {
+            "tsc": 0,
+            "nr": 0,
+            "n_aligned": 0,
+            "n_unaligned": 0
+        },
+        "bh_meta": {
+            "tsc": 0,
+            "nr": 0
+        },
+        "ua_fcache": {
+            "tsc": 0,
+            "nr": 0
+        },
+        "fragmentation": {
+            "nfiles": 0,
+            "nblocks": 0,
+            "nfragments": 0,
+            "layout_derived": 0
+        },
+        "hashfs_lookups": {
+            "nops": 0,
+            "nentries": 0
+        },
+        "bench": "filebench",
+        "workload": "fileserver",
+        "layout": 0.85,
+        "throughput": 1501.2,
+        "struct": "hashfs",
+        "kernfs": {
+            "digest": 122022374726,
+            "metadata_blocks": 0,
+            "path_search": 5704741408,
+            "path_storage": 0,
+            "storage": {
+                "rtsc": 2070117898,
+                "rnr": 2948087552,
+                "wtsc": 70342001486,
+                "wnr": 48443851696
+            },
+            "search": {
+                "total_time": 5704741408,
+                "total_blocks": 12170599,
+                "nr_search": 2260231
+            }
+        },
+        "trial num": 0
+    },
+    {
+        "title": "shutdown fs",
+        "wait_digest": {
+            "tsc": 36972943838,
+            "nr": 11
+        },
+        "l0": {
+            "tsc": 2847361028,
+            "nr": 18442233
+        },
+        "lsm": {
+            "tsc": 2353096362,
+            "nr": 1073604
+        },
+        "log": {
+            "commit": {
+                "tsc": 82090541246,
+                "nr": 1651421
+            },
+            "write": {
+                "tsc": 41774115014,
+                "nr": 1100939
+            },
+            "alloc": {
+                "tsc": 37008629560,
+                "nr": 1100939
+            },
+            "hdr_write": {
+                "tsc": 3083102012,
+                "nr": 1100939
+            },
+            "hash_update": {
+                "tsc": 4549779780,
+                "nr": 447717
+            }
+        },
+        "read_data": {
+            "tsc": 26693008768,
+            "nr": 8807712,
+            "bytes": 36076388352
+        },
+        "path_storage": {
+            "tsc": 0,
+            "nr": 0
+        },
+        "storage": {
+            "rtsc": 25835577970,
+            "rnr": 36158197490,
+            "wtsc": 34640359370,
+            "wnr": 38679333437
+        },
+        "read_end_to_end": {
+            "tsc": 33693433348,
+            "nr": 275241,
+            "n_aligned": 275241,
+            "n_unaligned": 0
+        },
+        "bh_meta": {
+            "tsc": 11996,
+            "nr": 268401
+        },
+        "ua_fcache": {
+            "tsc": 0,
+            "nr": 0
+        },
+        "fragmentation": {
+            "nfiles": 0,
+            "nblocks": 0,
+            "nfragments": 0,
+            "layout_derived": 0
+        },
+        "hashfs_lookups": {
+            "nops": 0,
+            "nentries": 0
+        },
+        "idx_stats": {
+            "compute_tsc": 0,
+            "compute_nr": 0,
+            "nlookups": 0,
+            "nconflicts": 0,
+            "nbuckets_checked": 0,
+            "nbuckets_per_lookup": NaN,
+            "nconflicts_per_lookup": NaN
+        },
+        "bench": "filebench",
+        "workload": "fileserver",
+        "layout": 0.85,
+        "throughput": 1182.6,
+        "struct": "global_cuckoo_hash",
+        "kernfs": {
+            "digest": 129318260062,
+            "metadata_blocks": 0,
+            "path_search": 55006089584,
+            "path_storage": 0,
+            "storage": {
+                "rtsc": 1524900150,
+                "rnr": 2337203200,
+                "wtsc": 55517955504,
+                "wnr": 38359485097
+            },
+            "search": {
+                "total_time": 55006089584,
+                "total_blocks": 9634521,
+                "nr_search": 4473774
+            },
+            "idx_stats": {
+                "compute_tsc": 0,
+                "compute_nr": 0,
+                "nlookups": 0,
+                "nconflicts": 0,
+                "nbuckets_checked": 0,
+                "nbuckets_per_lookup": NaN,
+                "nconflicts_per_lookup": NaN
+            }
+        },
+        "trial num": 0
+    },
+    {
+        "title": "shutdown fs",
+        "wait_digest": {
+            "tsc": 28,
+            "nr": 1
+        },
+        "l0": {
+            "tsc": 3787198,
+            "nr": 25760
+        },
+        "lsm": {
+            "tsc": 0,
+            "nr": 0
+        },
+        "log": {
+            "commit": {
+                "tsc": 96208022,
+                "nr": 1671
+            },
+            "write": {
+                "tsc": 91302750,
+                "nr": 1671
+            },
+            "alloc": {
+                "tsc": 55238,
+                "nr": 1671
+            },
+            "hdr_write": {
+                "tsc": 4576476,
+                "nr": 1671
+            },
+            "hash_update": {
+                "tsc": 13630616,
+                "nr": 805
+            }
+        },
+        "read_data": {
+            "tsc": 0,
+            "nr": 0,
+            "bytes": 0
+        },
+        "path_storage": {
+            "tsc": 0,
+            "nr": 0
+        },
+        "storage": {
+            "rtsc": 64656,
+            "rnr": 436224,
+            "wtsc": 76737574,
+            "wnr": 106043853
+        },
+        "read_end_to_end": {
+            "tsc": 0,
+            "nr": 0,
+            "n_aligned": 0,
+            "n_unaligned": 0
+        },
+        "bh_meta": {
+            "tsc": 0,
+            "nr": 0
+        },
+        "ua_fcache": {
+            "tsc": 0,
+            "nr": 0
+        },
+        "fragmentation": {
+            "nfiles": 0,
+            "nblocks": 0,
+            "nfragments": 0,
+            "layout_derived": 0
+        },
+        "hashfs_lookups": {
+            "nops": 0,
+            "nentries": 0
+        },
+        "idx_stats": {
+            "compute_tsc": 0,
+            "compute_nr": 0
+        },
+        "bench": "filebench",
+        "workload": "fileserver",
+        "layout": 0.85,
+        "throughput": 911.0,
+        "struct": "level_hash_tables",
+        "kernfs": {
+            "digest": 122207812042,
+            "metadata_blocks": 88846,
+            "path_search": 63551001282,
+            "path_storage": 0,
+            "storage": {
+                "rtsc": 1076280690,
+                "rnr": 3230268928,
+                "wtsc": 33177337906,
+                "wnr": 25680530023
+            },
+            "search": {
+                "total_time": 63551001282,
+                "total_blocks": 6450244,
+                "nr_search": 6634554
+            },
+            "idx_stats": {
+                "compute_tsc": 4683419390,
+                "compute_nr": 29325556
+            }
+        },
+        "trial num": 0
+    }
+]

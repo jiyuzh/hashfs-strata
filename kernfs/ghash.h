@@ -463,7 +463,7 @@ nvram_alloc_range(size_t count) {
 
   assert(total_blocks == count);
 
-  printf("-- Allocated blkno %llu - %llu\n", block, last);
+  printf("-- Allocated blkno %lu - %lu\n", block, last);
 
   return block;
 }

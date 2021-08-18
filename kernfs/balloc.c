@@ -5,6 +5,10 @@
 
 #define SHARED_PARTITION (65536)
 
+static int layout_score_percent = 0;
+static double layout_score_fraction = 0.0;
+static bool init_layout_score = false;
+
 uint64_t size_of_bitmap(mlfs_fsblk_t nrblocks)
 {
 	return (nrblocks >> 3) + ((nrblocks % 8) ? 1 : 0);
@@ -467,6 +471,7 @@ int mlfs_alloc_block_free_lists(struct super_block *sb)
 
 	pthread_mutexattr_init(&attr);
 	pthread_mutexattr_setpshared(&attr, PTHREAD_PROCESS_SHARED);
+	pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
 
 	sb->free_lists = mlfs_alloc(sb->n_partition * sizeof(struct free_list));
 
@@ -646,10 +651,6 @@ int mlfs_free_blocks_node(struct super_block *sb, unsigned long blocknr,
 	int new_node_used = 0;
 	int ret;
 
-#ifdef NEVER_REUSE_BLOCKS
-    return 0;
-#endif
-
 
 	if (num <= 0) {
 		mlfs_info("ERROR: free %d\n", num);
@@ -750,13 +751,35 @@ static unsigned long mlfs_alloc_blocks_in_free_list(struct super_block *sb,
 	struct rb_node *temp, *next_node;
 	unsigned long curr_blocks;
 	bool found = 0;
-	unsigned long step = 0;
 
 	tree = &(free_list->block_free_tree);
 	temp = &(free_list->first_node->node);
 
+#if defined(SIMULATE_FRAGMENTATION)
+    if (layout_score_percent < 100) {
+        /* 
+        // Stupid logical traversal for randomness.
+        int which_node = rand() % tree->rb_nnodes;
+
+        int count = 0;
+        while (count < which_node) {
+            temp = rb_next(temp);
+            ++count;
+        }
+        */
+
+        // Random descent to a leaf
+        temp = tree->rb_node;
+        while (temp->rb_right || temp->rb_left) {
+            if (!temp->rb_right) temp = temp->rb_left;
+            else if (!temp->rb_left) temp = temp->rb_right;
+            else temp = rand() % 2 ? temp->rb_left : temp->rb_right; 
+        }
+        
+    }
+#endif
+
 	while (temp) {
-		step++;
 		curr = container_of(temp, struct mlfs_range_node, node);
 
 		curr_blocks = curr->range_high - curr->range_low + 1;
@@ -789,8 +812,37 @@ static unsigned long mlfs_alloc_blocks_in_free_list(struct super_block *sb,
 		}
 
 		/* Allocate partial blocknode */
+#if defined(SIMULATE_FRAGMENTATION)
+        if (layout_score_percent == 100 || curr_blocks - num_blocks <= 1) {
+            *new_blocknr = curr->range_low;
+            curr->range_low += num_blocks;
+        } else {
+            // Allocate in the middle, split the node.
+            size_t remainder_lo = (curr_blocks - num_blocks) / 2;
+            size_t remainder_high = remainder_lo + ((curr_blocks - num_blocks) % 2);
+            
+            // -- update lower node
+            *new_blocknr = curr->range_low + remainder_lo;
+            curr->range_high = *new_blocknr - 1;
+            // -- insert new node
+			struct mlfs_range_node *blknode = mlfs_alloc_blocknode(sb);
+			if (NULL == blknode) {
+				panic("cannot allocate blocknode\n");
+            }
+
+			blknode->range_low = curr->range_high + 1 + num_blocks;
+			blknode->range_high = blknode->range_low + remainder_high - 1;
+			int ret = mlfs_insert_blocktree(sb, tree, blknode);
+			if (ret) {
+				mlfs_info("%s\n", "fail to insert block tree");
+				mlfs_free_blocknode(sb, blknode);
+				return -EIO; 
+			}
+        }
+#else
 		*new_blocknr = curr->range_low;
 		curr->range_low += num_blocks;
+#endif
 		found = 1;
 		break;
 	}
@@ -798,16 +850,9 @@ static unsigned long mlfs_alloc_blocks_in_free_list(struct super_block *sb,
 	free_list->num_free_blocks -= num_blocks;
 
 
-	if (found == 0)
+	if (0 == found) {
 		return -ENOSPC;
-
-#ifdef NEVER_REUSE_BLOCKS
-    static unsigned long last_blk_num = 0;
-    last_blk_num = max(last_blk_num, *new_blocknr);
-    *new_blocknr = last_blk_num;
-
-    last_blk_num += num_blocks;
-#endif
+    }
 
     if (IDXAPI_IS_PER_FILE()) {
         for (unsigned long i = 0; i < num_blocks; ++i) {
@@ -928,8 +973,6 @@ retry:
 	}
 
 #if defined(SIMULATE_FRAGMENTATION)
-  static int layout_score_percent = 0;
-  static bool init_layout_score = false;
   if (!init_layout_score) {
     const char *mlfs_layout_score = getenv("MLFS_LAYOUT_SCORE");
     if (NULL != mlfs_layout_score) {
@@ -937,45 +980,29 @@ retry:
     } else {
       layout_score_percent = 100;
     }
+    srand(time(NULL));
     init_layout_score = true;
+    layout_score_fraction = layout_score_percent / 100.0;
     printf("Simulating fragmentation: '%s' => layout score of %f\n",
-        mlfs_layout_score, layout_score_percent / 100.0);
+        mlfs_layout_score, layout_score_fraction);
 
   }
 
   ret_blocks = 0;
   bool set = false;
 
+  unsigned long new_num_blocks = num_blocks;
+  // We don't fragment our metadata blocks
   if (atype == DATA) {
-      for(size_t blk = 0; blk < num_blocks; ) {
-        int rnd = rand() % 100;
-        if (rnd < layout_score_percent) {
-          unsigned long dummy_block;
-          int real_block = mlfs_alloc_blocks_in_free_list(sb, free_list, btype,
-              1, &dummy_block);
-
-          if (!set) {
-            new_blocknr = dummy_block;
-            set = true;
-          }
-
-          if(set && dummy_block != new_blocknr + ret_blocks) break;
-          ret_blocks += real_block;
-          blk += real_block;
-
-        } else {
-          unsigned long dummy_block;
-          int junk_block = mlfs_alloc_blocks_in_free_list(sb, free_list, btype,
-              1, &dummy_block);
-
-          if (set) break;
-        }
+      new_num_blocks = 1;
+      while ((rand() % 100) < layout_score_percent && new_num_blocks < num_blocks) {
+          new_num_blocks++;
       }
-  } else {
-	ret_blocks = mlfs_alloc_blocks_in_free_list(sb, free_list, btype,
-			num_blocks, &new_blocknr);
+      // Less accurate for small sizes
+      //new_num_blocks = (unsigned long)fmin(1.0 / (1.0 - layout_score_fraction), num_blocks);
   }
-
+	ret_blocks = mlfs_alloc_blocks_in_free_list(sb, free_list, btype,
+			new_num_blocks, &new_blocknr);
 #else
 	ret_blocks = mlfs_alloc_blocks_in_free_list(sb, free_list, btype,
 			num_blocks, &new_blocknr);
@@ -994,8 +1021,9 @@ retry:
 
 	pthread_mutex_unlock(&free_list->mutex);
 
-	if (ret_blocks <= 0 || new_blocknr == 0)
+	if (ret_blocks <= 0 || new_blocknr == 0) {
 		return -ENOSPC;
+    }
 
 	if (zero) {
 		panic("Unsupported code path\n");

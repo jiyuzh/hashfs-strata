@@ -30,7 +30,7 @@ LD_FLAGS_CXX = -lpthread -lm -L$(NVML_DIR)/nondebug/ -lpmem -lrt \
 
 #DEBUG = -g -O0
 #DEBUG = -g -Ofast
-AVX_ARGS = -march=skylake-avx512 -mavx -mavx512f -mavx512vl -mavx512cd -mavx512bw -mavx512dq
+AVX_ARGS = -march=native
 DEBUG = -g -O0 $(AVX_ARGS)
 OPT_ARGS = -g 03 $(AVX_ARGS)
 
@@ -64,7 +64,7 @@ MLFS_FLAGS += -DSIMULATE_FRAGMENTATION
 ########
 .PHONY: kernfs all clean
 
-BIN := kernfs fifo_cli extent_test concurrency_test nvram_versus_dram
+BIN := kernfs fifo_cli concurrency_test nvram_versus_dram
 
 all: $(BIN)
 

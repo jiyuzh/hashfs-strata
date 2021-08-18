@@ -1,0 +1,9 @@
+[
+    {
+        "layout": 0.85,
+        "throughput": 1263.9,
+        "struct": "hashfs_rocache",
+        "bench": "filebench",
+        "workload": "webproxy"
+    }
+]

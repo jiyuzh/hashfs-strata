@@ -7,7 +7,7 @@
 
 SUBDIR	:= io cache concurrency global ds mlfs storage .
 
-PREFIX ?= ebuild
+PREFIX ?= build
 SRC_DIR   := $(addprefix , $(SUBDIR))
 BUILD_DIR := $(addprefix $(PREFIX)/, $(SUBDIR))
 LIBFS_DIR := $(CURDIR)/../libfs
@@ -59,17 +59,17 @@ MLFS_FLAGS += -DFCONCURRENT
 #MLFS_FLAGS += -DUSE_HDD
 #MLFS_FLAGS += -DMIGRATION
 #MLFS_FLAGS += -DEXPERIMENTAL
-ifeq ($(PREFIX), hbuild)
-	MLFS_FLAGS += -DHASHTABLE -DINDEX_NAME=\"hash\"
-else
-ifneq ($(PREFIX), ebuild)
-    $(error "prefix must be ebuild or hbuild")
-endif
-	MLFS_FLAGS += -DINDEX_NAME=\"ext\ \"
-endif
+#ifeq ($(PREFIX), hbuild)
+#	MLFS_FLAGS += -DHASHTABLE -DINDEX_NAME=\"hash\"
+#else
+#ifneq ($(PREFIX), ebuild)
+#    $(error "prefix must be ebuild or hbuild")
+#endif
+#	MLFS_FLAGS += -DINDEX_NAME=\"ext\ \"
+#endif
 
 OPT_ARGS ?= -g -O3 
-AVX_FLAGS = -march=skylake-avx512 -mavx -mavx512f -mavx512vl -mavx512cd -mavx512bw -mavx512dq
+AVX_FLAGS = -march=native
 
 
 #######

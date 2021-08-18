@@ -44,7 +44,7 @@ extern uint8_t g_hdd_dev;
 #define NINDIRECT (g_block_size_bytes / sizeof(addr_t))
 
 #define N_FILE_PER_DIR (g_block_size_bytes / sizeof(struct mlfs_dirent))
-#define g_max_open_files ((NDIRECT + 1) * N_FILE_PER_DIR)
+#define g_max_open_files NINODES
 
 /* FIXME: compute this */
 #define MAXFILE 10000000
@@ -86,6 +86,7 @@ typedef enum indexing_api_choice {
     GLOBAL_CUCKOO_HASH,
     GLOBAL_HASH_TABLE,
     HASHFS,
+    HASHFS_ROCACHE,
     LEVEL_HASH_TABLES,
     RADIX_TREES,
     NONE
@@ -93,19 +94,24 @@ typedef enum indexing_api_choice {
 
 extern indexing_choice_t g_idx_choice;
 extern bool g_idx_cached;
+extern bool g_idx_has_parallel_lookup;
 
-#define USE_IDXAPI() (g_idx_choice != NONE)
+#define USE_IDXAPI() (g_idx_choice != NONE && g_idx_choice != HASHFS)
 
-#define IDXAPI_IS_PER_FILE() (g_idx_choice == EXTENT_TREES || g_idx_choice == LEVEL_HASH_TABLES \
-        || g_idx_choice == RADIX_TREES)
+#define IDXAPI_IS_PER_FILE() (g_idx_choice == EXTENT_TREES || \
+        g_idx_choice == LEVEL_HASH_TABLES || \
+        g_idx_choice == RADIX_TREES || \
+        g_idx_choice == EXTENT_TREES_TOP_CACHED)
 
-#define IDXAPI_IS_HASHFS() (g_idx_choice == HASHFS)
+#define IDXAPI_IS_HASHFS() (g_idx_choice == HASHFS || g_idx_choice == HASHFS_ROCACHE)
+#define IDXAPI_IS_ROCACHED() (g_idx_choice == HASHFS_ROCACHE)
 #define IDXAPI_IS_GLOBAL() (g_idx_choice == GLOBAL_HASH_TABLE || g_idx_choice == GLOBAL_CUCKOO_HASH)
 
 indexing_choice_t get_indexing_choice(void);
 bool get_indexing_is_cached(void);
 void print_global_idx_stats(bool enable_perf_stats);
 void add_idx_stats_to_json(bool enable_perf_stats, json_object *root);
+bool get_idx_has_parallel_lookup(void);
 
 #ifdef __cplusplus
 }

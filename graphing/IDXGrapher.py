@@ -30,8 +30,10 @@ class IDXGrapher:
         self.args = args
         self.data = IDXDataObject(file_path=Path(args.input_file))
         self.output_dir = Path(args.output_dir)
-        self.schema_file = Path(args.schema_file)
-        assert self.schema_file.exists() and self.output_dir.exists()
+        assert self.output_dir.exists()
+
+        self._handle_schema_file(args)
+        
         with self.schema_file.open() as f:
             self.schema_config = yaml.safe_load(f)
             self.schemas = self.schema_config['schemes']
@@ -40,105 +42,122 @@ class IDXGrapher:
             self.schema_name = args.schema_name
             self.config_sets = self.schema_config['config_sets']
 
+    def _handle_schema_file(self, args):
+        if 'schema_file' in args and args.schema_file is not None:
+            self.schema_file = Path(args.schema_file)
+        elif 'schema_template' in args and args.schema_template is not None:
+            from jinja2 import Template, Environment
+            tmpl_file = Path(args.schema_template)
+            assert tmpl_file.exists()
+
+            self.schema_file = Path(args.schema_template.replace('.j2', ''))
+            assert self.schema_file != tmpl_file
+
+            with tmpl_file.open() as f:
+                jinja_env = Environment(extensions=['jinja2.ext.do'],
+                        trim_blocks=True, lstrip_blocks=True)
+                tmpl = jinja_env.from_string(f.read())
+                schema_raw = tmpl.render()
+
+                with self.schema_file.open('w') as f:
+                    f.write(schema_raw)
+            
+        else:
+            raise Exception('Bad path!')
+        
+        assert self.schema_file.exists()
+
+    def _filter_configs(self, df, layout):
+        config_set_name = layout['config_set'] if 'config_set' in layout else 'default'
+        config_set = [c.upper() for c in self.config_sets[config_set_name]]
+        
+        return df[df.struct.isin(config_set)]
+
     def _plot_single_stat(self, gs, layout):
         grapher = Grapher(self.args)
 
         df = self.data.get_dataframe()
         # options = layout['options']
+        # embed()
 
-        # config_set = layout['config_set'] if 'config_set' in layout else 'default'
-        # dfs = self.data.filter_configs(self.config_sets[config_set], dfs)
-        # dfs = self.data.reorder_data_frames(dfs)
-        # if 'stat' in layout:
-        #     dfs = self.data.filter_stats(layout['stat'], dfs)
-        # elif 'stats' in layout:
-        #     dfs = self.data.filter_stats(layout['stats'], dfs)
-        # if 'layout_score' in layout:
-        #     dfs = self.data.filter_layout_score(layout['layout_score'], dfs)
-        # if 'benchmarks' in layout:
-        #     dfs = self.data.filter_benchmarks(layout['benchmarks'], dfs)
+        df = self._filter_configs(df, layout)
 
         config = layout['data_config']
         for col, val in config['filter'].items():
-            df = df[df[col] == val]
+            if isinstance(val, list):
+                df = df[df[col].isin(val)]
+            else:
+                df = df[df[col] == val]
 
-        new_index = [config['axis'], config['groups']]
+        new_index = [*config['axis'], config['groups']] \
+                    if isinstance(config['axis'], list) else \
+                        [config['axis'], config['groups']]
 
+        # embed()
         df = df.set_index(new_index)
+        df = df[~df.index.duplicated(keep='last')]
         
+        # embed()
         series = df[config['plot']]
         means_df = series.unstack()
-        ci_df = df[f'{config["plot"]}_ci'].unstack()
+        ci_df = df[f'{config["plot"]}_ci'].unstack().fillna(0)
         # embed()
+
+        if means_df.index.names[0] == 'layout':
+            means_df.sort_index(axis=0, ascending=False, inplace=True)
+            ci_df.sort_index(axis=0, ascending=False, inplace=True)
+
         flush = True
-        # if 'average' in options and options['average']:
-        #     dfs = self.data.average_stats(dfs)
-        #     flush = True
-        #     means_df = pd.DataFrame({'Average': dfs.T['mean']}).T
-        #     ci_df = pd.DataFrame({'Average': dfs.T['ci']}).T
-        # else:
-        #     means_df = dfs
-        #     means_df = means_df.iloc[::-1]
-        #     #ci_df = self.data.filter_stat_field('ci', dfs)
-        #     ci_df = copy.deepcopy(dfs)
-        #     ci_df[:] = 0
-
-        #     if 'benchmarks' in layout and 'Average' in layout['benchmarks']:
-        #         # Also add an average bar:
-        #         dfs = self.data.data_by_benchmark()
-        #         dfs = self.data.filter_configs(self.config_sets[config_set], dfs)
-        #         dfs = self.data.reorder_data_frames(dfs)
-        #         dfs = self.data.filter_stats(layout['stat'], dfs)
-        #         avg_dfs = self.data.average_stats(dfs)
-        #         avg_mean = avg_dfs.T['mean']
-        #         ci_zero = avg_mean.copy()
-        #         ci_zero[:] = 0
-        #         means_df = means_df.append(pd.DataFrame({'Average': avg_mean}).T)
-        #         ci_df = ci_df.append(pd.DataFrame({'Average': ci_zero}).T)
-        #         flush = True
-
-        #if 'benchmarks' in layout:
-        #    means_df = means_df.reindex(layout['benchmarks'])
-        #    ci_df = ci_df.reindex(layout['benchmarks'])
 
         # By this point, means_df should be two dimensional
         return grapher.graph_single_stat(means_df, ci_df, gs,
                                          flush=flush, **layout['options'])
 
-    def _plot_mtcc(self, gs, layout):
+    def _plot_grouped_stacked(self, gs, layout):
         grapher = Grapher(self.args)
 
-        dfs = self.data.data_by_benchmark()
+        df = self.data.get_dataframe()
         options = layout['options']
 
-        config_set = layout['config_set'] if 'config_set' in layout else 'default'
-        dfs = self.data.filter_configs(self.config_sets[config_set], dfs)
-        dfs = self.data.reorder_data_frames(dfs)
-        dfs = self.data.filter_stats(layout['stat'], dfs)
+        df = self._filter_configs(df, layout)
 
-        layout_data = {}
-        for idx_struct, idx_res in dfs.items():
-            idx_data = {}
-            for n_threads, series in idx_res.items():
-                thread_num = n_threads.split('_')[0]
-                idx_data[thread_num] = series.T.loc[str(layout['layout_score'])][layout['stat']]
+        config = layout['data_config']
+        for col, val in config['filter'].items():
+            if isinstance(val, list) or isinstance(val, tuple):
+                df = df[df[col].isin(val)]
+            else:
+                df = df[df[col] == val]
 
-            layout_data[idx_struct] = pd.Series(idx_data)
+            if 'repetitions' in df:
+                df = df[df['repetitions'] != '1']
 
-        dfs = pd.DataFrame(layout_data)
+        new_index = [*config['axis'], config['groups']] \
+                    if isinstance(config['axis'], list) else \
+                        [config['axis'], config['groups']]
 
-        print(layout['stat'])
-        print(dfs)
+        df = df.set_index(new_index)
+        df = df[~df.index.duplicated(keep='last')]
+        
+        assert isinstance(config['plot'], list)
+        # dfs = []
+        # for stat in config['plot']:
+        #     series = df[stat]
+        #     means_df = series.unstack()
+        #     # ci_df = df[f'{config["plot"]}_ci'].unstack().fillna(0)
 
-        flush = True
-        means_df = dfs
-        means_df = means_df.iloc[::-1]
-        #ci_df = self.data.filter_stat_field('ci', dfs)
-        ci_df = copy.deepcopy(dfs)
-        ci_df[:] = 0
+        #     if means_df.index.names[0] == 'layout':
+        #         means_df.sort_index(axis=0, ascending=False, inplace=True)
+        #         # ci_df.sort_index(axis=0, ascending=False, inplace=True)
+            
+        #     dfs += [means_df]
 
-        return grapher.graph_single_stat(means_df, ci_df, gs,
-                                         flush=flush, **options)
+        series = df[config['plot']]
+        dfs = series.unstack().fillna(0)
+
+        # By this point, means_df should be two dimensional
+        return grapher.graph_grouped_stacked_bars(dfs, gs, **options)
+        # return grapher.graph_single_stat(means_df, ci_df, gs,
+        #                                  flush=flush, **layout['options'])
 
     def _plot_indexing_breakdown(self, gs, layout):
         grapher = Grapher(self.args)
@@ -180,6 +199,76 @@ class IDXGrapher:
 
         return grapher.graph_grouped_stacked_bars(dfs, gs, **options)
 
+    def _create_table(self, gs, layout):
+        grapher = Grapher(self.args)
+
+        df = self.data.get_dataframe()
+
+        config = layout['data_config']
+        for col, val in config['filter'].items():
+            df = df[df[col] == val]
+
+        new_index = [*config['rows'], config['groups'], *config['columns']]
+
+        df = df.set_index(new_index)
+
+        df = df[~df.index.duplicated(keep='last')]
+
+        series = df[config['values']]
+        means_df = series.unstack()
+
+        ci_values = [f'{v}_ci' for v in config['values']]
+        series_ci = df[ci_values]
+
+        # if 'baseline' in config:
+        #     baseline_value = series.loc[config['baseline']]
+        #     for group_name in series.index.get_level_values(0).unique():
+        #         if group_name == config['baseline']:
+        #             continue
+
+        #         embed()
+        #         series.loc[group_name] /= baseline_value
+        #         series_ci.loc[group_name] /= baseline_value
+     
+        # By this point, means_df should be two dimensional
+        return grapher.create_single_stat_table(means_df, None, gs, 
+                                                **layout['options'])
+
+    def _plot_mtcc(self, gs, layout):
+        grapher = Grapher(self.args)
+
+        dfs = self.data.data_by_benchmark()
+        options = layout['options']
+
+        config_set = layout['config_set'] if 'config_set' in layout else 'default'
+        dfs = self.data.filter_configs(self.config_sets[config_set], dfs)
+        dfs = self.data.reorder_data_frames(dfs)
+        dfs = self.data.filter_stats(layout['stat'], dfs)
+
+        layout_data = {}
+        for idx_struct, idx_res in dfs.items():
+            idx_data = {}
+            for n_threads, series in idx_res.items():
+                thread_num = n_threads.split('_')[0]
+                idx_data[thread_num] = series.T.loc[str(layout['layout_score'])][layout['stat']]
+
+            layout_data[idx_struct] = pd.Series(idx_data)
+
+        dfs = pd.DataFrame(layout_data)
+
+        print(layout['stat'])
+        print(dfs)
+
+        flush = True
+        means_df = dfs
+        means_df = means_df.iloc[::-1]
+        #ci_df = self.data.filter_stat_field('ci', dfs)
+        ci_df = copy.deepcopy(dfs)
+        ci_df[:] = 0
+
+        return grapher.graph_single_stat(means_df, ci_df, gs,
+                                         flush=flush, **options)
+
     def plot_schema(self):
         grapher = Grapher(self.args)
 
@@ -195,6 +284,12 @@ class IDXGrapher:
             if layout_config['type'] == 'single_stat':
                 a = self._plot_single_stat(axis, layout_config)
                 artists += [a]
+            elif layout_config['type'] == 'grouped_stacked':
+                a = self._plot_grouped_stacked(axis, layout_config)
+                artists += [a]
+            elif layout_config['type'] == 'table':
+                a = self._create_table(axis, layout_config)
+                artists += [a]
             elif layout_config['type'] == 'mtcc':
                 a = self._plot_mtcc(axis, layout_config)
                 artists += [a]
@@ -209,21 +304,29 @@ class IDXGrapher:
         fig.tight_layout()
 
         output_file = str(self.output_dir / self.schema['file_name'])
-        plt.savefig(output_file, dpi=300, bbox_inches='tight', pad_inches=0.02,
+        plt.tight_layout()
+        plt.savefig(output_file, dpi=600, bbox_inches='tight', pad_inches=0.02,
                     additional_artists=artists)
+        # plt.savefig(output_file, dpi=300, pad_inches=0.02, additional_artists=artists)
         plt.close()
 
     @classmethod
     def add_parser_args(cls, parser):
-        parser.add_argument('--input-file', '-i', default='report.json',
+        parser.add_argument('--input-file', '-i', default='report.yaml',
                             help='Where the aggregations live')
         parser.add_argument('--output-dir', '-d', default='.',
                             help='Where to output the report')
         parser.add_argument('--config', '-c', default='graph_config.yaml',
                             help='What file to use for this dataset.')
 
-        parser.add_argument('--schema-file', default='graph_schemes.yaml',
+        schema_group = parser.add_mutually_exclusive_group()
+
+        schema_group.add_argument('--schema-file',
                             help='File containing relevant schemas.')
+        schema_group.add_argument('--schema-template', 
+                                  default='graph_schemes.yaml.j2',
+                                  help='File containing schema in jinja2 template.')
+
         parser.add_argument('--filter', '-f', default=None, nargs='+',
                             help='what benchmarks to filter, all if None')
         parser.add_argument('schema_name', help='Name of the schema to use.')

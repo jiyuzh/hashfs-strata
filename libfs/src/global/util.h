@@ -41,7 +41,8 @@ static inline unsigned long long asm_rdtsc(void)
 static inline unsigned long long asm_rdtscp(void)
 {
 	unsigned hi, lo;
-	__asm__ __volatile__ ("rdtscp" : "=a"(lo), "=d"(hi)::"rcx");
+	//__asm__ __volatile__ ("rdtscp" : "=a"(lo), "=d"(hi)::"rcx");
+	__asm__ __volatile__ ("rdtsc" : "=a"(lo), "=d"(hi));
 	return ( (unsigned long long)lo)|( ((unsigned long long)hi)<<32 );
 }
 #else
@@ -185,7 +186,7 @@ static inline char* get_parent_path(const char *path, char *parent_path, char *n
 
 	return parent_path;
 }
-#define tri_ratio(tsc,nr) tsc, nr, (double)tsc/nr
+#define tri_ratio(tsc,nr) tsc, nr, (nr ? (double)tsc/nr : 0.0) 
 #define js_add_int64(obj, name, val) json_object_object_add(obj, name, json_object_new_int64(val));
 #define js_add_double(obj, name, val) json_object_object_add(obj, name, json_object_new_double(val));
 // statistics utils

@@ -1,0 +1,44 @@
+[
+    {
+        "layout": 0.85,
+        "throughput": 1235.4,
+        "struct": "none",
+        "bench": "filebench",
+        "workload": "webproxy"
+    },
+    {
+        "layout": 0.85,
+        "throughput": 1228.3,
+        "struct": "radix_trees",
+        "bench": "filebench",
+        "workload": "webproxy"
+    },
+    {
+        "layout": 0.85,
+        "throughput": 1228.2,
+        "struct": "extent_trees",
+        "bench": "filebench",
+        "workload": "webproxy"
+    },
+    {
+        "layout": 0.85,
+        "throughput": 1196.1,
+        "struct": "global_cuckoo_hash",
+        "bench": "filebench",
+        "workload": "webproxy"
+    },
+    {
+        "layout": 0.85,
+        "throughput": 1229.6,
+        "struct": "hashfs",
+        "bench": "filebench",
+        "workload": "webproxy"
+    },
+    {
+        "layout": 0.85,
+        "throughput": 1229.8,
+        "struct": "level_hash_tables",
+        "bench": "filebench",
+        "workload": "webproxy"
+    }
+]

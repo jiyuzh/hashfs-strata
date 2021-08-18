@@ -28,8 +28,8 @@ pd.set_option('display.float_format', lambda x: '%.3f' % x)
 
 class Grapher:
 
-    D       = 5
-    HATCH   = [D*'//', '', D*'\\\\', D*'..', D*'', D*'xx', D*'*', D*'+', D*'\\']
+    D       = 3
+    HATCH   = [D*'//', '', D*'\\\\', D*'xx', D*'o', D*'+', D*'*', D*'..']
 
     def _hex_color_to_tuple(self, color_str):
         r = int(color_str[1:3], 16) / 256.0
@@ -51,11 +51,16 @@ class Grapher:
 
         self.barchart_defaults = {
                                     'edgecolor': 'black',
-                                    'linewidth': 1.0,
+                                    'linewidth': 0.7,
+                                    'error_kw': {
+                                        'elinewidth': 0.8,
+                                    }
                                  }
 
     def _get_config_name(self, config_name):
-        name = config_name.lower()
+        name = config_name
+        if isinstance(config_name, str):
+            name = config_name.lower()
         if name in self.config['display_options']['config_names']:
             return self.config['display_options']['config_names'][name]
         return config_name
@@ -101,11 +106,14 @@ class Grapher:
                 else []
         new_names = []
         for name in benchmark_names:
-            name = name.lower()
+            lname = name
+            if isinstance(name, str):
+                name = name.lower()
+
             if name in bnames:
                 new_names += [bnames[name]]
             else:
-                new_names += [name]
+                new_names += [lname]
         return new_names
 
     @staticmethod
@@ -119,6 +127,8 @@ class Grapher:
         return df.rename(columns=new_columns)
 
     def _rename_multi_index(self, df):
+        if not isinstance(df.index, pd.MultiIndex):
+            return df
         index = df.index.unique(1).tolist()
         new_index = [self._get_config_name(c) for c in index]
         df.index = df.index.set_levels(new_index, level=1)
@@ -157,6 +167,47 @@ class Grapher:
     def _kwargs_has(self, kwargs_dict, field):
         return field in kwargs_dict and kwargs_dict[field] is not None
 
+    def create_single_stat_table(self, means_df, ci_df, axis, **kwargs):
+        # axis.table(cellText=[['yo']])
+
+        y = [1, 2, 3, 4, 5, 4, 3, 2, 1, 1, 1, 1, 1, 1, 1, 1]    
+        col_labels = ['col1', 'col2', 'col3']
+        row_labels = ['row1', 'row2', 'row3']
+        table_vals = [[11, 12, 13], [21, 22, 23], [31, 32, 33]]
+
+        row_labels = [' '.join([str(p) for p in x]) for x in means_df.index]
+        col_labels = [' '.join([str(p) for p in x]) for x in means_df.columns]
+
+        pprint(row_labels)
+        pprint(col_labels)
+
+        table_vals = []
+        for r in means_df.index:
+            row = []
+            for c in means_df.columns:
+                row += [f'{means_df[c][r]:.0f}']
+                
+            table_vals += [row]
+
+        # Draw table
+        the_table = axis.table(cellText=table_vals,
+                            # colWidths=[0.1] * 3,
+                            rowLabels=row_labels,
+                            colLabels=col_labels,
+                            loc='center')
+        the_table.auto_set_font_size(False)
+        the_table.set_fontsize(6)
+        the_table.scale(1, 1)
+
+        plt.sca(axis)
+        # Removing ticks and spines enables you to get the figure only with table
+        plt.tick_params(axis='x', which='both', 
+                        bottom=False, top=False, labelbottom=False)
+        plt.tick_params(axis='y', which='both', 
+                        right=False, left=False, labelleft=False)
+        for pos in ['right', 'top', 'bottom', 'left']:
+            axis.spines[pos].set_visible(False)
+
     def graph_single_stat(self, means_df, ci_df, axis, **kwargs):
         all_means = self._rename_configs(self._reorder_configs(means_df))
         all_error = self._rename_configs(self._reorder_configs(ci_df)) if ci_df is not None else None
@@ -182,7 +233,7 @@ class Grapher:
             all_error[:] = 0.0
 
         num_configs = len(all_means.columns)
-        width = num_configs / (num_configs + 2)
+        width = num_configs / (num_configs + self._kwargs_default(kwargs, 'bar_spacing', 1.5))
         bar_width = width / num_configs
 
         max_val = (all_means + all_error + 0.5).max().max()
@@ -190,6 +241,9 @@ class Grapher:
         start = self._kwargs_default(kwargs, 'start', 0.0)
         axis.set_xlim(start, cutoff)
         axis.margins(0.0)
+
+        # all_means.sort_index(axis=1, inplace=True)
+        # embed()
 
         ax = all_means.plot.barh(ax=axis,
                                  xerr=all_error,
@@ -231,6 +285,7 @@ class Grapher:
 
         artist = []
 
+
         
         #labels = self._clean_benchmark_names(labels)
 
@@ -258,7 +313,7 @@ class Grapher:
             for c in colors ], [])
 
         for bar, hatch, color in zip(bars, all_hatches, all_colors):
-            #bar.set_hatch(hatch)
+            bar.set_hatch(hatch)
             bar.set_color(color)
             bar.set_edgecolor('black')
         
@@ -271,10 +326,9 @@ class Grapher:
                        box.width, box.height * scale]
             axis.set_position(new_box)
 
+
         plt.sca(axis)
         self.__class__._do_grid_lines()
-
-        
 
         plt.xlabel(self._kwargs_default(kwargs, 'label', ''))
         plt.xscale(self._kwargs_default(kwargs, 'xscale', 'linear'))
@@ -300,11 +354,44 @@ class Grapher:
         else:
             plt.legend().set_visible(False)
 
-
         if self._kwargs_bool(kwargs, 'exclude_tick_labels'):
-            plt.yticks(ticks=range(len(labels)), labels=['']*len(labels))
+            plt.gca().set_yticklabels([])
+            # this causes weird truncation of bars on the graph
+            #plt.yticks(ticks=range(len(labels)), labels=['']*len(labels))
         else:
-            # plt.yticks(ticks=range(len(labels)), labels=labels, ha='right')
+            # Try to improve the labels
+            new_labels = []
+            for label in labels:
+                if isinstance(label, list) or isinstance(label, tuple):
+                    try:
+                        new_label = '{:.1f}, {}'.format(label[0], label[1])
+                        new_labels += [new_label]
+                    except Exception as e:
+                        print(e)
+                        new_labels += [label]
+                elif isinstance(label, float):
+                    new_label = f'{round(label, 2)}'
+                    new_labels += [new_label]
+                elif isinstance(label, str) or isinstance(label, int):
+                    new_labels += [label]
+                else:
+                    raise Exception('huh?')
+
+            # this causes weird truncation of bars on the graph
+            #plt.yticks(ticks=range(len(new_labels)), labels=new_labels, ha='right')
+            print(new_labels)
+            if new_labels == ['A', 'B', 'C', 'D', 'E', 'F']:
+                new_labels = [
+                    'Workload A\n(50% read,\n50% update)',
+                    'Workload B\n(95% read,\n5% update)',
+                    'Workload C\n(100% read)',
+                    'Workload D\n(95% read,\n5% insert)',
+                    'Workload E\n(95% scan,\n5% inserts)',
+                    'Workload F\n(50% read,\n50% RMW)'
+                ]
+                print(new_labels)
+            
+            plt.gca().set_yticklabels(new_labels)
 
             minor_ticks = []
             if self._kwargs_has(kwargs, 'per_tick_label'):
@@ -334,17 +421,27 @@ class Grapher:
     def graph_grouped_stacked_bars(self, dataframes, axis, **kwargs):
         dataframes = self._rename_multi_index(dataframes)
 
-        num_bench = dataframes.index.levshape[0]
+        num_bench = dataframes.index.size
         # reversed for top to bottom
         index = np.arange(num_bench)[::-1]
-        dfs = dataframes.swaplevel(0,1).sort_index().T
+        if isinstance(dataframes.index, pd.MultiIndex):
+            dfs = dataframes.swaplevel(0, 1).sort_index().T
+        else:
+            dfs = dataframes.sort_index().T
         max_val = ceil(dfs.sum().max() + 0.6)
         cutoff = self._kwargs_default(kwargs, 'cutoff', max_val)
         if cutoff != max_val:
             axis.set_xlim(0, cutoff)
         axis.margins(x=0, y=0)
 
-        dfs = self._reorder_configs(dfs)
+        #dfs = self._reorder_configs(dfs)
+        dfs = dataframes.swaplevel(axis=1)
+
+        cols = dfs.columns.unique(0).to_list()
+        if 'NONE' in cols:
+            cols.remove('NONE')
+            cols += ['NONE']
+        dfs = dfs.reindex(cols, level=0, axis='columns')
 
         n = 0.0
         num_slots = 0
@@ -364,7 +461,7 @@ class Grapher:
         for config in dfs.columns.unique(0):
             bottom = None
             #df = dfs[config].T.sort_index(ascending=False)
-            df = dfs[config].T
+            df = dfs[config]
 
             config_color = np.array(self._get_config_color(config))
             reason_index = 0
@@ -375,7 +472,6 @@ class Grapher:
                 data = df[reason].values
 
                 hatch = hatches[reason_index % len(hatches)]
-
                 axis.barh(new_index,
                           data,
                           height=width,
@@ -414,11 +510,11 @@ class Grapher:
                     labels = df[reason].index.tolist()[::-1]
 
             config_patches += [Patch(facecolor=config_color, edgecolor='black',
-                                     label=config)]
+                                     label=self._get_config_name(config))]
 
             if len(reason_patches) == 0:
                 for reason, hatch, i in zip(df.columns, hatches, itertools.count()):
-                    reason = self._get_reason_name(reason)
+                    reason = self._get_reason_name(str(reason))
                     reason_patches += [Patch(facecolor='white',
                                              edgecolor='black',
                                              hatch=hatch,
@@ -431,8 +527,16 @@ class Grapher:
         if self._kwargs_bool(kwargs, 'exclude_tick_labels'):
             plt.yticks(ticks=np.arange(num_bench), labels=['']*num_bench)
         else:
-            print(labels)
-            plt.yticks(ticks=np.arange(num_bench), labels=labels)
+            new_labels = []
+            for label in labels:
+                try:
+                    new_label = '{:.1f}, {}'.format(label[0], label[1])
+                    new_labels += [new_label]
+                except Exception as e:
+                    print(e)
+                    new_labels += [label]
+            print(new_labels)
+            plt.yticks(ticks=np.arange(num_bench), labels=new_labels)
         plt.xscale(self._kwargs_default(kwargs, 'xscale', 'linear'))
         #axis.set_ylim(*ybounds)
 
@@ -452,10 +556,12 @@ class Grapher:
             #axis.tick_params(labelsize=4)
             axis.xaxis.set_major_locator(ticker.MultipleLocator(interval))
             axis.xaxis.set_minor_locator(ticker.MultipleLocator(interval / 10.0))
-
+ 
         axis.set_axisbelow(True)
 
         plt.xlabel(self._kwargs_default(kwargs, 'label', ''))
+        if self._kwargs_has(kwargs, 'xbins'):
+            plt.locator_params(axis='x', nbins=kwargs['xbins'])
 
         self.__class__._do_grid_lines()
 

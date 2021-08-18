@@ -1651,7 +1651,7 @@ init_common()
 
 void sigusr_handler(int signum) {
  if (signum == SIGUSR1) {
-    show_libfs_stats("worker sigusr1");
+    //show_libfs_stats("worker sigusr1");
  }
 }
 /*
@@ -1683,8 +1683,8 @@ main(int argc, char *argv[])
 	if (mode == FB_MODE_CVARS)
 		cvars_mode(&fbparams);
 
-    printf("getchar to continue\n");
-    getchar();
+    //printf("getchar to continue\n");
+    //getchar();
     struct sigaction new_action;
     new_action.sa_handler = sigusr_handler;
     sigemptyset(&new_action.sa_mask);
@@ -2626,8 +2626,8 @@ parser_run(cmd_t *cmd)
 	if (mlfs) {
 		while(make_digest_request_async(100) == -EBUSY);
 		wait_on_digesting();
-        show_libfs_stats("master reset");
-        reset_libfs_stats();
+        //show_libfs_stats("master reset");
+        //reset_libfs_stats();
 	}
 
 	proc_create();

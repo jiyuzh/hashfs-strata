@@ -28,12 +28,12 @@ CThread::~CThread()
 
 }
 
-void CThread::Start() throw(CThreadException)
+void CThread::Start()
 {
 	CreateThread();
 }
 
-void CThread::Join() throw(CThreadException)
+void CThread::Join()
 {
 	if (!done) {
 		int rc = pthread_join(m_Tid, NULL);
@@ -53,7 +53,7 @@ void* CThread::ThreadFunc( void* pTr )
 	pthread_exit(0); 
 }
 
-void CThread::CreateThread() throw(CThreadException)
+void CThread::CreateThread()
 {
 	int rc = pthread_create(&m_Tid, NULL, ThreadFunc, this);
 	if ( rc != 0 )

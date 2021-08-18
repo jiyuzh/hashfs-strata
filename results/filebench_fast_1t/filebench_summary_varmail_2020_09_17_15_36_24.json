@@ -1,0 +1,9 @@
+[
+    {
+        "layout": 0.85,
+        "throughput": 881.8,
+        "struct": "hashfs_rocache",
+        "bench": "filebench",
+        "workload": "varmail"
+    }
+]

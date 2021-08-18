@@ -14,8 +14,7 @@
 #include "global/defs.h"
 
 void flush_llc(void) {
-    return;
-    size_t repeats = 1;
+    size_t repeats = 4;
     size_t mult = 16;
     size_t allocation_size = mult * 32 * 1024 * 1024;
 
@@ -28,10 +27,10 @@ void flush_llc(void) {
 
     //memset(buf, 42, allocation_size);
 
-    asm volatile("sfence\n\t"
-                 :
-                 :
-                 : "memory"); 
+    //asm volatile("sfence\n\t"
+    //             :
+    //             :
+    //             : "memory"); 
 
     for (i = 0; i < allocation_size; i += cache_line) {
         asm volatile("clflush (%0)\n\t"

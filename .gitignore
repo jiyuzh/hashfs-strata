@@ -28,6 +28,7 @@ shim/libshim/*.so
 shim/glibc/build
 shim/glibc-build-all
 shim/glibc-build-opt
+shim/glibc-build
 
 # Test files.
 kernfs/tests/extent_test
@@ -109,6 +110,11 @@ bench/filebench/workloads/Makefile.in
 
 
 bench/benchout
+
+graphing/graph_schemes.yaml
+
+bench/*.yaml
+graphing/*.yaml
 
 # Graphs.
 *.pdf

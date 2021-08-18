@@ -68,18 +68,18 @@ class CThread
 		/**
 		 *   Function to start thread. 
 		 */
-		void Start() throw(CThreadException);
+		void Start();
 
 		/**
 		 *   Function to join thread. 
 		 */
-		void Join() throw(CThreadException);
+		void Join();
 	private:
 
 		/**
 		 *   private Function to create thread. 
 		 */
-		void CreateThread() throw(CThreadException);
+		void CreateThread();
 
 		/**
 		 *   Call back Function Passing to pthread create API

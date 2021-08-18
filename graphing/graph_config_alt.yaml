@@ -1,0 +1,26 @@
+display_options:
+  config_names:
+    extent_trees: NVM Only
+    none: DRAM+NVM
+
+  breakdown_names:
+    indexing: Indexing
+    indexing_per_op: Indexing
+    indexing_throughput: Indexing
+    read_data: Device IO
+    read_data_per_op: Device IO
+    read_data_throughput: Device IO
+
+  benchmark_order:
+    - 1MB
+    - 64kB
+    - 4kB
+
+  config_colors:
+    NVM Only: '#6296ea'
+    DRAM+NVM: '#a6a6a6'
+
+  config_order:
+    - NVM Only
+    - DRAM+NVM
+

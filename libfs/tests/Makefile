@@ -5,17 +5,19 @@ CC = gcc9.2 -std=c99
 #	  append_test fwrite_fread partial_update_test \
 #	  deepqueue multithread age
 EXE = file_basic small_io falloc_test ftrunc_test lock_test lock_perf \
-	  simple_spdk_test dir_test many_files_test fork_io readdir_test \
-	  append_test fwrite_fread partial_update_test \
-	  deepqueue multithread age
+	  dir_test many_files_test fork_io readdir_test \
+	  fwrite_fread \
+	  age \
+	  concurrency_stress_test MTCC readfile ls rmrf
+#append_test partial_update_test simple_spdk_test deepqueue multithread 
 
 #$(info $(EXE))
 
 CUR_DIR = $(shell pwd)
 GLIBC_DIR = $(CUR_DIR)/../../shim/glibc-build/
 LIBFS_DIR = $(CUR_DIR)/../build/
-#NVML_DIR = $(LIBFS_DIR)/../lib/nvml/src/nondebug/
-NVML_DIR = 
+NVML_DIR = $(LIBFS_DIR)/../lib/nvml/src/nondebug/
+#NVML_DIR = 
 CUCKOO_DIR = $(LIBFS_DIR)/../lib/cuckoofilter
 LIBFS=$(LIBFS_DIR)/libmlfs.a
 LIBSPDK_DIR =../src/storage/spdk/
@@ -59,7 +61,8 @@ all: $(EXE)
 	$(CXX) -std=c++11 $(CFLAGS) -c -g $< -o $@
 
 time_stat.o: time_stat.c
-	$(CC) time_stat.c -c -o time_stat.o -D_BSD_SOURCE
+	#$(CC) time_stat.c -c -o time_stat.o -D_BSD_SOURCE
+	$(CC) time_stat.c -c -o time_stat.o -D_DEFAULT_SOURCE
 
 simple_spdk_test: simple_spdk_test.c
 	$(CC) -g -o $@ $^ -I$(INCLUDES) -L$(LIBFS_DIR) -lmlfs $(LIBSPDK) $(LDFLAGS)
@@ -122,9 +125,11 @@ multithread: multithread.c
 
 age: age.c
 	$(CC) -g -o $@ $^ -I$(INCLUDES) -L$(LIBFS_DIR) -lmlfs $(LDFLAGS)
-
+concurrency_stress_test: concurrency_stress_test.c
+	$(CC) -g -o $@ $^  -I$(INCLUDES) -L$(LIBFS_DIR) -lmlfs -L$(LIBSPDK_DIR) -lspdk -DMLFS $(CFLAGS) $(LDFLAGS)
 MTCC: MTCC.c
 	$(CC) -g -o $@ $^  -I$(INCLUDES) -L$(LIBFS_DIR) -lmlfs -L$(LIBSPDK_DIR) -lspdk -DMLFS $(CFLAGS) $(LDFLAGS)
+	#$(CC) -g -o $@ $^  -I$(INCLUDES) -L$(LIBFS_DIR) -lmlfs -DMLFS $(CFLAGS) $(LDFLAGS)
 MTCCcorrect: MTCCcorrect.c
 	$(CC) -g -o $@ $^  -I$(INCLUDES) -L$(LIBFS_DIR) -lmlfs -L$(LIBSPDK_DIR) -lspdk -DMLFS $(CFLAGS) $(LDFLAGS)
 readfile: readfile.c
@@ -132,6 +137,8 @@ readfile: readfile.c
 cp: cp.c
 	$(CC) -g -o $@ $^  -I$(INCLUDES) -L$(LIBFS_DIR) -lmlfs -L$(LIBSPDK_DIR) -lspdk -DMLFS $(CFLAGS) $(LDFLAGS)
 ls: ls.c
+	$(CC) -g -o $@ $^  -I$(INCLUDES) -L$(LIBFS_DIR) -lmlfs -L$(LIBSPDK_DIR) -lspdk -DMLFS $(CFLAGS) $(LDFLAGS)
+rmrf: rmrf.c
 	$(CC) -g -o $@ $^  -I$(INCLUDES) -L$(LIBFS_DIR) -lmlfs -L$(LIBSPDK_DIR) -lspdk -DMLFS $(CFLAGS) $(LDFLAGS)
 recursive_read: recursive_read.c
 	$(CC) -g -o $@ $^  -I$(INCLUDES) -L$(LIBFS_DIR) -lmlfs -L$(LIBSPDK_DIR) -lspdk -DMLFS $(CFLAGS) $(LDFLAGS)
