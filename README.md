@@ -1,33 +1,36 @@
-Strata: A Cross Media File System
+Rethinking File Mapping for Persistent Memory
 ==================================
 
 Strata is a research prototype file system, presented in SOSP 2017 ([Strata]).
+We extend Strata so we can test a variety of PM file mapping structures. We
+present the results of this in our FAST 2021 paper ([indexing])
 
-Strata is developed and tested on Ubuntu 16.04 LTS, Linux kernel 4.8.12 and gcc
-version 5.4.0.
+We have tested on Ubuntu 20.04 LTS, Linux kernel 5.4.0 and gcc
+version 9.2.
 
 This repository contains initial source code and tests. Benchmarks will be
 released soon. As a research prototype, Strata has several limitations,
 described in the [limitations section](#limitations).
 
-To run NVM emulation, your machine should have enough DRAM for testing. Kernel
-will reserve the DRAM for NVM emulation. Strata requires at least two
-partitions of NVM: operation log (1 - 2 GB) and NVM shared area (It depends on
-your test. I recommend to use more than 8 GB at least).
+Strata requires at least there
+partitions of NVM: operation log (1 - 2 GB), NVM shared area (It depends on
+your test, and an undo log region (1 GB at most). I recommend to use more than 8 GB at least).
+
+You first 
 
 ### Building Strata ###
 Assume current directory is a project root directory.
 
 Make sure to initialize the repository and sub-repositories first:
 ```
-    git clone https://github.com/ut-osa/strata.git
+    git clone https://github.com/efeslab/strata.git
     git submodule init
     git submodule update
 ```
 
 ##### 1. Change memory configuration
 ~~~
-./utils/change_dev_size.py [dax0.0] [SSD] [HDD] [dax1.0]
+./utils/change_dev_size.py [dax0.0] [SSD] [HDD] [dax1.0] [dax2.0]
 ~~~
 This script does the following:
 1. Opens `libfs/src/storage/storage.h`
@@ -38,20 +41,9 @@ This script does the following:
     - `dev_size[2]`: SSD size : just put 0 for now
     - `dev_size[3]`: HDD size : put 0 for now
     - `dev_size[4]`: dax1.0 size
+    - `dev_size[5]`: dax2.0 size
 
-##### 2. Build kernel
-~~~
-sudo apt install libssl-dev || sudo yum install openssl-devel
-cd kernel/kbuild
-make -f Makefile.setup .config
-make -f Makefile.setup
-make -j$(nproc)
-sudo make modules_install ; sudo make install
-sudo update-grub2 || sudo grub2-mkconfig -o /boot/grub2/grub.cfg
-~~~
-
-This step requires reboot your machine after installing the new kernel.
-##### 3. Build glibc
+##### 2. Build glibc
 
 Building glibc might not be an easy task in some machines. We provide pre-built libc binaries in "shim/glibc-build".
 If you keep failing to build glibc, I recommend to use the pre-built glibc for your testing.
@@ -60,7 +52,9 @@ If you keep failing to build glibc, I recommend to use the pre-built glibc for y
 make -C shim
 ~~~
 
-##### 4. Build dependent libraries (SPDK, NVML, JEMALLOC)
+This will also be performed by running `./remake.sh` from the root directory.
+
+##### 3. Build dependent libraries (SPDK, NVML, JEMALLOC)
 ~~~
 cd libfs/lib
 git clone https://github.com/pmem/nvml
@@ -80,77 +74,63 @@ For SPDK build errors, please check a SPDK website (http://www.spdk.io/doc/getti
 
 For NVML build errors, please check a NVML repository (https://github.com/pmem/nvml/)
 
-##### 5. Build Libfs
+##### 4. Build Libfs
 ~~~
 make -C libfs
 ~~~
 
-##### 6. Build KernelFS
+This will also be performed by running `./remake.sh` from the root directory.
+
+##### 5. Build KernelFS
 ~~~
 make -C kernfs
 make -C kernfs/tests
 ~~~
 
-##### 7. Build libshim
+This will also be performed by running `./remake.sh` from the root directory.
+
+##### 6. Build libshim
 ~~~
 make -C shim/libshim
 ~~~
 
+This will also be performed by running `./remake.sh` from the root directory.
+
+
 ### <a name="runningstrata"></a>Running Strata ###
 
-##### 1. Setup NVM (DEV-DAX) emulation
-Strata emulates NVM using a physically contiguous memory region, and relies on
-the kernel NVDIMM support.
+##### 1. Setup NVM (DEV-DAX) devices
 
-You need to make sure that your kernel is built with NVDIMM support enabled
-(CONFIG_BLK_DEV_PMEM), and then you can reserve the memory space by booting the
-kernel with memmap command line option.
+To set up the `/dev/dax*` devices, you will need to use ndctl.
 
-For instance, adding memmap=16G!8G to the kernel boot parameters will reserve
-16GB memory starting from 8GB address, and the kernel will create a pmem0 block
-device under the /dev directory. Adding `GRUB_CMDLINE_LINUX="memmap=16G!4G,
-4G!20G"` will add a pmem0 and pmem1.
+Documnetation is available here: https://docs.pmem.io/persistent-memory/getting-started-guide/what-is-ndctl
 
-Details are available at:
-http://pmem.io/2016/02/22/pm-emulation.html
-
-This step requires rebooting your machine.
-
-##### 2. Use DEV-DAX emulation
-~~~
-cd utils
-sudo ./use_dax.sh bind
-~~~
-This instruction will change pmem emulation to use dev-dax mode.
-
-e.g., `/dev/pmem0` -> `/dev/dax0`
-
-To rollback to previous setting,
-~~~
-sudo ./use_dax.sh unbind
-~~~
-
-##### 3. Setup storage size
+##### 2. Setup storage size
 This step requires rebuilding of Libfs and KernFS.
+
+1. Open `libfs/src/storage/storage.h`
+2. Modifie `dev_size` array values with each storage size in bytes.
+    - `dev_size[0]`: could be always 0 (not used)
+    - `dev_size[1]`: dax0.0 size
+    - `dev_size[2]`: SSD size : just put 0 for now
+    - `dev_size[3]`: HDD size : put 0 for now
+    - `dev_size[4]`: dax1.0 size
+    - `dev_size[5]`: dax2.0 size
+
+##### 3. Formatting storages
+The simplest way:
 ~~~
-TODO: Some instructions to setup storage size (by a script or manually)
+cd kernfs/tests
+./mkfs.sh
 ~~~
 
-##### 4. Setup UIO for SPDK
-~~~
-cd utils
-sudo ./uio_setup.sh linux config
-~~~
-To rollback to previous setting,
-~~~
-sudo ./uio_setup.sh linux reset
-~~~
+Manually:
 
-##### 5. Formatting storages
 ~~~
 cd libfs
 sudo ./bin/mkfs.mlfs <dev id>
 ~~~
+
 dev id is a device identifier used in Strata (hardcoded).<br/>
 1 : NVM shared area (dax0.0)<br/>
 2 : SSD shared area <br/>
@@ -250,3 +230,4 @@ Available topics:
 [Strata]: http://www.cs.utexas.edu/~yjkwon/publication/strata/ "Strata project"
 [docs]: docs/
 [spdk_doc]: docs/concurrency.md
+[indexing]: https://www.usenix.org/conference/fast21/presentation/neal "Rethinking File Mapping for Persistent Memory"

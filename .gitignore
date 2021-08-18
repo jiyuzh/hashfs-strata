@@ -113,6 +113,9 @@ bench/benchout
 
 graphing/graph_schemes.yaml
 
+bench/*.yaml
+graphing/*.yaml
+
 # Graphs.
 *.pdf
 __pycache__

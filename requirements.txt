@@ -1,0 +1,4 @@
+inflect
+jinja2
+scipy
+progressbar2
