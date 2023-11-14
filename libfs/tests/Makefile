@@ -14,7 +14,6 @@ EXE = file_basic small_io falloc_test ftrunc_test lock_test lock_perf \
 #$(info $(EXE))
 
 CUR_DIR = $(shell pwd)
-GLIBC_DIR = $(CUR_DIR)/../../shim/glibc-build/
 LIBFS_DIR = $(CUR_DIR)/../build/
 NVML_DIR = $(LIBFS_DIR)/../lib/nvml/src/nondebug/
 #NVML_DIR = 
@@ -40,16 +39,9 @@ SPDK_LIBS += $(SPDK_ROOT_DIR)/build/lib/libspdk_nvme.a \
 CFLAGS = -I $(LIBSPDK_INC) -I $(DPDK_DIR)/include -I$(INCLUDES) \
 	   -I$(SPDK_ROOT_DIR)/include
 
-LDFLAGS = -Wl,-rpath=$(abspath $(GLIBC_DIR)) \
-		  -Wl,-rpath=$(abspath $(GLIBC_DIR))/rt \
-		  -Wl,-rpath=$(abspath $(LIBFS_DIR)) \
+LDFLAGS = -Wl,-rpath=$(abspath $(LIBFS_DIR)) \
 		  -Wl,-rpath=$(abspath $(NVML_DIR)) \
 		  -Wl,-rpath=$(abspath $(LIBSPDK_DIR)) \
-		  -Wl,-rpath=/usr/local/lib \
-		  -Wl,-rpath=/usr/lib/x86_64-linux-gnu/ \
-		  -Wl,-rpath=/lib/x86_64-linux-gnu/ \
-		  -Wl,-rpath=/lib64 \
-		  -Wl,-dynamic-linker=$(abspath $(GLIBC_DIR))/ld-linux-x86-64.so.2 \
 		  -lpthread -lrt -lm -lpmem
 
 all: $(EXE)
