@@ -592,8 +592,9 @@ int mlfs_posix_rename(char *oldpath, char *newpath)
 	return 0;
 }
 
+// FIXME: off is not used.
 int mlfs_posix_getdents(int fd, struct linux_dirent *buf,
-		size_t nbytes)
+		size_t nbytes, offset_t off)
 {
 	struct file *f;
 	int bytes;

@@ -30,7 +30,6 @@ function remake() {
 #done
 remake libfs
 remake kernfs
-remake shim/libshim
 remake kernfs/tests
 remake libfs/tests
 ##! /bin/bash

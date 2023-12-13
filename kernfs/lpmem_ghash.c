@@ -22,6 +22,9 @@
  * GLib at ftp://ftp.gtk.org/pub/gtk/.
  */
 
+// Set it to test compilation on the machine that does not support SIMD instructions.
+// #define EPI64_NOT_SUPPORTED 1
+
 /*
  * MT safe
  */
@@ -300,6 +303,7 @@ static void directHash_simd8(__m512i *keys, __m256i *node_indices) {
 
 static void
 mixHash_simd8_helper(__m512i *first, __m512i *second, __m512i *third, int right, uint32_t shiftCount, __mmask8 searching) {
+#ifndef EPI64_NOT_SUPPORTED
   *first = _mm512_maskz_sub_epi64(searching, *first, *second); //first = first - second
   *first = _mm512_maskz_sub_epi64(searching, *first, *third); //first = first - third
   __m512i bsTemp;
@@ -310,6 +314,7 @@ mixHash_simd8_helper(__m512i *first, __m512i *second, __m512i *third, int right,
     bsTemp = _mm512_maskz_slli_epi64(searching, *third, shiftCount); //<<
   }
   *first = _mm512_maskz_xor_epi64(searching, *first, bsTemp); //first = first XOR (third (<< || >>) shiftcount)
+#endif
 }
 
 
@@ -352,6 +357,7 @@ static void mixHash_simd8(__m512i *keys, __m256i *node_indices, __mmask8 searchi
 
 static void
 mixHash_simd4_helper(__m256i *first, __m256i *second, __m256i *third, int right, uint32_t shiftCount, __mmask8 searching) {
+#ifndef EPI64_NOT_SUPPORTED
   *first = _mm256_maskz_sub_epi64(searching, *first, *second); //first = first - second
   *first = _mm256_maskz_sub_epi64(searching, *first, *third); //first = first - third
   __m256i bsTemp;
@@ -362,9 +368,11 @@ mixHash_simd4_helper(__m256i *first, __m256i *second, __m256i *third, int right,
     bsTemp = _mm256_maskz_slli_epi64(searching, *third, shiftCount); //<<
   }
   *first = _mm256_maskz_xor_epi64(searching, *first, bsTemp); //first = first XOR (third (<< || >>) shiftcount)
+#endif
 }
 
 static void mixHash_simd4(__m256i *keys, __m128i *node_indices, __mmask8 searching) {
+#ifndef EPI64_NOT_SUPPORTED
   __m256i c = *keys;
   int RIGHT = 1;
   int LEFT = 0;
@@ -383,23 +391,29 @@ static void mixHash_simd4(__m256i *keys, __m128i *node_indices, __mmask8 searchi
 
   __m128i hash_values = _mm256_cvtepi64_epi32(c); // direct hash with truncation to 32-bit
   pmem_mod_simd4(&hash_values, node_indices);
+#endif
 }
 
 static void pmem_make_key_simd8(__m512i *inums, __m512i *lblks, __m512i *keys) {
+#ifndef EPI64_NOT_SUPPORTED
   __mmask8 oneMask = _cvtu32_mask8(~0); //zeros
   *keys = _mm512_mask_mov_epi64(*inums, oneMask, *inums); // keys = inums
   *keys = _mm512_slli_epi64(*keys, 32); // rotate left 32 bits
   *keys = _mm512_or_epi64(*keys, *lblks); // & with lblks
+#endif
 }
 
 static void pmem_make_key_simd4(__m256i *inums, __m256i *lblks, __m256i *keys) {
+#ifndef EPI64_NOT_SUPPORTED
   __mmask8 oneMask = _cvtu32_mask8(~0); //zeros
   *keys = _mm256_mask_mov_epi64(*inums, oneMask, *inums); // keys = inums
   *keys = _mm256_slli_epi64(*keys, 32); // rotate left 32 bits
   *keys = _mm256_or_epi64(*keys, *lblks); // & with lblks
+#endif
 }
 
 void pmem_nvm_hash_table_lookup_node_simd8(__m512i *keys, __m256i *node_indices, __mmask8 *failure, __mmask8 searching) {
+#ifndef EPI64_NOT_SUPPORTED 
 
 #ifdef SEQ_STEP
   uint32_t step = 1;
@@ -444,9 +458,11 @@ void pmem_nvm_hash_table_lookup_node_simd8(__m512i *keys, __m256i *node_indices,
 
   //printf("[lookup] step @ end = %d\n", step);
   
+#endif
 }
 
 void pmem_nvm_hash_table_lookup_node_simd4(__m256i *keys, __m128i *node_indices, __mmask8 *failure, __mmask8 searching) {
+#ifndef EPI64_NOT_SUPPORTED
 
 #ifdef SEQ_STEP
   uint32_t step = 1;
@@ -488,6 +504,7 @@ void pmem_nvm_hash_table_lookup_node_simd4(__m256i *keys, __m128i *node_indices,
 
   }
   
+#endif
 }
 
 // #pragma GCC pop_options
@@ -597,7 +614,7 @@ pmem_nvm_hash_table_new(struct disk_superblock *sblk,
 
 #ifndef KERNFS
   if (IDXAPI_IS_ROCACHED()) {
-    printf("RO caching! %d MB\n", pmem_ht_vol->nbytes / (1024 * 1024) );
+    printf("RO caching! %lu MB\n", pmem_ht_vol->nbytes / (1024 * 1024) );
     pmem_ht_vol->entries = (paddr_t*)malloc(pmem_ht_vol->nbytes);
     memcpy((char*)pmem_ht_vol->entries, pmem_ht_vol->entries_pm, pmem_ht_vol->nbytes);
   }
@@ -708,6 +725,7 @@ int pmem_nvm_hash_table_lookup(inum_t inum, paddr_t lblk,
 
 static inline int 
 pmem_nvm_hash_table_lookup_internal_simd8(__m512i *inums, __m512i *lblks, __m256i *val, __mmask8 to_find) {
+#ifndef EPI64_NOT_SUPPORTED
     //create keys vector
   __mmask8 zeroMask = _cvtu32_mask8(0); //zeros
   __mmask8 failure = _cvtu32_mask8(0);
@@ -716,10 +734,12 @@ pmem_nvm_hash_table_lookup_internal_simd8(__m512i *inums, __m512i *lblks, __m256
   pmem_make_key_simd8(inums, lblks, &keys);
   pmem_nvm_hash_table_lookup_node_simd8(&keys, val, &failure, to_find);
   return _cvtmask8_u32(failure) == 0;
+#endif
 }
 
 static inline int 
 pmem_nvm_hash_table_lookup_internal_simd4(__m256i *inums, __m256i *lblks, __m128i *val, __mmask8 to_find) {
+#ifndef EPI64_NOT_SUPPORTED
     //create keys vector
   __mmask8 zeroMask = _cvtu32_mask8(0); //zeros
   __mmask8 failure = _cvtu32_mask8(0);
@@ -728,10 +748,11 @@ pmem_nvm_hash_table_lookup_internal_simd4(__m256i *inums, __m256i *lblks, __m128
   pmem_make_key_simd4(inums, lblks, &keys);
   pmem_nvm_hash_table_lookup_node_simd4(&keys, val, &failure, to_find);
   return _cvtmask8_u32(failure) == 0;
+#endif
 }
 
 int pmem_nvm_hash_table_lookup_simd(uint32_t inum, uint32_t lblk, uint32_t len, uint64_t *pblks) {
-
+#ifndef EPI64_NOT_SUPPORTED
   int entries4 = len <= 4;
   u512i_64 inum_vec8; u512i_64 lblk_vec8;
   u256i_64 inum_vec4; u256i_64 lblk_vec4;
@@ -779,6 +800,9 @@ int pmem_nvm_hash_table_lookup_simd(uint32_t inum, uint32_t lblk, uint32_t len, 
   }
   
   return success;
+#else
+  return 0;
+#endif
 }
 /*
  * nvm_hash_table_insert_internal:
@@ -900,7 +924,7 @@ pmem_nvm_hash_table_insert (inum_t     inum,
 }
 
 void pmem_find_next_invalid_entry_simd8(__m256i *node_indices, uint32_t duplicates) {
-  
+#ifndef EPI64_NOT_SUPPORTED
 
 #ifdef SEQ_STEP
   uint32_t step = 1;
@@ -939,10 +963,11 @@ void pmem_find_next_invalid_entry_simd8(__m256i *node_indices, uint32_t duplicat
     cur = _mm512_mask_i32gather_epi64 (cur, searching, *node_indices, (void const*)(pmem_ht_vol->entries), 8);
 
   }
+#endif
 }
 
 void pmem_find_next_invalid_entry_simd4(__m128i *node_indices, uint32_t duplicates) {
-  
+#ifndef EPI64_NOT_SUPPORTED
 
 #ifdef SEQ_STEP
   uint32_t step = 1;
@@ -981,9 +1006,11 @@ void pmem_find_next_invalid_entry_simd4(__m128i *node_indices, uint32_t duplicat
     cur = _mm256_mmask_i32gather_epi64 (cur, searching, *node_indices, (void const*)(pmem_ht_vol->entries), 8);
 
   }
+#endif
 }
 
 static inline int pmem_nvm_hash_table_insert_internal_simd8(__m512i *inums, __m512i *lblks, __m256i *indices, __mmask8 to_find) {
+#ifndef EPI64_NOT_SUPPORTED
     //create keys vector
   __mmask8 zeroMask = _cvtu32_mask8(0); //zeros
   __mmask8 oneMask = _cvtu32_mask8(~0);
@@ -1035,10 +1062,13 @@ static inline int pmem_nvm_hash_table_insert_internal_simd8(__m512i *inums, __m5
   }
 
   return true;
-
+#else
+  return 0;
+#endif
 }
 
 static inline int pmem_nvm_hash_table_insert_internal_simd4(__m256i *inums, __m256i *lblks, __m128i *indices, __mmask8 to_find) {
+#ifndef EPI64_NOT_SUPPORTED
     //create keys vector
   __mmask8 zeroMask = _cvtu32_mask8(0); //zeros
   __mmask8 oneMask = _cvtu32_mask8(~0);
@@ -1072,10 +1102,13 @@ static inline int pmem_nvm_hash_table_insert_internal_simd4(__m256i *inums, __m2
   _mm256_mask_i32scatter_epi64(pmem_ht_vol->entries, to_find, *indices, keys, 8);
 
   return true;
-
+#else
+  return 0;
+#endif
 }
 
 int pmem_nvm_hash_table_insert_simd(uint32_t inum, uint32_t lblk, uint32_t len, uint64_t *pblks){
+#ifndef EPI64_NOT_SUPPORTED
   int entries4 = len <= 4;
   u512i_64 inum_vec8; u512i_64 lblk_vec8;
   u256i_64 inum_vec4; u256i_64 lblk_vec4;
@@ -1119,7 +1152,11 @@ int pmem_nvm_hash_table_insert_simd(uint32_t inum, uint32_t lblk, uint32_t len, 
   }
   
   return success;
+#else
+  return 0;
+#endif
 }
+
 /*
  * nvm_hash_table_remove_internal:
  * @hash_table: our #nvm_hash_idx_t
@@ -1174,7 +1211,7 @@ pmem_nvm_hash_table_remove_internal (paddr_t         key,
 
 static inline
 int pmem_nvm_hash_table_remove_internal_simd8(__m512i *inums, __m512i *lblks, __mmask8 to_remove) {
-  
+#ifndef EPI64_NOT_SUPPORTED
   __mmask8 zeroMask = _cvtu32_mask8(0); //zeros
   __mmask8 failure = _cvtu32_mask8(0);
   __m256i node_indices = _mm256_maskz_set1_epi32(zeroMask, 0);
@@ -1196,11 +1233,14 @@ int pmem_nvm_hash_table_remove_internal_simd8(__m512i *inums, __m512i *lblks, __
   }
 
   return _cvtmask8_u32(failure) == 0;
+#else
+  return 0;
+#endif
 }
 
 static inline
 int pmem_nvm_hash_table_remove_internal_simd4(__m256i *inums, __m256i *lblks, __mmask8 to_remove) {
-  
+#ifndef EPI64_NOT_SUPPORTED
   __mmask8 zeroMask = _cvtu32_mask8(0); //zeros
   __mmask8 oneMask = _cvtu32_mask8(~0);
   __mmask8 failure = _cvtu32_mask8(0);
@@ -1215,9 +1255,13 @@ int pmem_nvm_hash_table_remove_internal_simd4(__m256i *inums, __m256i *lblks, __
   _mm256_mask_i32scatter_epi64(pmem_ht_vol->entries, to_tombstone, node_indices, tombstone_val, 8);
 
   return _cvtmask8_u32(failure) == 0;
+#else
+  return 0;
+#endif
 }
 
 int pmem_nvm_hash_table_remove_simd(uint32_t inum, uint32_t lblk, uint32_t len){
+#ifndef EPI64_NOT_SUPPORTED
   int entries4 = len <= 4;
   u512i_64 inum_vec8; u512i_64 lblk_vec8;
   u256i_64 inum_vec4; u256i_64 lblk_vec4;
@@ -1244,6 +1288,9 @@ int pmem_nvm_hash_table_remove_simd(uint32_t inum, uint32_t lblk, uint32_t len){
   }
 
   return success;
+#else
+  return 0;
+#endif
 }
 
 /**

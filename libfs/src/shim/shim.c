@@ -6,9 +6,10 @@
 #include <errno.h>
 #include <fcntl.h>
 
-#include <filesystem/fs.h>
+#include <mlfs/mlfs_interface.h>
 #include <posix/posix_interface.h>
 #include <global/types.h>
+#include <global/util.h>
 #include <libsyscall_intercept_hook_point.h>
 
 #define FD_START 1000000 //should be consistent with FD_START in libfs/param.h
@@ -479,16 +480,11 @@ int shim_do_access(const char *pathname, int mode, int* result)
 
 int shim_do_fsync(int fd, int* result)
 {
-  int ret;
 
   if (check_mlfs_fd(fd)) {
-    //FIXME: temporarily override fsyncs to perform rsyncs
-    //for assisse
-    //printf("Intercepting fsync call and overriding with rsync\n");
-    //ret = mlfs_do_rsync();
-    ret = mlfs_posix_fsync(fd);
+    // fsync is no-op
     syscall_trace(__func__, ret, 0);
-    *result = ret;
+    *result = 0;
     return 0;
   } else {
     return 1;
@@ -572,6 +568,8 @@ int shim_do_getdents(int fd, struct linux_dirent *buf, size_t count, size_t* res
 
 }
 
+// Not implemented in hashfs STRATA.
+/*
 int shim_do_getdents64(int fd, struct linux_dirent64 *buf, size_t count, size_t* result)
 {
   size_t ret;
@@ -588,6 +586,7 @@ int shim_do_getdents64(int fd, struct linux_dirent64 *buf, size_t count, size_t*
   }
 
 }
+*/
 
 
 static int
@@ -625,7 +624,7 @@ hook(long syscall_number,
     case SYS_mmap: return shim_do_mmap((void*)arg0, (size_t)arg1, (int)arg2, (int)arg3, (int)arg4, (off_t)arg5, (void**)result);
     case SYS_munmap: return shim_do_munmap((void*)arg0, (size_t)arg1, (int*)result);
     case SYS_getdents: return shim_do_getdents((int)arg0, (struct linux_dirent*)arg1, (size_t)arg2, (size_t*)result);
-    case SYS_getdents64: return shim_do_getdents64((int)arg0, (struct linux_dirent64*)arg1, (size_t)arg2, (size_t*)result);
+    // case SYS_getdents64: return shim_do_getdents64((int)arg0, (struct linux_dirent64*)arg1, (size_t)arg2, (size_t*)result);
   }
   return 1;
 }
