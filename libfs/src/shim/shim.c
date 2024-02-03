@@ -269,6 +269,10 @@ int shim_do_mkdir(void *path, mode_t mode, int* result)
     syscall_trace(__func__, ret, 2, path, mode);
 
     *result = ret;
+
+    if (ret < 0)
+      errno = -ret;
+
     return 0;
   }
 
