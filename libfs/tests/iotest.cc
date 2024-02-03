@@ -115,7 +115,7 @@ void io_bench::prepare(void)
   cpu_set_t cpuset;
 
 #ifdef MLFS
-  init_fs();
+  // init_fs();
   do_fsync = 0;
 #else
   do_fsync = 1;
@@ -646,7 +646,7 @@ int main(int argc, char *argv[])
   time_stats_stop(&main_stats);
 
 #ifdef MLFS
-  shutdown_fs();
+  // shutdown_fs();
 #endif
 
   time_stats_stop(&total_stats);

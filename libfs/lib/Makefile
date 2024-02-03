@@ -11,6 +11,12 @@ all:
 	 cmake -DCMAKE_INSTALL_PREFIX=$(shell pwd)/syscall_intercept/install -DCMAKE_BUILD_TYPE=Release ..; \
 	 make; \
 	 make install)
+	if [ ! -d jemalloc-4.5.0 ]; then tar -xf jemalloc-4.5.0.tar.bz2; fi
+	(cd jemalloc-4.5.0 && \
+	 ./autogen.sh && \
+	 ./configure && \
+	 make && \
+	 sudo make install)
 
 #shouldn't redownload DPDK, there is an issue right now with fPIC; it's manually
 #added in its Makefile (mk/rte.lib.mk, line 53 has CFLAGS += -fPIC).

@@ -23,7 +23,7 @@ Assume current directory is a project root directory.
 
 Make sure to initialize the repository and sub-repositories first:
 ```
-    git clone https://github.com/efeslab/strata.git
+    git clone <repo>
     git submodule init
     git submodule update
 ```
@@ -43,30 +43,12 @@ This script does the following:
     - `dev_size[4]`: dax1.0 size
     - `dev_size[5]`: dax2.0 size
 
-##### 2. Build glibc
-
-Building glibc might not be an easy task in some machines. We provide pre-built libc binaries in "shim/glibc-build".
-If you keep failing to build glibc, I recommend to use the pre-built glibc for your testing.
-
-~~~
-make -C shim
-~~~
-
-This will also be performed by running `./remake.sh` from the root directory.
-
-##### 3. Build dependent libraries (SPDK, NVML, JEMALLOC)
+##### 2. Build dependent libraries (SPDK, NVML, JEMALLOC, SYSCALL_INTERCEPT)
 ~~~
 cd libfs/lib
-git clone https://github.com/pmem/nvml
-make -C nvml
 
-tar xvjf jemalloc-4.5.0.tar.bz2
-cd jemalloc-4.5.0
-./autogen.sh
-./configure
-make
-cd ..
-
+# Download sources. (If there are no source codes.)
+make redownload
 make
 ~~~
 
@@ -74,28 +56,20 @@ For SPDK build errors, please check a SPDK website (http://www.spdk.io/doc/getti
 
 For NVML build errors, please check a NVML repository (https://github.com/pmem/nvml/)
 
-##### 4. Build Libfs
+##### 3. Build Libfs
 ~~~
 make -C libfs
 ~~~
 
 This will also be performed by running `./remake.sh` from the root directory.
 
-##### 5. Build KernelFS
+##### 4. Build KernelFS
 ~~~
 make -C kernfs
 make -C kernfs/tests
 ~~~
 
 This will also be performed by running `./remake.sh` from the root directory.
-
-##### 6. Build libshim
-~~~
-make -C shim/libshim
-~~~
-
-This will also be performed by running `./remake.sh` from the root directory.
-
 
 ### <a name="runningstrata"></a>Running Strata ###
 
@@ -150,12 +124,16 @@ make
 sudo ./run.sh kernfs
 ~~~
 
-##### 7. Run testing problem
+##### 7. Run testing program
 ~~~
 cd libfs/tests
 make
 sudo ./run.sh iotest sw 2G 4K 1 #sequential write, 2GB file with 4K IO and 1 thread
 ~~~
+
+### Select indexing mechanism
+Set proper indexing mechanism to `MLFS_IDX_STRUCT` environment variable.
+Please refer to `global.c` and benchmark scripts (E.g., `bench/filebench/run_server.sh`).
 
 ### Strata configuration ###
 ##### 1. LibFS configuration ######

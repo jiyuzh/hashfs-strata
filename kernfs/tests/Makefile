@@ -1,4 +1,4 @@
-CC=gcc9.2
+CC=gcc-9
 CXX=g++ -std=c++11
 
 #CC = clang-3.8
