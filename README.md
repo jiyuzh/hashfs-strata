@@ -135,6 +135,19 @@ sudo ./run.sh iotest sw 2G 4K 1 #sequential write, 2GB file with 4K IO and 1 thr
 Set proper indexing mechanism to `MLFS_IDX_STRUCT` environment variable.
 Please refer to `global.c` and benchmark scripts (E.g., `bench/filebench/run_server.sh`).
 
+For example, if you want to run `hashfs` indexing:
+
+```shell
+# In one terminal,
+cd kernfs/tests
+sudo MLFS_IDX_STRUCT=HASHFS ./mkfs.sh
+sudo MLFS_IDX_STRUCT=HASHFS ./run.sh kernfs
+
+# In another terminal,
+cd libfs/tests
+sudo MLFS_IDX_STRUCT=HASHFS ./run.sh iotest sw 1G 4K 1
+```
+
 ### Strata configuration ###
 ##### 1. LibFS configuration ######
 In `libfs/Makefile`, search `MLFS_FLAGS` as keyword
