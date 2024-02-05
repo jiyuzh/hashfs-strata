@@ -34,10 +34,10 @@ redownload:
 	@rm -rf libcuckoo-c
 	git clone https://github.com/kroki/Cuckoo-hash libcuckoo-c#
 	########
-	# syscall_intercept
+	# syscall_intercept --> added as a submodule.
 	########
-	@rm -rf syscall_intercept
-	git clone https://github.com/pmem/syscall_intercept.git
+	# @rm -rf syscall_intercept
+	# git clone https://github.com/pmem/syscall_intercept.git
 
 clean:
 	make clean -C spdk
