@@ -17,7 +17,7 @@ CUCKOO_DIR := $(abspath $(LIBFS_DIR)/lib/cuckoofilter)
 GLIB_DIR :=
 LIBSPDK_DIR := $(abspath $(LIBFS_DIR)/src/storage/spdk/)
 C_LIBCUCKOO_DIR := $(abspath $(LIBFS_DIR)/lib/libcuckoo-c/src)
-API_DIR := $(abspath ../../../nvm-file-indexing/api)
+API_DIR := $(abspath ../../nvm-file-indexing/api)
 
 INCLUDES := $(addprefix -I, .. . $(LIBSPDK_DIR) $(NVML_DIR)/include $(CUCKOO_DIR)/src $(C_LIBCUCKOO_DIR) $(GLIB_DIR) $(GLIB_DIR)/glib $(API_DIR))
 

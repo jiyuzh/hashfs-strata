@@ -25,7 +25,7 @@ extern uint8_t g_hdd_dev;
 #define g_block_size_shift	12UL
 // 2 is for microbenchmark
 // 6 is generally too big. but Redis AOF mode requires at least 6.
-#define g_max_blocks_per_operation 5
+#define g_max_blocks_per_operation 16
 #define g_hdd_block_size_bytes 4194304UL
 #define g_hdd_block_size_shift 22UL
 #define g_directory_shift  16UL

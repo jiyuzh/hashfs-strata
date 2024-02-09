@@ -36,7 +36,7 @@ JEMALLOC_DIR := $(abspath $(LIBFS_DIR)/lib/jemalloc-4.5.0)
 STORAGE_ENGINE := $(wildcard $(LIBFS_DIR)/$(PREFIX)/storage/*.o)
 #C_LIBCUCKOO_DIR := $(abspath $(LIBFS_DIR)/lib/libcuckoo-c/src)
 #LIBSPDK := $(abspath $(LIBFS_DIR)/src/storage/spdk/libspdk.so)
-API_DIR := $(abspath ../../nvm-file-indexing/api)
+API_DIR := $(abspath ../nvm-file-indexing/api)
 
 INCLUDES  := $(addprefix -I, . $(LIBSPDK_DIR) $(NVML_DIR)/include $(CUCKOO_DIR) $(CUCKOO_FILTER_DIR)/src $(GLIB_DIR)/ $(GLIB_DIR)/glib $(C_LIBCUCKOO_DIR) $(API_DIR))
 

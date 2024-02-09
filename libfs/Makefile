@@ -42,7 +42,7 @@ SPDK_DIR := $(abspath $(CURDIR)/lib/spdk)
 LIBSPDK_DIR := $(abspath $(CURDIR)/src/storage/spdk/)
 JEMALLOC_DIR := $(abspath $(CURDIR)/lib/jemalloc-4.5.0)
 C_LIBCUCKOO_DIR := $(abspath $(CURDIR)/lib/libcuckoo-c/src)
-API_DIR := $(abspath ../../nvm-file-indexing/api)
+API_DIR := $(abspath ../nvm-file-indexing/api)
 SYSCALL_INTERCEPT_DIR := $(abspath $(CURDIR)/lib/syscall_intercept/install/)
 
 INCLUDES := $(addprefix -I,src/ $(LIBSPDK_DIR) $(NVML_DIR)/include $(C_LIBCUCKOO_DIR) $(API_DIR) $(SYSCALL_INTERCEPT_DIR)/include)

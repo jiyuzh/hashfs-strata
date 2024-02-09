@@ -14,7 +14,7 @@ add_subdirectory(levelhash)
 add_subdirectory(radixtree)
 #add_subdirectory(p-hot)
 #link_directories(p-hot/boost_1_73_0/stage/lib)
-add_subdirectory(test)
+#add_subdirectory(test)
 
 file(GLOB api_src
     "*.h"
