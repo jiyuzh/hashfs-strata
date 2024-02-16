@@ -126,3 +126,8 @@ cscope*
 
 # working files
 *.orig
+libfs/tests/hashfs-micro/
+libfs/tests/concurrency_stress_test
+libfs/tests/ls
+libfs/tests/readfile
+libfs/tests/rmrf

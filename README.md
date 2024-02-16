@@ -64,22 +64,14 @@ For SPDK build errors, please check a SPDK website (http://www.spdk.io/doc/getti
 
 For NVML build errors, please check a NVML repository (https://github.com/pmem/nvml/)
 
-##### 3. Build Libfs
+##### 3. Build File system
 
 ~~~shell
 cd nvm-file-indexing/api
 ./make.sh
 cd ../..
 
-make -C libfs
-make -C libfs/tests
-~~~
-
-##### 4. Build KernelFS
-
-~~~shell
-make -C kernfs
-make -C kernfs/tests
+./remake.sh
 ~~~
 
 
@@ -153,6 +145,16 @@ cd ../..
 
 Set proper indexing mechanism to `MLFS_IDX_STRUCT` environment variable.
 Please refer to `global.c` and benchmark scripts (E.g., `bench/filebench/run_server.sh`).
+
+Some commonly used values are:
+
+```
+RADIX_TREES
+EXTENT_TREES
+HASHFS
+GLOBAL_CUCKOO_HASH
+LEVEL_HASH_TABLES
+```
 
 For example, if you want to run `hashfs` indexing:
 
